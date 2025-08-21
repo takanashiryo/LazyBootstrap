@@ -338,7 +338,7 @@ namespace LazyBootstrap
 
         private void MoveCompatFiles(string sourceDirRel, string destDirRel, string operationName)
         {
-            Log($"NVIDIA API, DirectX to Vulkan准备{operationName}...");
+            Log($"NVIDIA API, DXVK准备{operationName}...");
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string sourceDir = Path.Combine(baseDir, sourceDirRel);
             string destDir = Path.Combine(baseDir, destDirRel);

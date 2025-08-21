@@ -251,6 +251,7 @@
             this.txtLogOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtLogOutput.Font = new System.Drawing.Font("宋体", 10F);
             this.txtLogOutput.Location = new System.Drawing.Point(381, 28);
             this.txtLogOutput.Multiline = true;
             this.txtLogOutput.Name = "txtLogOutput";
