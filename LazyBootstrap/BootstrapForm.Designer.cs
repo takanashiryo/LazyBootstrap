@@ -17,6 +17,7 @@
 
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BootstrapForm));
             this.lblEaServer = new System.Windows.Forms.Label();
             this.txtEaServer = new System.Windows.Forms.TextBox();
@@ -25,7 +26,6 @@
             this.lblSubnetMask = new System.Windows.Forms.Label();
             this.txtSubnetMask = new System.Windows.Forms.TextBox();
             this.groupBoxOptions = new System.Windows.Forms.GroupBox();
-            this.btnKillProcesses = new System.Windows.Forms.Button();
             this.chkNoRestoreRotation = new System.Windows.Forms.CheckBox();
             this.btnSwitchRotation = new System.Windows.Forms.Button();
             this.cmbRotation = new System.Windows.Forms.ComboBox();
@@ -33,6 +33,7 @@
             this.chkNetDump = new System.Windows.Forms.CheckBox();
             this.chkNoAsphyxia = new System.Windows.Forms.CheckBox();
             this.chkWindowed = new System.Windows.Forms.CheckBox();
+            this.btnKillProcesses = new System.Windows.Forms.Button();
             this.btnStart = new System.Windows.Forms.Button();
             this.groupBoxTools = new System.Windows.Forms.GroupBox();
             this.btnEditConfig = new System.Windows.Forms.Button();
@@ -46,6 +47,7 @@
             this.btnLoadCompat = new System.Windows.Forms.Button();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.groupBoxOptions.SuspendLayout();
             this.groupBoxTools.SuspendLayout();
             this.groupBoxCompatLayer.SuspendLayout();
@@ -60,6 +62,7 @@
             this.lblEaServer.Size = new System.Drawing.Size(89, 12);
             this.lblEaServer.TabIndex = 0;
             this.lblEaServer.Text = "EA服务器地址：";
+            this.toolTip1.SetToolTip(this.lblEaServer, "填写e-amusment server地址");
             // 
             // txtEaServer
             // 
@@ -76,6 +79,7 @@
             this.lblNetworkIp.Size = new System.Drawing.Size(89, 12);
             this.lblNetworkIp.TabIndex = 4;
             this.lblNetworkIp.Text = "网络适配器IP：";
+            this.toolTip1.SetToolTip(this.lblNetworkIp, "联机使用，填写Radmin或者其他虚拟局域网适配器的IP");
             // 
             // txtNetworkIp
             // 
@@ -92,6 +96,7 @@
             this.lblSubnetMask.Size = new System.Drawing.Size(101, 12);
             this.lblSubnetMask.TabIndex = 6;
             this.lblSubnetMask.Text = "网络适配器掩码：";
+            this.toolTip1.SetToolTip(this.lblSubnetMask, "联机用，填写Radmin或者其他虚拟局域网适配器的子网掩码");
             // 
             // txtSubnetMask
             // 
@@ -115,17 +120,6 @@
             this.groupBoxOptions.TabIndex = 8;
             this.groupBoxOptions.TabStop = false;
             this.groupBoxOptions.Text = "启动选项";
-            // 
-            // btnKillProcesses
-            // 
-            this.btnKillProcesses.Font = new System.Drawing.Font("宋体", 10F);
-            this.btnKillProcesses.Location = new System.Drawing.Point(32, 206);
-            this.btnKillProcesses.Name = "btnKillProcesses";
-            this.btnKillProcesses.Size = new System.Drawing.Size(125, 60);
-            this.btnKillProcesses.TabIndex = 8;
-            this.btnKillProcesses.Text = "结束所有进程";
-            this.btnKillProcesses.UseVisualStyleBackColor = true;
-            this.btnKillProcesses.Click += new System.EventHandler(this.btnKillProcesses_Click);
             // 
             // chkNoRestoreRotation
             // 
@@ -194,6 +188,17 @@
             this.chkWindowed.TabIndex = 1;
             this.chkWindowed.Text = "窗口化启动";
             this.chkWindowed.UseVisualStyleBackColor = true;
+            // 
+            // btnKillProcesses
+            // 
+            this.btnKillProcesses.Font = new System.Drawing.Font("宋体", 10F);
+            this.btnKillProcesses.Location = new System.Drawing.Point(32, 206);
+            this.btnKillProcesses.Name = "btnKillProcesses";
+            this.btnKillProcesses.Size = new System.Drawing.Size(125, 60);
+            this.btnKillProcesses.TabIndex = 8;
+            this.btnKillProcesses.Text = "结束所有进程";
+            this.btnKillProcesses.UseVisualStyleBackColor = true;
+            this.btnKillProcesses.Click += new System.EventHandler(this.btnKillProcesses_Click);
             // 
             // btnStart
             // 
@@ -268,6 +273,7 @@
             this.lblPcbId.Size = new System.Drawing.Size(47, 12);
             this.lblPcbId.TabIndex = 2;
             this.lblPcbId.Text = "PCBID：";
+            this.toolTip1.SetToolTip(this.lblPcbId, "填写PCBID");
             // 
             // txtPcbId
             // 
@@ -286,6 +292,7 @@
             this.groupBoxCompatLayer.TabIndex = 10;
             this.groupBoxCompatLayer.TabStop = false;
             this.groupBoxCompatLayer.Text = "AMD/Intel显卡兼容层";
+            this.toolTip1.SetToolTip(this.groupBoxCompatLayer, "AMD/Intel显卡需要启用，否则会闪退");
             // 
             // btnUnloadCompat
             // 
@@ -391,5 +398,6 @@
         private System.Windows.Forms.ToolStripStatusLabel statusLabel;
         private System.Windows.Forms.CheckBox chkNoRestoreRotation;
         private System.Windows.Forms.Button btnKillProcesses;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }
