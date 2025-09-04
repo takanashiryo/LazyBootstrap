@@ -1,8 +1,8 @@
-﻿using System;
+﻿// written by Arkito aka Takanashi Ryo with Gemini, only release in SDVX Lazy Pack.
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
@@ -12,6 +12,7 @@ namespace LazyBootstrap
     {
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
+        private bool _isExpertMode = false; // Status of Expert Mode
 
         public BootstrapForm()
         {
@@ -28,20 +29,30 @@ namespace LazyBootstrap
         private void InitializeCustomComponents()
         {
             // 设置默认值和下拉列表项
-            txtEaServer.Text = "http://localhost:8083";
+            //txtEaServer.Text = "http://localhost:8083";
             cmbRotation.Items.AddRange(new object[] { "0", "90", "180", "270" });
             cmbRotation.SelectedIndex = 0;
-            statusLabel.Text = "就绪";
+            //statusLabel.Text = "就绪";
+            if (this.Controls.Find("statusStrip1", true).Length > 0 && statusLabel != null)
+            {
+                statusLabel.Text = "就绪";
+            }
             this.FormClosing += Bootstrap_FormClosing;
         }
         private void LoadSettings()
         {
             try
             {
+                // load from config
                 txtEaServer.Text = _configFile.ReadString("Settings", "eaURL", "http://localhost:8083");
                 txtPcbId.Text = _configFile.ReadString("Settings", "pcbid", "");
                 txtNetworkIp.Text = _configFile.ReadString("Settings", "networkip", "");
                 txtSubnetMask.Text = _configFile.ReadString("Settings", "subnet", "");
+                // check expert mode
+                _isExpertMode = bool.Parse(_configFile.ReadString("Settings", "expertmode", "false"));
+                expertModeMenuItem.Checked = _isExpertMode;
+                UpdateUiForExpertMode();
+
                 Log("Load config.ini");
             }
             catch (Exception ex)
@@ -58,10 +69,55 @@ namespace LazyBootstrap
                 _configFile.WriteString("Settings", "pcbid", txtPcbId.Text);
                 _configFile.WriteString("Settings", "networkip", txtNetworkIp.Text);
                 _configFile.WriteString("Settings", "subnet", txtSubnetMask.Text);
+
+                _configFile.WriteString("Settings", "expertmode", _isExpertMode.ToString());
+
+                Log("Saved to config.ini");
             }
             catch(Exception ex)
             {
                 Log($"加载出错{ex.Message}");
+            }
+        }
+
+        private void expertModeMenuItem_Click(object sender, EventArgs e)
+        {
+            _isExpertMode = expertModeMenuItem.Checked;
+
+            if (_isExpertMode) {
+                MessageBox.Show(
+                    "专家模式已开启！\n \n 在此模式下：\n1. 游戏将不会使用懒人预设配置，全部需要在spicecfg中手动设定\n2. 配置随游戏保存的功能失效，配置文件将写入当前电脑",
+                    "专家模式：On",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                    );
+            }
+
+            UpdateUiForExpertMode();
+        }
+
+        private void UpdateUiForExpertMode()
+        {
+            bool isNormalMode = !_isExpertMode;
+
+            // status of form
+            lblEaServer.Visible = isNormalMode;
+            txtEaServer.Visible = isNormalMode;
+            lblPcbId.Visible = isNormalMode;
+            txtPcbId.Visible = isNormalMode;
+            lblNetworkIp.Visible = isNormalMode;
+            txtNetworkIp.Visible = isNormalMode;
+            lblSubnetMask.Visible = isNormalMode;
+            txtSubnetMask.Visible = isNormalMode;
+
+            // 根据控件显隐，调整下方控件组的位置
+            if (_isExpertMode)
+            {
+                groupBoxOptions.Location = new System.Drawing.Point(15, 37);
+            }
+            else
+            {
+                groupBoxOptions.Location = new System.Drawing.Point(15, 142);
             }
         }
 
@@ -110,28 +166,32 @@ namespace LazyBootstrap
                     Log("\n已跳过启动 Asphyxia Core。");
                 }
 
-                // Spice2x launch args
                 var argsBuilder = new StringBuilder();
-                argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
-                argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
-                argsBuilder.Append("-modules modules ");
-                argsBuilder.Append("-cmdoverride ");
+                if (!_isExpertMode)
+                {
+                    // Spice2x launch args
+                    argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
+                    argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
+                    argsBuilder.Append("-modules modules ");
+                    argsBuilder.Append("-cmdoverride ");
 
-                string eaURL = string.IsNullOrWhiteSpace(txtEaServer.Text) ? "http://localhost:8083" : txtEaServer.Text;
-                argsBuilder.Append($"-url {eaURL} ");
+                    string eaURL = string.IsNullOrWhiteSpace(txtEaServer.Text) ? "http://localhost:8083" : txtEaServer.Text;
+                    argsBuilder.Append($"-url {eaURL} ");
 
-                if (this.Controls.ContainsKey("txtPcbId") && !string.IsNullOrWhiteSpace(txtPcbId.Text))
-                {
-                    argsBuilder.Append($"-p {txtPcbId.Text.Trim()} ");
+                    if (this.Controls.ContainsKey("txtPcbId") && !string.IsNullOrWhiteSpace(txtPcbId.Text))
+                    {
+                        argsBuilder.Append($"-p {txtPcbId.Text.Trim()} ");
+                    }
+                    if (!string.IsNullOrWhiteSpace(txtNetworkIp.Text))
+                    {
+                        argsBuilder.Append($"-network {txtNetworkIp.Text} ");
+                    }
+                    if (!string.IsNullOrWhiteSpace(txtSubnetMask.Text))
+                    {
+                        argsBuilder.Append($"-subnet {txtSubnetMask.Text} ");
+                    }
                 }
-                if (!string.IsNullOrWhiteSpace(txtNetworkIp.Text))
-                {
-                    argsBuilder.Append($"-network {txtNetworkIp.Text} ");
-                }
-                if (!string.IsNullOrWhiteSpace(txtSubnetMask.Text))
-                {
-                    argsBuilder.Append($"-subnet {txtSubnetMask.Text} ");
-                }
+
                 if (chkWindowed.Checked)
                 {
                     argsBuilder.Append("-w ");
@@ -301,7 +361,11 @@ namespace LazyBootstrap
         private void btnEditConfig_Click(object sender, EventArgs e)
         {
             string cfgToolPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spicecfg.exe");
-            string arguments = "-cfgpath lazy/spicetools.xml -patchcfgpath lazy/spicetools_patch_manager.json -modules modules";
+            string arguments = "";
+            if (!_isExpertMode)
+            {
+                arguments = "-cfgpath lazy/spicetools.xml -patchcfgpath lazy/spicetools_patch_manager.json -modules modules";
+            }
 
             try
             {
@@ -314,7 +378,8 @@ namespace LazyBootstrap
                 {
                     FileName = cfgToolPath,
                     Arguments = arguments,
-                    WorkingDirectory = Path.GetDirectoryName(cfgToolPath)
+                    WorkingDirectory = Path.GetDirectoryName(cfgToolPath),
+
                 };
 
                 Process.Start(startInfo);
@@ -437,6 +502,11 @@ namespace LazyBootstrap
                 }
             }
             btnKillProcesses.Enabled = true;
+        }
+
+        private void groupBoxCompatLayer_Enter(object sender, EventArgs e)
+        {
+
         }
     }
 }
