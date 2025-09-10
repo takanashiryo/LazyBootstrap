@@ -148,7 +148,7 @@ namespace LazyBootstrap
                         var asphyxiaStartInfo = new ProcessStartInfo
                         {
                             FileName = asphyxiaPath,
-                            WindowStyle = ProcessWindowStyle.Minimized
+                            //WindowStyle = ProcessWindowStyle.Minimized
                         };
                         Process.Start(asphyxiaStartInfo);
                         Log("Asphyxia Core 已启动。");
