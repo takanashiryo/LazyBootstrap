@@ -203,7 +203,7 @@
             // 
             // btnStart
             // 
-            this.btnStart.Font = new System.Drawing.Font("宋体", 15F);
+            this.btnStart.Font = new System.Drawing.Font("宋体", 9F);
             this.btnStart.Location = new System.Drawing.Point(17, 28);
             this.btnStart.Name = "btnStart";
             this.btnStart.Size = new System.Drawing.Size(125, 60);
@@ -351,7 +351,7 @@
             // 
             this.expertModeMenuItem.CheckOnClick = true;
             this.expertModeMenuItem.Name = "expertModeMenuItem";
-            this.expertModeMenuItem.Size = new System.Drawing.Size(180, 22);
+            this.expertModeMenuItem.Size = new System.Drawing.Size(140, 22);
             this.expertModeMenuItem.Text = "专家模式(&E)";
             this.expertModeMenuItem.Click += new System.EventHandler(this.expertModeMenuItem_Click);
             // 
