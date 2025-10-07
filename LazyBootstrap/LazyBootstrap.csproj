@@ -49,7 +49,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>bootstrap.ico</ApplicationIcon>
+    <ApplicationIcon>bootstrap-gpt.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <ManifestCertificateThumbprint>976D2177C4FA2DDD140AED69ACED57C1EE3CA9B7</ManifestCertificateThumbprint>
@@ -121,6 +121,7 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="bootstrap-gpt.ico" />
     <Content Include="bootstrap.ico" />
   </ItemGroup>
   <ItemGroup>

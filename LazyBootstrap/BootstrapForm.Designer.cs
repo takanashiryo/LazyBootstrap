@@ -19,11 +19,11 @@
         {
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BootstrapForm));
             this.lblEaServer = new System.Windows.Forms.Label();
-            this.txtEaServer = new System.Windows.Forms.TextBox();
+            this.txtEaServer = new System.Windows.Forms.ComboBox();
             this.lblNetworkIp = new System.Windows.Forms.Label();
-            this.txtNetworkIp = new System.Windows.Forms.TextBox();
+            this.txtNetworkIp = new System.Windows.Forms.ComboBox();
             this.lblSubnetMask = new System.Windows.Forms.Label();
-            this.txtSubnetMask = new System.Windows.Forms.TextBox();
+            this.txtSubnetMask = new System.Windows.Forms.ComboBox();
             this.groupBoxOptions = new System.Windows.Forms.GroupBox();
             this.btnKillProcesses = new System.Windows.Forms.Button();
             this.chkNoRestoreRotation = new System.Windows.Forms.CheckBox();
@@ -35,13 +35,15 @@
             this.chkWindowed = new System.Windows.Forms.CheckBox();
             this.btnStart = new System.Windows.Forms.Button();
             this.groupBoxTools = new System.Windows.Forms.GroupBox();
+            this.btnInstallRuntime = new System.Windows.Forms.Button();
             this.btnEditConfig = new System.Windows.Forms.Button();
             this.btnClearCache = new System.Windows.Forms.Button();
             this.lblLogOutput = new System.Windows.Forms.Label();
             this.txtLogOutput = new System.Windows.Forms.TextBox();
             this.lblPcbId = new System.Windows.Forms.Label();
-            this.txtPcbId = new System.Windows.Forms.TextBox();
+            this.txtPcbId = new System.Windows.Forms.ComboBox();
             this.groupBoxCompatLayer = new System.Windows.Forms.GroupBox();
+            this.lblCompatStatus = new System.Windows.Forms.Label();
             this.btnUnloadCompat = new System.Windows.Forms.Button();
             this.btnLoadCompat = new System.Windows.Forms.Button();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
@@ -67,9 +69,10 @@
             // 
             // txtEaServer
             // 
+            this.txtEaServer.FormattingEnabled = true;
             this.txtEaServer.Location = new System.Drawing.Point(114, 34);
             this.txtEaServer.Name = "txtEaServer";
-            this.txtEaServer.Size = new System.Drawing.Size(250, 21);
+            this.txtEaServer.Size = new System.Drawing.Size(250, 20);
             this.txtEaServer.TabIndex = 1;
             // 
             // lblNetworkIp
@@ -83,9 +86,10 @@
             // 
             // txtNetworkIp
             // 
+            this.txtNetworkIp.FormattingEnabled = true;
             this.txtNetworkIp.Location = new System.Drawing.Point(114, 88);
             this.txtNetworkIp.Name = "txtNetworkIp";
-            this.txtNetworkIp.Size = new System.Drawing.Size(250, 21);
+            this.txtNetworkIp.Size = new System.Drawing.Size(250, 20);
             this.txtNetworkIp.TabIndex = 5;
             // 
             // lblSubnetMask
@@ -99,9 +103,10 @@
             // 
             // txtSubnetMask
             // 
+            this.txtSubnetMask.FormattingEnabled = true;
             this.txtSubnetMask.Location = new System.Drawing.Point(114, 115);
             this.txtSubnetMask.Name = "txtSubnetMask";
-            this.txtSubnetMask.Size = new System.Drawing.Size(250, 21);
+            this.txtSubnetMask.Size = new System.Drawing.Size(250, 20);
             this.txtSubnetMask.TabIndex = 7;
             // 
             // groupBoxOptions
@@ -214,6 +219,7 @@
             // 
             // groupBoxTools
             // 
+            this.groupBoxTools.Controls.Add(this.btnInstallRuntime);
             this.groupBoxTools.Controls.Add(this.btnEditConfig);
             this.groupBoxTools.Controls.Add(this.btnClearCache);
             this.groupBoxTools.Location = new System.Drawing.Point(15, 317);
@@ -222,6 +228,16 @@
             this.groupBoxTools.TabIndex = 9;
             this.groupBoxTools.TabStop = false;
             this.groupBoxTools.Text = "工具";
+            // 
+            // btnInstallRuntime
+            // 
+            this.btnInstallRuntime.Location = new System.Drawing.Point(164, 27);
+            this.btnInstallRuntime.Name = "btnInstallRuntime";
+            this.btnInstallRuntime.Size = new System.Drawing.Size(158, 28);
+            this.btnInstallRuntime.TabIndex = 2;
+            this.btnInstallRuntime.Text = "安装运行库";
+            this.btnInstallRuntime.UseVisualStyleBackColor = true;
+            this.btnInstallRuntime.Click += new System.EventHandler(this.btnInstallRuntime_Click);
             // 
             // btnEditConfig
             // 
@@ -237,7 +253,7 @@
             // 
             this.btnClearCache.Location = new System.Drawing.Point(17, 27);
             this.btnClearCache.Name = "btnClearCache";
-            this.btnClearCache.Size = new System.Drawing.Size(305, 28);
+            this.btnClearCache.Size = new System.Drawing.Size(141, 28);
             this.btnClearCache.TabIndex = 0;
             this.btnClearCache.Text = "清除 data_mods 缓存";
             this.btnClearCache.UseVisualStyleBackColor = true;
@@ -254,8 +270,8 @@
             // 
             // txtLogOutput
             // 
-            this.txtLogOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
+            this.txtLogOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+            | System.Windows.Forms.AnchorStyles.Left)
             | System.Windows.Forms.AnchorStyles.Right)));
             this.txtLogOutput.Location = new System.Drawing.Point(381, 52);
             this.txtLogOutput.Multiline = true;
@@ -276,25 +292,39 @@
             // 
             // txtPcbId
             // 
+            this.txtPcbId.FormattingEnabled = true;
             this.txtPcbId.Location = new System.Drawing.Point(114, 61);
             this.txtPcbId.Name = "txtPcbId";
-            this.txtPcbId.Size = new System.Drawing.Size(250, 21);
+            this.txtPcbId.Size = new System.Drawing.Size(250, 20);
             this.txtPcbId.TabIndex = 3;
             // 
             // groupBoxCompatLayer
             // 
+            this.groupBoxCompatLayer.Controls.Add(this.lblCompatStatus);
             this.groupBoxCompatLayer.Controls.Add(this.btnUnloadCompat);
             this.groupBoxCompatLayer.Controls.Add(this.btnLoadCompat);
             this.groupBoxCompatLayer.Location = new System.Drawing.Point(15, 423);
             this.groupBoxCompatLayer.Name = "groupBoxCompatLayer";
-            this.groupBoxCompatLayer.Size = new System.Drawing.Size(349, 80);
+            this.groupBoxCompatLayer.Size = new System.Drawing.Size(349, 90);
             this.groupBoxCompatLayer.TabIndex = 10;
             this.groupBoxCompatLayer.TabStop = false;
             this.groupBoxCompatLayer.Text = "AMD/Intel 兼容层";
+            this.groupBoxCompatLayer.Enter += new System.EventHandler(this.groupBoxCompatLayer_Enter);
+            // 
+            // lblCompatStatus
+            // 
+            this.lblCompatStatus.AutoSize = true;
+            this.lblCompatStatus.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Bold);
+            this.lblCompatStatus.Location = new System.Drawing.Point(17, 65);
+            this.lblCompatStatus.Name = "lblCompatStatus";
+            this.lblCompatStatus.Size = new System.Drawing.Size(63, 12);
+            this.lblCompatStatus.TabIndex = 2;
+            this.lblCompatStatus.Text = "● 未载入";
+            this.lblCompatStatus.ForeColor = System.Drawing.Color.Red;
             // 
             // btnUnloadCompat
             // 
-            this.btnUnloadCompat.Location = new System.Drawing.Point(180, 29);
+            this.btnUnloadCompat.Location = new System.Drawing.Point(180, 20);
             this.btnUnloadCompat.Name = "btnUnloadCompat";
             this.btnUnloadCompat.Size = new System.Drawing.Size(142, 33);
             this.btnUnloadCompat.TabIndex = 1;
@@ -304,7 +334,7 @@
             // 
             // btnLoadCompat
             // 
-            this.btnLoadCompat.Location = new System.Drawing.Point(17, 29);
+            this.btnLoadCompat.Location = new System.Drawing.Point(17, 20);
             this.btnLoadCompat.Name = "btnLoadCompat";
             this.btnLoadCompat.Size = new System.Drawing.Size(142, 33);
             this.btnLoadCompat.TabIndex = 0;
@@ -385,6 +415,7 @@
             this.groupBoxOptions.PerformLayout();
             this.groupBoxTools.ResumeLayout(false);
             this.groupBoxCompatLayer.ResumeLayout(false);
+            this.groupBoxCompatLayer.PerformLayout();
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
             this.menuStrip1.ResumeLayout(false);
@@ -397,11 +428,11 @@
         #endregion
 
         private System.Windows.Forms.Label lblEaServer;
-        private System.Windows.Forms.TextBox txtEaServer;
+        private System.Windows.Forms.ComboBox txtEaServer;
         private System.Windows.Forms.Label lblNetworkIp;
-        private System.Windows.Forms.TextBox txtNetworkIp;
+        private System.Windows.Forms.ComboBox txtNetworkIp;
         private System.Windows.Forms.Label lblSubnetMask;
-        private System.Windows.Forms.TextBox txtSubnetMask;
+        private System.Windows.Forms.ComboBox txtSubnetMask;
         private System.Windows.Forms.GroupBox groupBoxOptions;
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.CheckBox chkNetDump;
@@ -411,13 +442,15 @@
         private System.Windows.Forms.ComboBox cmbRotation;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.GroupBox groupBoxTools;
+        private System.Windows.Forms.Button btnInstallRuntime;
         private System.Windows.Forms.Button btnEditConfig;
         private System.Windows.Forms.Button btnClearCache;
         private System.Windows.Forms.Label lblLogOutput;
         private System.Windows.Forms.TextBox txtLogOutput;
         private System.Windows.Forms.Label lblPcbId;
-        private System.Windows.Forms.TextBox txtPcbId;
+        private System.Windows.Forms.ComboBox txtPcbId;
         private System.Windows.Forms.GroupBox groupBoxCompatLayer;
+        private System.Windows.Forms.Label lblCompatStatus;
         private System.Windows.Forms.Button btnUnloadCompat;
         private System.Windows.Forms.Button btnLoadCompat;
         private System.Windows.Forms.StatusStrip statusStrip1;

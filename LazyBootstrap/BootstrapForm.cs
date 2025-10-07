@@ -1,5 +1,6 @@
 ﻿// written by Arkito aka Takanashi Ryo with Gemini, only release in SDVX Lazy Pack.
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -13,6 +14,7 @@ namespace LazyBootstrap
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
         private bool _isExpertMode = false; // Status of Expert Mode
+        private const int MAX_HISTORY_ITEMS = 10; // 最大历史记录数量
 
         public BootstrapForm()
         {
@@ -24,6 +26,7 @@ namespace LazyBootstrap
             InitializeCustomComponents();
             Log("本包体免费，如果你是付费获取的，请窒息");
             LoadSettings();
+            LoadHistoryItems(); // 加载历史记录
         }
 
         private void InitializeCustomComponents()
@@ -38,7 +41,108 @@ namespace LazyBootstrap
                 statusLabel.Text = "就绪";
             }
             this.FormClosing += Bootstrap_FormClosing;
+
+            // 初始化兼容层状态
+            UpdateCompatLayerStatus();
         }
+
+        // 加载历史记录
+        private void LoadHistoryItems()
+        {
+            try
+            {
+                // 加载 EA 服务器历史
+                LoadComboBoxHistory(txtEaServer, "History", "eaURL");
+
+                // 加载 PCBID 历史
+                LoadComboBoxHistory(txtPcbId, "History", "pcbid");
+
+                // 加载网络 IP 历史
+                LoadComboBoxHistory(txtNetworkIp, "History", "networkip");
+
+                // 加载子网掩码历史
+                LoadComboBoxHistory(txtSubnetMask, "History", "subnet");
+            }
+            catch (Exception ex)
+            {
+                Log($"加载历史记录时出错: {ex.Message}");
+            }
+        }
+
+        // 从配置文件加载 ComboBox 的历史记录
+        private void LoadComboBoxHistory(ComboBox comboBox, string section, string keyPrefix)
+        {
+            comboBox.Items.Clear();
+            for (int i = 0; i < MAX_HISTORY_ITEMS; i++)
+            {
+                string value = _configFile.ReadString(section, $"{keyPrefix}_{i}", "");
+                if (!string.IsNullOrWhiteSpace(value))
+                {
+                    comboBox.Items.Add(value);
+                }
+            }
+        }
+
+        // 保存历史记录
+        private void SaveHistoryItems()
+        {
+            try
+            {
+                // 保存 EA 服务器历史
+                SaveComboBoxHistory(txtEaServer, "History", "eaURL");
+
+                // 保存 PCBID 历史
+                SaveComboBoxHistory(txtPcbId, "History", "pcbid");
+
+                // 保存网络 IP 历史
+                SaveComboBoxHistory(txtNetworkIp, "History", "networkip");
+
+                // 保存子网掩码历史
+                SaveComboBoxHistory(txtSubnetMask, "History", "subnet");
+            }
+            catch (Exception ex)
+            {
+                Log($"保存历史记录时出错: {ex.Message}");
+            }
+        }
+
+        // 保存 ComboBox 的历史记录到配置文件
+        private void SaveComboBoxHistory(ComboBox comboBox, string section, string keyPrefix)
+        {
+            // 获取当前输入值
+            string currentText = comboBox.Text.Trim();
+
+            // 创建新的历史列表
+            List<string> historyList = new List<string>();
+
+            // 如果当前有输入且不为空，添加到列表首位
+            if (!string.IsNullOrWhiteSpace(currentText))
+            {
+                historyList.Add(currentText);
+            }
+
+            // 添加现有的历史记录（排除重复项和当前输入）
+            foreach (var item in comboBox.Items)
+            {
+                string itemText = item.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(itemText) &&
+                    itemText != currentText &&
+                    !historyList.Contains(itemText))
+                {
+                    historyList.Add(itemText);
+                    if (historyList.Count >= MAX_HISTORY_ITEMS)
+                        break;
+                }
+            }
+
+            // 保存到配置文件
+            for (int i = 0; i < MAX_HISTORY_ITEMS; i++)
+            {
+                string value = i < historyList.Count ? historyList[i] : "";
+                _configFile.WriteString(section, $"{keyPrefix}_{i}", value);
+            }
+        }
+
         private void LoadSettings()
         {
             try
@@ -72,9 +176,12 @@ namespace LazyBootstrap
 
                 _configFile.WriteString("Settings", "expertmode", _isExpertMode.ToString());
 
+                // 保存历史记录
+                SaveHistoryItems();
+
                 Log("Saved to config.ini");
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 Log($"加载出错{ex.Message}");
             }
@@ -84,7 +191,8 @@ namespace LazyBootstrap
         {
             _isExpertMode = expertModeMenuItem.Checked;
 
-            if (_isExpertMode) {
+            if (_isExpertMode)
+            {
                 MessageBox.Show(
                     "专家模式已开启！\n \n 在此模式下：\n1. 游戏将不会使用懒人预设配置，全部需要在spicecfg中手动设定\n2. 配置随游戏保存的功能失效，配置文件将写入当前电脑",
                     "专家模式：On",
@@ -121,6 +229,53 @@ namespace LazyBootstrap
             }
         }
 
+        // 检查兼容层是否已载入
+        private int GetCompatLayerFileCount()
+        {
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string modulesDir = Path.Combine(baseDir, "contents", "modules");
+            string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
+
+            int foundCount = 0;
+            foreach (var fileName in compatFiles)
+            {
+                string filePath = Path.Combine(modulesDir, fileName);
+                if (File.Exists(filePath))
+                {
+                    foundCount++;
+                }
+            }
+
+            return foundCount;
+        }
+
+        // 更新兼容层状态指示器
+        private void UpdateCompatLayerStatus()
+        {
+            if (lblCompatStatus == null) return;
+
+            int fileCount = GetCompatLayerFileCount();
+
+            if (fileCount == 4)
+            {
+                // 所有文件都存在
+                lblCompatStatus.Text = "● 已载入";
+                lblCompatStatus.ForeColor = System.Drawing.Color.Green;
+            }
+            else if (fileCount >= 1 && fileCount <= 3)
+            {
+                // 部分文件存在
+                lblCompatStatus.Text = "● 已载入，但可能不完整";
+                lblCompatStatus.ForeColor = System.Drawing.Color.Orange;
+            }
+            else
+            {
+                // 没有文件
+                lblCompatStatus.Text = "● 未载入";
+                lblCompatStatus.ForeColor = System.Drawing.Color.Red;
+            }
+        }
+
         // Boot
         private async void btnStart_Click(object sender, EventArgs e)
         {
@@ -142,7 +297,7 @@ namespace LazyBootstrap
                 if (!chkNoAsphyxia.Checked)
                 {
                     Log("\n正在启动 Asphyxia Core...");
-                    string asphyxiaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "asphyxia","asphyxia-core-x64.exe");
+                    string asphyxiaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "asphyxia", "asphyxia-core-x64.exe");
                     if (File.Exists(asphyxiaPath))
                     {
                         var asphyxiaStartInfo = new ProcessStartInfo
@@ -205,7 +360,7 @@ namespace LazyBootstrap
                 Log("\n正在启动游戏...");
                 Log($"  - 启动参数: {argsBuilder.ToString()}");
 
-                string spicePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents","spice64.exe");
+                string spicePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spice64.exe");
                 if (!File.Exists(spicePath))
                 {
                     Log($"\n错误: 未找到游戏主程序, 路径: {spicePath}");
@@ -338,7 +493,7 @@ namespace LazyBootstrap
         // Clear ifs_hook cache
         private void btnClearCache_Click(object sender, EventArgs e)
         {
-            string cachePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents","data_mods","_cache");
+            string cachePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "data_mods", "_cache");
             try
             {
                 if (Directory.Exists(cachePath))
@@ -354,6 +509,61 @@ namespace LazyBootstrap
             catch (Exception ex)
             {
                 MessageBox.Show($"清除缓存失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // Install Runtime
+        private void btnInstallRuntime_Click(object sender, EventArgs e)
+        {
+            string runtimePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtime");
+            string installBatPath = Path.Combine(runtimePath, "install.bat");
+
+            try
+            {
+                if (!File.Exists(installBatPath))
+                {
+                    MessageBox.Show($"未找到安装脚本: {installBatPath}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Log($"错误: 未找到 runtime/install.bat");
+                    return;
+                }
+
+                Log("\n正在安装 Runtime 组件...");
+                Log($"  - 执行脚本: {installBatPath}");
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = installBatPath,
+                    WorkingDirectory = runtimePath,
+                    UseShellExecute = true,
+                    Verb = "runas" // 以管理员权限运行
+                };
+
+                Process installProcess = Process.Start(startInfo);
+
+                if (installProcess != null)
+                {
+                    Log("Runtime 安装程序已启动，请按照提示完成安装。");
+                    MessageBox.Show("Runtime 安装程序已启动，请按照提示完成安装。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                // 用户取消了UAC提示
+                if (ex.NativeErrorCode == 1223)
+                {
+                    Log("用户取消了 Runtime 安装。");
+                    MessageBox.Show("已取消安装。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                else
+                {
+                    Log($"启动 Runtime 安装失败: {ex.Message}");
+                    MessageBox.Show($"启动安装失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"启动 Runtime 安装时发生错误: {ex.Message}");
+                MessageBox.Show($"启动安装失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -393,12 +603,14 @@ namespace LazyBootstrap
         // NVIDIA API,dxvk Library Load
         private void btnLoadCompat_Click(object sender, EventArgs e)
         {
-            MoveCompatFiles(Path.Combine("contents","lazy", "stubs"), Path.Combine("contents", "modules"), "载入");
+            MoveCompatFiles(Path.Combine("contents", "lazy", "stubs"), Path.Combine("contents", "modules"), "载入");
+            UpdateCompatLayerStatus();
         }
 
         private void btnUnloadCompat_Click(object sender, EventArgs e)
         {
-            MoveCompatFiles(Path.Combine("contents", "modules"), Path.Combine("contents","lazy", "stubs"), "卸载");
+            MoveCompatFiles(Path.Combine("contents", "modules"), Path.Combine("contents", "lazy", "stubs"), "卸载");
+            UpdateCompatLayerStatus();
         }
 
         private void MoveCompatFiles(string sourceDirRel, string destDirRel, string operationName)
@@ -457,6 +669,10 @@ namespace LazyBootstrap
             {
                 MessageBox.Show($"{operationName}失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+            finally
+            {
+                UpdateCompatLayerStatus();
+            }
         }
 
         // Kill process when exit bootstrap
@@ -466,7 +682,7 @@ namespace LazyBootstrap
             try
             {
                 if (_gameProcess != null && !_gameProcess.HasExited)
-                _gameProcess.Kill();
+                    _gameProcess.Kill();
             }
             catch (Exception) { /* ignored */ }
         }
