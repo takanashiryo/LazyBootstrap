@@ -26,7 +26,6 @@ namespace LazyBootstrap
             InitializeCustomComponents();
             Log("本包体免费，如果你是付费获取的，请窒息");
             LoadSettings();
-            LoadHistoryItems(); // 加载历史记录
         }
 
         private void InitializeCustomComponents()
@@ -45,113 +44,11 @@ namespace LazyBootstrap
             UpdateCompatLayerStatus();
         }
 
-        // 加载历史记录
-        private void LoadHistoryItems()
-        {
-            try
-            {
-                // 加载 EA 服务器历史
-                LoadComboBoxHistory(txtEaServer, "History", "eaURL");
-
-                // 加载 PCBID 历史
-                LoadComboBoxHistory(txtPcbId, "History", "pcbid");
-
-                // 加载网络 IP 历史
-                LoadComboBoxHistory(txtNetworkIp, "History", "networkip");
-
-                // 加载子网掩码历史
-                LoadComboBoxHistory(txtSubnetMask, "History", "subnet");
-            }
-            catch (Exception ex)
-            {
-                Log($"加载历史记录时出错: {ex.Message}");
-            }
-        }
-
-        // 从配置文件加载 ComboBox 的历史记录
-        private void LoadComboBoxHistory(ComboBox comboBox, string section, string keyPrefix)
-        {
-            comboBox.Items.Clear();
-            for (int i = 0; i < MAX_HISTORY_ITEMS; i++)
-            {
-                string value = _configFile.ReadString(section, $"{keyPrefix}_{i}", "");
-                if (!string.IsNullOrWhiteSpace(value))
-                {
-                    comboBox.Items.Add(value);
-                }
-            }
-        }
-
-        // 保存历史记录
-        private void SaveHistoryItems()
-        {
-            try
-            {
-                // 保存 EA 服务器历史
-                SaveComboBoxHistory(txtEaServer, "History", "eaURL");
-
-                // 保存 PCBID 历史
-                SaveComboBoxHistory(txtPcbId, "History", "pcbid");
-
-                // 保存网络 IP 历史
-                SaveComboBoxHistory(txtNetworkIp, "History", "networkip");
-
-                // 保存子网掩码历史
-                SaveComboBoxHistory(txtSubnetMask, "History", "subnet");
-            }
-            catch (Exception ex)
-            {
-                Log($"保存历史记录时出错: {ex.Message}");
-            }
-        }
-
-        // 保存 ComboBox 的历史记录到配置文件
-        private void SaveComboBoxHistory(ComboBox comboBox, string section, string keyPrefix)
-        {
-            // 获取当前输入值
-            string currentText = comboBox.Text.Trim();
-
-            // 创建新的历史列表
-            List<string> historyList = new List<string>();
-
-            // 如果当前有输入且不为空，添加到列表首位
-            if (!string.IsNullOrWhiteSpace(currentText))
-            {
-                historyList.Add(currentText);
-            }
-
-            // 添加现有的历史记录（排除重复项和当前输入）
-            foreach (var item in comboBox.Items)
-            {
-                string itemText = item.ToString().Trim();
-                if (!string.IsNullOrWhiteSpace(itemText) &&
-                    itemText != currentText &&
-                    !historyList.Contains(itemText))
-                {
-                    historyList.Add(itemText);
-                    if (historyList.Count >= MAX_HISTORY_ITEMS)
-                        break;
-                }
-            }
-
-            // 保存到配置文件
-            for (int i = 0; i < MAX_HISTORY_ITEMS; i++)
-            {
-                string value = i < historyList.Count ? historyList[i] : "";
-                _configFile.WriteString(section, $"{keyPrefix}_{i}", value);
-            }
-        }
 
         private void LoadSettings()
         {
             try
             {
-                // load from config
-                txtEaServer.Text = _configFile.ReadString("Settings", "eaURL", "http://localhost:8083");
-                txtPcbId.Text = _configFile.ReadString("Settings", "pcbid", "");
-                txtNetworkIp.Text = _configFile.ReadString("Settings", "networkip", "");
-                txtSubnetMask.Text = _configFile.ReadString("Settings", "subnet", "");
-
                 // 加载预配置选项
                 string usePreconfigStr = _configFile.ReadString("Settings", "usepreconfig", "true");
                 if (!bool.TryParse(usePreconfigStr, out _usePreconfig))
@@ -179,11 +76,6 @@ namespace LazyBootstrap
         {
             try
             {
-                _configFile.WriteString("Settings", "eaURL", txtEaServer.Text);
-                _configFile.WriteString("Settings", "pcbid", txtPcbId.Text);
-                _configFile.WriteString("Settings", "networkip", txtNetworkIp.Text);
-                _configFile.WriteString("Settings", "subnet", txtSubnetMask.Text);
-
                 _configFile.WriteString("Settings", "usepreconfig", _usePreconfig.ToString());
 
                 // 保存其他启动选项
@@ -191,9 +83,6 @@ namespace LazyBootstrap
                 _configFile.WriteString("Settings", "pcoreopt", chkPCoreOptimization.Checked.ToString());
                 _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString());
                 _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString());
-
-                // 保存历史记录
-                SaveHistoryItems();
 
                 Log("Saved to config.ini");
             }
@@ -213,12 +102,7 @@ namespace LazyBootstrap
         // 根据预配置模式更新UI
         private void UpdateUiForPreconfigMode()
         {
-            // 取消勾选时不再隐藏配置输入框，只调整布局位置
-            // 配置输入框始终保持可见
-
-            // 根据是否使用预配置，调整下方控件组的位置
-            // 无论哪种模式，都保持启动选项组在同一位置
-            groupBoxOptions.Location = new System.Drawing.Point(15, 142);
+            // 无需调整UI位置
         }
 
         // 检查兼容层文件数量
@@ -335,44 +219,6 @@ namespace LazyBootstrap
                     argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
                     argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
                     argsBuilder.Append("-modules modules ");
-                    argsBuilder.Append("-cmdoverride ");
-
-                    string eaURL = string.IsNullOrWhiteSpace(txtEaServer.Text) ? "http://localhost:8083" : txtEaServer.Text;
-                    argsBuilder.Append($"-url {eaURL} ");
-
-                    if (this.Controls.ContainsKey("txtPcbId") && !string.IsNullOrWhiteSpace(txtPcbId.Text))
-                    {
-                        argsBuilder.Append($"-p {txtPcbId.Text.Trim()} ");
-                    }
-                    if (!string.IsNullOrWhiteSpace(txtNetworkIp.Text))
-                    {
-                        argsBuilder.Append($"-network {txtNetworkIp.Text} ");
-                    }
-                    if (!string.IsNullOrWhiteSpace(txtSubnetMask.Text))
-                    {
-                        argsBuilder.Append($"-subnet {txtSubnetMask.Text} ");
-                    }
-                }
-                else
-                {
-                    // 专家模式：不使用预配置文件，但仍然传递配置参数
-                    argsBuilder.Append("-cmdoverride ");
-
-                    string eaURL = string.IsNullOrWhiteSpace(txtEaServer.Text) ? "http://localhost:8083" : txtEaServer.Text;
-                    argsBuilder.Append($"-url {eaURL} ");
-
-                    if (this.Controls.ContainsKey("txtPcbId") && !string.IsNullOrWhiteSpace(txtPcbId.Text))
-                    {
-                        argsBuilder.Append($"-p {txtPcbId.Text.Trim()} ");
-                    }
-                    if (!string.IsNullOrWhiteSpace(txtNetworkIp.Text))
-                    {
-                        argsBuilder.Append($"-network {txtNetworkIp.Text} ");
-                    }
-                    if (!string.IsNullOrWhiteSpace(txtSubnetMask.Text))
-                    {
-                        argsBuilder.Append($"-subnet {txtSubnetMask.Text} ");
-                    }
                 }
 
                 if (chkWindowed.Checked)

@@ -19,12 +19,6 @@
         {
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BootstrapForm));
-            this.lblEaServer = new System.Windows.Forms.Label();
-            this.txtEaServer = new System.Windows.Forms.ComboBox();
-            this.lblNetworkIp = new System.Windows.Forms.Label();
-            this.txtNetworkIp = new System.Windows.Forms.ComboBox();
-            this.lblSubnetMask = new System.Windows.Forms.Label();
-            this.txtSubnetMask = new System.Windows.Forms.ComboBox();
             this.groupBoxOptions = new System.Windows.Forms.GroupBox();
             this.btnKillProcesses = new System.Windows.Forms.Button();
             this.chkNoRestoreRotation = new System.Windows.Forms.CheckBox();
@@ -45,8 +39,6 @@
             this.btnClearCache = new System.Windows.Forms.Button();
             this.lblLogOutput = new System.Windows.Forms.Label();
             this.txtLogOutput = new System.Windows.Forms.TextBox();
-            this.lblPcbId = new System.Windows.Forms.Label();
-            this.txtPcbId = new System.Windows.Forms.ComboBox();
             this.groupBoxCompatLayer = new System.Windows.Forms.GroupBox();
             this.lblCompatStatus = new System.Windows.Forms.Label();
             this.btnUnloadCompat = new System.Windows.Forms.Button();
@@ -60,67 +52,10 @@
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
-            // lblEaServer
-            // 
-            this.lblEaServer.AutoSize = true;
-            this.lblEaServer.Location = new System.Drawing.Point(13, 37);
-            this.lblEaServer.Name = "lblEaServer";
-            this.lblEaServer.Size = new System.Drawing.Size(89, 12);
-            this.lblEaServer.TabIndex = 0;
-            this.lblEaServer.Text = "EA服务器地址：";
-            this.toolTip0.SetToolTip(this.lblEaServer, "填写e-Amusement服务器地址，强制覆盖，无论spicecfg是否配置");
-            // 
-            // txtEaServer
-            // 
-            this.txtEaServer.FormattingEnabled = true;
-            this.txtEaServer.Location = new System.Drawing.Point(133, 34);
-            this.txtEaServer.Name = "txtEaServer";
-            this.txtEaServer.Size = new System.Drawing.Size(250, 20);
-            this.txtEaServer.TabIndex = 1;
-            this.toolTip0.SetToolTip(this.txtEaServer, "填写e-Amusement服务器地址，强制覆盖，无论spicecfg是否配置");
-            // 
-            // lblNetworkIp
-            // 
-            this.lblNetworkIp.AutoSize = true;
-            this.lblNetworkIp.Location = new System.Drawing.Point(13, 91);
-            this.lblNetworkIp.Name = "lblNetworkIp";
-            this.lblNetworkIp.Size = new System.Drawing.Size(77, 12);
-            this.lblNetworkIp.TabIndex = 4;
-            this.lblNetworkIp.Text = "友人对战IP：";
-            this.toolTip0.SetToolTip(this.lblNetworkIp, "填写Radmin，Zerotier等虚拟局域网的网卡IP，强制覆盖，无论spicecfg是否配置");
-            // 
-            // txtNetworkIp
-            // 
-            this.txtNetworkIp.FormattingEnabled = true;
-            this.txtNetworkIp.Location = new System.Drawing.Point(133, 88);
-            this.txtNetworkIp.Name = "txtNetworkIp";
-            this.txtNetworkIp.Size = new System.Drawing.Size(250, 20);
-            this.txtNetworkIp.TabIndex = 5;
-            this.toolTip0.SetToolTip(this.txtNetworkIp, "填写Radmin，Zerotier等虚拟局域网的网卡IP，强制覆盖，无论spicecfg是否配置");
-            // 
-            // lblSubnetMask
-            // 
-            this.lblSubnetMask.AutoSize = true;
-            this.lblSubnetMask.Location = new System.Drawing.Point(13, 118);
-            this.lblSubnetMask.Name = "lblSubnetMask";
-            this.lblSubnetMask.Size = new System.Drawing.Size(113, 12);
-            this.lblSubnetMask.TabIndex = 6;
-            this.lblSubnetMask.Text = "友人对战子网掩码：";
-            this.toolTip0.SetToolTip(this.lblSubnetMask, "填写Radmin，Zerotier等虚拟局域网的网卡子网掩码，强制覆盖，无论spicecfg是否配置");
-            // 
-            // txtSubnetMask
-            // 
-            this.txtSubnetMask.FormattingEnabled = true;
-            this.txtSubnetMask.Location = new System.Drawing.Point(133, 115);
-            this.txtSubnetMask.Name = "txtSubnetMask";
-            this.txtSubnetMask.Size = new System.Drawing.Size(250, 20);
-            this.txtSubnetMask.TabIndex = 7;
-            this.toolTip0.SetToolTip(this.txtSubnetMask, "填写Radmin，Zerotier等虚拟局域网的网卡子网掩码，强制覆盖，无论spicecfg是否配置");
-            // 
             // groupBoxOptions
             // 
-            this.groupBoxOptions.Controls.Add(this.btnKillProcesses);
             this.groupBoxOptions.Controls.Add(this.chkNoRestoreRotation);
+            this.groupBoxOptions.Controls.Add(this.btnEditConfig);
             this.groupBoxOptions.Controls.Add(this.btnSwitchRotation);
             this.groupBoxOptions.Controls.Add(this.cmbRotation);
             this.groupBoxOptions.Controls.Add(this.label2);
@@ -132,7 +67,7 @@
             this.groupBoxOptions.Controls.Add(this.chkNoAsphyxia);
             this.groupBoxOptions.Controls.Add(this.chkWindowed);
             this.groupBoxOptions.Controls.Add(this.btnStart);
-            this.groupBoxOptions.Location = new System.Drawing.Point(15, 142);
+            this.groupBoxOptions.Location = new System.Drawing.Point(15, 34);
             this.groupBoxOptions.Name = "groupBoxOptions";
             this.groupBoxOptions.Size = new System.Drawing.Size(368, 195);
             this.groupBoxOptions.TabIndex = 8;
@@ -142,9 +77,9 @@
             // btnKillProcesses
             // 
             this.btnKillProcesses.Font = new System.Drawing.Font("宋体", 9F);
-            this.btnKillProcesses.Location = new System.Drawing.Point(17, 125);
+            this.btnKillProcesses.Location = new System.Drawing.Point(34, 296);
             this.btnKillProcesses.Name = "btnKillProcesses";
-            this.btnKillProcesses.Size = new System.Drawing.Size(125, 58);
+            this.btnKillProcesses.Size = new System.Drawing.Size(330, 27);
             this.btnKillProcesses.TabIndex = 8;
             this.btnKillProcesses.Text = "结束所有进程";
             this.toolTip0.SetToolTip(this.btnKillProcesses, "强制结束所有游戏相关进程");
@@ -279,9 +214,8 @@
             // groupBoxTools
             // 
             this.groupBoxTools.Controls.Add(this.btnInstallRuntime);
-            this.groupBoxTools.Controls.Add(this.btnEditConfig);
             this.groupBoxTools.Controls.Add(this.btnClearCache);
-            this.groupBoxTools.Location = new System.Drawing.Point(15, 343);
+            this.groupBoxTools.Location = new System.Drawing.Point(15, 235);
             this.groupBoxTools.Name = "groupBoxTools";
             this.groupBoxTools.Size = new System.Drawing.Size(368, 100);
             this.groupBoxTools.TabIndex = 9;
@@ -300,11 +234,11 @@
             // 
             // btnEditConfig
             // 
-            this.btnEditConfig.Location = new System.Drawing.Point(17, 61);
+            this.btnEditConfig.Location = new System.Drawing.Point(19, 137);
             this.btnEditConfig.Name = "btnEditConfig";
-            this.btnEditConfig.Size = new System.Drawing.Size(332, 28);
+            this.btnEditConfig.Size = new System.Drawing.Size(125, 43);
             this.btnEditConfig.TabIndex = 1;
-            this.btnEditConfig.Text = "启动 spicecfg";
+            this.btnEditConfig.Text = "编辑 spicecfg";
             this.toolTip0.SetToolTip(this.btnEditConfig, "如果你勾选了“使用预配置文件”，则会编辑预配置文件");
             this.btnEditConfig.UseVisualStyleBackColor = true;
             this.btnEditConfig.Click += new System.EventHandler(this.btnEditConfig_Click);
@@ -333,39 +267,20 @@
             this.txtLogOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
-            this.txtLogOutput.Location = new System.Drawing.Point(394, 52);
+            this.txtLogOutput.Location = new System.Drawing.Point(394, 54);
             this.txtLogOutput.Multiline = true;
             this.txtLogOutput.Name = "txtLogOutput";
             this.txtLogOutput.ReadOnly = true;
             this.txtLogOutput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtLogOutput.Size = new System.Drawing.Size(378, 497);
+            this.txtLogOutput.Size = new System.Drawing.Size(378, 376);
             this.txtLogOutput.TabIndex = 12;
-            // 
-            // lblPcbId
-            // 
-            this.lblPcbId.AutoSize = true;
-            this.lblPcbId.Location = new System.Drawing.Point(13, 64);
-            this.lblPcbId.Name = "lblPcbId";
-            this.lblPcbId.Size = new System.Drawing.Size(47, 12);
-            this.lblPcbId.TabIndex = 2;
-            this.lblPcbId.Text = "PCBID：";
-            this.toolTip0.SetToolTip(this.lblPcbId, "强制覆盖，无论spicecfg是否配置");
-            // 
-            // txtPcbId
-            // 
-            this.txtPcbId.FormattingEnabled = true;
-            this.txtPcbId.Location = new System.Drawing.Point(133, 61);
-            this.txtPcbId.Name = "txtPcbId";
-            this.txtPcbId.Size = new System.Drawing.Size(250, 20);
-            this.txtPcbId.TabIndex = 3;
-            this.toolTip0.SetToolTip(this.txtPcbId, "强制覆盖，无论spicecfg是否配置");
             // 
             // groupBoxCompatLayer
             // 
             this.groupBoxCompatLayer.Controls.Add(this.lblCompatStatus);
             this.groupBoxCompatLayer.Controls.Add(this.btnUnloadCompat);
             this.groupBoxCompatLayer.Controls.Add(this.button1);
-            this.groupBoxCompatLayer.Location = new System.Drawing.Point(15, 449);
+            this.groupBoxCompatLayer.Location = new System.Drawing.Point(15, 341);
             this.groupBoxCompatLayer.Name = "groupBoxCompatLayer";
             this.groupBoxCompatLayer.Size = new System.Drawing.Size(368, 90);
             this.groupBoxCompatLayer.TabIndex = 10;
@@ -408,7 +323,7 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusLabel});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 552);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 442);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(784, 22);
             this.statusStrip1.SizingGrip = false;
@@ -425,21 +340,14 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(784, 574);
+            this.ClientSize = new System.Drawing.Size(784, 464);
+            this.Controls.Add(this.btnKillProcesses);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.groupBoxCompatLayer);
-            this.Controls.Add(this.txtPcbId);
-            this.Controls.Add(this.lblPcbId);
             this.Controls.Add(this.txtLogOutput);
             this.Controls.Add(this.lblLogOutput);
             this.Controls.Add(this.groupBoxTools);
             this.Controls.Add(this.groupBoxOptions);
-            this.Controls.Add(this.txtSubnetMask);
-            this.Controls.Add(this.lblSubnetMask);
-            this.Controls.Add(this.txtNetworkIp);
-            this.Controls.Add(this.lblNetworkIp);
-            this.Controls.Add(this.txtEaServer);
-            this.Controls.Add(this.lblEaServer);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
@@ -459,12 +367,6 @@
 
         #endregion
 
-        private System.Windows.Forms.Label lblEaServer;
-        private System.Windows.Forms.ComboBox txtEaServer;
-        private System.Windows.Forms.Label lblNetworkIp;
-        private System.Windows.Forms.ComboBox txtNetworkIp;
-        private System.Windows.Forms.Label lblSubnetMask;
-        private System.Windows.Forms.ComboBox txtSubnetMask;
         private System.Windows.Forms.GroupBox groupBoxOptions;
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.CheckBox chkUsePreconfig;
@@ -482,8 +384,6 @@
         private System.Windows.Forms.Button btnClearCache;
         private System.Windows.Forms.Label lblLogOutput;
         private System.Windows.Forms.TextBox txtLogOutput;
-        private System.Windows.Forms.Label lblPcbId;
-        private System.Windows.Forms.ComboBox txtPcbId;
         private System.Windows.Forms.GroupBox groupBoxCompatLayer;
         private System.Windows.Forms.Label lblCompatStatus;
         private System.Windows.Forms.Button btnUnloadCompat;
