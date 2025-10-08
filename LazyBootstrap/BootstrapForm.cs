@@ -13,7 +13,7 @@ namespace LazyBootstrap
     {
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
-        private bool _isExpertMode = false; // Status of Expert Mode
+        private bool _usePreconfig = true; // 是否使用预配置文件（默认勾选）
         private const int MAX_HISTORY_ITEMS = 10; // 最大历史记录数量
 
         public BootstrapForm()
@@ -32,10 +32,9 @@ namespace LazyBootstrap
         private void InitializeCustomComponents()
         {
             // 设置默认值和下拉列表项
-            //txtEaServer.Text = "http://localhost:8083";
             cmbRotation.Items.AddRange(new object[] { "0", "90", "180", "270" });
             cmbRotation.SelectedIndex = 0;
-            //statusLabel.Text = "就绪";
+
             if (this.Controls.Find("statusStrip1", true).Length > 0 && statusLabel != null)
             {
                 statusLabel.Text = "就绪";
@@ -152,10 +151,21 @@ namespace LazyBootstrap
                 txtPcbId.Text = _configFile.ReadString("Settings", "pcbid", "");
                 txtNetworkIp.Text = _configFile.ReadString("Settings", "networkip", "");
                 txtSubnetMask.Text = _configFile.ReadString("Settings", "subnet", "");
-                // check expert mode
-                _isExpertMode = bool.Parse(_configFile.ReadString("Settings", "expertmode", "false"));
-                expertModeMenuItem.Checked = _isExpertMode;
-                UpdateUiForExpertMode();
+
+                // 加载预配置选项
+                string usePreconfigStr = _configFile.ReadString("Settings", "usepreconfig", "true");
+                if (!bool.TryParse(usePreconfigStr, out _usePreconfig))
+                {
+                    _usePreconfig = true;
+                }
+                chkUsePreconfig.Checked = _usePreconfig;
+                UpdateUiForPreconfigMode();
+
+                // 加载其他启动选项
+                chkWindowed.Checked = bool.Parse(_configFile.ReadString("Settings", "windowed", "false"));
+                chkPCoreOptimization.Checked = bool.Parse(_configFile.ReadString("Settings", "pcoreopt", "false"));
+                chkNoAsphyxia.Checked = bool.Parse(_configFile.ReadString("Settings", "noasphyxia", "false"));
+                chkNoRestoreRotation.Checked = bool.Parse(_configFile.ReadString("Settings", "norestorerotation", "false"));
 
                 Log("Load config.ini");
             }
@@ -174,7 +184,13 @@ namespace LazyBootstrap
                 _configFile.WriteString("Settings", "networkip", txtNetworkIp.Text);
                 _configFile.WriteString("Settings", "subnet", txtSubnetMask.Text);
 
-                _configFile.WriteString("Settings", "expertmode", _isExpertMode.ToString());
+                _configFile.WriteString("Settings", "usepreconfig", _usePreconfig.ToString());
+
+                // 保存其他启动选项
+                _configFile.WriteString("Settings", "windowed", chkWindowed.Checked.ToString());
+                _configFile.WriteString("Settings", "pcoreopt", chkPCoreOptimization.Checked.ToString());
+                _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString());
+                _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString());
 
                 // 保存历史记录
                 SaveHistoryItems();
@@ -183,53 +199,29 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                Log($"加载出错{ex.Message}");
+                Log($"保存出错: {ex.Message}");
             }
         }
 
-        private void expertModeMenuItem_Click(object sender, EventArgs e)
+        // 使用预配置文件复选框事件
+        private void chkUsePreconfig_CheckedChanged(object sender, EventArgs e)
         {
-            _isExpertMode = expertModeMenuItem.Checked;
-
-            if (_isExpertMode)
-            {
-                MessageBox.Show(
-                    "专家模式已开启！\n \n 在此模式下：\n1. 游戏将不会使用懒人预设配置，全部需要在spicecfg中手动设定\n2. 配置随游戏保存的功能失效，配置文件将写入当前电脑",
-                    "专家模式：On",
-                    MessageBoxButtons.OK,
-                    MessageBoxIcon.Information
-                    );
-            }
-
-            UpdateUiForExpertMode();
+            _usePreconfig = chkUsePreconfig.Checked;
+            UpdateUiForPreconfigMode();
         }
 
-        private void UpdateUiForExpertMode()
+        // 根据预配置模式更新UI
+        private void UpdateUiForPreconfigMode()
         {
-            bool isNormalMode = !_isExpertMode;
+            // 取消勾选时不再隐藏配置输入框，只调整布局位置
+            // 配置输入框始终保持可见
 
-            // status of form
-            lblEaServer.Visible = isNormalMode;
-            txtEaServer.Visible = isNormalMode;
-            lblPcbId.Visible = isNormalMode;
-            txtPcbId.Visible = isNormalMode;
-            lblNetworkIp.Visible = isNormalMode;
-            txtNetworkIp.Visible = isNormalMode;
-            lblSubnetMask.Visible = isNormalMode;
-            txtSubnetMask.Visible = isNormalMode;
-
-            // 根据控件显隐，调整下方控件组的位置
-            if (_isExpertMode)
-            {
-                groupBoxOptions.Location = new System.Drawing.Point(15, 37);
-            }
-            else
-            {
-                groupBoxOptions.Location = new System.Drawing.Point(15, 142);
-            }
+            // 根据是否使用预配置，调整下方控件组的位置
+            // 无论哪种模式，都保持启动选项组在同一位置
+            groupBoxOptions.Location = new System.Drawing.Point(15, 142);
         }
 
-        // 检查兼容层是否已载入
+        // 检查兼容层文件数量
         private int GetCompatLayerFileCount()
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
@@ -300,12 +292,27 @@ namespace LazyBootstrap
                     string asphyxiaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "asphyxia", "asphyxia-core-x64.exe");
                     if (File.Exists(asphyxiaPath))
                     {
-                        var asphyxiaStartInfo = new ProcessStartInfo
+                        // 如果勾选了调试模式，使用 cmd.exe 启动以保持窗口打开
+                        if (chkAsphyxiaDebug.Checked)
                         {
-                            FileName = asphyxiaPath,
-                            //WindowStyle = ProcessWindowStyle.Minimized
-                        };
-                        Process.Start(asphyxiaStartInfo);
+                            var asphyxiaStartInfo = new ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = $"/k \"\"{asphyxiaPath}\" --dev\"",
+                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                            };
+                            Process.Start(asphyxiaStartInfo);
+                            Log("  - 使用调试模式启动（控制台窗口将保持打开）");
+                        }
+                        else
+                        {
+                            var asphyxiaStartInfo = new ProcessStartInfo
+                            {
+                                FileName = asphyxiaPath,
+                            };
+                            Process.Start(asphyxiaStartInfo);
+                        }
+
                         Log("Asphyxia Core 已启动。");
                     }
                     else
@@ -322,12 +329,33 @@ namespace LazyBootstrap
                 }
 
                 var argsBuilder = new StringBuilder();
-                if (!_isExpertMode)
+                if (_usePreconfig)
                 {
-                    // Spice2x launch args
+                    // Spice2x launch args（使用预配置）
                     argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
                     argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
                     argsBuilder.Append("-modules modules ");
+                    argsBuilder.Append("-cmdoverride ");
+
+                    string eaURL = string.IsNullOrWhiteSpace(txtEaServer.Text) ? "http://localhost:8083" : txtEaServer.Text;
+                    argsBuilder.Append($"-url {eaURL} ");
+
+                    if (this.Controls.ContainsKey("txtPcbId") && !string.IsNullOrWhiteSpace(txtPcbId.Text))
+                    {
+                        argsBuilder.Append($"-p {txtPcbId.Text.Trim()} ");
+                    }
+                    if (!string.IsNullOrWhiteSpace(txtNetworkIp.Text))
+                    {
+                        argsBuilder.Append($"-network {txtNetworkIp.Text} ");
+                    }
+                    if (!string.IsNullOrWhiteSpace(txtSubnetMask.Text))
+                    {
+                        argsBuilder.Append($"-subnet {txtSubnetMask.Text} ");
+                    }
+                }
+                else
+                {
+                    // 专家模式：不使用预配置文件，但仍然传递配置参数
                     argsBuilder.Append("-cmdoverride ");
 
                     string eaURL = string.IsNullOrWhiteSpace(txtEaServer.Text) ? "http://localhost:8083" : txtEaServer.Text;
@@ -354,6 +382,10 @@ namespace LazyBootstrap
                 if (chkNetDump.Checked)
                 {
                     argsBuilder.Append("-netdump ");
+                }
+                if (chkPCoreOptimization.Checked)
+                {
+                    argsBuilder.Append("-processefficiency pcores ");
                 }
 
                 // Booting
@@ -455,22 +487,96 @@ namespace LazyBootstrap
 
             foreach (Process p in processes)
             {
-                using (p)
+                try
+                {
+                    int pid = p.Id;
+
+                    // 先尝试正常终止
+                    p.Kill();
+
+                    // 等待进程退出，最多等待3秒
+                    if (!p.WaitForExit(3000))
+                    {
+                        // 如果3秒后还没退出，使用强制终止
+                        Log($"  - 进程 {processName} (PID: {pid}) 未响应，尝试强制终止...");
+
+                        try
+                        {
+                            // 使用 taskkill /F 强制终止
+                            ProcessStartInfo taskKillInfo = new ProcessStartInfo
+                            {
+                                FileName = "taskkill",
+                                Arguments = $"/F /PID {pid}",
+                                CreateNoWindow = true,
+                                UseShellExecute = false,
+                                RedirectStandardOutput = true,
+                                RedirectStandardError = true
+                            };
+
+                            using (Process taskKillProcess = Process.Start(taskKillInfo))
+                            {
+                                taskKillProcess.WaitForExit(2000);
+                            }
+
+                            Log($"  - 已强制结束进程: {processName}.exe (PID: {pid})");
+                        }
+                        catch (Exception ex)
+                        {
+                            Log($"  - 强制终止进程失败: {ex.Message}");
+                        }
+                    }
+                    else
+                    {
+                        Log($"  - 已结束进程: {processName}.exe (PID: {pid})");
+                    }
+
+                    count++;
+                }
+                catch (InvalidOperationException)
+                {
+                    Log($"  - 进程 {processName} 已退出，无需结束。");
+                }
+                catch (System.ComponentModel.Win32Exception ex)
+                {
+                    Log($"  - 结束进程 {processName} 时权限不足: {ex.Message}");
+
+                    // 尝试使用管理员权限的 taskkill
+                    try
+                    {
+                        ProcessStartInfo taskKillInfo = new ProcessStartInfo
+                        {
+                            FileName = "taskkill",
+                            Arguments = $"/F /IM {processName}.exe",
+                            CreateNoWindow = true,
+                            UseShellExecute = true,
+                            Verb = "runas" // 请求管理员权限
+                        };
+
+                        Process.Start(taskKillInfo);
+                        Log($"  - 已使用管理员权限尝试终止 {processName}");
+                    }
+                    catch (Exception ex2)
+                    {
+                        Log($"  - 管理员权限终止失败: {ex2.Message}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"  - 结束进程 {processName} 时出错: {ex.Message}");
+                }
+                finally
                 {
                     try
                     {
-                        int pid = p.Id;
-                        p.Kill();
-                        p.WaitForExit(5000); // 5 seconds
-                        count++;
-                        Log($"  - 已结束进程: {processName}.exe (PID: {pid})");
+                        if (p != null && !p.HasExited)
+                        {
+                            p.Dispose();
+                        }
                     }
-                    catch (Exception)
-                    {
-                        Log($"  - 进程 {processName} 已退出，无需结束。");
-                    }
+                    catch { }
                 }
             }
+
             return count;
         }
 
@@ -512,6 +618,38 @@ namespace LazyBootstrap
             }
         }
 
+        // Edit spicecfg
+        private void btnEditConfig_Click(object sender, EventArgs e)
+        {
+            string cfgToolPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spicecfg.exe");
+            string arguments = "";
+            if (_usePreconfig)
+            {
+                arguments = "-cfgpath lazy/spicetools.xml -patchcfgpath lazy/spicetools_patch_manager.json -modules modules";
+            }
+
+            try
+            {
+                if (!File.Exists(cfgToolPath))
+                {
+                    MessageBox.Show($"未找到编辑器: {cfgToolPath}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = cfgToolPath,
+                    Arguments = arguments,
+                    WorkingDirectory = Path.GetDirectoryName(cfgToolPath),
+                };
+
+                Process.Start(startInfo);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"启动编辑器失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
         // Install Runtime
         private void btnInstallRuntime_Click(object sender, EventArgs e)
         {
@@ -540,11 +678,11 @@ namespace LazyBootstrap
 
                 Process installProcess = Process.Start(startInfo);
 
-                if (installProcess != null)
-                {
-                    Log("Runtime 安装程序已启动，请按照提示完成安装。");
-                    MessageBox.Show("Runtime 安装程序已启动，请按照提示完成安装。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
+                //if (installProcess != null)
+                //{
+                //    Log("Runtime 安装程序已启动，请按照提示完成安装。");
+                //    MessageBox.Show("Runtime 安装程序已启动，请按照提示完成安装。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                //}
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
@@ -564,39 +702,6 @@ namespace LazyBootstrap
             {
                 Log($"启动 Runtime 安装时发生错误: {ex.Message}");
                 MessageBox.Show($"启动安装失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        // Edit spicecfg
-        private void btnEditConfig_Click(object sender, EventArgs e)
-        {
-            string cfgToolPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spicecfg.exe");
-            string arguments = "";
-            if (!_isExpertMode)
-            {
-                arguments = "-cfgpath lazy/spicetools.xml -patchcfgpath lazy/spicetools_patch_manager.json -modules modules";
-            }
-
-            try
-            {
-                if (!File.Exists(cfgToolPath))
-                {
-                    MessageBox.Show($"未找到编辑器: {cfgToolPath}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = cfgToolPath,
-                    Arguments = arguments,
-                    WorkingDirectory = Path.GetDirectoryName(cfgToolPath),
-
-                };
-
-                Process.Start(startInfo);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"启动编辑器失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -706,7 +811,7 @@ namespace LazyBootstrap
         {
             btnStart.Enabled = enabled;
             groupBoxTools.Enabled = enabled;
-            if (this.Controls.ContainsKey("groupBoxCompatLayer"))
+            if (groupBoxCompatLayer != null)
             {
                 groupBoxCompatLayer.Enabled = enabled;
             }
