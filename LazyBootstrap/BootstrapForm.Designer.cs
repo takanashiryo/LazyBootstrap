@@ -20,8 +20,8 @@
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BootstrapForm));
             this.groupBoxOptions = new System.Windows.Forms.GroupBox();
-            this.btnKillProcesses = new System.Windows.Forms.Button();
             this.chkNoRestoreRotation = new System.Windows.Forms.CheckBox();
+            this.btnEditConfig = new System.Windows.Forms.Button();
             this.btnSwitchRotation = new System.Windows.Forms.Button();
             this.cmbRotation = new System.Windows.Forms.ComboBox();
             this.label2 = new System.Windows.Forms.Label();
@@ -33,9 +33,9 @@
             this.chkNoAsphyxia = new System.Windows.Forms.CheckBox();
             this.chkWindowed = new System.Windows.Forms.CheckBox();
             this.btnStart = new System.Windows.Forms.Button();
+            this.btnKillProcesses = new System.Windows.Forms.Button();
             this.groupBoxTools = new System.Windows.Forms.GroupBox();
             this.btnInstallRuntime = new System.Windows.Forms.Button();
-            this.btnEditConfig = new System.Windows.Forms.Button();
             this.btnClearCache = new System.Windows.Forms.Button();
             this.lblLogOutput = new System.Windows.Forms.Label();
             this.txtLogOutput = new System.Windows.Forms.TextBox();
@@ -74,18 +74,6 @@
             this.groupBoxOptions.TabStop = false;
             this.groupBoxOptions.Text = "启动选项";
             // 
-            // btnKillProcesses
-            // 
-            this.btnKillProcesses.Font = new System.Drawing.Font("宋体", 9F);
-            this.btnKillProcesses.Location = new System.Drawing.Point(34, 296);
-            this.btnKillProcesses.Name = "btnKillProcesses";
-            this.btnKillProcesses.Size = new System.Drawing.Size(330, 27);
-            this.btnKillProcesses.TabIndex = 8;
-            this.btnKillProcesses.Text = "结束所有进程";
-            this.toolTip0.SetToolTip(this.btnKillProcesses, "强制结束所有游戏相关进程");
-            this.btnKillProcesses.UseVisualStyleBackColor = true;
-            this.btnKillProcesses.Click += new System.EventHandler(this.btnKillProcesses_Click);
-            // 
             // chkNoRestoreRotation
             // 
             this.chkNoRestoreRotation.AutoSize = true;
@@ -95,6 +83,17 @@
             this.chkNoRestoreRotation.TabIndex = 7;
             this.chkNoRestoreRotation.Text = "退出时不还原屏幕";
             this.chkNoRestoreRotation.UseVisualStyleBackColor = true;
+            // 
+            // btnEditConfig
+            // 
+            this.btnEditConfig.Location = new System.Drawing.Point(19, 137);
+            this.btnEditConfig.Name = "btnEditConfig";
+            this.btnEditConfig.Size = new System.Drawing.Size(125, 43);
+            this.btnEditConfig.TabIndex = 1;
+            this.btnEditConfig.Text = "编辑 spicecfg";
+            this.toolTip0.SetToolTip(this.btnEditConfig, "如果你勾选了“使用预配置文件”，则会编辑预配置文件");
+            this.btnEditConfig.UseVisualStyleBackColor = true;
+            this.btnEditConfig.Click += new System.EventHandler(this.btnEditConfig_Click);
             // 
             // btnSwitchRotation
             // 
@@ -211,6 +210,18 @@
             this.btnStart.UseVisualStyleBackColor = true;
             this.btnStart.Click += new System.EventHandler(this.btnStart_Click);
             // 
+            // btnKillProcesses
+            // 
+            this.btnKillProcesses.Font = new System.Drawing.Font("宋体", 9F);
+            this.btnKillProcesses.Location = new System.Drawing.Point(34, 296);
+            this.btnKillProcesses.Name = "btnKillProcesses";
+            this.btnKillProcesses.Size = new System.Drawing.Size(330, 27);
+            this.btnKillProcesses.TabIndex = 8;
+            this.btnKillProcesses.Text = "结束所有进程";
+            this.toolTip0.SetToolTip(this.btnKillProcesses, "强制结束所有游戏相关进程");
+            this.btnKillProcesses.UseVisualStyleBackColor = true;
+            this.btnKillProcesses.Click += new System.EventHandler(this.btnKillProcesses_Click);
+            // 
             // groupBoxTools
             // 
             this.groupBoxTools.Controls.Add(this.btnInstallRuntime);
@@ -231,17 +242,6 @@
             this.btnInstallRuntime.Text = "安装运行库";
             this.btnInstallRuntime.UseVisualStyleBackColor = true;
             this.btnInstallRuntime.Click += new System.EventHandler(this.btnInstallRuntime_Click);
-            // 
-            // btnEditConfig
-            // 
-            this.btnEditConfig.Location = new System.Drawing.Point(19, 137);
-            this.btnEditConfig.Name = "btnEditConfig";
-            this.btnEditConfig.Size = new System.Drawing.Size(125, 43);
-            this.btnEditConfig.TabIndex = 1;
-            this.btnEditConfig.Text = "编辑 spicecfg";
-            this.toolTip0.SetToolTip(this.btnEditConfig, "如果你勾选了“使用预配置文件”，则会编辑预配置文件");
-            this.btnEditConfig.UseVisualStyleBackColor = true;
-            this.btnEditConfig.Click += new System.EventHandler(this.btnEditConfig_Click);
             // 
             // btnClearCache
             // 
