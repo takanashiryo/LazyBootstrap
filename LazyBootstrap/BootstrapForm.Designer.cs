@@ -82,6 +82,7 @@
             this.chkNoRestoreRotation.Size = new System.Drawing.Size(120, 16);
             this.chkNoRestoreRotation.TabIndex = 7;
             this.chkNoRestoreRotation.Text = "退出时不还原屏幕";
+            this.toolTip0.SetToolTip(this.chkNoRestoreRotation, "退出游戏进程时保持当前的旋转方向");
             this.chkNoRestoreRotation.UseVisualStyleBackColor = true;
             // 
             // btnEditConfig
@@ -187,6 +188,7 @@
             this.chkNoAsphyxia.Size = new System.Drawing.Size(84, 16);
             this.chkNoAsphyxia.TabIndex = 2;
             this.chkNoAsphyxia.Text = "不启动氧无";
+            this.toolTip0.SetToolTip(this.chkNoAsphyxia, "启动时不启动氧无，连接在线服时可勾选");
             this.chkNoAsphyxia.UseVisualStyleBackColor = true;
             // 
             // chkWindowed
@@ -197,6 +199,7 @@
             this.chkWindowed.Size = new System.Drawing.Size(84, 16);
             this.chkWindowed.TabIndex = 1;
             this.chkWindowed.Text = "窗口化启动";
+            this.toolTip0.SetToolTip(this.chkWindowed, "以窗口化模式运行游戏");
             this.chkWindowed.UseVisualStyleBackColor = true;
             // 
             // btnStart
@@ -240,6 +243,7 @@
             this.btnInstallRuntime.Size = new System.Drawing.Size(157, 28);
             this.btnInstallRuntime.TabIndex = 2;
             this.btnInstallRuntime.Text = "安装运行库";
+            this.toolTip0.SetToolTip(this.btnInstallRuntime, "安装必要的游戏运行库");
             this.btnInstallRuntime.UseVisualStyleBackColor = true;
             this.btnInstallRuntime.Click += new System.EventHandler(this.btnInstallRuntime_Click);
             // 
@@ -250,6 +254,7 @@
             this.btnClearCache.Size = new System.Drawing.Size(159, 28);
             this.btnClearCache.TabIndex = 0;
             this.btnClearCache.Text = "清除 data_mods 缓存";
+            this.toolTip0.SetToolTip(this.btnClearCache, "一键清除data_mods的缓存文件\r\n更新游戏后需清除，以保证歌曲数据库正确读取");
             this.btnClearCache.UseVisualStyleBackColor = true;
             this.btnClearCache.Click += new System.EventHandler(this.btnClearCache_Click);
             // 
@@ -286,6 +291,7 @@
             this.groupBoxCompatLayer.TabIndex = 10;
             this.groupBoxCompatLayer.TabStop = false;
             this.groupBoxCompatLayer.Text = "AMD/Intel 兼容层";
+            this.toolTip0.SetToolTip(this.groupBoxCompatLayer, "载入AMD/Intel显卡的兼容层使其正确运行");
             this.groupBoxCompatLayer.Enter += new System.EventHandler(this.groupBoxCompatLayer_Enter);
             // 
             // lblCompatStatus
