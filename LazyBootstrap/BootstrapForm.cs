@@ -1,4 +1,4 @@
-﻿// written by Arkito aka Takanashi Ryo with Gemini, only release in SDVX Lazy Pack.
+﻿// written by Arkito aka Takanashi Ryo, only release in SDVX Lazy Pack.
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -14,7 +14,7 @@ namespace LazyBootstrap
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
         private bool _usePreconfig = true; // 是否使用预配置文件（默认勾选）
-        private const int MAX_HISTORY_ITEMS = 10; // 最大历史记录数量
+        private bool _isLoadingSettings = false; // 标志：是否正在加载设置
 
         public BootstrapForm()
         {
@@ -49,6 +49,7 @@ namespace LazyBootstrap
         {
             try
             {
+                _isLoadingSettings = true; // 标记正在加载设置
                 // 加载预配置选项
                 string usePreconfigStr = _configFile.ReadString("Settings", "usepreconfig", "true");
                 if (!bool.TryParse(usePreconfigStr, out _usePreconfig))
@@ -56,7 +57,6 @@ namespace LazyBootstrap
                     _usePreconfig = true;
                 }
                 chkUsePreconfig.Checked = _usePreconfig;
-                UpdateUiForPreconfigMode();
 
                 // 加载其他启动选项
                 chkWindowed.Checked = bool.Parse(_configFile.ReadString("Settings", "windowed", "false"));
@@ -69,6 +69,10 @@ namespace LazyBootstrap
             catch (Exception ex)
             {
                 Log($"加载配置文件时出错: {ex.Message}");
+            }
+            finally
+            {
+                _isLoadingSettings = false; // 标记加载完成
             }
         }
 
@@ -95,14 +99,29 @@ namespace LazyBootstrap
         // 使用预配置文件复选框事件
         private void chkUsePreconfig_CheckedChanged(object sender, EventArgs e)
         {
-            _usePreconfig = chkUsePreconfig.Checked;
-            UpdateUiForPreconfigMode();
-        }
+            if (_isLoadingSettings)
+            {
+                return; // 如果正在加载设置，不显示警告
+            }
 
-        // 根据预配置模式更新UI
-        private void UpdateUiForPreconfigMode()
-        {
-            // 无需调整UI位置
+            if (!chkUsePreconfig.Checked)
+            {
+                // 用户取消勾选，显示警告
+                DialogResult result = MessageBox.Show(
+                    "如果不使用预配置文件，你需要重新手动设置所有选项与补丁（等同于纯净版），请确保你拥有相关知识！",
+                    "警告",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Cancel)
+                {
+                    // 用户点击取消，恢复勾选状态
+                    chkUsePreconfig.Checked = true;
+                    return;
+                }
+            }
+
+            _usePreconfig = chkUsePreconfig.Checked;
         }
 
         // 检查兼容层文件数量
@@ -451,16 +470,16 @@ namespace LazyBootstrap
                 if (Directory.Exists(cachePath))
                 {
                     Directory.Delete(cachePath, true);
-                    MessageBox.Show("缓存已成功清除！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    Log("缓存已成功清除！");
                 }
                 else
                 {
-                    MessageBox.Show("缓存文件不存在", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    Log("缓存文件不存在。");
                 }
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"清除缓存失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                Log($"清除缓存失败: {ex.Message}");
             }
         }
 
@@ -524,11 +543,6 @@ namespace LazyBootstrap
 
                 Process installProcess = Process.Start(startInfo);
 
-                //if (installProcess != null)
-                //{
-                //    Log("Runtime 安装程序已启动，请按照提示完成安装。");
-                //    MessageBox.Show("Runtime 安装程序已启动，请按照提示完成安装。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                //}
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
@@ -536,18 +550,15 @@ namespace LazyBootstrap
                 if (ex.NativeErrorCode == 1223)
                 {
                     Log("用户取消了 Runtime 安装。");
-                    MessageBox.Show("已取消安装。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
                     Log($"启动 Runtime 安装失败: {ex.Message}");
-                    MessageBox.Show($"启动安装失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             catch (Exception ex)
             {
                 Log($"启动 Runtime 安装时发生错误: {ex.Message}");
-                MessageBox.Show($"启动安装失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -656,7 +667,6 @@ namespace LazyBootstrap
         private void SetControlsEnabled(bool enabled)
         {
             btnStart.Enabled = enabled;
-            groupBoxTools.Enabled = enabled;
             if (groupBoxCompatLayer != null)
             {
                 groupBoxCompatLayer.Enabled = enabled;
@@ -668,12 +678,17 @@ namespace LazyBootstrap
                     ctrl.Enabled = enabled;
                 }
             }
-            btnKillProcesses.Enabled = true;
+            btnClearCache.Enabled = enabled;
+            btnInstallRuntime.Enabled = enabled;
+            btnAddFirewallRule.Enabled = enabled; 
+            btnKillProcesses.Enabled = true; // 始终启用
         }
 
-        private void groupBoxCompatLayer_Enter(object sender, EventArgs e)
+        private void btnAddFirewallRule_Click(object sender, EventArgs e)
         {
-
+            const string ruleName = "SpiceTools";
+            string spicePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spice64.exe");
+            FirewallHelper.EnsureFirewallRule(ruleName, spicePath, Log);
         }
     }
 }

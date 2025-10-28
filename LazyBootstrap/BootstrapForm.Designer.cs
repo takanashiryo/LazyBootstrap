@@ -37,6 +37,7 @@
             this.groupBoxTools = new System.Windows.Forms.GroupBox();
             this.btnInstallRuntime = new System.Windows.Forms.Button();
             this.btnClearCache = new System.Windows.Forms.Button();
+            this.btnAddFirewallRule = new System.Windows.Forms.Button();
             this.lblLogOutput = new System.Windows.Forms.Label();
             this.txtLogOutput = new System.Windows.Forms.TextBox();
             this.groupBoxCompatLayer = new System.Windows.Forms.GroupBox();
@@ -87,7 +88,7 @@
             // 
             // btnEditConfig
             // 
-            this.btnEditConfig.Location = new System.Drawing.Point(19, 137);
+            this.btnEditConfig.Location = new System.Drawing.Point(17, 140);
             this.btnEditConfig.Name = "btnEditConfig";
             this.btnEditConfig.Size = new System.Drawing.Size(125, 43);
             this.btnEditConfig.TabIndex = 1;
@@ -139,7 +140,7 @@
             this.chkUsePreconfig.AutoSize = true;
             this.chkUsePreconfig.Checked = true;
             this.chkUsePreconfig.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkUsePreconfig.Location = new System.Drawing.Point(19, 67);
+            this.chkUsePreconfig.Location = new System.Drawing.Point(19, 95);
             this.chkUsePreconfig.Name = "chkUsePreconfig";
             this.chkUsePreconfig.Size = new System.Drawing.Size(108, 16);
             this.chkUsePreconfig.TabIndex = 9;
@@ -204,10 +205,10 @@
             // 
             // btnStart
             // 
-            this.btnStart.Font = new System.Drawing.Font("宋体", 9F);
+            this.btnStart.Font = new System.Drawing.Font("宋体", 12F);
             this.btnStart.Location = new System.Drawing.Point(17, 20);
             this.btnStart.Name = "btnStart";
-            this.btnStart.Size = new System.Drawing.Size(125, 41);
+            this.btnStart.Size = new System.Drawing.Size(125, 67);
             this.btnStart.TabIndex = 0;
             this.btnStart.Text = "启动";
             this.btnStart.UseVisualStyleBackColor = true;
@@ -216,9 +217,9 @@
             // btnKillProcesses
             // 
             this.btnKillProcesses.Font = new System.Drawing.Font("宋体", 9F);
-            this.btnKillProcesses.Location = new System.Drawing.Point(34, 296);
+            this.btnKillProcesses.Location = new System.Drawing.Point(19, 93);
             this.btnKillProcesses.Name = "btnKillProcesses";
-            this.btnKillProcesses.Size = new System.Drawing.Size(330, 27);
+            this.btnKillProcesses.Size = new System.Drawing.Size(334, 30);
             this.btnKillProcesses.TabIndex = 8;
             this.btnKillProcesses.Text = "结束所有进程";
             this.toolTip0.SetToolTip(this.btnKillProcesses, "强制结束所有游戏相关进程");
@@ -227,21 +228,23 @@
             // 
             // groupBoxTools
             // 
+            this.groupBoxTools.Controls.Add(this.btnKillProcesses);
             this.groupBoxTools.Controls.Add(this.btnInstallRuntime);
             this.groupBoxTools.Controls.Add(this.btnClearCache);
+            this.groupBoxTools.Controls.Add(this.btnAddFirewallRule);
             this.groupBoxTools.Location = new System.Drawing.Point(15, 235);
             this.groupBoxTools.Name = "groupBoxTools";
-            this.groupBoxTools.Size = new System.Drawing.Size(368, 100);
+            this.groupBoxTools.Size = new System.Drawing.Size(368, 140);
             this.groupBoxTools.TabIndex = 9;
             this.groupBoxTools.TabStop = false;
             this.groupBoxTools.Text = "工具";
             // 
             // btnInstallRuntime
             // 
-            this.btnInstallRuntime.Location = new System.Drawing.Point(192, 27);
+            this.btnInstallRuntime.Location = new System.Drawing.Point(19, 56);
             this.btnInstallRuntime.Name = "btnInstallRuntime";
-            this.btnInstallRuntime.Size = new System.Drawing.Size(157, 28);
-            this.btnInstallRuntime.TabIndex = 2;
+            this.btnInstallRuntime.Size = new System.Drawing.Size(334, 30);
+            this.btnInstallRuntime.TabIndex = 1;
             this.btnInstallRuntime.Text = "安装运行库";
             this.toolTip0.SetToolTip(this.btnInstallRuntime, "安装必要的游戏运行库");
             this.btnInstallRuntime.UseVisualStyleBackColor = true;
@@ -249,14 +252,25 @@
             // 
             // btnClearCache
             // 
-            this.btnClearCache.Location = new System.Drawing.Point(17, 27);
+            this.btnClearCache.Location = new System.Drawing.Point(19, 20);
             this.btnClearCache.Name = "btnClearCache";
-            this.btnClearCache.Size = new System.Drawing.Size(159, 28);
+            this.btnClearCache.Size = new System.Drawing.Size(157, 30);
             this.btnClearCache.TabIndex = 0;
             this.btnClearCache.Text = "清除 data_mods 缓存";
             this.toolTip0.SetToolTip(this.btnClearCache, "一键清除data_mods的缓存文件\r\n更新游戏后需清除，以保证歌曲数据库正确读取");
             this.btnClearCache.UseVisualStyleBackColor = true;
             this.btnClearCache.Click += new System.EventHandler(this.btnClearCache_Click);
+            // 
+            // btnAddFirewallRule
+            // 
+            this.btnAddFirewallRule.Location = new System.Drawing.Point(192, 20);
+            this.btnAddFirewallRule.Name = "btnAddFirewallRule";
+            this.btnAddFirewallRule.Size = new System.Drawing.Size(161, 30);
+            this.btnAddFirewallRule.TabIndex = 2;
+            this.btnAddFirewallRule.Text = "添加防火墙规则";
+            this.toolTip0.SetToolTip(this.btnAddFirewallRule, "添加允许游戏通过防火墙的规则");
+            this.btnAddFirewallRule.UseVisualStyleBackColor = true;
+            this.btnAddFirewallRule.Click += new System.EventHandler(this.btnAddFirewallRule_Click);
             // 
             // lblLogOutput
             // 
@@ -277,7 +291,7 @@
             this.txtLogOutput.Name = "txtLogOutput";
             this.txtLogOutput.ReadOnly = true;
             this.txtLogOutput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtLogOutput.Size = new System.Drawing.Size(378, 376);
+            this.txtLogOutput.Size = new System.Drawing.Size(378, 415);
             this.txtLogOutput.TabIndex = 12;
             // 
             // groupBoxCompatLayer
@@ -285,14 +299,13 @@
             this.groupBoxCompatLayer.Controls.Add(this.lblCompatStatus);
             this.groupBoxCompatLayer.Controls.Add(this.btnUnloadCompat);
             this.groupBoxCompatLayer.Controls.Add(this.button1);
-            this.groupBoxCompatLayer.Location = new System.Drawing.Point(15, 341);
+            this.groupBoxCompatLayer.Location = new System.Drawing.Point(15, 381);
             this.groupBoxCompatLayer.Name = "groupBoxCompatLayer";
             this.groupBoxCompatLayer.Size = new System.Drawing.Size(368, 90);
             this.groupBoxCompatLayer.TabIndex = 10;
             this.groupBoxCompatLayer.TabStop = false;
             this.groupBoxCompatLayer.Text = "AMD/Intel 兼容层";
             this.toolTip0.SetToolTip(this.groupBoxCompatLayer, "载入AMD/Intel显卡的兼容层使其正确运行");
-            this.groupBoxCompatLayer.Enter += new System.EventHandler(this.groupBoxCompatLayer_Enter);
             // 
             // lblCompatStatus
             // 
@@ -329,7 +342,7 @@
             // 
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusLabel});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 442);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 481);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(784, 22);
             this.statusStrip1.SizingGrip = false;
@@ -346,8 +359,7 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(784, 464);
-            this.Controls.Add(this.btnKillProcesses);
+            this.ClientSize = new System.Drawing.Size(784, 503);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.groupBoxCompatLayer);
             this.Controls.Add(this.txtLogOutput);
@@ -388,6 +400,7 @@
         private System.Windows.Forms.Button btnInstallRuntime;
         private System.Windows.Forms.Button btnEditConfig;
         private System.Windows.Forms.Button btnClearCache;
+        private System.Windows.Forms.Button btnAddFirewallRule;
         private System.Windows.Forms.Label lblLogOutput;
         private System.Windows.Forms.TextBox txtLogOutput;
         private System.Windows.Forms.GroupBox groupBoxCompatLayer;
