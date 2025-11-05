@@ -39,7 +39,7 @@
             this.btnClearCache = new System.Windows.Forms.Button();
             this.btnAddFirewallRule = new System.Windows.Forms.Button();
             this.lblLogOutput = new System.Windows.Forms.Label();
-            this.txtLogOutput = new System.Windows.Forms.TextBox();
+            this.txtLogOutput = new System.Windows.Forms.RichTextBox();
             this.groupBoxCompatLayer = new System.Windows.Forms.GroupBox();
             this.lblCompatStatus = new System.Windows.Forms.Label();
             this.btnUnloadCompat = new System.Windows.Forms.Button();
@@ -290,9 +290,10 @@
             this.txtLogOutput.Multiline = true;
             this.txtLogOutput.Name = "txtLogOutput";
             this.txtLogOutput.ReadOnly = true;
-            this.txtLogOutput.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
+            this.txtLogOutput.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
             this.txtLogOutput.Size = new System.Drawing.Size(378, 415);
             this.txtLogOutput.TabIndex = 12;
+            this.txtLogOutput.Text = "";
             // 
             // groupBoxCompatLayer
             // 
@@ -304,7 +305,7 @@
             this.groupBoxCompatLayer.Size = new System.Drawing.Size(368, 90);
             this.groupBoxCompatLayer.TabIndex = 10;
             this.groupBoxCompatLayer.TabStop = false;
-            this.groupBoxCompatLayer.Text = "AMD/Intel 兼容层";
+            this.groupBoxCompatLayer.Text = "AMD/Intel显卡兼容层";
             this.toolTip0.SetToolTip(this.groupBoxCompatLayer, "载入AMD/Intel显卡的兼容层使其正确运行");
             // 
             // lblCompatStatus
@@ -324,7 +325,7 @@
             this.btnUnloadCompat.Name = "btnUnloadCompat";
             this.btnUnloadCompat.Size = new System.Drawing.Size(157, 33);
             this.btnUnloadCompat.TabIndex = 1;
-            this.btnUnloadCompat.Text = "卸载";
+            this.btnUnloadCompat.Text = "关闭";
             this.btnUnloadCompat.UseVisualStyleBackColor = true;
             this.btnUnloadCompat.Click += new System.EventHandler(this.btnUnloadCompat_Click);
             // 
@@ -334,7 +335,7 @@
             this.button1.Name = "button1";
             this.button1.Size = new System.Drawing.Size(157, 33);
             this.button1.TabIndex = 0;
-            this.button1.Text = "载入";
+            this.button1.Text = "启用";
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.btnLoadCompat_Click);
             // 
@@ -402,7 +403,7 @@
         private System.Windows.Forms.Button btnClearCache;
         private System.Windows.Forms.Button btnAddFirewallRule;
         private System.Windows.Forms.Label lblLogOutput;
-        private System.Windows.Forms.TextBox txtLogOutput;
+        private System.Windows.Forms.RichTextBox txtLogOutput;
         private System.Windows.Forms.GroupBox groupBoxCompatLayer;
         private System.Windows.Forms.Label lblCompatStatus;
         private System.Windows.Forms.Button btnUnloadCompat;

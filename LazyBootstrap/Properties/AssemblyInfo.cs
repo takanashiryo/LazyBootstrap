@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("LazyBootstrap")]
-[assembly: AssemblyDescription("only compatible with lazy sdvx")]
+[assembly: AssemblyTitle("LazyBootstrap - Lazy SDVX")]
+[assembly: AssemblyDescription("only compatible with sdvx lazy pack")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("LazyBootstrap")]

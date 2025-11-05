@@ -16,15 +16,22 @@ namespace LazyBootstrap
         private bool _usePreconfig = true; // 是否使用预配置文件（默认勾选）
         private bool _isLoadingSettings = false; // 标志：是否正在加载设置
 
+        // 统一路径前缀
+        private readonly string _baseDir;
+        private readonly string _contentsDir;
+
         public BootstrapForm()
         {
             InitializeComponent();
 
-            string configFilePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.ini");
+            _baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            _contentsDir = Path.Combine(_baseDir, "contents");
+
+            string configFilePath = Path.Combine(_baseDir, "config.ini");
             _configFile = new ConfigHandler(configFilePath);
 
             InitializeCustomComponents();
-            Log("本包体免费，如果你是付费获取的，请窒息");
+            LogSystem.Log("本包体免费，如果你是付费获取的，请窒息");
             LoadSettings();
         }
 
@@ -33,6 +40,9 @@ namespace LazyBootstrap
             // 设置默认值和下拉列表项
             cmbRotation.Items.AddRange(new object[] { "0", "90", "180", "270" });
             cmbRotation.SelectedIndex = 0;
+
+            // 初始化日志输出控件
+            LogSystem.Initialize(txtLogOutput);
 
             if (this.Controls.Find("statusStrip1", true).Length > 0 && statusLabel != null)
             {
@@ -44,6 +54,23 @@ namespace LazyBootstrap
             UpdateCompatLayerStatus();
         }
 
+        private bool TryGetRotationAngle(out int angle)
+        {
+            angle = 0;
+            var selected = cmbRotation.SelectedItem?.ToString();
+            if (string.IsNullOrEmpty(selected)) return true; // 不选则按 0 处理
+            return int.TryParse(selected, out angle);
+        }
+
+        private string GetAsphyxiaPath()
+        {
+            return Path.Combine(_baseDir, "asphyxia", "asphyxia-core-x64.exe");
+        }
+
+        private string GetSpicePath()
+        {
+            return Path.Combine(_contentsDir, "spice64.exe");
+        }
 
         private void LoadSettings()
         {
@@ -64,11 +91,11 @@ namespace LazyBootstrap
                 chkNoAsphyxia.Checked = bool.Parse(_configFile.ReadString("Settings", "noasphyxia", "false"));
                 chkNoRestoreRotation.Checked = bool.Parse(_configFile.ReadString("Settings", "norestorerotation", "false"));
 
-                Log("Load config.ini");
+                LogSystem.Log("Load config.ini");
             }
             catch (Exception ex)
             {
-                Log($"加载配置文件时出错: {ex.Message}");
+                LogSystem.Log($"加载配置文件时出错: {ex.Message}", LogSystem.LogLevel.Error);
             }
             finally
             {
@@ -88,11 +115,11 @@ namespace LazyBootstrap
                 _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString());
                 _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString());
 
-                Log("Saved to config.ini");
+                LogSystem.Log("Saved to config.ini");
             }
             catch (Exception ex)
             {
-                Log($"保存出错: {ex.Message}");
+                LogSystem.Log($"保存出错: {ex.Message}", LogSystem.LogLevel.Error);
             }
         }
 
@@ -127,9 +154,8 @@ namespace LazyBootstrap
         // 检查兼容层文件数量
         private int GetCompatLayerFileCount()
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string modulesDir = Path.Combine(baseDir, "contents", "modules");
-            string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
+            string modulesDir = Path.Combine(_contentsDir, "modules");
+            string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
 
             int foundCount = 0;
             foreach (var fileName in compatFiles)
@@ -151,16 +177,16 @@ namespace LazyBootstrap
 
             int fileCount = GetCompatLayerFileCount();
 
-            if (fileCount == 4)
+            if (fileCount == 3)
             {
                 // 所有文件都存在
-                lblCompatStatus.Text = "● 已载入";
+                lblCompatStatus.Text = "● 已启用";
                 lblCompatStatus.ForeColor = System.Drawing.Color.Green;
             }
-            else if (fileCount >= 1 && fileCount <= 3)
+            else if (fileCount >= 1 && fileCount <= 2)
             {
                 // 部分文件存在
-                lblCompatStatus.Text = "● 已载入，但可能不完整";
+                lblCompatStatus.Text = "● 已启用，但可能不完整";
                 lblCompatStatus.ForeColor = System.Drawing.Color.Orange;
             }
             else
@@ -176,26 +202,25 @@ namespace LazyBootstrap
         {
             // Lock Element
             SetControlsEnabled(false);
-            statusLabel.Text = "正在启动...";
+            if (statusLabel != null) statusLabel.Text = "正在启动...";
             txtLogOutput.Clear();
 
             try
             {
                 // Screen Rotate
-                Log("正在旋转屏幕...");
-                int rotationAngle = int.Parse(cmbRotation.SelectedItem.ToString());
+                LogSystem.Log("正在旋转屏幕...");
+                if (!TryGetRotationAngle(out int rotationAngle)) rotationAngle = 0;
                 bool rotationSuccess = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, rotationAngle);
-                Log(rotationSuccess ? $"屏幕已旋转至 {rotationAngle} 度。" : "屏幕旋转失败或无需旋转。");
+                LogSystem.Log(rotationSuccess ? $"屏幕已旋转至 {rotationAngle} 度。" : "屏幕旋转失败或无需旋转。");
                 await Task.Delay(500); // 等待旋转生效
 
                 // Launch Asphyxia
                 if (!chkNoAsphyxia.Checked)
                 {
-                    Log("\n正在启动 Asphyxia Core...");
-                    string asphyxiaPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "asphyxia", "asphyxia-core-x64.exe");
+                    LogSystem.Log("\n正在启动 Asphyxia Core...");
+                    string asphyxiaPath = GetAsphyxiaPath();
                     if (File.Exists(asphyxiaPath))
                     {
-                        // 如果勾选了调试模式，使用 cmd.exe 启动以保持窗口打开
                         if (chkAsphyxiaDebug.Checked)
                         {
                             var asphyxiaStartInfo = new ProcessStartInfo
@@ -205,22 +230,23 @@ namespace LazyBootstrap
                                 WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
                             };
                             Process.Start(asphyxiaStartInfo);
-                            Log("  - 使用调试模式启动（控制台窗口将保持打开）");
+                            LogSystem.Log("  - 使用调试模式启动（控制台窗口将保持打开）");
                         }
                         else
                         {
                             var asphyxiaStartInfo = new ProcessStartInfo
                             {
                                 FileName = asphyxiaPath,
+                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
                             };
                             Process.Start(asphyxiaStartInfo);
                         }
 
-                        Log("Asphyxia Core 已启动。");
+                        LogSystem.Log("Asphyxia Core 已启动。");
                     }
                     else
                     {
-                        Log($"错误: 未找到 Asphyxia Core, 路径: {asphyxiaPath}");
+                        LogSystem.Log($"错误: 未找到 Asphyxia Core, 路径: {asphyxiaPath}", LogSystem.LogLevel.Error);
                         SetControlsEnabled(true);
                         if (statusLabel != null) statusLabel.Text = "启动失败";
                         return;
@@ -228,13 +254,14 @@ namespace LazyBootstrap
                 }
                 else
                 {
-                    Log("\n已跳过启动 Asphyxia Core。");
+                    LogSystem.Log("\n已跳过启动 Asphyxia Core。");
                 }
 
                 var argsBuilder = new StringBuilder();
                 if (_usePreconfig)
                 {
                     // Spice2x launch args（使用预配置）
+                    argsBuilder.Append("-cmdoverride ");
                     argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
                     argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
                     argsBuilder.Append("-modules modules ");
@@ -253,16 +280,27 @@ namespace LazyBootstrap
                     argsBuilder.Append("-processefficiency pcores ");
                 }
 
-                // Booting
-                Log("\n正在启动游戏...");
-                Log($"  - 启动参数: {argsBuilder.ToString()}");
+                // add "-dx9on12 1" when detect NVIDIA API in modules
+                try
+                {
+                    if (GetCompatLayerFileCount() == 3)
+                    {
+                        argsBuilder.Append("-dx9on12 1 ");
+                        LogSystem.Log("检测到 NVIDIA API 兼容层，已添加启动参数: -dx9on12 1");
+                    }
+                }
+                catch { }
 
-                string spicePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spice64.exe");
+                // Booting
+                LogSystem.Log("\n正在启动游戏...");
+                LogSystem.Log($"  - 启动参数: {argsBuilder.ToString()}");
+
+                string spicePath = GetSpicePath();
                 if (!File.Exists(spicePath))
                 {
-                    Log($"\n错误: 未找到游戏主程序, 路径: {spicePath}");
+                    LogSystem.Log($"\n错误: 未找到游戏主程序, 路径: {spicePath}", LogSystem.LogLevel.Error);
                     SetControlsEnabled(true);
-                    statusLabel.Text = "启动失败";
+                    if (statusLabel != null) statusLabel.Text = "启动失败";
                     return;
                 }
 
@@ -279,14 +317,14 @@ namespace LazyBootstrap
 
                 _gameProcess.Start();
 
-                statusLabel.Text = "游戏已启动";
-                Log("\n游戏进程已启动。");
+                if (statusLabel != null) statusLabel.Text = "游戏已启动";
+                LogSystem.Log("\n游戏进程已启动。");
             }
             catch (Exception ex)
             {
-                Log($"\n启动过程中发生严重错误: {ex.Message}");
+                LogSystem.Log($"\n启动过程中发生严重错误: {ex.Message}", LogSystem.LogLevel.Error);
                 SetControlsEnabled(true);
-                statusLabel.Text = "启动失败";
+                if (statusLabel != null) statusLabel.Text = "启动失败";
             }
         }
 
@@ -297,24 +335,24 @@ namespace LazyBootstrap
             {
                 BeginInvoke((MethodInvoker)delegate
                 {
-                    Log("\n游戏进程已退出。");
+                    LogSystem.Log("\n游戏进程已退出。");
 
-                    Log("正在关闭 Asphyxia Core...");
+                    LogSystem.Log("正在关闭 Asphyxia Core...");
                     try
                     {
                         KillProcessesByName("asphyxia-core-x64");
-                        Log("Asphyxia Core 已关闭");
+                        LogSystem.Log("Asphyxia Core 已关闭");
                     }
                     catch (Exception ex)
                     {
-                        Log($"未找到正在运行的 Asphyxia Core 进程。{ex.Message}");
+                        LogSystem.Log($"未找到正在运行的 Asphyxia Core 进程。{ex.Message}", LogSystem.LogLevel.Warning);
                     }
 
                     if (!chkNoRestoreRotation.Checked)
                     {
-                        Log("正在还原屏幕旋转...");
+                        LogSystem.Log("正在还原屏幕旋转...");
                         bool restored = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, 0);
-                        Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
+                        LogSystem.Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
                     }
 
                     if (statusLabel != null) statusLabel.Text = "就绪";
@@ -331,7 +369,7 @@ namespace LazyBootstrap
         // kill process
         private void btnKillProcesses_Click(object sender, EventArgs e)
         {
-            Log("\n正在尝试结束所有相关进程...");
+            LogSystem.Log("\n正在尝试结束所有相关进程...");
             KillProcessesByName("spice64");
             KillProcessesByName("asphyxia-core-x64");
         }
@@ -346,7 +384,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                Log($"  - 获取进程列表 {processName} 时出错: {ex.Message}");
+                LogSystem.Log($"  - 获取进程列表 {processName} 时出错: {ex.Message}", LogSystem.LogLevel.Error);
                 return 0;
             }
 
@@ -363,7 +401,7 @@ namespace LazyBootstrap
                     if (!p.WaitForExit(3000))
                     {
                         // 如果3秒后还没退出，使用强制终止
-                        Log($"  - 进程 {processName} (PID: {pid}) 未响应，尝试强制终止...");
+                        LogSystem.Log($"  - 进程 {processName} (PID: {pid}) 未响应，尝试强制终止...", LogSystem.LogLevel.Warning);
 
                         try
                         {
@@ -383,27 +421,27 @@ namespace LazyBootstrap
                                 taskKillProcess.WaitForExit(2000);
                             }
 
-                            Log($"  - 已强制结束进程: {processName}.exe (PID: {pid})");
+                            LogSystem.Log($"  - 已强制结束进程: {processName}.exe (PID: {pid})");
                         }
                         catch (Exception ex)
                         {
-                            Log($"  - 强制终止进程失败: {ex.Message}");
+                            LogSystem.Log($"  - 强制终止进程失败: {ex.Message}", LogSystem.LogLevel.Error);
                         }
                     }
                     else
                     {
-                        Log($"  - 已结束进程: {processName}.exe (PID: {pid})");
+                        LogSystem.Log($"  - 已结束进程: {processName}.exe (PID: {pid})");
                     }
 
                     count++;
                 }
                 catch (InvalidOperationException)
                 {
-                    Log($"  - 进程 {processName} 已退出，无需结束。");
+                    LogSystem.Log($"  - 进程 {processName} 已退出，无需结束。");
                 }
                 catch (System.ComponentModel.Win32Exception ex)
                 {
-                    Log($"  - 结束进程 {processName} 时权限不足: {ex.Message}");
+                    LogSystem.Log($"  - 结束进程 {processName} 时权限不足: {ex.Message}", LogSystem.LogLevel.Error);
 
                     // 尝试使用管理员权限的 taskkill
                     try
@@ -418,25 +456,22 @@ namespace LazyBootstrap
                         };
 
                         Process.Start(taskKillInfo);
-                        Log($"  - 已使用管理员权限尝试终止 {processName}");
+                        LogSystem.Log($"  - 已使用管理员权限尝试终止 {processName}");
                     }
                     catch (Exception ex2)
                     {
-                        Log($"  - 管理员权限终止失败: {ex2.Message}");
+                        LogSystem.Log($"  - 管理员权限终止失败: {ex2.Message}", LogSystem.LogLevel.Error);
                     }
                 }
                 catch (Exception ex)
                 {
-                    Log($"  - 结束进程 {processName} 时出错: {ex.Message}");
+                    LogSystem.Log($"  - 结束进程 {processName} 时出错: {ex.Message}", LogSystem.LogLevel.Error);
                 }
                 finally
                 {
                     try
                     {
-                        if (p != null && !p.HasExited)
-                        {
-                            p.Dispose();
-                        }
+                        p.Dispose();
                     }
                     catch { }
                 }
@@ -450,7 +485,7 @@ namespace LazyBootstrap
         {
             try
             {
-                int angle = int.Parse(cmbRotation.SelectedItem.ToString());
+                if (!TryGetRotationAngle(out int angle)) angle = 0;
                 bool success = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, angle);
                 MessageBox.Show(success ? $"屏幕旋转至 {angle} 度成功。" : "屏幕旋转失败。", "提示", MessageBoxButtons.OK,
                     success ? MessageBoxIcon.Information : MessageBoxIcon.Error);
@@ -464,33 +499,33 @@ namespace LazyBootstrap
         // Clear ifs_hook cache
         private void btnClearCache_Click(object sender, EventArgs e)
         {
-            string cachePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "data_mods", "_cache");
+            string cachePath = Path.Combine(_contentsDir, "data_mods", "_cache");
             try
             {
                 if (Directory.Exists(cachePath))
                 {
                     Directory.Delete(cachePath, true);
-                    Log("缓存已成功清除！");
+                    LogSystem.Log("缓存已成功清除！");
                 }
                 else
                 {
-                    Log("缓存文件不存在。");
+                    LogSystem.Log("缓存文件不存在。", LogSystem.LogLevel.Warning);
                 }
             }
             catch (Exception ex)
             {
-                Log($"清除缓存失败: {ex.Message}");
+                LogSystem.Log($"清除缓存失败: {ex.Message}", LogSystem.LogLevel.Error);
             }
         }
 
         // Edit spicecfg
         private void btnEditConfig_Click(object sender, EventArgs e)
         {
-            string cfgToolPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spicecfg.exe");
+            string cfgToolPath = Path.Combine(_contentsDir, "spicecfg.exe");
             string arguments = "";
             if (_usePreconfig)
             {
-                arguments = "-cfgpath lazy/spicetools.xml -patchcfgpath lazy/spicetools_patch_manager.json -modules modules";
+                arguments = "-cmdoverride -cfgpath lazy/spicetools.xml -patchcfgpath lazy/spicetools_patch_manager.json -modules modules";
             }
 
             try
@@ -518,7 +553,7 @@ namespace LazyBootstrap
         // Install Runtime
         private void btnInstallRuntime_Click(object sender, EventArgs e)
         {
-            string runtimePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "runtime");
+            string runtimePath = Path.Combine(_baseDir, "runtime");
             string installBatPath = Path.Combine(runtimePath, "install.bat");
 
             try
@@ -526,12 +561,12 @@ namespace LazyBootstrap
                 if (!File.Exists(installBatPath))
                 {
                     MessageBox.Show($"未找到安装脚本: {installBatPath}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    Log($"错误: 未找到 runtime/install.bat");
+                    LogSystem.Log($"错误: 未找到 runtime/install.bat", LogSystem.LogLevel.Error);
                     return;
                 }
 
-                Log("\n正在安装 Runtime 组件...");
-                Log($"  - 执行脚本: {installBatPath}");
+                LogSystem.Log("\n正在安装 Runtime 组件...");
+                LogSystem.Log($"  - 执行脚本: {installBatPath}");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -549,16 +584,16 @@ namespace LazyBootstrap
                 // 用户取消了UAC提示
                 if (ex.NativeErrorCode == 1223)
                 {
-                    Log("用户取消了 Runtime 安装。");
+                    LogSystem.Log("用户取消了 Runtime 安装。", LogSystem.LogLevel.Warning);
                 }
                 else
                 {
-                    Log($"启动 Runtime 安装失败: {ex.Message}");
+                    LogSystem.Log($"启动 Runtime 安装失败: {ex.Message}", LogSystem.LogLevel.Error);
                 }
             }
             catch (Exception ex)
             {
-                Log($"启动 Runtime 安装时发生错误: {ex.Message}");
+                LogSystem.Log($"启动 Runtime 安装时发生错误: {ex.Message}", LogSystem.LogLevel.Error);
             }
         }
 
@@ -577,11 +612,10 @@ namespace LazyBootstrap
 
         private void MoveCompatFiles(string sourceDirRel, string destDirRel, string operationName)
         {
-            Log($"NVIDIA API, DXVK准备{operationName}...");
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string sourceDir = Path.Combine(baseDir, sourceDirRel);
-            string destDir = Path.Combine(baseDir, destDirRel);
-            string[] filesToMove = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
+            LogSystem.Log($"NVIDIA API 准备{operationName}...");
+            string sourceDir = Path.Combine(_baseDir, sourceDirRel);
+            string destDir = Path.Combine(_baseDir, destDirRel);
+            string[] filesToMove = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
 
             int successCount = 0;
             int skippedCount = 0;
@@ -604,15 +638,15 @@ namespace LazyBootstrap
                         if (File.Exists(destPath))
                         {
                             File.Delete(destPath);
-                            Log($"已删除旧的目标文件: {destPath}");
+                            LogSystem.Log($"已删除旧的目标文件: {destPath}");
                         }
                         File.Move(sourcePath, destPath);
-                        Log($"成功移动: {fileName}");
+                        LogSystem.Log($"成功移动: {fileName}");
                         successCount++;
                     }
                     else
                     {
-                        Log($"源文件不存在，跳过: {sourcePath}");
+                        LogSystem.Log($"源文件不存在，跳过: {sourcePath}", LogSystem.LogLevel.Warning);
                         skippedCount++;
                     }
                 }
@@ -649,21 +683,6 @@ namespace LazyBootstrap
             catch (Exception) { /* ignored */ }
         }
 
-        // Log output
-        private void Log(string message)
-        {
-            if (string.IsNullOrEmpty(message)) return;
-
-            if (txtLogOutput.InvokeRequired)
-            {
-                txtLogOutput.Invoke((MethodInvoker)delegate { Log(message); });
-            }
-            else
-            {
-                txtLogOutput.AppendText(message + Environment.NewLine);
-            }
-        }
-
         private void SetControlsEnabled(bool enabled)
         {
             btnStart.Enabled = enabled;
@@ -680,15 +699,15 @@ namespace LazyBootstrap
             }
             btnClearCache.Enabled = enabled;
             btnInstallRuntime.Enabled = enabled;
-            btnAddFirewallRule.Enabled = enabled; 
+            btnAddFirewallRule.Enabled = enabled;
             btnKillProcesses.Enabled = true; // 始终启用
         }
 
         private void btnAddFirewallRule_Click(object sender, EventArgs e)
         {
             const string ruleName = "SpiceTools";
-            string spicePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "contents", "spice64.exe");
-            FirewallHelper.EnsureFirewallRule(ruleName, spicePath, Log);
+            string spicePath = GetSpicePath();
+            FirewallHelper.EnsureFirewallRule(ruleName, spicePath, LogSystem.Log);
         }
     }
 }
