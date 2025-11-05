@@ -125,8 +125,6 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="bootstrap-gpt.ico" />
-    <Content Include="bootstrap.ico" />
     <Content Include="SOUND VOLTEX EXCEED GEAR.ico" />
   </ItemGroup>
   <ItemGroup>
