@@ -47,6 +47,10 @@
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
             this.toolTip0 = new System.Windows.Forms.ToolTip(this.components);
+            this.lblCurrentVersion = new System.Windows.Forms.Label();
+            this.txtCurrentVersion = new System.Windows.Forms.TextBox();
+            this.lblRevision = new System.Windows.Forms.Label();
+            this.txtRevision = new System.Windows.Forms.TextBox();
             this.groupBoxOptions.SuspendLayout();
             this.groupBoxTools.SuspendLayout();
             this.groupBoxCompatLayer.SuspendLayout();
@@ -355,11 +359,51 @@
             this.statusLabel.Size = new System.Drawing.Size(33, 17);
             this.statusLabel.Text = "就绪";
             // 
+            // lblCurrentVersion
+            // 
+            this.lblCurrentVersion.AutoSize = true;
+            this.lblCurrentVersion.Location = new System.Drawing.Point(15, 15);
+            this.lblCurrentVersion.Name = "lblCurrentVersion";
+            this.lblCurrentVersion.Size = new System.Drawing.Size(58, 13);
+            this.lblCurrentVersion.TabIndex = 14;
+            this.lblCurrentVersion.Text = "当前版本:";
+            // 
+            // txtCurrentVersion
+            // 
+            this.txtCurrentVersion.Location = new System.Drawing.Point(79, 12);
+            this.txtCurrentVersion.Name = "txtCurrentVersion";
+            this.txtCurrentVersion.ReadOnly = true;
+            this.txtCurrentVersion.Size = new System.Drawing.Size(78, 20);
+            this.txtCurrentVersion.TabIndex = 15;
+            this.txtCurrentVersion.Text = "读取中...";
+            // 
+            // lblRevision
+            // 
+            this.lblRevision.AutoSize = true;
+            this.lblRevision.Location = new System.Drawing.Point(182, 15);
+            this.lblRevision.Name = "lblRevision";
+            this.lblRevision.Size = new System.Drawing.Size(82, 13);
+            this.lblRevision.TabIndex = 16;
+            this.lblRevision.Text = "懒人包修订号:";
+            // 
+            // txtRevision
+            // 
+            this.txtRevision.Location = new System.Drawing.Point(268, 12);
+            this.txtRevision.Name = "txtRevision";
+            this.txtRevision.ReadOnly = true;
+            this.txtRevision.Size = new System.Drawing.Size(54, 20);
+            this.txtRevision.TabIndex = 17;
+            this.txtRevision.Text = "读取中...";
+            // 
             // BootstrapForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(784, 545);
+            this.Controls.Add(this.lblCurrentVersion);
+            this.Controls.Add(this.txtCurrentVersion);
+            this.Controls.Add(this.lblRevision);
+            this.Controls.Add(this.txtRevision);
             this.Controls.Add(this.statusStrip1);
             this.Controls.Add(this.groupBoxCompatLayer);
             this.Controls.Add(this.txtLogOutput);
@@ -413,5 +457,9 @@
         private System.Windows.Forms.ToolTip toolTip0;
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label lblCurrentVersion;
+        private System.Windows.Forms.TextBox txtCurrentVersion;
+        private System.Windows.Forms.Label lblRevision;
+        private System.Windows.Forms.TextBox txtRevision;
     }
 }

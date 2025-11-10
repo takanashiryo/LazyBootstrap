@@ -13,6 +13,7 @@ namespace LazyBootstrap
     {
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
+        private readonly ConfigHandler _versionFile; // 新增：单独的版本信息文件
         private bool _usePreconfig = true; // 是否使用预配置文件（默认勾选）
         private bool _isLoadingSettings = false; // 标志：是否正在加载设置
 
@@ -28,7 +29,31 @@ namespace LazyBootstrap
             _contentsDir = Path.Combine(_baseDir, "contents");
 
             string configFilePath = Path.Combine(_baseDir, "config.ini");
+            string versionFilePath = Path.Combine(_baseDir, "version.ini");
+            bool newConfigCreated = !System.IO.File.Exists(configFilePath);
+            bool newVersionCreated = !System.IO.File.Exists(versionFilePath);
             _configFile = new ConfigHandler(configFilePath);
+            _versionFile = new ConfigHandler(versionFilePath);
+
+            if (newVersionCreated)
+            {
+                // 创建版本文件并写入默认版本与修订号
+                _versionFile.WriteString("Version", "version", "1.0.0");
+                _versionFile.WriteString("Version", "revision", "r1");
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(_versionFile.ReadString("Version", "version", "")))
+                {
+                    _versionFile.WriteString("Version", "version", "1.0.0");
+                }
+                if (string.IsNullOrWhiteSpace(_versionFile.ReadString("Version", "revision", "")))
+                {
+                    _versionFile.WriteString("Version", "revision", "r1");
+                }
+            }
+
+            // 保留 config.ini 其它键的默认写入（如果首次创建需要可在后面扩展）
 
             InitializeCustomComponents();
             LogSystem.Log("本包体免费，如果你是付费获取的，请窒息");
@@ -91,11 +116,27 @@ namespace LazyBootstrap
                 chkNoAsphyxia.Checked = bool.Parse(_configFile.ReadString("Settings", "noasphyxia", "false"));
                 chkNoRestoreRotation.Checked = bool.Parse(_configFile.ReadString("Settings", "norestorerotation", "false"));
 
+                // 读取当前版本（来自 version.ini）
+                string version = _versionFile.ReadString("Version", "version", "Unknown");
+                if (txtCurrentVersion != null)
+                {
+                    txtCurrentVersion.Text = version;
+                }
+
+                // 读取懒人包修订号（来自 version.ini）
+                string revision = _versionFile.ReadString("Version", "revision", "Unknown");
+                if (txtRevision != null)
+                {
+                    txtRevision.Text = revision;
+                }
+
                 LogSystem.Log("Load config.ini");
             }
             catch (Exception ex)
             {
                 LogSystem.Log($"加载配置文件时出错: {ex.Message}", LogSystem.LogLevel.Error);
+                if (txtCurrentVersion != null) txtCurrentVersion.Text = "读取失败";
+                if (txtRevision != null) txtRevision.Text = "读取失败";
             }
             finally
             {
