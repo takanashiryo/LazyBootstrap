@@ -13,7 +13,7 @@ namespace LazyBootstrap
     {
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
-        private readonly ConfigHandler _versionFile; // 新增：单独的版本信息文件
+        private readonly ConfigHandler _versionFile;
         private bool _usePreconfig = true; // 是否使用预配置文件（默认勾选）
         private bool _isLoadingSettings = false; // 标志：是否正在加载设置
 
@@ -53,7 +53,14 @@ namespace LazyBootstrap
                 }
             }
 
-            // 保留 config.ini 其它键的默认写入（如果首次创建需要可在后面扩展）
+            if (newConfigCreated)
+            {
+                _configFile.WriteString("Settings", "usepreconfig", "true");
+                _configFile.WriteString("Settings", "windowed", "false");
+                _configFile.WriteString("Settings", "pcoreopt", "false");
+                _configFile.WriteString("Settings", "noasphyxia", "false");
+                _configFile.WriteString("Settings", "norestorerotation", "false");
+            }
 
             InitializeCustomComponents();
             LogSystem.Log("本包体免费，如果你是付费获取的，请窒息");
@@ -116,14 +123,14 @@ namespace LazyBootstrap
                 chkNoAsphyxia.Checked = bool.Parse(_configFile.ReadString("Settings", "noasphyxia", "false"));
                 chkNoRestoreRotation.Checked = bool.Parse(_configFile.ReadString("Settings", "norestorerotation", "false"));
 
-                // 读取当前版本（来自 version.ini）
+                // 读取当前版本
                 string version = _versionFile.ReadString("Version", "version", "Unknown");
                 if (txtCurrentVersion != null)
                 {
                     txtCurrentVersion.Text = version;
                 }
 
-                // 读取懒人包修订号（来自 version.ini）
+                // 读取懒人包修订号
                 string revision = _versionFile.ReadString("Version", "revision", "Unknown");
                 if (txtRevision != null)
                 {
@@ -148,13 +155,13 @@ namespace LazyBootstrap
         {
             try
             {
-                _configFile.WriteString("Settings", "usepreconfig", _usePreconfig.ToString());
+                _configFile.WriteString("Settings", "usepreconfig", _usePreconfig.ToString().ToLowerInvariant());
 
                 // 保存其他启动选项
-                _configFile.WriteString("Settings", "windowed", chkWindowed.Checked.ToString());
-                _configFile.WriteString("Settings", "pcoreopt", chkPCoreOptimization.Checked.ToString());
-                _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString());
-                _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString());
+                _configFile.WriteString("Settings", "windowed", chkWindowed.Checked.ToString().ToLowerInvariant());
+                _configFile.WriteString("Settings", "pcoreopt", chkPCoreOptimization.Checked.ToString().ToLowerInvariant());
+                _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString().ToLowerInvariant());
+                _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString().ToLowerInvariant());
 
                 LogSystem.Log("Saved to config.ini");
             }

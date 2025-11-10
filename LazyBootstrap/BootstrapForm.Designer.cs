@@ -294,7 +294,7 @@
             this.txtLogOutput.Name = "txtLogOutput";
             this.txtLogOutput.ReadOnly = true;
             this.txtLogOutput.ScrollBars = System.Windows.Forms.RichTextBoxScrollBars.Vertical;
-            this.txtLogOutput.Size = new System.Drawing.Size(378, 449);
+            this.txtLogOutput.Size = new System.Drawing.Size(378, 452);
             this.txtLogOutput.TabIndex = 12;
             this.txtLogOutput.Text = "";
             // 
