@@ -240,7 +240,7 @@ namespace LazyBootstrap
             else
             {
                 // 没有文件
-                lblCompatStatus.Text = "● 未载入";
+                lblCompatStatus.Text = "● 未启用";
                 lblCompatStatus.ForeColor = System.Drawing.Color.Red;
             }
         }

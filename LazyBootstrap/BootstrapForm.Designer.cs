@@ -320,7 +320,7 @@
             this.lblCompatStatus.Name = "lblCompatStatus";
             this.lblCompatStatus.Size = new System.Drawing.Size(64, 12);
             this.lblCompatStatus.TabIndex = 2;
-            this.lblCompatStatus.Text = "● 未启用";
+            this.lblCompatStatus.Text = "● 未知";
             // 
             // btnUnloadCompat
             // 
@@ -375,7 +375,7 @@
             this.txtCurrentVersion.ReadOnly = true;
             this.txtCurrentVersion.Size = new System.Drawing.Size(78, 20);
             this.txtCurrentVersion.TabIndex = 15;
-            this.txtCurrentVersion.Text = "读取中...";
+            //this.txtCurrentVersion.Text = "读取中...";
             // 
             // lblRevision
             // 
@@ -393,7 +393,7 @@
             this.txtRevision.ReadOnly = true;
             this.txtRevision.Size = new System.Drawing.Size(54, 20);
             this.txtRevision.TabIndex = 17;
-            this.txtRevision.Text = "读取中...";
+            //this.txtRevision.Text = "读取中...";
             // 
             // BootstrapForm
             // 
