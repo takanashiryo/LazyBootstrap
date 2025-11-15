@@ -38,18 +38,18 @@ namespace LazyBootstrap
             if (newVersionCreated)
             {
                 // 创建版本文件并写入默认版本与修订号
-                _versionFile.WriteString("Version", "version", "1.0.0");
-                _versionFile.WriteString("Version", "revision", "r1");
+                _versionFile.WriteString("Version", "version", "YYYYMMDD");
+                _versionFile.WriteString("Version", "revision", "0");
             }
             else
             {
                 if (string.IsNullOrWhiteSpace(_versionFile.ReadString("Version", "version", "")))
                 {
-                    _versionFile.WriteString("Version", "version", "1.0.0");
+                    _versionFile.WriteString("Version", "version", "YYYYMMDD");
                 }
                 if (string.IsNullOrWhiteSpace(_versionFile.ReadString("Version", "revision", "")))
                 {
-                    _versionFile.WriteString("Version", "revision", "r1");
+                    _versionFile.WriteString("Version", "revision", "0");
                 }
             }
 
@@ -136,8 +136,6 @@ namespace LazyBootstrap
                 {
                     txtRevision.Text = revision;
                 }
-
-                LogSystem.Log("Load config.ini");
             }
             catch (Exception ex)
             {
