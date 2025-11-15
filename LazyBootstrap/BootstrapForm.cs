@@ -755,5 +755,30 @@ namespace LazyBootstrap
             string spicePath = GetSpicePath();
             FirewallHelper.EnsureFirewallRule(ruleName, spicePath, LogSystem.Log);
         }
+
+        private void btnOpenLog_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                string logPath = Path.Combine(_contentsDir, "log.txt");
+                if (File.Exists(logPath))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = logPath,
+                        UseShellExecute = true
+                    });
+                    LogSystem.Log($"已打开spice2x日志文件: {logPath}");
+                }
+                else
+                {
+                    LogSystem.Log($"未找到spice2x日志文件: {logPath}", LogSystem.LogLevel.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"打开spice2x日志失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
     }
 }

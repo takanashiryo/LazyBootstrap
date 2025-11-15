@@ -21,6 +21,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(BootstrapForm));
             this.groupBoxOptions = new System.Windows.Forms.GroupBox();
             this.chkNoRestoreRotation = new System.Windows.Forms.CheckBox();
+            this.btnOpenLog = new System.Windows.Forms.Button();
             this.btnEditConfig = new System.Windows.Forms.Button();
             this.btnSwitchRotation = new System.Windows.Forms.Button();
             this.cmbRotation = new System.Windows.Forms.ComboBox();
@@ -60,6 +61,7 @@
             // groupBoxOptions
             // 
             this.groupBoxOptions.Controls.Add(this.chkNoRestoreRotation);
+            this.groupBoxOptions.Controls.Add(this.btnOpenLog);
             this.groupBoxOptions.Controls.Add(this.btnEditConfig);
             this.groupBoxOptions.Controls.Add(this.btnSwitchRotation);
             this.groupBoxOptions.Controls.Add(this.cmbRotation);
@@ -84,17 +86,27 @@
             this.chkNoRestoreRotation.AutoSize = true;
             this.chkNoRestoreRotation.Location = new System.Drawing.Point(163, 181);
             this.chkNoRestoreRotation.Name = "chkNoRestoreRotation";
-            this.chkNoRestoreRotation.Size = new System.Drawing.Size(122, 17);
+            this.chkNoRestoreRotation.Size = new System.Drawing.Size(125, 19);
             this.chkNoRestoreRotation.TabIndex = 7;
             this.chkNoRestoreRotation.Text = "退出时不还原屏幕";
             this.toolTip0.SetToolTip(this.chkNoRestoreRotation, "退出游戏进程时保持当前的旋转方向");
             this.chkNoRestoreRotation.UseVisualStyleBackColor = true;
             // 
+            // btnOpenLog
+            // 
+            this.btnOpenLog.Location = new System.Drawing.Point(19, 170);
+            this.btnOpenLog.Name = "btnOpenLog";
+            this.btnOpenLog.Size = new System.Drawing.Size(125, 30);
+            this.btnOpenLog.TabIndex = 12;
+            this.btnOpenLog.Text = "查看 log.txt";
+            this.btnOpenLog.UseVisualStyleBackColor = true;
+            this.btnOpenLog.Click += new System.EventHandler(this.btnOpenLog_Click);
+            // 
             // btnEditConfig
             // 
-            this.btnEditConfig.Location = new System.Drawing.Point(17, 152);
+            this.btnEditConfig.Location = new System.Drawing.Point(20, 135);
             this.btnEditConfig.Name = "btnEditConfig";
-            this.btnEditConfig.Size = new System.Drawing.Size(125, 47);
+            this.btnEditConfig.Size = new System.Drawing.Size(125, 30);
             this.btnEditConfig.TabIndex = 1;
             this.btnEditConfig.Text = "编辑 spicecfg";
             this.toolTip0.SetToolTip(this.btnEditConfig, "如果你勾选了“使用预配置文件”，则会编辑预配置文件");
@@ -126,7 +138,7 @@
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(161, 81);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(67, 13);
+            this.label2.Size = new System.Drawing.Size(67, 15);
             this.label2.TabIndex = 4;
             this.label2.Text = "调试选项：";
             // 
@@ -135,7 +147,7 @@
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(161, 135);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(67, 13);
+            this.label1.Size = new System.Drawing.Size(67, 15);
             this.label1.TabIndex = 4;
             this.label1.Text = "屏幕旋转：";
             // 
@@ -146,7 +158,7 @@
             this.chkUsePreconfig.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkUsePreconfig.Location = new System.Drawing.Point(19, 103);
             this.chkUsePreconfig.Name = "chkUsePreconfig";
-            this.chkUsePreconfig.Size = new System.Drawing.Size(110, 17);
+            this.chkUsePreconfig.Size = new System.Drawing.Size(113, 19);
             this.chkUsePreconfig.TabIndex = 9;
             this.chkUsePreconfig.Text = "使用预配置文件";
             this.toolTip0.SetToolTip(this.chkUsePreconfig, "使用预先配置好的最优配置文件来启动游戏，以防止因错误的系统内建配置造成的干扰\r\n两者互相独立，取消勾选以使用系统内建配置");
@@ -158,7 +170,7 @@
             this.chkPCoreOptimization.AutoSize = true;
             this.chkPCoreOptimization.Location = new System.Drawing.Point(253, 25);
             this.chkPCoreOptimization.Name = "chkPCoreOptimization";
-            this.chkPCoreOptimization.Size = new System.Drawing.Size(86, 17);
+            this.chkPCoreOptimization.Size = new System.Drawing.Size(89, 19);
             this.chkPCoreOptimization.TabIndex = 10;
             this.chkPCoreOptimization.Text = "大小核优化";
             this.toolTip0.SetToolTip(this.chkPCoreOptimization, "勾选后，会限制游戏在性能核心上运行");
@@ -169,7 +181,7 @@
             this.chkAsphyxiaDebug.AutoSize = true;
             this.chkAsphyxiaDebug.Location = new System.Drawing.Point(253, 103);
             this.chkAsphyxiaDebug.Name = "chkAsphyxiaDebug";
-            this.chkAsphyxiaDebug.Size = new System.Drawing.Size(98, 17);
+            this.chkAsphyxiaDebug.Size = new System.Drawing.Size(101, 19);
             this.chkAsphyxiaDebug.TabIndex = 11;
             this.chkAsphyxiaDebug.Text = "调试启动氧无";
             this.toolTip0.SetToolTip(this.chkAsphyxiaDebug, "以调试模式启动 Asphyxia Core，可输出详细错误日志");
@@ -180,7 +192,7 @@
             this.chkNetDump.AutoSize = true;
             this.chkNetDump.Location = new System.Drawing.Point(163, 103);
             this.chkNetDump.Name = "chkNetDump";
-            this.chkNetDump.Size = new System.Drawing.Size(71, 17);
+            this.chkNetDump.Size = new System.Drawing.Size(82, 19);
             this.chkNetDump.TabIndex = 3;
             this.chkNetDump.Text = "NetDump";
             this.chkNetDump.UseVisualStyleBackColor = true;
@@ -190,7 +202,7 @@
             this.chkNoAsphyxia.AutoSize = true;
             this.chkNoAsphyxia.Location = new System.Drawing.Point(163, 49);
             this.chkNoAsphyxia.Name = "chkNoAsphyxia";
-            this.chkNoAsphyxia.Size = new System.Drawing.Size(86, 17);
+            this.chkNoAsphyxia.Size = new System.Drawing.Size(89, 19);
             this.chkNoAsphyxia.TabIndex = 2;
             this.chkNoAsphyxia.Text = "不启动氧无";
             this.toolTip0.SetToolTip(this.chkNoAsphyxia, "启动时不启动氧无，连接在线服时可勾选");
@@ -201,7 +213,7 @@
             this.chkWindowed.AutoSize = true;
             this.chkWindowed.Location = new System.Drawing.Point(163, 25);
             this.chkWindowed.Name = "chkWindowed";
-            this.chkWindowed.Size = new System.Drawing.Size(86, 17);
+            this.chkWindowed.Size = new System.Drawing.Size(89, 19);
             this.chkWindowed.TabIndex = 1;
             this.chkWindowed.Text = "窗口化启动";
             this.toolTip0.SetToolTip(this.chkWindowed, "以窗口化模式运行游戏");
@@ -281,7 +293,7 @@
             this.lblLogOutput.AutoSize = true;
             this.lblLogOutput.Location = new System.Drawing.Point(392, 37);
             this.lblLogOutput.Name = "lblLogOutput";
-            this.lblLogOutput.Size = new System.Drawing.Size(67, 13);
+            this.lblLogOutput.Size = new System.Drawing.Size(67, 15);
             this.lblLogOutput.TabIndex = 11;
             this.lblLogOutput.Text = "日志输出：";
             // 
@@ -318,7 +330,7 @@
             this.lblCompatStatus.ForeColor = System.Drawing.Color.Red;
             this.lblCompatStatus.Location = new System.Drawing.Point(17, 70);
             this.lblCompatStatus.Name = "lblCompatStatus";
-            this.lblCompatStatus.Size = new System.Drawing.Size(64, 12);
+            this.lblCompatStatus.Size = new System.Drawing.Size(64, 15);
             this.lblCompatStatus.TabIndex = 2;
             this.lblCompatStatus.Text = "● 未知";
             // 
@@ -344,11 +356,12 @@
             // 
             // statusStrip1
             // 
+            this.statusStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusLabel});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 523);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 519);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(784, 22);
+            this.statusStrip1.Size = new System.Drawing.Size(784, 26);
             this.statusStrip1.SizingGrip = false;
             this.statusStrip1.TabIndex = 13;
             this.statusStrip1.Text = "statusStrip1";
@@ -356,7 +369,7 @@
             // statusLabel
             // 
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new System.Drawing.Size(33, 17);
+            this.statusLabel.Size = new System.Drawing.Size(41, 20);
             this.statusLabel.Text = "就绪";
             // 
             // lblCurrentVersion
@@ -364,7 +377,7 @@
             this.lblCurrentVersion.AutoSize = true;
             this.lblCurrentVersion.Location = new System.Drawing.Point(15, 15);
             this.lblCurrentVersion.Name = "lblCurrentVersion";
-            this.lblCurrentVersion.Size = new System.Drawing.Size(58, 13);
+            this.lblCurrentVersion.Size = new System.Drawing.Size(58, 15);
             this.lblCurrentVersion.TabIndex = 14;
             this.lblCurrentVersion.Text = "当前版本:";
             // 
@@ -375,14 +388,13 @@
             this.txtCurrentVersion.ReadOnly = true;
             this.txtCurrentVersion.Size = new System.Drawing.Size(78, 20);
             this.txtCurrentVersion.TabIndex = 15;
-            //this.txtCurrentVersion.Text = "读取中...";
             // 
             // lblRevision
             // 
             this.lblRevision.AutoSize = true;
             this.lblRevision.Location = new System.Drawing.Point(182, 15);
             this.lblRevision.Name = "lblRevision";
-            this.lblRevision.Size = new System.Drawing.Size(82, 13);
+            this.lblRevision.Size = new System.Drawing.Size(82, 15);
             this.lblRevision.TabIndex = 16;
             this.lblRevision.Text = "懒人包修订号:";
             // 
@@ -393,7 +405,6 @@
             this.txtRevision.ReadOnly = true;
             this.txtRevision.Size = new System.Drawing.Size(54, 20);
             this.txtRevision.TabIndex = 17;
-            //this.txtRevision.Text = "读取中...";
             // 
             // BootstrapForm
             // 
@@ -443,6 +454,7 @@
         private System.Windows.Forms.GroupBox groupBoxTools;
         private System.Windows.Forms.Button btnInstallRuntime;
         private System.Windows.Forms.Button btnEditConfig;
+        private System.Windows.Forms.Button btnOpenLog;
         private System.Windows.Forms.Button btnClearCache;
         private System.Windows.Forms.Button btnAddFirewallRule;
         private System.Windows.Forms.Label lblLogOutput;
