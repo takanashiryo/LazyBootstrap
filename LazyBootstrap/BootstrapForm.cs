@@ -73,6 +73,17 @@ namespace LazyBootstrap
             cmbRotation.Items.AddRange(new object[] { "0", "90", "180", "270" });
             cmbRotation.SelectedIndex = 0;
 
+            // 兼容层类型默认值
+            if (cmbCompatType != null)
+            {
+                // 确保包含期望的项，默认选择 dx9on12
+                if (cmbCompatType.Items.Count == 0)
+                {
+                    cmbCompatType.Items.AddRange(new object[] { "dx9on12", "dxvk" });
+                }
+                cmbCompatType.SelectedIndex = 0;
+            }
+
             // 初始化日志输出控件
             LogSystem.Initialize(txtLogOutput);
 
@@ -326,13 +337,24 @@ namespace LazyBootstrap
                     argsBuilder.Append("-processefficiency pcores ");
                 }
 
-                // add "-dx9on12 1" when detect NVIDIA API in modules
+                // 根据兼容层选择添加 -dx9on12 参数
                 try
                 {
-                    if (GetCompatLayerFileCount() == 3)
+                    string compat = cmbCompatType != null && cmbCompatType.SelectedItem != null
+                        ? cmbCompatType.SelectedItem.ToString()
+                        : "dx9on12";
+
+                    if (string.Equals(compat, "dxvk", StringComparison.OrdinalIgnoreCase))
                     {
-                        argsBuilder.Append("-dx9on12 1 ");
-                        LogSystem.Log("检测到 NVIDIA API 兼容层，已添加启动参数: -dx9on12 1");
+                        argsBuilder.Append("-dx9on12 0 ");
+                    }
+                    else
+                    {
+                        // 保持现有逻辑：仅在检测到 NVIDIA API 兼容层时添加 -dx9on12 1
+                        if (GetCompatLayerFileCount() == 3)
+                        {
+                            argsBuilder.Append("-dx9on12 1 ");
+                        }
                     }
                 }
                 catch { }
@@ -606,7 +628,7 @@ namespace LazyBootstrap
             {
                 if (!File.Exists(installBatPath))
                 {
-                    MessageBox.Show($"未找到安装脚本: {installBatPath}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    //MessageBox.Show($"未找到安装脚本: {installBatPath}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     LogSystem.Log($"错误: 未找到 runtime/install.bat", LogSystem.LogLevel.Error);
                     return;
                 }
@@ -627,10 +649,9 @@ namespace LazyBootstrap
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
-                // 用户取消了UAC提示
                 if (ex.NativeErrorCode == 1223)
                 {
-                    LogSystem.Log("用户取消了 Runtime 安装。", LogSystem.LogLevel.Warning);
+                    LogSystem.Log("用户已取消。", LogSystem.LogLevel.Warning);
                 }
                 else
                 {
@@ -661,7 +682,23 @@ namespace LazyBootstrap
             LogSystem.Log($"NVIDIA API 准备{operationName}...");
             string sourceDir = Path.Combine(_baseDir, sourceDirRel);
             string destDir = Path.Combine(_baseDir, destDirRel);
-            string[] filesToMove = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
+            List<string> filesToMoveList = new List<string> { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
+
+            // dxvk d3d9.dll if needed
+            try
+            {
+                string compat = cmbCompatType != null && cmbCompatType.SelectedItem != null
+                    ? cmbCompatType.SelectedItem.ToString()
+                    : "dx9on12";
+                if (string.Equals(compat, "dxvk", StringComparison.OrdinalIgnoreCase))
+                {
+                    LogSystem.Log($"DXVK 准备{operationName}...");
+                    filesToMoveList.Add("d3d9.dll");
+                }
+            }
+            catch { }
+
+            string[] filesToMove = filesToMoveList.ToArray();
 
             int successCount = 0;
             int skippedCount = 0;
@@ -669,7 +706,7 @@ namespace LazyBootstrap
             {
                 if (!Directory.Exists(sourceDir))
                 {
-                    MessageBox.Show($"源文件夹 '{sourceDirRel}' 不存在!", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    LogSystem.Log($"源文件夹 '{sourceDirRel}' 不存在!", LogSystem.LogLevel.Error);
                     return;
                 }
                 Directory.CreateDirectory(destDir); // make sure destination folder has been created

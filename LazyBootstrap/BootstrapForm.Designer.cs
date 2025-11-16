@@ -42,6 +42,7 @@
             this.lblLogOutput = new System.Windows.Forms.Label();
             this.txtLogOutput = new System.Windows.Forms.RichTextBox();
             this.groupBoxCompatLayer = new System.Windows.Forms.GroupBox();
+            this.cmbCompatType = new System.Windows.Forms.ComboBox();
             this.lblCompatStatus = new System.Windows.Forms.Label();
             this.btnUnloadCompat = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
@@ -52,6 +53,7 @@
             this.txtCurrentVersion = new System.Windows.Forms.TextBox();
             this.lblRevision = new System.Windows.Forms.Label();
             this.txtRevision = new System.Windows.Forms.TextBox();
+            this.label3 = new System.Windows.Forms.Label();
             this.groupBoxOptions.SuspendLayout();
             this.groupBoxTools.SuspendLayout();
             this.groupBoxCompatLayer.SuspendLayout();
@@ -86,7 +88,7 @@
             this.chkNoRestoreRotation.AutoSize = true;
             this.chkNoRestoreRotation.Location = new System.Drawing.Point(163, 181);
             this.chkNoRestoreRotation.Name = "chkNoRestoreRotation";
-            this.chkNoRestoreRotation.Size = new System.Drawing.Size(125, 19);
+            this.chkNoRestoreRotation.Size = new System.Drawing.Size(122, 17);
             this.chkNoRestoreRotation.TabIndex = 7;
             this.chkNoRestoreRotation.Text = "退出时不还原屏幕";
             this.toolTip0.SetToolTip(this.chkNoRestoreRotation, "退出游戏进程时保持当前的旋转方向");
@@ -138,7 +140,7 @@
             this.label2.AutoSize = true;
             this.label2.Location = new System.Drawing.Point(161, 81);
             this.label2.Name = "label2";
-            this.label2.Size = new System.Drawing.Size(67, 15);
+            this.label2.Size = new System.Drawing.Size(67, 13);
             this.label2.TabIndex = 4;
             this.label2.Text = "调试选项：";
             // 
@@ -147,7 +149,7 @@
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(161, 135);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(67, 15);
+            this.label1.Size = new System.Drawing.Size(67, 13);
             this.label1.TabIndex = 4;
             this.label1.Text = "屏幕旋转：";
             // 
@@ -158,7 +160,7 @@
             this.chkUsePreconfig.CheckState = System.Windows.Forms.CheckState.Checked;
             this.chkUsePreconfig.Location = new System.Drawing.Point(19, 103);
             this.chkUsePreconfig.Name = "chkUsePreconfig";
-            this.chkUsePreconfig.Size = new System.Drawing.Size(113, 19);
+            this.chkUsePreconfig.Size = new System.Drawing.Size(110, 17);
             this.chkUsePreconfig.TabIndex = 9;
             this.chkUsePreconfig.Text = "使用预配置文件";
             this.toolTip0.SetToolTip(this.chkUsePreconfig, "使用预先配置好的最优配置文件来启动游戏，以防止因错误的系统内建配置造成的干扰\r\n两者互相独立，取消勾选以使用系统内建配置");
@@ -170,7 +172,7 @@
             this.chkPCoreOptimization.AutoSize = true;
             this.chkPCoreOptimization.Location = new System.Drawing.Point(253, 25);
             this.chkPCoreOptimization.Name = "chkPCoreOptimization";
-            this.chkPCoreOptimization.Size = new System.Drawing.Size(89, 19);
+            this.chkPCoreOptimization.Size = new System.Drawing.Size(86, 17);
             this.chkPCoreOptimization.TabIndex = 10;
             this.chkPCoreOptimization.Text = "大小核优化";
             this.toolTip0.SetToolTip(this.chkPCoreOptimization, "勾选后，会限制游戏在性能核心上运行");
@@ -181,7 +183,7 @@
             this.chkAsphyxiaDebug.AutoSize = true;
             this.chkAsphyxiaDebug.Location = new System.Drawing.Point(253, 103);
             this.chkAsphyxiaDebug.Name = "chkAsphyxiaDebug";
-            this.chkAsphyxiaDebug.Size = new System.Drawing.Size(101, 19);
+            this.chkAsphyxiaDebug.Size = new System.Drawing.Size(98, 17);
             this.chkAsphyxiaDebug.TabIndex = 11;
             this.chkAsphyxiaDebug.Text = "调试启动氧无";
             this.toolTip0.SetToolTip(this.chkAsphyxiaDebug, "以调试模式启动 Asphyxia Core，可输出详细错误日志");
@@ -192,7 +194,7 @@
             this.chkNetDump.AutoSize = true;
             this.chkNetDump.Location = new System.Drawing.Point(163, 103);
             this.chkNetDump.Name = "chkNetDump";
-            this.chkNetDump.Size = new System.Drawing.Size(82, 19);
+            this.chkNetDump.Size = new System.Drawing.Size(71, 17);
             this.chkNetDump.TabIndex = 3;
             this.chkNetDump.Text = "NetDump";
             this.chkNetDump.UseVisualStyleBackColor = true;
@@ -202,7 +204,7 @@
             this.chkNoAsphyxia.AutoSize = true;
             this.chkNoAsphyxia.Location = new System.Drawing.Point(163, 49);
             this.chkNoAsphyxia.Name = "chkNoAsphyxia";
-            this.chkNoAsphyxia.Size = new System.Drawing.Size(89, 19);
+            this.chkNoAsphyxia.Size = new System.Drawing.Size(86, 17);
             this.chkNoAsphyxia.TabIndex = 2;
             this.chkNoAsphyxia.Text = "不启动氧无";
             this.toolTip0.SetToolTip(this.chkNoAsphyxia, "启动时不启动氧无，连接在线服时可勾选");
@@ -213,7 +215,7 @@
             this.chkWindowed.AutoSize = true;
             this.chkWindowed.Location = new System.Drawing.Point(163, 25);
             this.chkWindowed.Name = "chkWindowed";
-            this.chkWindowed.Size = new System.Drawing.Size(89, 19);
+            this.chkWindowed.Size = new System.Drawing.Size(86, 17);
             this.chkWindowed.TabIndex = 1;
             this.chkWindowed.Text = "窗口化启动";
             this.toolTip0.SetToolTip(this.chkWindowed, "以窗口化模式运行游戏");
@@ -293,7 +295,7 @@
             this.lblLogOutput.AutoSize = true;
             this.lblLogOutput.Location = new System.Drawing.Point(392, 37);
             this.lblLogOutput.Name = "lblLogOutput";
-            this.lblLogOutput.Size = new System.Drawing.Size(67, 15);
+            this.lblLogOutput.Size = new System.Drawing.Size(67, 13);
             this.lblLogOutput.TabIndex = 11;
             this.lblLogOutput.Text = "日志输出：";
             // 
@@ -302,6 +304,7 @@
             this.txtLogOutput.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+            this.txtLogOutput.BackColor = System.Drawing.Color.Black;
             this.txtLogOutput.Location = new System.Drawing.Point(394, 59);
             this.txtLogOutput.Name = "txtLogOutput";
             this.txtLogOutput.ReadOnly = true;
@@ -312,9 +315,11 @@
             // 
             // groupBoxCompatLayer
             // 
+            this.groupBoxCompatLayer.Controls.Add(this.cmbCompatType);
             this.groupBoxCompatLayer.Controls.Add(this.lblCompatStatus);
             this.groupBoxCompatLayer.Controls.Add(this.btnUnloadCompat);
             this.groupBoxCompatLayer.Controls.Add(this.button1);
+            this.groupBoxCompatLayer.Controls.Add(this.label3);
             this.groupBoxCompatLayer.Location = new System.Drawing.Point(15, 413);
             this.groupBoxCompatLayer.Name = "groupBoxCompatLayer";
             this.groupBoxCompatLayer.Size = new System.Drawing.Size(368, 98);
@@ -323,6 +328,19 @@
             this.groupBoxCompatLayer.Text = "AMD/Intel显卡兼容层";
             this.toolTip0.SetToolTip(this.groupBoxCompatLayer, "载入AMD/Intel显卡的兼容层");
             // 
+            // cmbCompatType
+            // 
+            this.cmbCompatType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbCompatType.FormattingEnabled = true;
+            this.cmbCompatType.Items.AddRange(new object[] {
+            "dx9on12",
+            "dxvk"});
+            this.cmbCompatType.Location = new System.Drawing.Point(228, 66);
+            this.cmbCompatType.Name = "cmbCompatType";
+            this.cmbCompatType.Size = new System.Drawing.Size(121, 21);
+            this.cmbCompatType.TabIndex = 3;
+            this.toolTip0.SetToolTip(this.cmbCompatType, "选择兼容层实现\r\ndx9on12：默认，通常情况下可提供最好的效果\r\ndxvk：备用，可能会出现轨道缺失等问题");
+            // 
             // lblCompatStatus
             // 
             this.lblCompatStatus.AutoSize = true;
@@ -330,7 +348,7 @@
             this.lblCompatStatus.ForeColor = System.Drawing.Color.Red;
             this.lblCompatStatus.Location = new System.Drawing.Point(17, 70);
             this.lblCompatStatus.Name = "lblCompatStatus";
-            this.lblCompatStatus.Size = new System.Drawing.Size(64, 15);
+            this.lblCompatStatus.Size = new System.Drawing.Size(51, 12);
             this.lblCompatStatus.TabIndex = 2;
             this.lblCompatStatus.Text = "● 未知";
             // 
@@ -359,9 +377,9 @@
             this.statusStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
             this.statusLabel});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 519);
+            this.statusStrip1.Location = new System.Drawing.Point(0, 523);
             this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(784, 26);
+            this.statusStrip1.Size = new System.Drawing.Size(784, 22);
             this.statusStrip1.SizingGrip = false;
             this.statusStrip1.TabIndex = 13;
             this.statusStrip1.Text = "statusStrip1";
@@ -369,7 +387,7 @@
             // statusLabel
             // 
             this.statusLabel.Name = "statusLabel";
-            this.statusLabel.Size = new System.Drawing.Size(41, 20);
+            this.statusLabel.Size = new System.Drawing.Size(33, 17);
             this.statusLabel.Text = "就绪";
             // 
             // lblCurrentVersion
@@ -377,7 +395,7 @@
             this.lblCurrentVersion.AutoSize = true;
             this.lblCurrentVersion.Location = new System.Drawing.Point(15, 15);
             this.lblCurrentVersion.Name = "lblCurrentVersion";
-            this.lblCurrentVersion.Size = new System.Drawing.Size(58, 15);
+            this.lblCurrentVersion.Size = new System.Drawing.Size(58, 13);
             this.lblCurrentVersion.TabIndex = 14;
             this.lblCurrentVersion.Text = "当前版本:";
             // 
@@ -394,7 +412,7 @@
             this.lblRevision.AutoSize = true;
             this.lblRevision.Location = new System.Drawing.Point(182, 15);
             this.lblRevision.Name = "lblRevision";
-            this.lblRevision.Size = new System.Drawing.Size(82, 15);
+            this.lblRevision.Size = new System.Drawing.Size(82, 13);
             this.lblRevision.TabIndex = 16;
             this.lblRevision.Text = "懒人包修订号:";
             // 
@@ -405,6 +423,15 @@
             this.txtRevision.ReadOnly = true;
             this.txtRevision.Size = new System.Drawing.Size(54, 20);
             this.txtRevision.TabIndex = 17;
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(149, 70);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(79, 13);
+            this.label3.TabIndex = 4;
+            this.label3.Text = "兼容层实现：";
             // 
             // BootstrapForm
             // 
@@ -473,5 +500,7 @@
         private System.Windows.Forms.TextBox txtCurrentVersion;
         private System.Windows.Forms.Label lblRevision;
         private System.Windows.Forms.TextBox txtRevision;
+        private System.Windows.Forms.ComboBox cmbCompatType;
+        private System.Windows.Forms.Label label3;
     }
 }
