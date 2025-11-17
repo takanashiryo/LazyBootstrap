@@ -340,7 +340,7 @@
             this.cmbCompatType.Name = "cmbCompatType";
             this.cmbCompatType.Size = new System.Drawing.Size(121, 21);
             this.cmbCompatType.TabIndex = 3;
-            this.toolTip0.SetToolTip(this.cmbCompatType, "选择兼容层实现\r\ndx9on12：默认，通常情况下可提供最好的效果\r\ndxvk：备用，可能会出现轨道缺失等问题");
+            this.toolTip0.SetToolTip(this.cmbCompatType, "选择兼容层实现\r\ndx9on12：默认，通常情况下可提供最好的效果，窗口化会白屏\r\ndxvk：备用，可能会出现轨道缺失等问题");
             // 
             // lblCompatStatus
             // 
@@ -381,6 +381,7 @@
             this.label3.Size = new System.Drawing.Size(79, 13);
             this.label3.TabIndex = 4;
             this.label3.Text = "兼容层实现：";
+            this.toolTip0.SetToolTip(this.label3, "选择兼容层实现\r\ndx9on12：默认，通常情况下可提供最好的效果，窗口化会白屏\r\ndxvk：备用，可能会出现轨道缺失等问题");
             // 
             // statusStrip1
             // 

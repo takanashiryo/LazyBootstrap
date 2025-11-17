@@ -21,6 +21,9 @@ namespace LazyBootstrap
         private readonly string _baseDir;
         private readonly string _contentsDir;
 
+        // 缓存兼容层实现下拉框原始 tooltip，避免禁用时闪烁
+        private string _compatTypeTooltipCache;
+
         public BootstrapForm()
         {
             InitializeComponent();
@@ -60,6 +63,7 @@ namespace LazyBootstrap
                 _configFile.WriteString("Settings", "pcoreopt", "false");
                 _configFile.WriteString("Settings", "noasphyxia", "false");
                 _configFile.WriteString("Settings", "norestorerotation", "false");
+                _configFile.WriteString("Settings", "compatlayerenabled", "false");
             }
 
             InitializeCustomComponents();
@@ -88,6 +92,11 @@ namespace LazyBootstrap
                     cmbCompatType.Items.AddRange(new object[] { "dx9on12", "dxvk" });
                 }
                 cmbCompatType.SelectedIndex = 0;
+                // 缓存原始 tooltip 文本
+                if (toolTip0 != null)
+                {
+                    _compatTypeTooltipCache = toolTip0.GetToolTip(cmbCompatType);
+                }
             }
 
             // 初始化日志输出控件
@@ -233,6 +242,17 @@ namespace LazyBootstrap
             return foundCount;
         }
 
+        private bool IsCompatLayerEnabledConfigured()
+        {
+            try
+            {
+                var s = _configFile.ReadString("Settings", "compatlayerenabled", "false");
+                bool enabled;
+                return bool.TryParse(s, out enabled) && enabled;
+            }
+            catch { return false; }
+        }
+
         // 更新兼容层状态指示器
         private void UpdateCompatLayerStatus()
         {
@@ -257,6 +277,35 @@ namespace LazyBootstrap
                 // 没有文件
                 lblCompatStatus.Text = "● 未启用";
                 lblCompatStatus.ForeColor = System.Drawing.Color.Red;
+            }
+
+            // 启用状态下禁用兼容层实现下拉，需先关闭再更改；同时“启用”按钮禁用、“关闭”按钮启用
+            bool effectiveEnabled = fileCount >= 1 || IsCompatLayerEnabledConfigured();
+            if (cmbCompatType != null)
+            {
+                cmbCompatType.Enabled = !effectiveEnabled;
+                if (toolTip0 != null)
+                {
+                    if (effectiveEnabled)
+                    {
+                        // 禁用时移除 tooltip，避免持续闪烁
+                        toolTip0.SetToolTip(cmbCompatType, string.Empty);
+                    }
+                    else
+                    {
+                        // 恢复原始 tooltip
+                        if (!string.IsNullOrEmpty(_compatTypeTooltipCache))
+                            toolTip0.SetToolTip(cmbCompatType, _compatTypeTooltipCache);
+                    }
+                }
+            }
+            if (button1 != null) // 启用按钮
+            {
+                button1.Enabled = !effectiveEnabled;
+            }
+            if (btnUnloadCompat != null) // 关闭按钮
+            {
+                btnUnloadCompat.Enabled = effectiveEnabled;
             }
         }
 
@@ -303,6 +352,25 @@ namespace LazyBootstrap
                 });
 
                 LogSystem.Log("环境检测完成。\r\n");
+
+                // 检测异常弹窗
+                if (EnvironmentScan.LastHadError)
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("(｡>﹏<｡) 啊哇哇，Near检测到你的系统可能缺少必要的运行组件，可能导致启动失败或功能异常。");
+                    sb.AppendLine();
+                    sb.AppendLine("٩(ˊᗜˋ*)و Noah给出的解决方法：");
+                    sb.AppendLine("- 点击启动器‘安装运行库’按钮安装必要组件");
+                    sb.AppendLine("- 确保已安装最新的显卡驱动程序");
+                    sb.AppendLine("- 若为 AMD/Intel 显卡，启用‘兼容层’后重试");
+                    sb.AppendLine();
+                    sb.AppendLine("如果‘系统媒体功能包’异常：");
+                    sb.AppendLine("- 检查‘Windows 功能’中是否启用了‘媒体功能包’");
+                    sb.AppendLine();
+                    sb.AppendLine("您可先行尝试启动游戏，若出现问题，再寻求周围帮助。");
+
+                    MessageBox.Show(this, sb.ToString(), "环境检测发现问题", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             catch (Exception ex)
             {
@@ -735,12 +803,16 @@ namespace LazyBootstrap
         private void btnLoadCompat_Click(object sender, EventArgs e)
         {
             MoveCompatFiles(Path.Combine("contents", "lazy", "stubs"), Path.Combine("contents", "modules"), "载入");
+            // 记录启用状态
+            try { _configFile.WriteString("Settings", "compatlayerenabled", "true"); LogSystem.Log("已记录兼容层状态: 启用"); } catch { }
             UpdateCompatLayerStatus();
         }
 
         private void btnUnloadCompat_Click(object sender, EventArgs e)
         {
             MoveCompatFiles(Path.Combine("contents", "modules"), Path.Combine("contents", "lazy", "stubs"), "卸载");
+            // 记录关闭状态
+            try { _configFile.WriteString("Settings", "compatlayerenabled", "false"); LogSystem.Log("已记录兼容层状态: 关闭"); } catch { }
             UpdateCompatLayerStatus();
         }
 

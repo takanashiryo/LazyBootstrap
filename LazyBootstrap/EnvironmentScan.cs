@@ -1,157 +1,63 @@
-using Microsoft.Win32;
+using Microsoft.Win32; // 可移除如不再需要 Registry
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
-using System.Collections.Generic;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LazyBootstrap
 {
     public static class EnvironmentScan
     {
-        private const int StepCount = 6; // CPU、GPU、NVIDIA API、DirectX9.0c、VC2010 x86、VC2010 x64
+        private const int StepCount = 7; // CPU / GPU / NVIDIA API / DirectX9.0c / 系统媒体功能包 / VC2010 x86 / VC2010 x64
+
+        // 最近一次扫描的错误状态与摘要
+        private static bool _lastHadError;
+        private static string _lastErrorSummary;
+        public static bool LastHadError => _lastHadError;
+        public static string LastErrorSummary => _lastErrorSummary ?? string.Empty;
 
         public static async Task RunAsync(Action<int, string> progress)
         {
-            Action<int, string> reportProgressOnly = (p, m) => { try { progress?.Invoke(p, ""); } catch { } };
+            // 统一的进度上报（不传递 message 内容，仅数值）
+            void Report(int stepIndex) { try { progress?.Invoke((int)Math.Round((double)stepIndex * 100 / StepCount), ""); } catch { } }
 
-            int step = 0;
-            int Percent() => (int)Math.Round((double)step * 100 / StepCount);
+            bool hadIssue = false; // Warning 或 Error
+            bool hadError = false; // 仅 Error
+            var errorSummary = new StringBuilder();
 
-            // 初始化
-            LogSystem.Log("初始化环境检测...");
-            reportProgressOnly(Percent(), "");
-            await Task.Delay(150);
+            void LogInfo(string msg) => LogSystem.Log(msg);
+            void LogWarn(string msg) { hadIssue = true; LogSystem.Log(msg, LogSystem.LogLevel.Warning); }
+            void LogError(string msg) { hadIssue = true; hadError = true; errorSummary.AppendLine(msg); LogSystem.Log(msg, LogSystem.LogLevel.Error); }
 
-            // 1. CPU 型号
-            try
+            LogInfo("初始化环境检测...");
+            Report(0);
+            await Task.Delay(120);
+
+            // 局部函数：无对外暴露，保持单方法结构
+            string GetCpuName()
             {
-                step++;
-                string cpu = GetCpuNameByRegistry();
-                LogSystem.Log($"CPU: {cpu}");
-            }
-            catch (Exception ex)
-            {
-                LogSystem.Log($"读取 CPU 信息失败: {ex.Message}", LogSystem.LogLevel.Error);
-            }
-            reportProgressOnly(Percent(), "");
-            await Task.Delay(200);
-
-            // 2. GPU 型号（注册表）
-            try
-            {
-                step++;
-                var gpus = GetGpuNamesByRegistry();
-                if (gpus.Count == 0)
+                try
                 {
-                    LogSystem.Log("GPU: 未检测到", LogSystem.LogLevel.Warning);
-                }
-                else
-                {
-                    var sb = new StringBuilder();
-                    sb.AppendLine("GPU:");
-                    foreach (var gpu in gpus)
+                    using (var k = Registry.LocalMachine.OpenSubKey(@"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0"))
                     {
-                        sb.AppendLine($"  - {gpu}");
+                        var name = k?.GetValue("ProcessorNameString") as string;
+                        if (!string.IsNullOrWhiteSpace(name)) return name.Trim();
                     }
-                    LogSystem.Log(sb.ToString().TrimEnd());
                 }
+                catch { }
+                return "未知处理器";
             }
-            catch (Exception ex)
-            {
-                LogSystem.Log($"读取 GPU 信息失败: {ex.Message}", LogSystem.LogLevel.Error);
-            }
-            reportProgressOnly(Percent(), "");
-            await Task.Delay(200);
 
-            // 3. NVIDIA API (System32) 逐项
-            try
+            List<string> GetGpuNames()
             {
-                step++;
-                LogNvidiaApiDetailed();
-            }
-            catch (Exception ex)
-            {
-                LogSystem.Log($"检测 NVIDIA API 失败: {ex.Message}", LogSystem.LogLevel.Error);
-            }
-            reportProgressOnly(Percent(), "");
-            await Task.Delay(200);
-
-            // 4. DirectX 9.0c 检测（逐项）
-            try
-            {
-                step++;
-                LogDirectX9cDetailed();
-            }
-            catch (Exception ex)
-            {
-                LogSystem.Log($"检测 DirectX 9.0c 失败: {ex.Message}", LogSystem.LogLevel.Error);
-            }
-            reportProgressOnly(Percent(), "");
-            await Task.Delay(200);
-
-            // 5. VC++ 2010 x86
-            try
-            {
-                step++;
-                bool vcredist86 = CheckVCRedist2010(false);
-                if (vcredist86)
-                    LogSystem.Log("VC++ 2010 x86: 已安装");
-                else
-                    LogSystem.Log("VC++ 2010 x86: 未检测到", LogSystem.LogLevel.Error);
-            }
-            catch (Exception ex)
-            {
-                LogSystem.Log($"检测 VC++ 2010 x86 失败: {ex.Message}", LogSystem.LogLevel.Error);
-            }
-            reportProgressOnly(Percent(), "");
-            await Task.Delay(200);
-
-            // 6. VC++ 2010 x64
-            try
-            {
-                step++;
-                bool vcredist64 = CheckVCRedist2010(true);
-                if (vcredist64)
-                    LogSystem.Log("VC++ 2010 x64: 已安装");
-                else
-                    LogSystem.Log("VC++ 2010 x64: 未检测到", LogSystem.LogLevel.Error);
-            }
-            catch (Exception ex)
-            {
-                LogSystem.Log($"检测 VC++ 2010 x64 失败: {ex.Message}", LogSystem.LogLevel.Error);
-            }
-            reportProgressOnly(Percent(), "");
-            await Task.Delay(200);
-
-            LogSystem.Log("环境检测完成。");
-            reportProgressOnly(100, "Done");
-        }
-
-        private static string GetCpuNameByRegistry()
-        {
-            try
-            {
-                using (var k = Registry.LocalMachine.OpenSubKey(@"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0"))
+                var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                try
                 {
-                    var name = k?.GetValue("ProcessorNameString") as string;
-                    if (!string.IsNullOrWhiteSpace(name)) return name.Trim();
-                }
-            }
-            catch { }
-            return "未知处理器";
-        }
-
-        private static List<string> GetGpuNamesByRegistry()
-        {
-            var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            try
-            {
-                using (var root = Registry.LocalMachine.OpenSubKey(@"SYSTEM\\CurrentControlSet\\Control\\Video"))
-                {
-                    if (root != null)
+                    using (var root = Registry.LocalMachine.OpenSubKey(@"SYSTEM\\CurrentControlSet\\Control\\Video"))
                     {
+                        if (root == null) return set.ToList();
                         foreach (var guid in root.GetSubKeyNames())
                         {
                             using (var adapterKey = root.OpenSubKey(guid))
@@ -163,7 +69,6 @@ namespace LazyBootstrap
                                     {
                                         var desc = conf?.GetValue("DriverDesc") as string;
                                         if (!string.IsNullOrWhiteSpace(desc)) set.Add(desc.Trim());
-
                                         var adapterStr = conf?.GetValue("HardwareInformation.AdapterString") as string;
                                         if (!string.IsNullOrWhiteSpace(adapterStr)) set.Add(adapterStr.Trim());
                                     }
@@ -172,100 +77,149 @@ namespace LazyBootstrap
                         }
                     }
                 }
+                catch { }
+                return set.ToList();
             }
-            catch { }
 
-            return set.ToList();
-        }
-
-        // 按行输出 NVIDIA API 检测结果：存在 -> Info；缺失 -> Warning
-        private static void LogNvidiaApiDetailed()
-        {
-            LogSystem.Log("NVIDIA API (System32):");
-            try
+            bool IsCompatLayerEnabled()
             {
-                var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
-                string[] nvFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
-                foreach (var f in nvFiles)
+                try
                 {
-                    bool ok = File.Exists(Path.Combine(sys32, f));
-                    var line = $"  {f}: {(ok ? "已检测到" : "未检测到")}";
-                    LogSystem.Log(line, ok ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Error);
+                    var cfgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.ini");
+                    if (!File.Exists(cfgPath)) return false;
+                    var cfg = new ConfigHandler(cfgPath);
+                    var s = cfg.ReadString("Settings", "compatlayerenabled", "false");
+                    bool enabled; return bool.TryParse(s, out enabled) && enabled;
                 }
+                catch { return false; }
             }
-            catch (Exception)
-            {
-                LogSystem.Log("  检测失败", LogSystem.LogLevel.Error);
-            }
-        }
 
-        // 按行输出 DirectX 9.0c 检测结果：存在 -> Info；缺失 -> Error（包含 d3dx9_43.dll）
-        private static void LogDirectX9cDetailed()
-        {
-            LogSystem.Log("DirectX 9.0c:");
-            try
+            void LogCpu()
             {
-                var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
-                bool hasCore = File.Exists(Path.Combine(sys32, "d3d9.dll"));
-                bool hasJun2010 = File.Exists(Path.Combine(sys32, "d3dx9_43.dll"));
-
-                LogSystem.Log($"  d3d9.dll: {(hasCore ? "检测到核心" : "未检测到核心")}", hasCore ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Error);
-                LogSystem.Log($"  d3dx9_43.dll: {(hasJun2010 ? "检测到辅助库" : "未检测到辅助库")}", hasJun2010 ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Error);
+                LogInfo("CPU:");
+                LogInfo("  - " + GetCpuName());
             }
-            catch (Exception)
-            {
-                LogSystem.Log("  检测失败", LogSystem.LogLevel.Error);
-            }
-        }
 
-        private static bool CheckVCRedist2010(bool x64)
-        {
-            try
+            void LogGpu()
             {
-                string[] uninstallRoots = new[]
+                LogInfo("GPU:");
+                var gpus = GetGpuNames();
+                if (gpus.Count == 0)
+                    LogWarn("  - 未检测到");
+                else
+                    foreach (var g in gpus) LogInfo("  - " + g);
+            }
+
+            void LogNvidia()
+            {
+                LogInfo("NVIDIA API (System32):");
+                if (IsCompatLayerEnabled())
                 {
-                    @"SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
-                    @"SOFTWARE\\Wow6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-                };
-
-                foreach (var root in uninstallRoots)
+                    LogInfo("  - 已启用兼容层，自动跳过系统库检测");
+                    return;
+                }
+                try
                 {
-                    using (var baseKey = Registry.LocalMachine.OpenSubKey(root))
+                    var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
+                    foreach (var f in new[] { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" })
                     {
-                        if (baseKey == null) continue;
-                        foreach (var sub in baseKey.GetSubKeyNames())
-                        {
-                            using (var k = baseKey.OpenSubKey(sub))
-                            {
-                                var name = k?.GetValue("DisplayName") as string;
-                                if (string.IsNullOrEmpty(name)) continue;
-
-                                bool is2010 = name.IndexOf("Visual C++", StringComparison.OrdinalIgnoreCase) >= 0
-                                              && name.IndexOf("2010", StringComparison.OrdinalIgnoreCase) >= 0
-                                              && name.IndexOf("Redistributable", StringComparison.OrdinalIgnoreCase) >= 0;
-                                if (!is2010) continue;
-
-                                bool hasX64 = name.IndexOf("x64", StringComparison.OrdinalIgnoreCase) >= 0
-                                              || name.IndexOf("amd64", StringComparison.OrdinalIgnoreCase) >= 0;
-                                bool hasX86 = name.IndexOf("x86", StringComparison.OrdinalIgnoreCase) >= 0
-                                              || name.IndexOf("x32", StringComparison.OrdinalIgnoreCase) >= 0
-                                              || (!hasX64);
-
-                                if (x64)
-                                {
-                                    if (hasX64) return true;
-                                }
-                                else
-                                {
-                                    if (hasX86) return true;
-                                }
-                            }
-                        }
+                        bool ok = File.Exists(Path.Combine(sys32, f));
+                        if (ok) LogInfo($"  - {f}: 已检测到"); else LogError($"  - {f}: 未检测到");
                     }
                 }
+                catch (Exception ex)
+                {
+                    LogError($"  - 检测失败: {ex.Message}");
+                }
             }
-            catch { }
-            return false;
+
+            void LogDirectX()
+            {
+                LogInfo("DirectX 9.0c:");
+                try
+                {
+                    var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
+                    bool hasCore = File.Exists(Path.Combine(sys32, "d3d9.dll"));
+                    bool hasJun = File.Exists(Path.Combine(sys32, "d3dx9_43.dll"));
+                    if (hasCore) LogInfo("  - d3d9.dll: 已检测到"); else LogError("  - d3d9.dll: 未检测到");
+                    if (hasJun) LogInfo("  - d3dx9_43.dll: 已检测到"); else LogError("  - d3dx9_43.dll: 未检测到");
+                }
+                catch (Exception ex)
+                {
+                    LogError($"  - 检测失败: {ex.Message}");
+                }
+            }
+
+            // 新增：系统媒体功能包（MF.dll、MFPLAT.dll、WMVCore.dll）
+            void LogMediaFeaturePack()
+            {
+                LogInfo("系统媒体功能包:");
+                try
+                {
+                    var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
+                    foreach (var f in new[] { "MF.dll", "MFPLAT.dll", "WMVCore.dll" })
+                    {
+                        bool ok = File.Exists(Path.Combine(sys32, f));
+                        if (ok) LogInfo($"  - {f}: 已检测到"); else LogError($"  - {f}: 未检测到");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogError($"  - 检测失败: {ex.Message}");
+                }
+            }
+
+            void LogVc2010(bool x64)
+            {
+                string arch = x64 ? "x64" : "x86";
+                LogInfo($"VC++ 2010 {arch}:");
+                try
+                {
+                    var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
+                    string dllDir = x64 ? Path.Combine(winDir, "System32") : (Environment.Is64BitOperatingSystem ? Path.Combine(winDir, "SysWOW64") : Path.Combine(winDir, "System32"));
+                    var dlls = new[] { "msvcr100.dll", "msvcp100.dll" };
+                    foreach (var d in dlls)
+                    {
+                        bool ok = File.Exists(Path.Combine(dllDir, d));
+                        if (ok) LogInfo($"  - {d}: 已检测到"); else LogError($"  - {d}: 未检测到");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    LogError($"  - 检测失败: {ex.Message}");
+                }
+            }
+
+            // 步骤定义数组，循环执行
+            var steps = new Action[]
+            {
+                LogCpu,
+                LogGpu,
+                LogNvidia,
+                LogDirectX,
+                LogMediaFeaturePack,
+                () => LogVc2010(false),
+                () => LogVc2010(true)
+            };
+
+            for (int i = 0; i < steps.Length; i++)
+            {
+                try { steps[i](); }
+                catch (Exception ex) { LogError($"步骤 {i+1} 未预期异常: {ex.Message}"); }
+                Report(i + 1);
+                await Task.Delay(160);
+            }
+
+            if (hadIssue)
+            {
+                LogError("环境监测异常！");
+            }
+
+            // 保存结果供 UI 使用
+            _lastHadError = hadError;
+            _lastErrorSummary = errorSummary.ToString();
+
+            Report(StepCount);
         }
     }
 }
