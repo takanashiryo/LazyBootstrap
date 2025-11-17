@@ -93,6 +93,7 @@
       <DependentUpon>BootstrapForm.cs</DependentUpon>
     </Compile>
     <Compile Include="ConfigHandler.cs" />
+    <Compile Include="EnvironmentScan.cs" />
     <Compile Include="FirewallHelper.cs" />
     <Compile Include="LogSystem.cs" />
     <Compile Include="Program.cs" />

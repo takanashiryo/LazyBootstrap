@@ -65,6 +65,12 @@ namespace LazyBootstrap
             InitializeCustomComponents();
             LogSystem.Log("本包体免费，如果你是付费获取的，请窒息");
             LoadSettings();
+
+            // 窗体显示后进行环境检测
+            this.Shown += async (s, e) =>
+            {
+                await RunEnvironmentScanAsync();
+            };
         }
 
         private void InitializeCustomComponents()
@@ -251,6 +257,67 @@ namespace LazyBootstrap
                 // 没有文件
                 lblCompatStatus.Text = "● 未启用";
                 lblCompatStatus.ForeColor = System.Drawing.Color.Red;
+            }
+        }
+
+        // 环境扫描（启动时执行）
+        private async Task RunEnvironmentScanAsync()
+        {
+            try
+            {
+                SetControlsEnabled(false);
+                if (statusLabel != null) statusLabel.Text = "正在进行环境检测...";
+                if (statusProgress != null)
+                {
+                    statusProgress.Visible = true;
+                    statusProgress.Value = 0;
+                    statusProgress.Minimum = 0;
+                    statusProgress.Maximum = 100;
+                }
+
+                // 记录开始
+                LogSystem.Log("开始环境检测...");
+
+                // 执行检测
+                await EnvironmentScan.RunAsync((progress, message) =>
+                {
+                    if (!string.IsNullOrEmpty(message))
+                    {
+                        LogSystem.Log(message);
+                    }
+
+                    if (statusProgress != null)
+                    {
+                        int value = progress;
+                        if (value < 0) value = 0;
+                        if (value > 100) value = 100;
+                        try
+                        {
+                            if (this.IsHandleCreated)
+                            {
+                                this.BeginInvoke((MethodInvoker)(() => { statusProgress.Value = value; }));
+                            }
+                        }
+                        catch { }
+                    }
+                });
+
+                LogSystem.Log("环境检测完成。\r\n");
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"环境检测时发生错误: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+            finally
+            {
+                if (statusLabel != null) statusLabel.Text = "就绪";
+                // 检测完成后隐藏进度条并复位
+                if (statusProgress != null)
+                {
+                    try { statusProgress.Value = 0; } catch { }
+                    statusProgress.Visible = false;
+                }
+                SetControlsEnabled(true);
             }
         }
 

@@ -46,14 +46,15 @@
             this.lblCompatStatus = new System.Windows.Forms.Label();
             this.btnUnloadCompat = new System.Windows.Forms.Button();
             this.button1 = new System.Windows.Forms.Button();
+            this.label3 = new System.Windows.Forms.Label();
             this.statusStrip1 = new System.Windows.Forms.StatusStrip();
             this.statusLabel = new System.Windows.Forms.ToolStripStatusLabel();
+            this.statusProgress = new System.Windows.Forms.ToolStripProgressBar();
             this.toolTip0 = new System.Windows.Forms.ToolTip(this.components);
             this.lblCurrentVersion = new System.Windows.Forms.Label();
             this.txtCurrentVersion = new System.Windows.Forms.TextBox();
             this.lblRevision = new System.Windows.Forms.Label();
             this.txtRevision = new System.Windows.Forms.TextBox();
-            this.label3 = new System.Windows.Forms.Label();
             this.groupBoxOptions.SuspendLayout();
             this.groupBoxTools.SuspendLayout();
             this.groupBoxCompatLayer.SuspendLayout();
@@ -117,9 +118,9 @@
             // 
             // btnSwitchRotation
             // 
-            this.btnSwitchRotation.Location = new System.Drawing.Point(295, 148);
+            this.btnSwitchRotation.Location = new System.Drawing.Point(297, 152);
             this.btnSwitchRotation.Name = "btnSwitchRotation";
-            this.btnSwitchRotation.Size = new System.Drawing.Size(54, 25);
+            this.btnSwitchRotation.Size = new System.Drawing.Size(54, 21);
             this.btnSwitchRotation.TabIndex = 6;
             this.btnSwitchRotation.Text = "切换";
             this.btnSwitchRotation.UseVisualStyleBackColor = true;
@@ -372,11 +373,21 @@
             this.button1.UseVisualStyleBackColor = true;
             this.button1.Click += new System.EventHandler(this.btnLoadCompat_Click);
             // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(149, 70);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(79, 13);
+            this.label3.TabIndex = 4;
+            this.label3.Text = "兼容层实现：";
+            // 
             // statusStrip1
             // 
             this.statusStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
             this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.statusLabel});
+            this.statusLabel,
+            this.statusProgress});
             this.statusStrip1.Location = new System.Drawing.Point(0, 523);
             this.statusStrip1.Name = "statusStrip1";
             this.statusStrip1.Size = new System.Drawing.Size(784, 22);
@@ -389,6 +400,14 @@
             this.statusLabel.Name = "statusLabel";
             this.statusLabel.Size = new System.Drawing.Size(33, 17);
             this.statusLabel.Text = "就绪";
+            // 
+            // statusProgress
+            // 
+            this.statusProgress.AutoSize = false;
+            this.statusProgress.Name = "statusProgress";
+            this.statusProgress.Size = new System.Drawing.Size(180, 16);
+            this.statusProgress.Style = System.Windows.Forms.ProgressBarStyle.Continuous;
+            this.statusProgress.Visible = false;
             // 
             // lblCurrentVersion
             // 
@@ -423,15 +442,6 @@
             this.txtRevision.ReadOnly = true;
             this.txtRevision.Size = new System.Drawing.Size(54, 20);
             this.txtRevision.TabIndex = 17;
-            // 
-            // label3
-            // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(149, 70);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(79, 13);
-            this.label3.TabIndex = 4;
-            this.label3.Text = "兼容层实现：";
             // 
             // BootstrapForm
             // 
@@ -502,5 +512,6 @@
         private System.Windows.Forms.TextBox txtRevision;
         private System.Windows.Forms.ComboBox cmbCompatType;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.ToolStripProgressBar statusProgress;
     }
 }
