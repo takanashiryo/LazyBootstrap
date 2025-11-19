@@ -937,23 +937,33 @@ namespace LazyBootstrap
             try
             {
                 string logPath = Path.Combine(_contentsDir, "log.txt");
-                if (File.Exists(logPath))
+                string folderPath = _contentsDir;
+                if (Directory.Exists(folderPath))
                 {
-                    Process.Start(new ProcessStartInfo
+                    if (File.Exists(logPath))
                     {
-                        FileName = logPath,
-                        UseShellExecute = true
-                    });
-                    LogSystem.Log($"已打开spice2x日志文件: {logPath}");
+                        // 打开资源管理器并选中 log.txt
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "explorer.exe",
+                            Arguments = $"/select,\"{logPath}\"",
+                            UseShellExecute = true
+                        });
+                        LogSystem.Log($"已打开日志所在文件夹并选中: {logPath}");
+                    }
+                    else
+                    {
+                        LogSystem.Log($"未找到日志文件: {folderPath}", LogSystem.LogLevel.Warning);
+                    }
                 }
                 else
                 {
-                    LogSystem.Log($"未找到spice2x日志文件: {logPath}", LogSystem.LogLevel.Error);
+                    LogSystem.Log($"未找到日志文件夹: {folderPath}", LogSystem.LogLevel.Error);
                 }
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"打开spice2x日志失败: {ex.Message}", LogSystem.LogLevel.Error);
+                LogSystem.Log($"打开文件夹失败: {ex.Message}", LogSystem.LogLevel.Error);
             }
         }
     }
