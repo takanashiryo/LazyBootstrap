@@ -1,4 +1,5 @@
 ﻿// written by Arkito aka Takanashi Ryo, only release in SDVX Lazy Pack.
+// Encoding: UTF-8 with BOM
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
