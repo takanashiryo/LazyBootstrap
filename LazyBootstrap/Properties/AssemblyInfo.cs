@@ -1,15 +1,14 @@
 ﻿using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // 有关程序集的一般信息由以下
 // 控制。更改这些特性值可修改
 // 与程序集关联的信息。
-[assembly: AssemblyTitle("LazyBootstrap - Lazy SDVX")]
+[assembly: AssemblyTitle("Launcher for Lazy SDVX")]
 [assembly: AssemblyDescription("only compatible with sdvx lazy pack")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("LazyBootstrap")]
+[assembly: AssemblyProduct("LazyBootstrap - Lazy SDVX")]
 [assembly: AssemblyCopyright("Copyright ©  2025 Takanashi Ryo")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -29,5 +28,6 @@ using System.Runtime.InteropServices;
 //      生成号
 //      修订号
 //
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("25.2.0.0")]
+[assembly: AssemblyFileVersion("25.2.0.0")]
+[assembly: AssemblyInformationalVersion("25.2")]

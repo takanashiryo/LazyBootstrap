@@ -25,6 +25,16 @@ namespace LazyBootstrap
         // 缓存兼容层实现下拉框原始 tooltip，避免禁用时闪烁
         private string _compatTypeTooltipCache;
 
+        // 高级选项选择的缓存（不改动原有布局与配置文件结构）
+        private bool _advDisableSubDisplay = false;
+        private int _advWindowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口
+        private bool _advSubBorderless = false;
+        private bool _advShowCursorTouchSim = false;
+
+        // 调试与 NetDump 选项缓存（不依赖隐藏控件）
+        private bool _dbgNetDump = false;
+        private bool _dbgAsphyxiaDebug = false;
+
         public BootstrapForm()
         {
             InitializeComponent();
@@ -71,11 +81,69 @@ namespace LazyBootstrap
             LogSystem.Log("本包体免费，如果你是付费获取的，请窒息");
             LoadSettings();
 
+            // 绑定高级选项菜单项与复选框的同步
+            try
+            {
+                if (menuItemNetDump != null) menuItemNetDump.Checked = chkNetDump != null && chkNetDump.Checked;
+                if (menuItemAsphyxiaDebug != null) menuItemAsphyxiaDebug.Checked = chkAsphyxiaDebug != null && chkAsphyxiaDebug.Checked;
+            }
+            catch { }
+
             // 窗体显示后进行环境检测
             this.Shown += async (s, e) =>
             {
                 await RunEnvironmentScanAsync();
             };
+        }
+
+        private void btnAdvancedOptions_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var dlg = new AdvancedOptionsForm
+                {
+                    NetDumpEnabled = _dbgNetDump,
+                    AsphyxiaDebugEnabled = _dbgAsphyxiaDebug,
+                    DisableSubDisplay = _advDisableSubDisplay,
+                    WindowModeIndex = _advWindowModeIndex,
+                    SubBorderless = _advSubBorderless,
+                    ShowCursorAndTouchSim = _advShowCursorTouchSim
+                };
+                var result = dlg.ShowDialog(this);
+                if (result == DialogResult.OK)
+                {
+                    // 读取对话框选择并缓存
+                    _dbgNetDump = dlg.NetDumpEnabled;
+                    _dbgAsphyxiaDebug = dlg.AsphyxiaDebugEnabled;
+
+                    // 同步菜单项勾选状态
+                    if (menuItemNetDump != null) menuItemNetDump.Checked = _dbgNetDump;
+                    if (menuItemAsphyxiaDebug != null) menuItemAsphyxiaDebug.Checked = _dbgAsphyxiaDebug;
+
+                    // 缓存高级选项选择
+                    _advDisableSubDisplay = dlg.DisableSubDisplay;
+                    _advWindowModeIndex = dlg.WindowModeIndex;
+                    _advSubBorderless = dlg.SubBorderless;
+                    _advShowCursorTouchSim = dlg.ShowCursorAndTouchSim;
+                }
+            }
+            catch { }
+        }
+
+        private void menuItemNetDump_Click(object sender, EventArgs e)
+        {
+            if (menuItemNetDump != null)
+            {
+                _dbgNetDump = menuItemNetDump.Checked;
+            }
+        }
+
+        private void menuItemAsphyxiaDebug_Click(object sender, EventArgs e)
+        {
+            if (menuItemAsphyxiaDebug != null)
+            {
+                _dbgAsphyxiaDebug = menuItemAsphyxiaDebug.Checked;
+            }
         }
 
         private void InitializeCustomComponents()
@@ -87,20 +155,17 @@ namespace LazyBootstrap
             // 兼容层类型默认值
             if (cmbCompatType != null)
             {
-                // 确保包含期望的项，默认选择 dx9on12
                 if (cmbCompatType.Items.Count == 0)
                 {
                     cmbCompatType.Items.AddRange(new object[] { "dx9on12", "dxvk" });
                 }
                 cmbCompatType.SelectedIndex = 0;
-                // 缓存原始 tooltip 文本
                 if (toolTip0 != null)
                 {
                     _compatTypeTooltipCache = toolTip0.GetToolTip(cmbCompatType);
                 }
             }
 
-            // 初始化日志输出控件
             LogSystem.Initialize(txtLogOutput);
 
             if (this.Controls.Find("statusStrip1", true).Length > 0 && statusLabel != null)
@@ -109,7 +174,14 @@ namespace LazyBootstrap
             }
             this.FormClosing += Bootstrap_FormClosing;
 
-            // 初始化兼容层状态
+            // 初始时将菜单项与缓存同步
+            try
+            {
+                if (menuItemNetDump != null) menuItemNetDump.Checked = _dbgNetDump;
+                if (menuItemAsphyxiaDebug != null) menuItemAsphyxiaDebug.Checked = _dbgAsphyxiaDebug;
+            }
+            catch { }
+
             UpdateCompatLayerStatus();
         }
 
@@ -150,6 +222,10 @@ namespace LazyBootstrap
                 chkNoAsphyxia.Checked = bool.Parse(_configFile.ReadString("Settings", "noasphyxia", "false"));
                 chkNoRestoreRotation.Checked = bool.Parse(_configFile.ReadString("Settings", "norestorerotation", "false"));
 
+                // 读取调试和 NetDump 的缓存默认（不从配置文件持久化，保持会话内状态）
+                if (menuItemNetDump != null) menuItemNetDump.Checked = _dbgNetDump;
+                if (menuItemAsphyxiaDebug != null) menuItemAsphyxiaDebug.Checked = _dbgAsphyxiaDebug;
+
                 // 读取当前版本
                 string version = _versionFile.ReadString("Version", "version", "Unknown");
                 if (txtCurrentVersion != null)
@@ -173,6 +249,7 @@ namespace LazyBootstrap
             finally
             {
                 _isLoadingSettings = false; // 标记加载完成
+                _isLoadingSettings = false;
             }
         }
 
@@ -396,14 +473,23 @@ namespace LazyBootstrap
             // Lock Element
             SetControlsEnabled(false);
             if (statusLabel != null) statusLabel.Text = "正在启动...";
-            txtLogOutput.Clear();
+            if (txtLogOutput != null)
+            {
+                try { txtLogOutput.Clear(); } catch { }
+            }
 
             try
             {
                 // Screen Rotate
                 LogSystem.Log("正在旋转屏幕...");
                 if (!TryGetRotationAngle(out int rotationAngle)) rotationAngle = 0;
-                bool rotationSuccess = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, rotationAngle);
+                string deviceName = null;
+                try { deviceName = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.DeviceName : null; } catch { deviceName = null; }
+                bool rotationSuccess = false;
+                if (!string.IsNullOrEmpty(deviceName))
+                {
+                    rotationSuccess = ScreenRotate.Rotate(deviceName, rotationAngle);
+                }
                 LogSystem.Log(rotationSuccess ? $"屏幕已旋转至 {rotationAngle} 度。" : "屏幕旋转失败或无需旋转。");
                 await Task.Delay(500); // 等待旋转生效
 
@@ -414,7 +500,7 @@ namespace LazyBootstrap
                     string asphyxiaPath = GetAsphyxiaPath();
                     if (File.Exists(asphyxiaPath))
                     {
-                        if (chkAsphyxiaDebug.Checked)
+                        if (_dbgAsphyxiaDebug)
                         {
                             var asphyxiaStartInfo = new ProcessStartInfo
                             {
@@ -454,23 +540,48 @@ namespace LazyBootstrap
                 if (_usePreconfig)
                 {
                     // Spice2x launch args（使用预配置）
-                    argsBuilder.Append("-cmdoverride ");
-                    argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
-                    argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
-                    argsBuilder.Append("-modules modules ");
+// Spice2x launch args（使用预配置）
+argsBuilder.Append("-cmdoverride ");
+argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
+argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
+argsBuilder.Append("-modules modules ");
                 }
 
                 if (chkWindowed.Checked)
                 {
                     argsBuilder.Append("-w ");
                 }
-                if (chkNetDump.Checked)
+                // NetDump
+                if (_dbgNetDump)
                 {
                     argsBuilder.Append("-netdump ");
                 }
                 if (chkPCoreOptimization.Checked)
                 {
                     argsBuilder.Append("-processefficiency pcores ");
+                }
+
+                // 根据高级选项拼接参数
+                if (_advDisableSubDisplay)
+                {
+                    argsBuilder.Append("-sdvxnosub ");
+                }
+                switch (_advWindowModeIndex)
+                {
+                    case 1:
+                        argsBuilder.Append("-windowborder 1 ");
+                        break;
+                    case 2:
+                        argsBuilder.Append("-windowborder 2 ");
+                        break;
+                }
+                if (_advSubBorderless)
+                {
+                    argsBuilder.Append("-sdvxwsubborderless ");
+                }
+                if (_advShowCursorTouchSim)
+                {
+                    argsBuilder.Append("-s ");
                 }
 
                 // 根据兼容层选择添加 -dx9on12 参数
@@ -486,7 +597,6 @@ namespace LazyBootstrap
                     }
                     else
                     {
-                        // 保持现有逻辑：仅在检测到 NVIDIA API 兼容层时添加 -dx9on12 1
                         if (GetCompatLayerFileCount() == 3)
                         {
                             argsBuilder.Append("-dx9on12 1 ");
@@ -513,7 +623,7 @@ namespace LazyBootstrap
                     FileName = spicePath,
                     Arguments = argsBuilder.ToString(),
                     UseShellExecute = true,
-                    WorkingDirectory = Path.GetDirectoryName(spicePath) // set spice2x working directory to pass folders 
+                    WorkingDirectory = Path.GetDirectoryName(spicePath)
                 };
 
                 _gameProcess = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
@@ -555,7 +665,13 @@ namespace LazyBootstrap
                     if (!chkNoRestoreRotation.Checked)
                     {
                         LogSystem.Log("正在还原屏幕旋转...");
-                        bool restored = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, 0);
+                        string deviceName = null;
+                        try { deviceName = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.DeviceName : null; } catch { deviceName = null; }
+                        bool restored = false;
+                        if (!string.IsNullOrEmpty(deviceName))
+                        {
+                            restored = ScreenRotate.Rotate(deviceName, 0);
+                        }
                         LogSystem.Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
                     }
 
