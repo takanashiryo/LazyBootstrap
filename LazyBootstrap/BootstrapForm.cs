@@ -4,9 +4,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Linq;
 
 namespace LazyBootstrap
 {
@@ -125,6 +128,9 @@ namespace LazyBootstrap
                     _advWindowModeIndex = dlg.WindowModeIndex;
                     _advSubBorderless = dlg.SubBorderless;
                     _advShowCursorTouchSim = dlg.ShowCursorAndTouchSim;
+
+                    // 立即更新 XML 配置
+                    UpdateSpiceConfig();
                 }
             }
             catch { }
@@ -203,6 +209,11 @@ namespace LazyBootstrap
             return Path.Combine(_contentsDir, "spice64.exe");
         }
 
+        private string GetSpiceXmlPath()
+        {
+            return Path.Combine(_contentsDir, Path.Combine("lazy", "spicetools.xml"));
+        }
+
         private void LoadSettings()
         {
             try
@@ -239,6 +250,9 @@ namespace LazyBootstrap
                     }
                 }
                 catch { }
+
+                // 读取 XML 高级选项状态
+                LoadSpiceConfig();
 
                 // 读取调试和 NetDump 的缓存默认（不从配置文件持久化，保持会话内状态）
                 if (menuItemNetDump != null) menuItemNetDump.Checked = _dbgNetDump;
@@ -565,11 +579,10 @@ namespace LazyBootstrap
                 if (_usePreconfig)
                 {
                     // Spice2x launch args（使用预配置）
-// Spice2x launch args（使用预配置）
-argsBuilder.Append("-cmdoverride ");
-argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
-argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
-argsBuilder.Append("-modules modules ");
+                    // Spice2x launch args（使用预配置）argsBuilder.Append("-cmdoverride ");
+                    argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
+                    argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
+                    argsBuilder.Append("-modules modules ");
                 }
 
                 if (chkWindowed.Checked)
@@ -608,6 +621,11 @@ argsBuilder.Append("-modules modules ");
                 {
                     argsBuilder.Append("-s ");
                 }
+                // 由 XML 配置驱动，不再通过命令行附加以下参数
+                // if (_advDisableSubDisplay) { argsBuilder.Append("-sdvxnosub "); }
+                // switch (_advWindowModeIndex) { case 1: argsBuilder.Append("-windowborder 1 "); break; case 2: argsBuilder.Append("-windowborder 2 "); break; }
+                // if (_advSubBorderless) { argsBuilder.Append("-sdvxwsubborderless "); }
+                // if (_advShowCursorTouchSim) { argsBuilder.Append("-s "); }
 
                 // 根据兼容层选择添加 -dx9on12 参数
                 try
@@ -1125,6 +1143,166 @@ argsBuilder.Append("-modules modules ");
             catch (Exception ex)
             {
                 LogSystem.Log($"打开音频控制面板失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private void UpdateSpiceConfig()
+        {
+            try
+            {
+                string spiceXmlPath = GetSpiceXmlPath();
+                if (!File.Exists(spiceXmlPath))
+                {
+                    LogSystem.Log("未找到 SpiceTools 配置文件，无法更新高级选项。", LogSystem.LogLevel.Warning);
+                    return;
+                }
+
+                // 保留原始空白与格式
+                var doc = XDocument.Load(spiceXmlPath, LoadOptions.PreserveWhitespace);
+                var root = doc.Root;
+                if (root == null)
+                {
+                    LogSystem.Log("SpiceTools 配置 XML 根节点为空。", LogSystem.LogLevel.Error);
+                    return;
+                }
+
+                var soundVoltex = root.Elements("game").FirstOrDefault(g =>
+                {
+                    var nameAttr = g.Attribute("name");
+                    return nameAttr != null && string.Equals(nameAttr.Value, "Sound Voltex", StringComparison.OrdinalIgnoreCase);
+                });
+                if (soundVoltex == null)
+                {
+                    LogSystem.Log("未找到游戏条目: Sound Voltex。", LogSystem.LogLevel.Warning);
+                    return;
+                }
+
+                var options = soundVoltex.Element("options");
+                if (options == null)
+                {
+                    // 按原有缩进插入新节点，不影响其他格式
+                    options = new XElement("options");
+                    soundVoltex.Add(options);
+                }
+
+                void EnsureOption(string optName, string optValue)
+                {
+                    var existing = options.Elements("option").FirstOrDefault(o =>
+                    {
+                        var n = o.Attribute("name");
+                        return n != null && string.Equals(n.Value, optName, StringComparison.Ordinal);
+                    });
+                    if (existing == null)
+                    {
+                        var newOpt = new XElement("option",
+                            new XAttribute("name", optName),
+                            new XAttribute("value", optValue ?? string.Empty));
+                        options.Add(newOpt);
+                    }
+                    else
+                    {
+                        existing.SetAttributeValue("value", optValue ?? string.Empty);
+                    }
+                }
+
+                // 禁用副屏：sp2x-sdvxnosub -> /ENABLED 或 空
+                EnsureOption("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : "");
+
+                // 窗口化模式：sp2x-windowborder -> 1(无边框)/2(可变窗口)/空(默认)
+                string windowVal;
+                switch (_advWindowModeIndex)
+                {
+                    case 1:
+                        windowVal = "1";
+                        break;
+                    case 2:
+                        windowVal = "2";
+                        break;
+                    default:
+                        windowVal = ""; // 默认
+                        break;
+                }
+                EnsureOption("sp2x-windowborder", windowVal);
+
+                // 副屏无边框：sdvxwsubborderless -> /ENABLED 或 空
+                EnsureOption("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : "");
+
+                // 显示光标启用触控模拟：s -> /ENABLED 或 空
+                EnsureOption("s", _advShowCursorTouchSim ? "/ENABLED" : "");
+
+                doc.Save(spiceXmlPath);
+                LogSystem.Log("已更新 SpiceTools 高级选项配置。");
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"更新 SpiceTools 配置失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private void LoadSpiceConfig()
+        {
+            try
+            {
+                string spiceXmlPath = GetSpiceXmlPath();
+                if (!File.Exists(spiceXmlPath))
+                {
+                    LogSystem.Log("未找到 SpiceTools 配置文件，跳过读取高级选项。", LogSystem.LogLevel.Warning);
+                    return;
+                }
+
+                var doc = XDocument.Load(spiceXmlPath, LoadOptions.PreserveWhitespace);
+                var root = doc.Root;
+                if (root == null) return;
+
+                var soundVoltex = root.Elements("game").FirstOrDefault(g =>
+                {
+                    var nameAttr = g.Attribute("name");
+                    return nameAttr != null && string.Equals(nameAttr.Value, "Sound Voltex", StringComparison.OrdinalIgnoreCase);
+                });
+                if (soundVoltex == null) return;
+
+                var options = soundVoltex.Element("options");
+                if (options == null) return;
+
+                string GetValue(string name)
+                {
+                    var opt = options.Elements("option").FirstOrDefault(o =>
+                    {
+                        var n = o.Attribute("name");
+                        return n != null && string.Equals(n.Value, name, StringComparison.Ordinal);
+                    });
+                    var v = opt?.Attribute("value")?.Value ?? string.Empty;
+                    return v;
+                }
+
+                // 禁用副屏：/ENABLED 表示启用该禁用选项
+                _advDisableSubDisplay = string.Equals(GetValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.Ordinal);
+
+                // 窗口模式：空或0默认，1无边框，2可变窗口
+                var wv = GetValue("sp2x-windowborder");
+                if (string.Equals(wv, "1", StringComparison.Ordinal)) _advWindowModeIndex = 1;
+                else if (string.Equals(wv, "2", StringComparison.Ordinal)) _advWindowModeIndex = 2;
+                else _advWindowModeIndex = 0;
+
+                // 副屏无边框
+                _advSubBorderless = string.Equals(GetValue("sdvxwsubborderless"), "/ENABLED", StringComparison.Ordinal);
+
+                // 显示光标启用触控模拟
+                _advShowCursorTouchSim = string.Equals(GetValue("s"), "/ENABLED", StringComparison.Ordinal);
+
+                // 同步到高级选项对话框控件（若需要在界面显示当前状态）
+                try
+                {
+                    // 如果有对应控件存在，可以更新其状态
+                    // 这里只更新缓存字段，打开对话框时已有赋值
+                }
+                catch { }
+
+                LogSystem.Log("已读取 SpiceTools 高级选项状态。");
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"读取 XML 高级选项失败: {ex.Message}", LogSystem.LogLevel.Error);
             }
         }
     }
