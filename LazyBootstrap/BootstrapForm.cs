@@ -222,6 +222,24 @@ namespace LazyBootstrap
                 chkNoAsphyxia.Checked = bool.Parse(_configFile.ReadString("Settings", "noasphyxia", "false"));
                 chkNoRestoreRotation.Checked = bool.Parse(_configFile.ReadString("Settings", "norestorerotation", "false"));
 
+                // 渲染模式（兼容层实现）
+                try
+                {
+                    string renderMode = _configFile.ReadString("Settings", "rendermode", "dx9on12");
+                    if (cmbCompatType != null)
+                    {
+                        // 保证项存在
+                        if (cmbCompatType.Items.Count == 0)
+                        {
+                            cmbCompatType.Items.AddRange(new object[] { "dx9on12", "dxvk" });
+                        }
+                        int idx = 0;
+                        if (string.Equals(renderMode, "dxvk", StringComparison.OrdinalIgnoreCase)) idx = 1;
+                        cmbCompatType.SelectedIndex = idx;
+                    }
+                }
+                catch { }
+
                 // 读取调试和 NetDump 的缓存默认（不从配置文件持久化，保持会话内状态）
                 if (menuItemNetDump != null) menuItemNetDump.Checked = _dbgNetDump;
                 if (menuItemAsphyxiaDebug != null) menuItemAsphyxiaDebug.Checked = _dbgAsphyxiaDebug;
@@ -264,6 +282,13 @@ namespace LazyBootstrap
                 _configFile.WriteString("Settings", "pcoreopt", chkPCoreOptimization.Checked.ToString().ToLowerInvariant());
                 _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString().ToLowerInvariant());
                 _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString().ToLowerInvariant());
+
+                // 保存渲染模式（兼容层实现）
+                if (cmbCompatType != null && cmbCompatType.SelectedItem != null)
+                {
+                    string renderMode = cmbCompatType.SelectedItem.ToString();
+                    _configFile.WriteString("Settings", "rendermode", renderMode);
+                }
 
                 LogSystem.Log("Saved to config.ini");
             }

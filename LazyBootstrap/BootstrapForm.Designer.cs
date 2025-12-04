@@ -416,13 +416,13 @@
             this.txtCurrentVersion.Location = new System.Drawing.Point(79, 12);
             this.txtCurrentVersion.Name = "txtCurrentVersion";
             this.txtCurrentVersion.ReadOnly = true;
-            this.txtCurrentVersion.Size = new System.Drawing.Size(78, 20);
+            this.txtCurrentVersion.Size = new System.Drawing.Size(120, 20);
             this.txtCurrentVersion.TabIndex = 15;
             // 
             // lblRevision
             // 
             this.lblRevision.AutoSize = true;
-            this.lblRevision.Location = new System.Drawing.Point(182, 15);
+            this.lblRevision.Location = new System.Drawing.Point(218, 15);
             this.lblRevision.Name = "lblRevision";
             this.lblRevision.Size = new System.Drawing.Size(82, 13);
             this.lblRevision.TabIndex = 16;
@@ -430,10 +430,10 @@
             // 
             // txtRevision
             // 
-            this.txtRevision.Location = new System.Drawing.Point(268, 12);
+            this.txtRevision.Location = new System.Drawing.Point(304, 12);
             this.txtRevision.Name = "txtRevision";
             this.txtRevision.ReadOnly = true;
-            this.txtRevision.Size = new System.Drawing.Size(54, 20);
+            this.txtRevision.Size = new System.Drawing.Size(16, 20);
             this.txtRevision.TabIndex = 17;
             // 
             // contextMenuAdvanced
