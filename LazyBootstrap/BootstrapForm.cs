@@ -1064,6 +1064,7 @@ argsBuilder.Append("-modules modules ");
             btnClearCache.Enabled = enabled;
             btnInstallRuntime.Enabled = enabled;
             btnAddFirewallRule.Enabled = enabled;
+            btnAudioPanel.Enabled = enabled;
             btnKillProcesses.Enabled = true; // 始终启用
         }
 
@@ -1106,6 +1107,24 @@ argsBuilder.Append("-modules modules ");
             catch (Exception ex)
             {
                 LogSystem.Log($"打开文件夹失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private void btnAudioPanel_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "control.exe",
+                    Arguments = "mmsys.cpl",
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"打开音频控制面板失败: {ex.Message}", LogSystem.LogLevel.Error);
             }
         }
     }
