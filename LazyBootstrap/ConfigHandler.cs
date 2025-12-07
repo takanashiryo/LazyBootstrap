@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -6,6 +7,8 @@ using System.Text;
 public class ConfigHandler
 {
     private readonly string _path;
+    private const int InitialBufferSize = 256;
+    private const int MaxBufferSize = 8192;
 
     // 导入 Windows API 函数用于写入 INI 文件
     [DllImport("kernel32", CharSet = CharSet.Unicode)]
@@ -31,8 +34,19 @@ public class ConfigHandler
     // 读取字符串
     public string ReadString(string section, string key, string defaultValue = "")
     {
-        StringBuilder retVal = new StringBuilder(255);
-        GetPrivateProfileString(section, key, defaultValue, retVal, 255, _path);
-        return retVal.ToString();
+        int bufferSize = InitialBufferSize;
+        while (true)
+        {
+            var retVal = new StringBuilder(bufferSize);
+            int length = GetPrivateProfileString(section, key, defaultValue, retVal, retVal.Capacity, _path);
+
+            // GetPrivateProfileString 返回的长度不包含终止符。若值被截断，长度会等于缓冲区容量-1
+            if (length < retVal.Capacity - 1 || bufferSize >= MaxBufferSize)
+            {
+                return retVal.ToString();
+            }
+
+            bufferSize = Math.Min(bufferSize * 2, MaxBufferSize);
+        }
     }
 }

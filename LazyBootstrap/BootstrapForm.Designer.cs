@@ -35,6 +35,7 @@
             this.btnStart = new System.Windows.Forms.Button();
             this.btnKillProcesses = new System.Windows.Forms.Button();
             this.groupBoxTools = new System.Windows.Forms.GroupBox();
+            this.btnAudioPanel = new System.Windows.Forms.Button();
             this.btnInstallRuntime = new System.Windows.Forms.Button();
             this.btnClearCache = new System.Windows.Forms.Button();
             this.btnAddFirewallRule = new System.Windows.Forms.Button();
@@ -54,15 +55,10 @@
             this.txtCurrentVersion = new System.Windows.Forms.TextBox();
             this.lblRevision = new System.Windows.Forms.Label();
             this.txtRevision = new System.Windows.Forms.TextBox();
-            this.contextMenuAdvanced = new System.Windows.Forms.ContextMenuStrip(this.components);
-            this.menuItemNetDump = new System.Windows.Forms.ToolStripMenuItem();
-            this.menuItemAsphyxiaDebug = new System.Windows.Forms.ToolStripMenuItem();
-            this.btnAudioPanel = new System.Windows.Forms.Button();
             this.groupBoxOptions.SuspendLayout();
             this.groupBoxTools.SuspendLayout();
             this.groupBoxCompatLayer.SuspendLayout();
             this.statusStrip1.SuspendLayout();
-            this.contextMenuAdvanced.SuspendLayout();
             this.SuspendLayout();
             // 
             // groupBoxOptions
@@ -252,6 +248,16 @@
             this.groupBoxTools.TabStop = false;
             this.groupBoxTools.Text = "工具";
             // 
+            // btnAudioPanel
+            // 
+            this.btnAudioPanel.Location = new System.Drawing.Point(20, 60);
+            this.btnAudioPanel.Name = "btnAudioPanel";
+            this.btnAudioPanel.Size = new System.Drawing.Size(156, 32);
+            this.btnAudioPanel.TabIndex = 9;
+            this.btnAudioPanel.Text = "打开音频控制面板";
+            this.btnAudioPanel.UseVisualStyleBackColor = true;
+            this.btnAudioPanel.Click += new System.EventHandler(this.btnAudioPanel_Click);
+            // 
             // btnInstallRuntime
             // 
             this.btnInstallRuntime.Location = new System.Drawing.Point(192, 60);
@@ -438,40 +444,6 @@
             this.txtRevision.Size = new System.Drawing.Size(16, 20);
             this.txtRevision.TabIndex = 17;
             // 
-            // contextMenuAdvanced
-            // 
-            this.contextMenuAdvanced.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.menuItemNetDump,
-            this.menuItemAsphyxiaDebug});
-            this.contextMenuAdvanced.Name = "contextMenuAdvanced";
-            this.contextMenuAdvanced.Size = new System.Drawing.Size(153, 48);
-            // 
-            // menuItemNetDump
-            // 
-            this.menuItemNetDump.CheckOnClick = true;
-            this.menuItemNetDump.Name = "menuItemNetDump";
-            this.menuItemNetDump.Size = new System.Drawing.Size(152, 22);
-            this.menuItemNetDump.Text = "NetDump";
-            this.menuItemNetDump.Click += new System.EventHandler(this.menuItemNetDump_Click);
-            // 
-            // menuItemAsphyxiaDebug
-            // 
-            this.menuItemAsphyxiaDebug.CheckOnClick = true;
-            this.menuItemAsphyxiaDebug.Name = "menuItemAsphyxiaDebug";
-            this.menuItemAsphyxiaDebug.Size = new System.Drawing.Size(152, 22);
-            this.menuItemAsphyxiaDebug.Text = "调试启动氧无";
-            this.menuItemAsphyxiaDebug.Click += new System.EventHandler(this.menuItemAsphyxiaDebug_Click);
-            // 
-            // btnAudioPanel
-            // 
-            this.btnAudioPanel.Location = new System.Drawing.Point(20, 60);
-            this.btnAudioPanel.Name = "btnAudioPanel";
-            this.btnAudioPanel.Size = new System.Drawing.Size(156, 32);
-            this.btnAudioPanel.TabIndex = 9;
-            this.btnAudioPanel.Text = "打开音频控制面板";
-            this.btnAudioPanel.UseVisualStyleBackColor = true;
-            this.btnAudioPanel.Click += new System.EventHandler(this.btnAudioPanel_Click);
-            // 
             // BootstrapForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -499,7 +471,6 @@
             this.groupBoxCompatLayer.PerformLayout();
             this.statusStrip1.ResumeLayout(false);
             this.statusStrip1.PerformLayout();
-            this.contextMenuAdvanced.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -511,8 +482,6 @@
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.CheckBox chkUsePreconfig;
         private System.Windows.Forms.CheckBox chkPCoreOptimization;
-        private System.Windows.Forms.CheckBox chkAsphyxiaDebug; // 仍保留字段以便代码复用，但不在界面显示
-        private System.Windows.Forms.CheckBox chkNetDump;      // 仍保留字段以便代码复用，但不在界面显示
         private System.Windows.Forms.CheckBox chkNoAsphyxia;
         private System.Windows.Forms.CheckBox chkWindowed;
         private System.Windows.Forms.Button btnSwitchRotation;
@@ -545,9 +514,6 @@
         private System.Windows.Forms.ToolStripProgressBar statusProgress;
         // 新增字段声明
         private System.Windows.Forms.Button btnAdvancedOptions;
-        private System.Windows.Forms.ContextMenuStrip contextMenuAdvanced;
-        private System.Windows.Forms.ToolStripMenuItem menuItemNetDump;
-        private System.Windows.Forms.ToolStripMenuItem menuItemAsphyxiaDebug;
         private System.Windows.Forms.Button btnAudioPanel;
     }
 }
