@@ -17,6 +17,12 @@ namespace LazyBootstrap
             set { chkAsphyxiaDebug.Checked = value; }
         }
 
+        public bool PCoreOptimizationEnabled
+        {
+            get { return chkPCoreOptimization.Checked; }
+            set { chkPCoreOptimization.Checked = value; }
+        }
+
         // 高级选项属性：与 Designer 中的控件同步
         public bool DisableSubDisplay
         {

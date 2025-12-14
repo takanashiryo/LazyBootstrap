@@ -31,6 +31,7 @@ namespace LazyBootstrap
         private int _advWindowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口
         private bool _advSubBorderless = false;
         private bool _advShowCursorTouchSim = false;
+        private bool _advPCoreOptimization = false;
 
         private bool _dbgNetDump = false;
         private bool _dbgAsphyxiaDebug = false;
@@ -95,6 +96,7 @@ namespace LazyBootstrap
                 {
                     NetDumpEnabled = _dbgNetDump,
                     AsphyxiaDebugEnabled = _dbgAsphyxiaDebug,
+                    PCoreOptimizationEnabled = _advPCoreOptimization,
                     DisableSubDisplay = _advDisableSubDisplay,
                     WindowModeIndex = _advWindowModeIndex,
                     SubBorderless = _advSubBorderless,
@@ -108,6 +110,7 @@ namespace LazyBootstrap
                     _dbgAsphyxiaDebug = dlg.AsphyxiaDebugEnabled;
 
                     // 缓存高级选项选择
+                    _advPCoreOptimization = dlg.PCoreOptimizationEnabled;
                     _advDisableSubDisplay = dlg.DisableSubDisplay;
                     _advWindowModeIndex = dlg.WindowModeIndex;
                     _advSubBorderless = dlg.SubBorderless;
@@ -115,6 +118,7 @@ namespace LazyBootstrap
 
                     // 立即更新 XML 配置，仅修改对应的 Option
                     UpdateSpiceConfig(
+                        new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty),
                         new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty),
                         new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue()),
                         new OptionUpdate("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : string.Empty),
@@ -152,21 +156,13 @@ namespace LazyBootstrap
                 };
             }
 
-            // 勾选项实时更新：窗口化与大小核优化
+            // 勾选项实时更新：窗口化
             if (chkWindowed != null)
             {
                 chkWindowed.CheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings) return;
                     UpdateSpiceConfig(new OptionUpdate("w", chkWindowed.Checked ? "/ENABLE" : string.Empty));
-                };
-            }
-            if (chkPCoreOptimization != null)
-            {
-                chkPCoreOptimization.CheckedChanged += (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    UpdateSpiceConfig(new OptionUpdate("sp2x-processefficiency", chkPCoreOptimization.Checked ? "pcores" : string.Empty));
                 };
             }
             if (chkNoAsphyxia != null)
@@ -1312,8 +1308,7 @@ namespace LazyBootstrap
                 if (chkWindowed != null) chkWindowed.Checked = windowed;
 
                 var peVal = GetValue("sp2x-processefficiency");
-                bool pcores = string.Equals(peVal, "pcores", StringComparison.OrdinalIgnoreCase);
-                if (chkPCoreOptimization != null) chkPCoreOptimization.Checked = pcores;
+                _advPCoreOptimization = string.Equals(peVal, "pcores", StringComparison.OrdinalIgnoreCase);
 
                 // 高级选项缓存
                 _advDisableSubDisplay = string.Equals(GetValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.Ordinal);
@@ -1337,7 +1332,7 @@ namespace LazyBootstrap
         private IEnumerable<OptionUpdate> BuildDefaultOptionUpdates()
         {
             yield return new OptionUpdate("w", chkWindowed != null && chkWindowed.Checked ? "/ENABLE" : string.Empty);
-            yield return new OptionUpdate("sp2x-processefficiency", chkPCoreOptimization != null && chkPCoreOptimization.Checked ? "pcores" : string.Empty);
+            yield return new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty);
             yield return new OptionUpdate("sp2x-dx9on12", ResolveDxModeValue(), false);
             yield return new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue());

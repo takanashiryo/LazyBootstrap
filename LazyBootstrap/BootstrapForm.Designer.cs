@@ -28,7 +28,6 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.chkUsePreconfig = new System.Windows.Forms.CheckBox();
-            this.chkPCoreOptimization = new System.Windows.Forms.CheckBox();
             this.btnAdvancedOptions = new System.Windows.Forms.Button();
             this.chkNoAsphyxia = new System.Windows.Forms.CheckBox();
             this.chkWindowed = new System.Windows.Forms.CheckBox();
@@ -71,7 +70,6 @@
             this.groupBoxOptions.Controls.Add(this.label2);
             this.groupBoxOptions.Controls.Add(this.label1);
             this.groupBoxOptions.Controls.Add(this.chkUsePreconfig);
-            this.groupBoxOptions.Controls.Add(this.chkPCoreOptimization);
             this.groupBoxOptions.Controls.Add(this.btnAdvancedOptions);
             this.groupBoxOptions.Controls.Add(this.chkNoAsphyxia);
             this.groupBoxOptions.Controls.Add(this.chkWindowed);
@@ -166,17 +164,6 @@
             this.toolTip0.SetToolTip(this.chkUsePreconfig, "使用预先配置好的最优配置文件来启动游戏，以防止因错误的系统内建配置造成的干扰\r\n两者互相独立，取消勾选以使用系统内建配置");
             this.chkUsePreconfig.UseVisualStyleBackColor = true;
             this.chkUsePreconfig.CheckedChanged += new System.EventHandler(this.chkUsePreconfig_CheckedChanged);
-            // 
-            // chkPCoreOptimization
-            // 
-            this.chkPCoreOptimization.AutoSize = true;
-            this.chkPCoreOptimization.Location = new System.Drawing.Point(163, 72);
-            this.chkPCoreOptimization.Name = "chkPCoreOptimization";
-            this.chkPCoreOptimization.Size = new System.Drawing.Size(86, 17);
-            this.chkPCoreOptimization.TabIndex = 10;
-            this.chkPCoreOptimization.Text = "大小核优化";
-            this.toolTip0.SetToolTip(this.chkPCoreOptimization, "勾选后，会限制游戏在性能核心上运行");
-            this.chkPCoreOptimization.UseVisualStyleBackColor = true;
             // 
             // btnAdvancedOptions
             // 
@@ -481,7 +468,6 @@
         private System.Windows.Forms.GroupBox groupBoxOptions;
         private System.Windows.Forms.Button btnStart;
         private System.Windows.Forms.CheckBox chkUsePreconfig;
-        private System.Windows.Forms.CheckBox chkPCoreOptimization;
         private System.Windows.Forms.CheckBox chkNoAsphyxia;
         private System.Windows.Forms.CheckBox chkWindowed;
         private System.Windows.Forms.Button btnSwitchRotation;
