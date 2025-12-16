@@ -35,10 +35,9 @@ namespace LazyBootstrap
             // chkNetDump
             // 
             this.chkNetDump.AutoSize = true;
-            this.chkNetDump.Location = new System.Drawing.Point(21, 36);
-            this.chkNetDump.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.chkNetDump.Location = new System.Drawing.Point(16, 29);
             this.chkNetDump.Name = "chkNetDump";
-            this.chkNetDump.Size = new System.Drawing.Size(86, 20);
+            this.chkNetDump.Size = new System.Drawing.Size(71, 17);
             this.chkNetDump.TabIndex = 0;
             this.chkNetDump.Text = "NetDump";
             this.chkNetDump.UseVisualStyleBackColor = true;
@@ -46,20 +45,18 @@ namespace LazyBootstrap
             // chkAsphyxiaDebug
             // 
             this.chkAsphyxiaDebug.AutoSize = true;
-            this.chkAsphyxiaDebug.Location = new System.Drawing.Point(21, 64);
-            this.chkAsphyxiaDebug.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.chkAsphyxiaDebug.Location = new System.Drawing.Point(16, 52);
             this.chkAsphyxiaDebug.Name = "chkAsphyxiaDebug";
-            this.chkAsphyxiaDebug.Size = new System.Drawing.Size(164, 20);
+            this.chkAsphyxiaDebug.Size = new System.Drawing.Size(134, 17);
             this.chkAsphyxiaDebug.TabIndex = 1;
             this.chkAsphyxiaDebug.Text = "以调试模式启动氧无";
             this.chkAsphyxiaDebug.UseVisualStyleBackColor = true;
             // 
             // btnOk
             // 
-            this.btnOk.Location = new System.Drawing.Point(87, 388);
-            this.btnOk.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnOk.Location = new System.Drawing.Point(65, 315);
             this.btnOk.Name = "btnOk";
-            this.btnOk.Size = new System.Drawing.Size(100, 28);
+            this.btnOk.Size = new System.Drawing.Size(75, 23);
             this.btnOk.TabIndex = 2;
             this.btnOk.Text = "确定";
             this.btnOk.UseVisualStyleBackColor = true;
@@ -67,10 +64,9 @@ namespace LazyBootstrap
             // 
             // btnCancel
             // 
-            this.btnCancel.Location = new System.Drawing.Point(195, 388);
-            this.btnCancel.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.btnCancel.Location = new System.Drawing.Point(146, 315);
             this.btnCancel.Name = "btnCancel";
-            this.btnCancel.Size = new System.Drawing.Size(100, 28);
+            this.btnCancel.Size = new System.Drawing.Size(75, 23);
             this.btnCancel.TabIndex = 3;
             this.btnCancel.Text = "取消";
             this.btnCancel.UseVisualStyleBackColor = true;
@@ -80,11 +76,9 @@ namespace LazyBootstrap
             // 
             this.groupBox1.Controls.Add(this.chkNetDump);
             this.groupBox1.Controls.Add(this.chkAsphyxiaDebug);
-            this.groupBox1.Location = new System.Drawing.Point(20, 58);
-            this.groupBox1.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.groupBox1.Location = new System.Drawing.Point(15, 47);
             this.groupBox1.Name = "groupBox1";
-            this.groupBox1.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.groupBox1.Size = new System.Drawing.Size(341, 108);
+            this.groupBox1.Size = new System.Drawing.Size(256, 88);
             this.groupBox1.TabIndex = 4;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "调试选项";
@@ -93,10 +87,9 @@ namespace LazyBootstrap
             // 
             this.label1.AutoSize = true;
             this.label1.ForeColor = System.Drawing.Color.Red;
-            this.label1.Location = new System.Drawing.Point(16, 11);
-            this.label1.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.label1.Location = new System.Drawing.Point(12, 9);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(322, 32);
+            this.label1.Size = new System.Drawing.Size(259, 26);
             this.label1.TabIndex = 5;
             this.label1.Text = "警告：\r\n在调整高级选项前请确认你了解每个选项的作用";
             // 
@@ -108,11 +101,9 @@ namespace LazyBootstrap
             this.groupBox2.Controls.Add(this.cmbWindowMode);
             this.groupBox2.Controls.Add(this.lblWindowMode);
             this.groupBox2.Controls.Add(this.chkDisableSubDisplay);
-            this.groupBox2.Location = new System.Drawing.Point(20, 185);
-            this.groupBox2.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.groupBox2.Location = new System.Drawing.Point(15, 150);
             this.groupBox2.Name = "groupBox2";
-            this.groupBox2.Padding = new System.Windows.Forms.Padding(4, 4, 4, 4);
-            this.groupBox2.Size = new System.Drawing.Size(341, 187);
+            this.groupBox2.Size = new System.Drawing.Size(256, 152);
             this.groupBox2.TabIndex = 6;
             this.groupBox2.TabStop = false;
             this.groupBox2.Text = "高级选项";
@@ -120,10 +111,9 @@ namespace LazyBootstrap
             // chkPCoreOptimization
             // 
             this.chkPCoreOptimization.AutoSize = true;
-            this.chkPCoreOptimization.Location = new System.Drawing.Point(21, 90);
-            this.chkPCoreOptimization.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.chkPCoreOptimization.Location = new System.Drawing.Point(16, 73);
             this.chkPCoreOptimization.Name = "chkPCoreOptimization";
-            this.chkPCoreOptimization.Size = new System.Drawing.Size(104, 20);
+            this.chkPCoreOptimization.Size = new System.Drawing.Size(86, 17);
             this.chkPCoreOptimization.TabIndex = 2;
             this.chkPCoreOptimization.Text = "大小核优化";
             this.chkPCoreOptimization.UseVisualStyleBackColor = true;
@@ -131,10 +121,9 @@ namespace LazyBootstrap
             // chkShowCursorTouchSim
             // 
             this.chkShowCursorTouchSim.AutoSize = true;
-            this.chkShowCursorTouchSim.Location = new System.Drawing.Point(21, 146);
-            this.chkShowCursorTouchSim.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.chkShowCursorTouchSim.Location = new System.Drawing.Point(16, 119);
             this.chkShowCursorTouchSim.Name = "chkShowCursorTouchSim";
-            this.chkShowCursorTouchSim.Size = new System.Drawing.Size(179, 20);
+            this.chkShowCursorTouchSim.Size = new System.Drawing.Size(146, 17);
             this.chkShowCursorTouchSim.TabIndex = 4;
             this.chkShowCursorTouchSim.Text = "显示光标&启用触控模拟";
             this.chkShowCursorTouchSim.UseVisualStyleBackColor = true;
@@ -142,10 +131,9 @@ namespace LazyBootstrap
             // chkSubBorderless
             // 
             this.chkSubBorderless.AutoSize = true;
-            this.chkSubBorderless.Location = new System.Drawing.Point(21, 118);
-            this.chkSubBorderless.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.chkSubBorderless.Location = new System.Drawing.Point(16, 96);
             this.chkSubBorderless.Name = "chkSubBorderless";
-            this.chkSubBorderless.Size = new System.Drawing.Size(104, 20);
+            this.chkSubBorderless.Size = new System.Drawing.Size(86, 17);
             this.chkSubBorderless.TabIndex = 3;
             this.chkSubBorderless.Text = "副屏无边框";
             this.chkSubBorderless.UseVisualStyleBackColor = true;
@@ -158,38 +146,35 @@ namespace LazyBootstrap
             "默认",
             "无边框",
             "可变窗口"});
-            this.cmbWindowMode.Location = new System.Drawing.Point(125, 54);
-            this.cmbWindowMode.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.cmbWindowMode.Location = new System.Drawing.Point(94, 44);
             this.cmbWindowMode.Name = "cmbWindowMode";
-            this.cmbWindowMode.Size = new System.Drawing.Size(137, 24);
+            this.cmbWindowMode.Size = new System.Drawing.Size(104, 21);
             this.cmbWindowMode.TabIndex = 1;
             // 
             // lblWindowMode
             // 
             this.lblWindowMode.AutoSize = true;
-            this.lblWindowMode.Location = new System.Drawing.Point(19, 59);
-            this.lblWindowMode.Margin = new System.Windows.Forms.Padding(4, 0, 4, 0);
+            this.lblWindowMode.Location = new System.Drawing.Point(14, 48);
             this.lblWindowMode.Name = "lblWindowMode";
-            this.lblWindowMode.Size = new System.Drawing.Size(82, 16);
+            this.lblWindowMode.Size = new System.Drawing.Size(67, 13);
             this.lblWindowMode.TabIndex = 1;
             this.lblWindowMode.Text = "窗口化模式";
             // 
             // chkDisableSubDisplay
             // 
             this.chkDisableSubDisplay.AutoSize = true;
-            this.chkDisableSubDisplay.Location = new System.Drawing.Point(21, 27);
-            this.chkDisableSubDisplay.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
+            this.chkDisableSubDisplay.Location = new System.Drawing.Point(16, 22);
             this.chkDisableSubDisplay.Name = "chkDisableSubDisplay";
-            this.chkDisableSubDisplay.Size = new System.Drawing.Size(89, 20);
+            this.chkDisableSubDisplay.Size = new System.Drawing.Size(74, 17);
             this.chkDisableSubDisplay.TabIndex = 0;
             this.chkDisableSubDisplay.Text = "禁用副屏";
             this.chkDisableSubDisplay.UseVisualStyleBackColor = true;
             // 
             // AdvancedOptionsForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 16F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(381, 427);
+            this.ClientSize = new System.Drawing.Size(286, 366);
             this.ControlBox = false;
             this.Controls.Add(this.groupBox2);
             this.Controls.Add(this.label1);
@@ -197,7 +182,6 @@ namespace LazyBootstrap
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnOk);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
-            this.Margin = new System.Windows.Forms.Padding(4, 4, 4, 4);
             this.MaximizeBox = false;
             this.MinimizeBox = false;
             this.Name = "AdvancedOptionsForm";

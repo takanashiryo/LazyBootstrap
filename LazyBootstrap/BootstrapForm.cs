@@ -129,6 +129,25 @@ namespace LazyBootstrap
             catch { }
         }
 
+        private void btnManageServer_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var dlg = new ServerManagementForm())
+                {
+                    var result = dlg.ShowDialog(this);
+                    if (result == DialogResult.OK)
+                    {
+                        LogSystem.Log("服务器配置已更新。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"打开服务器管理对话框时出错: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
         private void InitializeCustomComponents()
         {
             // 设置默认值和下拉列表项
@@ -162,7 +181,7 @@ namespace LazyBootstrap
                 chkWindowed.CheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings) return;
-                    UpdateSpiceConfig(new OptionUpdate("w", chkWindowed.Checked ? "/ENABLE" : string.Empty));
+                    UpdateSpiceConfig(new OptionUpdate("w", chkWindowed.Checked ? "/ENABLED" : string.Empty));
                 };
             }
             if (chkNoAsphyxia != null)
@@ -1304,7 +1323,7 @@ namespace LazyBootstrap
 
                 // 游戏相关复选项从 XML 读取
                 var wVal = GetValue("w");
-                bool windowed = string.Equals(wVal, "/ENABLE", StringComparison.OrdinalIgnoreCase);
+                bool windowed = string.Equals(wVal, "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 if (chkWindowed != null) chkWindowed.Checked = windowed;
 
                 var peVal = GetValue("sp2x-processefficiency");
@@ -1331,7 +1350,7 @@ namespace LazyBootstrap
 
         private IEnumerable<OptionUpdate> BuildDefaultOptionUpdates()
         {
-            yield return new OptionUpdate("w", chkWindowed != null && chkWindowed.Checked ? "/ENABLE" : string.Empty);
+            yield return new OptionUpdate("w", chkWindowed != null && chkWindowed.Checked ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty);
             yield return new OptionUpdate("sp2x-dx9on12", ResolveDxModeValue(), false);
             yield return new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty);
