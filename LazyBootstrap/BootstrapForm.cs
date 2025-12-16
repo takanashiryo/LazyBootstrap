@@ -129,6 +129,25 @@ namespace LazyBootstrap
             catch { }
         }
 
+        private void btnManageServer_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var dlg = new ServerManagementForm())
+                {
+                    var result = dlg.ShowDialog(this);
+                    if (result == DialogResult.OK)
+                    {
+                        LogSystem.Log("服务器配置已更新。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"打开服务器管理对话框时出错: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
         private void InitializeCustomComponents()
         {
             // 设置默认值和下拉列表项

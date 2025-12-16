@@ -117,6 +117,12 @@
       <DependentUpon>Settings.settings</DependentUpon>
     </Compile>
     <Compile Include="ScreenRotate.cs" />
+    <Compile Include="ServerManagementForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ServerManagementForm.Designer.cs">
+      <DependentUpon>ServerManagementForm.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="AdvancedOptionsForm.resx">
       <DependentUpon>AdvancedOptionsForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -127,6 +133,9 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
       <SubType>Designer</SubType>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ServerManagementForm.resx">
+      <DependentUpon>ServerManagementForm.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\app.manifest" />
     <None Include="Properties\Settings.settings">
