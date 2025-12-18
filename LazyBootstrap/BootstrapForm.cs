@@ -1,12 +1,15 @@
 ﻿// written by Arkito aka Takanashi Ryo, only release in SDVX Lazy Pack.
-// Encoding: UTF-8 with BOM
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml;
+using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace LazyBootstrap
 {
@@ -15,15 +18,23 @@ namespace LazyBootstrap
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
         private readonly ConfigHandler _versionFile;
-        private bool _usePreconfig = true; // 是否使用预配置文件（默认勾选）
+        private bool _usePreconfig = true; // 是否使用预配置文件
         private bool _isLoadingSettings = false; // 标志：是否正在加载设置
 
         // 统一路径前缀
         private readonly string _baseDir;
         private readonly string _contentsDir;
 
-        // 缓存兼容层实现下拉框原始 tooltip，避免禁用时闪烁
         private string _compatTypeTooltipCache;
+
+        private bool _advDisableSubDisplay = false;
+        private int _advWindowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口
+        private bool _advSubBorderless = false;
+        private bool _advShowCursorTouchSim = false;
+        private bool _advPCoreOptimization = false;
+
+        private bool _dbgNetDump = false;
+        private bool _dbgAsphyxiaDebug = false;
 
         public BootstrapForm()
         {
@@ -60,8 +71,6 @@ namespace LazyBootstrap
             if (newConfigCreated)
             {
                 _configFile.WriteString("Settings", "usepreconfig", "true");
-                _configFile.WriteString("Settings", "windowed", "false");
-                _configFile.WriteString("Settings", "pcoreopt", "false");
                 _configFile.WriteString("Settings", "noasphyxia", "false");
                 _configFile.WriteString("Settings", "norestorerotation", "false");
                 _configFile.WriteString("Settings", "compatlayerenabled", "false");
@@ -74,8 +83,69 @@ namespace LazyBootstrap
             // 窗体显示后进行环境检测
             this.Shown += async (s, e) =>
             {
-                await RunEnvironmentScanAsync();
+                await RunEnvironmentScanAsync(); // Start environment scan
+                LoadSpiceConfig(); // Load current XML settings
             };
+        }
+
+        private void btnAdvancedOptions_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var dlg = new AdvancedOptionsForm
+                {
+                    NetDumpEnabled = _dbgNetDump,
+                    AsphyxiaDebugEnabled = _dbgAsphyxiaDebug,
+                    PCoreOptimizationEnabled = _advPCoreOptimization,
+                    DisableSubDisplay = _advDisableSubDisplay,
+                    WindowModeIndex = _advWindowModeIndex,
+                    SubBorderless = _advSubBorderless,
+                    ShowCursorAndTouchSim = _advShowCursorTouchSim
+                };
+                var result = dlg.ShowDialog(this);
+                if (result == DialogResult.OK)
+                {
+                    // 读取对话框选择并缓存
+                    _dbgNetDump = dlg.NetDumpEnabled;
+                    _dbgAsphyxiaDebug = dlg.AsphyxiaDebugEnabled;
+
+                    // 缓存高级选项选择
+                    _advPCoreOptimization = dlg.PCoreOptimizationEnabled;
+                    _advDisableSubDisplay = dlg.DisableSubDisplay;
+                    _advWindowModeIndex = dlg.WindowModeIndex;
+                    _advSubBorderless = dlg.SubBorderless;
+                    _advShowCursorTouchSim = dlg.ShowCursorAndTouchSim;
+
+                    // 立即更新 XML 配置，仅修改对应的 Option
+                    UpdateSpiceConfig(
+                        new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty),
+                        new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty),
+                        new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue()),
+                        new OptionUpdate("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : string.Empty),
+                        new OptionUpdate("s", _advShowCursorTouchSim ? "/ENABLED" : string.Empty)
+                    );
+                }
+            }
+            catch { }
+        }
+
+        private void btnManageServer_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var dlg = new ServerManagementForm())
+                {
+                    var result = dlg.ShowDialog(this);
+                    if (result == DialogResult.OK)
+                    {
+                        LogSystem.Log("服务器配置已更新。");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"打开服务器管理对话框时出错: {ex.Message}", LogSystem.LogLevel.Error);
+            }
         }
 
         private void InitializeCustomComponents()
@@ -87,20 +157,48 @@ namespace LazyBootstrap
             // 兼容层类型默认值
             if (cmbCompatType != null)
             {
-                // 确保包含期望的项，默认选择 dx9on12
                 if (cmbCompatType.Items.Count == 0)
                 {
                     cmbCompatType.Items.AddRange(new object[] { "dx9on12", "dxvk" });
                 }
                 cmbCompatType.SelectedIndex = 0;
-                // 缓存原始 tooltip 文本
                 if (toolTip0 != null)
                 {
                     _compatTypeTooltipCache = toolTip0.GetToolTip(cmbCompatType);
                 }
+                // 实时更新：兼容层选择改变时写入 XML
+                cmbCompatType.SelectedIndexChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-dx9on12", ResolveDxModeValue(), false));
+                    SaveSettings();
+                };
             }
 
-            // 初始化日志输出控件
+            // 勾选项实时更新：窗口化
+            if (chkWindowed != null)
+            {
+                chkWindowed.CheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    UpdateSpiceConfig(new OptionUpdate("w", chkWindowed.Checked ? "/ENABLED" : string.Empty));
+                };
+            }
+            if (chkNoAsphyxia != null)
+            {
+                chkNoAsphyxia.CheckedChanged += (s, e) =>
+                {
+                    SaveSettings();
+                };
+            }
+            if (chkNoRestoreRotation != null)
+            {
+                chkNoRestoreRotation.CheckedChanged += (s, e) =>
+                {
+                    SaveSettings();
+                };
+            }
+
             LogSystem.Initialize(txtLogOutput);
 
             if (this.Controls.Find("statusStrip1", true).Length > 0 && statusLabel != null)
@@ -109,7 +207,6 @@ namespace LazyBootstrap
             }
             this.FormClosing += Bootstrap_FormClosing;
 
-            // 初始化兼容层状态
             UpdateCompatLayerStatus();
         }
 
@@ -131,6 +228,17 @@ namespace LazyBootstrap
             return Path.Combine(_contentsDir, "spice64.exe");
         }
 
+        private string GetSpiceXmlPath()
+        {
+            if (_usePreconfig)
+            {
+                return Path.Combine(_contentsDir, "lazy", "spicetools.xml");
+            }
+
+            string appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(appDataDir, "spicetools.xml");
+        }
+
         private void LoadSettings()
         {
             try
@@ -144,11 +252,29 @@ namespace LazyBootstrap
                 }
                 chkUsePreconfig.Checked = _usePreconfig;
 
-                // 加载其他启动选项
-                chkWindowed.Checked = bool.Parse(_configFile.ReadString("Settings", "windowed", "false"));
-                chkPCoreOptimization.Checked = bool.Parse(_configFile.ReadString("Settings", "pcoreopt", "false"));
-                chkNoAsphyxia.Checked = bool.Parse(_configFile.ReadString("Settings", "noasphyxia", "false"));
-                chkNoRestoreRotation.Checked = bool.Parse(_configFile.ReadString("Settings", "norestorerotation", "false"));
+                // 加载其他启动选项（窗口化与大小核由 XML 驱动，故不再从 config.ini 读取）
+                chkNoAsphyxia.Checked = bool.TryParse(_configFile.ReadString("Settings", "noasphyxia", "false"), out var noAsphyxia) && noAsphyxia;
+                chkNoRestoreRotation.Checked = bool.TryParse(_configFile.ReadString("Settings", "norestorerotation", "false"), out var noRestoreRotation) && noRestoreRotation;
+
+                // 渲染模式（兼容层实现）
+                try
+                {
+                    string renderMode = _configFile.ReadString("Settings", "rendermode", "dx9on12");
+                    if (cmbCompatType != null)
+                    {
+                        // 保证项存在
+                        if (cmbCompatType.Items.Count == 0)
+                        {
+                            cmbCompatType.Items.AddRange(new object[] { "dx9on12", "dxvk" });
+                        }
+                        int idx = 0;
+                        if (string.Equals(renderMode, "dxvk", StringComparison.OrdinalIgnoreCase)) idx = 1;
+                        cmbCompatType.SelectedIndex = idx;
+                    }
+                }
+                catch { }
+
+                // 不在此处读取 XML（避免启动时与环境检测并发），环境检测完成后再读
 
                 // 读取当前版本
                 string version = _versionFile.ReadString("Version", "version", "Unknown");
@@ -178,17 +304,27 @@ namespace LazyBootstrap
 
         private void SaveSettings()
         {
+            if (_isLoadingSettings)
+            {
+                return;
+            }
+
             try
             {
                 _configFile.WriteString("Settings", "usepreconfig", _usePreconfig.ToString().ToLowerInvariant());
 
-                // 保存其他启动选项
-                _configFile.WriteString("Settings", "windowed", chkWindowed.Checked.ToString().ToLowerInvariant());
-                _configFile.WriteString("Settings", "pcoreopt", chkPCoreOptimization.Checked.ToString().ToLowerInvariant());
-                _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString().ToLowerInvariant());
-                _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString().ToLowerInvariant());
+                // 保存仍通过 config.ini 管理的选项
+                if (chkNoAsphyxia != null)
+                    _configFile.WriteString("Settings", "noasphyxia", chkNoAsphyxia.Checked.ToString().ToLowerInvariant());
+                if (chkNoRestoreRotation != null)
+                    _configFile.WriteString("Settings", "norestorerotation", chkNoRestoreRotation.Checked.ToString().ToLowerInvariant());
 
-                LogSystem.Log("Saved to config.ini");
+                // 保存渲染模式（兼容层实现）
+                if (cmbCompatType != null && cmbCompatType.SelectedItem != null)
+                {
+                    string renderMode = cmbCompatType.SelectedItem.ToString();
+                    _configFile.WriteString("Settings", "rendermode", renderMode);
+                }
             }
             catch (Exception ex)
             {
@@ -222,6 +358,14 @@ namespace LazyBootstrap
             }
 
             _usePreconfig = chkUsePreconfig.Checked;
+            SaveSettings();
+
+            var activeXmlPath = GetSpiceXmlPath();
+            LogSystem.Log(_usePreconfig
+                ? $"当前使用预配置 XML: {activeXmlPath}"
+                : $"当前使用系统 XML: {activeXmlPath}");
+
+            LoadSpiceConfig();
         }
 
         // 检查兼容层文件数量
@@ -291,7 +435,7 @@ namespace LazyBootstrap
                     {
                         // 禁用时移除 tooltip，避免持续闪烁
                         toolTip0.SetToolTip(cmbCompatType, string.Empty);
-                    }
+                      }
                     else
                     {
                         // 恢复原始 tooltip
@@ -396,14 +540,23 @@ namespace LazyBootstrap
             // Lock Element
             SetControlsEnabled(false);
             if (statusLabel != null) statusLabel.Text = "正在启动...";
-            txtLogOutput.Clear();
+            if (txtLogOutput != null)
+            {
+                try { txtLogOutput.Clear(); } catch { }
+            }
 
             try
             {
                 // Screen Rotate
                 LogSystem.Log("正在旋转屏幕...");
                 if (!TryGetRotationAngle(out int rotationAngle)) rotationAngle = 0;
-                bool rotationSuccess = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, rotationAngle);
+                string deviceName = null;
+                try { deviceName = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.DeviceName : null; } catch { deviceName = null; }
+                bool rotationSuccess = false;
+                if (!string.IsNullOrEmpty(deviceName))
+                {
+                    rotationSuccess = ScreenRotate.Rotate(deviceName, rotationAngle);
+                }
                 LogSystem.Log(rotationSuccess ? $"屏幕已旋转至 {rotationAngle} 度。" : "屏幕旋转失败或无需旋转。");
                 await Task.Delay(500); // 等待旋转生效
 
@@ -414,7 +567,7 @@ namespace LazyBootstrap
                     string asphyxiaPath = GetAsphyxiaPath();
                     if (File.Exists(asphyxiaPath))
                     {
-                        if (chkAsphyxiaDebug.Checked)
+                        if (_dbgAsphyxiaDebug)
                         {
                             var asphyxiaStartInfo = new ProcessStartInfo
                             {
@@ -450,50 +603,25 @@ namespace LazyBootstrap
                     LogSystem.Log("\n已跳过启动 Asphyxia Core。");
                 }
 
+                // 在启动前写入 XML 选项，替代命令行参数
+                UpdateSpiceConfig();
+
                 var argsBuilder = new StringBuilder();
                 if (_usePreconfig)
                 {
                     // Spice2x launch args（使用预配置）
-                    argsBuilder.Append("-cmdoverride ");
+                    // Spice2x launch args（使用预配置）argsBuilder.Append("-cmdoverride ");
                     argsBuilder.Append("-cfgpath lazy/spicetools.xml ");
                     argsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
                     argsBuilder.Append("-modules modules ");
                 }
 
-                if (chkWindowed.Checked)
-                {
-                    argsBuilder.Append("-w ");
-                }
-                if (chkNetDump.Checked)
+                // NetDump
+                if (_dbgNetDump)
                 {
                     argsBuilder.Append("-netdump ");
                 }
-                if (chkPCoreOptimization.Checked)
-                {
-                    argsBuilder.Append("-processefficiency pcores ");
-                }
-
-                // 根据兼容层选择添加 -dx9on12 参数
-                try
-                {
-                    string compat = cmbCompatType != null && cmbCompatType.SelectedItem != null
-                        ? cmbCompatType.SelectedItem.ToString()
-                        : "dx9on12";
-
-                    if (string.Equals(compat, "dxvk", StringComparison.OrdinalIgnoreCase))
-                    {
-                        argsBuilder.Append("-dx9on12 0 ");
-                    }
-                    else
-                    {
-                        // 保持现有逻辑：仅在检测到 NVIDIA API 兼容层时添加 -dx9on12 1
-                        if (GetCompatLayerFileCount() == 3)
-                        {
-                            argsBuilder.Append("-dx9on12 1 ");
-                        }
-                    }
-                }
-                catch { }
+                // 余下的游戏相关选项改由 XML 控制，不再通过命令行附加
 
                 // Booting
                 LogSystem.Log("\n正在启动游戏...");
@@ -513,7 +641,7 @@ namespace LazyBootstrap
                     FileName = spicePath,
                     Arguments = argsBuilder.ToString(),
                     UseShellExecute = true,
-                    WorkingDirectory = Path.GetDirectoryName(spicePath) // set spice2x working directory to pass folders 
+                    WorkingDirectory = Path.GetDirectoryName(spicePath)
                 };
 
                 _gameProcess = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
@@ -555,7 +683,13 @@ namespace LazyBootstrap
                     if (!chkNoRestoreRotation.Checked)
                     {
                         LogSystem.Log("正在还原屏幕旋转...");
-                        bool restored = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, 0);
+                        string deviceName = null;
+                        try { deviceName = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.DeviceName : null; } catch { deviceName = null; }
+                        bool restored = false;
+                        if (!string.IsNullOrEmpty(deviceName))
+                        {
+                            restored = ScreenRotate.Rotate(deviceName, 0);
+                        }
                         LogSystem.Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
                     }
 
@@ -690,7 +824,15 @@ namespace LazyBootstrap
             try
             {
                 if (!TryGetRotationAngle(out int angle)) angle = 0;
-                bool success = ScreenRotate.Rotate(Screen.PrimaryScreen.DeviceName, angle);
+                string deviceName = null;
+                try { deviceName = Screen.PrimaryScreen?.DeviceName; } catch { deviceName = null; }
+                if (string.IsNullOrEmpty(deviceName))
+                {
+                    MessageBox.Show("无法获取主显示器信息，已取消旋转。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+
+                bool success = ScreenRotate.Rotate(deviceName, angle);
                 MessageBox.Show(success ? $"屏幕旋转至 {angle} 度成功。" : "屏幕旋转失败。", "提示", MessageBoxButtons.OK,
                     success ? MessageBoxIcon.Information : MessageBoxIcon.Error);
             }
@@ -803,18 +945,33 @@ namespace LazyBootstrap
         // NVIDIA API,dxvk Library Load
         private void btnLoadCompat_Click(object sender, EventArgs e)
         {
-            MoveCompatFiles(Path.Combine("contents", "lazy", "stubs"), Path.Combine("contents", "modules"), "载入");
-            // 记录启用状态
-            try { _configFile.WriteString("Settings", "compatlayerenabled", "true"); LogSystem.Log("已记录兼容层状态: 启用"); } catch { }
-            UpdateCompatLayerStatus();
+            ToggleCompatLayer(true);
         }
 
         private void btnUnloadCompat_Click(object sender, EventArgs e)
         {
-            MoveCompatFiles(Path.Combine("contents", "modules"), Path.Combine("contents", "lazy", "stubs"), "卸载");
-            // 记录关闭状态
-            try { _configFile.WriteString("Settings", "compatlayerenabled", "false"); LogSystem.Log("已记录兼容层状态: 关闭"); } catch { }
+            ToggleCompatLayer(false);
+        }
+
+        private void ToggleCompatLayer(bool enable)
+        {
+            string source = enable
+                ? Path.Combine("contents", "lazy", "stubs")
+                : Path.Combine("contents", "modules");
+            string dest = enable
+                ? Path.Combine("contents", "modules")
+                : Path.Combine("contents", "lazy", "stubs");
+
+            MoveCompatFiles(source, dest, enable ? "载入" : "卸载");
+            try
+            {
+                _configFile.WriteString("Settings", "compatlayerenabled", enable ? "true" : "false");
+                LogSystem.Log($"已记录兼容层状态: {(enable ? "启用" : "关闭")}");
+            }
+            catch { }
+
             UpdateCompatLayerStatus();
+            try { UpdateSpiceConfig(new OptionUpdate("sp2x-dx9on12", ResolveDxModeValue(), false)); } catch { }
         }
 
         private void MoveCompatFiles(string sourceDirRel, string destDirRel, string operationName)
@@ -913,16 +1070,20 @@ namespace LazyBootstrap
             {
                 groupBoxCompatLayer.Enabled = enabled;
             }
-            foreach (Control ctrl in groupBoxOptions.Controls)
+            if (groupBoxOptions != null)
             {
-                if (ctrl != btnKillProcesses)
+                foreach (Control ctrl in groupBoxOptions.Controls)
                 {
-                    ctrl.Enabled = enabled;
+                    if (ctrl != btnKillProcesses)
+                    {
+                        ctrl.Enabled = enabled;
+                    }
                 }
             }
             btnClearCache.Enabled = enabled;
             btnInstallRuntime.Enabled = enabled;
             btnAddFirewallRule.Enabled = enabled;
+            btnAudioPanel.Enabled = enabled;
             btnKillProcesses.Enabled = true; // 始终启用
         }
 
@@ -966,6 +1127,393 @@ namespace LazyBootstrap
             {
                 LogSystem.Log($"打开文件夹失败: {ex.Message}", LogSystem.LogLevel.Error);
             }
+        }
+
+        private void btnAudioPanel_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "control.exe",
+                    Arguments = "mmsys.cpl",
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"打开音频控制面板失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private void UpdateSpiceConfig(params OptionUpdate[] updates)
+        {
+            try
+            {
+                if (updates == null || updates.Length == 0)
+                {
+                    updates = BuildDefaultOptionUpdates().ToArray();
+                }
+
+                if (updates.Length == 0) return;
+
+                if (!TryGetSpiceOptionsContext(LoadOptions.PreserveWhitespace, true, out var context))
+                {
+                    return;
+                }
+
+                var doc = context.Document;
+                var soundVoltex = context.SoundVoltex;
+                var options = context.OptionsElement;
+
+                string newline = "\r\n";
+                string optionsIndent = ExtractIndentation(options.PreviousNode as XText, ref newline) ?? string.Empty;
+                string indentStep = DetermineIndentStep(soundVoltex, ref newline) ?? new string(' ', 4);
+
+                string optionIndent = ExtractIndentation(options.Elements("option").FirstOrDefault()?.PreviousNode as XText, ref newline);
+                if (string.IsNullOrEmpty(optionIndent))
+                {
+                    optionIndent = optionsIndent + indentStep;
+                }
+
+                string optionLinePrefix = newline + optionIndent;
+                string closingLinePrefix = newline + optionsIndent;
+                var closingWhitespace = EnsureClosingWhitespace(options, closingLinePrefix);
+
+                foreach (var update in updates)
+                {
+                    if (update == null || string.IsNullOrEmpty(update.Name)) continue;
+
+                    context.OptionLookup.TryGetValue(update.Name, out var existing);
+
+                    if (existing == null)
+                    {
+                        if (update.ShouldRemove || string.IsNullOrEmpty(update.Value))
+                        {
+                            continue;
+                        }
+
+                        if (closingWhitespace == null)
+                        {
+                            closingWhitespace = EnsureClosingWhitespace(options, closingLinePrefix);
+                        }
+
+                        closingWhitespace.AddBeforeSelf(new XText(optionLinePrefix));
+                        var newOpt = new XElement("option",
+                            new XAttribute("name", update.Name),
+                            new XAttribute("value", update.Value ?? string.Empty));
+                        closingWhitespace.AddBeforeSelf(newOpt);
+                        context.OptionLookup[update.Name] = newOpt;
+                        continue;
+                    }
+
+                    if (update.ShouldRemove)
+                    {
+                        var whitespace = existing.PreviousNode as XText;
+                        existing.Remove();
+                        if (whitespace != null && string.IsNullOrWhiteSpace(whitespace.Value))
+                        {
+                            whitespace.Remove();
+                        }
+                        context.OptionLookup.Remove(update.Name);
+                        continue;
+                    }
+
+                    existing.SetAttributeValue("value", update.Value ?? string.Empty);
+                }
+
+                var settings = new XmlWriterSettings
+                {
+                    Indent = false,
+                    NewLineHandling = NewLineHandling.None,
+                    Encoding = new System.Text.UTF8Encoding(false),
+                    OmitXmlDeclaration = false,
+                    NewLineChars = newline,
+                    NewLineOnAttributes = false
+                };
+                using (var writer = XmlWriter.Create(context.FilePath, settings))
+                {
+                    doc.Save(writer);
+                }
+
+                NormalizeSelfClosingTags(context.FilePath);
+
+                string ExtractIndentation(XText textNode, ref string newlineChars)
+                {
+                    if (textNode == null) return null;
+
+                    var text = textNode.Value;
+                    if (text.Contains("\r\n")) newlineChars = "\r\n";
+                    else if (text.Contains("\n")) newlineChars = "\n";
+                    else if (text.Contains("\r")) newlineChars = "\r";
+
+                    int lastNewlineIndex = text.LastIndexOf('\n');
+                    if (lastNewlineIndex < text.LastIndexOf('\r'))
+                    {
+                        lastNewlineIndex = text.LastIndexOf('\r');
+                    }
+
+                    if (lastNewlineIndex >= 0 && lastNewlineIndex + 1 < text.Length)
+                    {
+                        int start = lastNewlineIndex + 1;
+                        while (start < text.Length && (text[start] == '\r' || text[start] == '\n'))
+                        {
+                            start++;
+                        }
+                        return text.Substring(start);
+                    }
+
+                    return text;
+                }
+
+                string DetermineIndentStep(XElement parentElement, ref string newlineChars)
+                {
+                    if (parentElement == null) return null;
+
+                    foreach (var container in parentElement.Elements())
+                    {
+                        if (!container.HasElements) continue;
+
+                        var containerIndent = ExtractIndentation(container.PreviousNode as XText, ref newlineChars);
+                        var child = container.Elements().FirstOrDefault();
+                        var childIndent = ExtractIndentation(child?.PreviousNode as XText, ref newlineChars);
+
+                        if (!string.IsNullOrEmpty(containerIndent) && !string.IsNullOrEmpty(childIndent) && childIndent.StartsWith(containerIndent))
+                        {
+                            return childIndent.Substring(containerIndent.Length);
+                        }
+                    }
+
+                    return null;
+                }
+
+                XText EnsureClosingWhitespace(XElement optionsElement, string desiredValue)
+                {
+                    var lastNode = optionsElement.Nodes().LastOrDefault();
+                    if (lastNode is XText textNode)
+                    {
+                        textNode.Value = desiredValue;
+                        return textNode;
+                    }
+
+                    var newTextNode = new XText(desiredValue);
+                    optionsElement.Add(newTextNode);
+                    return newTextNode;
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"更新 SpiceTools 配置失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private void LoadSpiceConfig()
+        {
+            bool previousLoadingState = _isLoadingSettings;
+            _isLoadingSettings = true;
+            try
+            {
+                if (!TryGetSpiceOptionsContext(LoadOptions.PreserveWhitespace, false, out var context))
+                {
+                    return;
+                }
+
+                string GetValue(string name) => context.GetOptionValue(name);
+
+                // 游戏相关复选项从 XML 读取
+                var wVal = GetValue("w");
+                bool windowed = string.Equals(wVal, "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                if (chkWindowed != null) chkWindowed.Checked = windowed;
+
+                var peVal = GetValue("sp2x-processefficiency");
+                _advPCoreOptimization = string.Equals(peVal, "pcores", StringComparison.OrdinalIgnoreCase);
+
+                // 高级选项缓存
+                _advDisableSubDisplay = string.Equals(GetValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.Ordinal);
+                var wborder = GetValue("sp2x-windowborder");
+                if (string.Equals(wborder, "1", StringComparison.Ordinal)) _advWindowModeIndex = 1;
+                else if (string.Equals(wborder, "2", StringComparison.Ordinal)) _advWindowModeIndex = 2;
+                else _advWindowModeIndex = 0;
+                _advSubBorderless = string.Equals(GetValue("sdvxwsubborderless"), "/ENABLED", StringComparison.Ordinal);
+                _advShowCursorTouchSim = string.Equals(GetValue("s"), "/ENABLED", StringComparison.Ordinal);
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"读取 XML 失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+            finally
+            {
+                _isLoadingSettings = previousLoadingState;
+            }
+        }
+
+        private IEnumerable<OptionUpdate> BuildDefaultOptionUpdates()
+        {
+            yield return new OptionUpdate("w", chkWindowed != null && chkWindowed.Checked ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty);
+            yield return new OptionUpdate("sp2x-dx9on12", ResolveDxModeValue(), false);
+            yield return new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue());
+            yield return new OptionUpdate("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("s", _advShowCursorTouchSim ? "/ENABLED" : string.Empty);
+        }
+
+        private string ResolveWindowBorderValue()
+        {
+            switch (_advWindowModeIndex)
+            {
+                case 1:
+                    return "1";
+                case 2:
+                    return "2";
+                default:
+                    return string.Empty;
+            }
+        }
+
+        private string ResolveDxModeValue()
+        {
+            try
+            {
+                bool compatEnabled = IsCompatLayerEffectivelyEnabled();
+                if (!compatEnabled) return "0";
+
+                var compat = cmbCompatType != null && cmbCompatType.SelectedItem != null
+                    ? cmbCompatType.SelectedItem.ToString()
+                    : "dx9on12";
+                return string.Equals(compat, "dxvk", StringComparison.OrdinalIgnoreCase) ? "0" : "1";
+            }
+            catch { return "0"; }
+        }
+
+        private bool IsCompatLayerEffectivelyEnabled()
+        {
+            try
+            {
+                int fileCount = GetCompatLayerFileCount();
+                return fileCount >= 1 || IsCompatLayerEnabledConfigured();
+            }
+            catch { return IsCompatLayerEnabledConfigured(); }
+        }
+
+        private bool TryGetSpiceOptionsContext(LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context)
+        {
+            context = null;
+            string spiceXmlPath = GetSpiceXmlPath();
+            if (!File.Exists(spiceXmlPath))
+            {
+                LogSystem.Log("未找到 SpiceTools 配置文件，无法读取或更新选项。", LogSystem.LogLevel.Warning);
+                return false;
+            }
+
+            var doc = XDocument.Load(spiceXmlPath, loadOptions);
+            var root = doc.Root;
+            if (root == null)
+            {
+                LogSystem.Log("SpiceTools 配置 XML 根节点为空。", LogSystem.LogLevel.Error);
+                return false;
+            }
+
+            var soundVoltex = root.Elements("game").FirstOrDefault(g =>
+            {
+                var nameAttr = g.Attribute("name");
+                return nameAttr != null && string.Equals(nameAttr.Value, "Sound Voltex", StringComparison.OrdinalIgnoreCase);
+            });
+            if (soundVoltex == null)
+            {
+                LogSystem.Log("未找到游戏条目: Sound Voltex。", LogSystem.LogLevel.Warning);
+                return false;
+            }
+
+            var options = soundVoltex.Element("options");
+            if (options == null)
+            {
+                if (createOptionsWhenMissing)
+                {
+                    options = new XElement("options");
+                    soundVoltex.Add(options);
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            var lookup = new Dictionary<string, XElement>(StringComparer.Ordinal);
+            foreach (var option in options.Elements("option"))
+            {
+                var nameAttr = option.Attribute("name");
+                if (nameAttr == null) continue;
+                var key = nameAttr.Value;
+                if (!lookup.ContainsKey(key))
+                {
+                    lookup[key] = option;
+                }
+            }
+
+            context = new SpiceOptionsContext(spiceXmlPath, doc, soundVoltex, options, lookup);
+            return true;
+        }
+
+        private void NormalizeSelfClosingTags(string filePath)
+        {
+            try
+            {
+                var original = File.ReadAllText(filePath, Encoding.UTF8);
+                var normalized = Regex.Replace(original, "(?<=\\S)[ \\\t]+/>", "/>");
+                if (!string.Equals(original, normalized, StringComparison.Ordinal))
+                {
+                    File.WriteAllText(filePath, normalized, new UTF8Encoding(false));
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"规范化自闭合标签格式失败: {ex.Message}", LogSystem.LogLevel.Warning);
+            }
+        }
+
+        private sealed class SpiceOptionsContext
+        {
+            public string FilePath { get; }
+            public XDocument Document { get; }
+            public XElement SoundVoltex { get; }
+            public XElement OptionsElement { get; }
+            public Dictionary<string, XElement> OptionLookup { get; }
+
+            public SpiceOptionsContext(string filePath, XDocument document, XElement soundVoltex, XElement optionsElement, Dictionary<string, XElement> optionLookup)
+            {
+                FilePath = filePath;
+                Document = document;
+                SoundVoltex = soundVoltex;
+                OptionsElement = optionsElement;
+                OptionLookup = optionLookup;
+            }
+
+            public string GetOptionValue(string name)
+            {
+                if (OptionLookup.TryGetValue(name, out var element))
+                {
+                    return element.Attribute("value")?.Value ?? string.Empty;
+                }
+                return string.Empty;
+            }
+        }
+
+        private sealed class OptionUpdate
+        {
+            public string Name { get; }
+            public string Value { get; }
+            public bool RemoveWhenEmpty { get; }
+
+            public OptionUpdate(string name, string value, bool removeWhenEmpty = false)
+            {
+                Name = name;
+                Value = value ?? string.Empty;
+                RemoveWhenEmpty = removeWhenEmpty;
+            }
+
+            public bool ShouldRemove => RemoveWhenEmpty && string.IsNullOrEmpty(Value);
         }
     }
 }

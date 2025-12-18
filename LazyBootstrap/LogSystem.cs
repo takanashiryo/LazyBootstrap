@@ -77,6 +77,13 @@ namespace LazyBootstrap
 
                     _output.AppendText(Environment.NewLine);
                 }
+
+                try
+                {
+                    _output.SelectionStart = _output.TextLength;
+                    _output.ScrollToCaret();
+                }
+                catch { }
             };
 
             if (_output.InvokeRequired)

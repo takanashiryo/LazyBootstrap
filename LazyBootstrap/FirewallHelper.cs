@@ -9,6 +9,11 @@ namespace LazyBootstrap
         public static void EnsureFirewallRule(string ruleName, string programPath, Action<string> log)
         {
             string spicePath = Path.GetFullPath(programPath);
+            if (!File.Exists(spicePath))
+            {
+                log?.Invoke($"未找到目标程序，无法添加防火墙规则: {spicePath}");
+                return;
+            }
             try
             {
                 var addProcessInfo = new ProcessStartInfo
