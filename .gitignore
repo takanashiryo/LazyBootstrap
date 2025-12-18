@@ -363,3 +363,6 @@ MigrationBackup/
 FodyWeavers.xsd
 
 Introduction.md
+dist/
+.vscode/
+.github/
