@@ -1,0 +1,219 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="LazyBootstrap.BootstrapWindow"
+        Title="SOUND VOLTEX LazyBootstrap"
+        Width="960" Height="720"
+        MinWidth="920" MinHeight="680"
+        CanResize="True"
+        WindowStartupLocation="CenterScreen">
+    <Window.Styles>
+        <Style Selector="Button">
+            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+
+        <Style Selector="TextBox.log-output">
+            <Setter Property="Background" Value="#101010"/>
+            <Setter Property="Foreground" Value="#F5F5F5"/>
+            <Setter Property="BorderBrush" Value="#4A4A4A"/>
+            <Setter Property="SelectionBrush" Value="#6080AFFF"/>
+        </Style>
+        <Style Selector="TextBox.log-output:pointerover">
+            <Setter Property="Background" Value="#101010"/>
+            <Setter Property="Foreground" Value="#F5F5F5"/>
+            <Setter Property="BorderBrush" Value="#6A6A6A"/>
+        </Style>
+        <Style Selector="TextBox.log-output:focus">
+            <Setter Property="Background" Value="#101010"/>
+            <Setter Property="Foreground" Value="#F5F5F5"/>
+            <Setter Property="BorderBrush" Value="#7A9ACD"/>
+        </Style>
+        <Style Selector="TextBox.log-output /template/ ScrollViewer">
+            <Setter Property="Background" Value="#101010"/>
+        </Style>
+        <Style Selector="TextBox.log-output /template/ ScrollViewer /template/ TextPresenter">
+            <Setter Property="Background" Value="#101010"/>
+        </Style>
+    </Window.Styles>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Top: Version Info -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="15,10,15,8">
+            <TextBlock Text="当前版本:" VerticalAlignment="Center"/>
+            <TextBox x:Name="txtCurrentVersion" Width="150" Margin="5,0,15,0" IsReadOnly="True"/>
+            <TextBlock Text="懒人包修订号:" VerticalAlignment="Center"/>
+            <TextBox x:Name="txtRevision" Width="72" Margin="5,0,0,0" IsReadOnly="True"/>
+        </StackPanel>
+
+        <!-- Main Content -->
+        <Grid Grid.Row="1" Margin="10,0,10,8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="430"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Left Panel -->
+            <StackPanel Grid.Column="0">
+
+                <!-- 启动选项 GroupBox -->
+                <HeaderedContentControl Margin="5,0,5,5">
+                    <HeaderedContentControl.Header>
+                        <TextBlock Text="启动选项" FontWeight="Bold"/>
+                    </HeaderedContentControl.Header>
+                    <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                    <Grid MinHeight="225">
+                        <!-- Left side: Big Start button + Edit buttons -->
+                        <StackPanel Width="150" HorizontalAlignment="Left" Margin="5,5,0,0">
+                            <Button x:Name="btnStart" Content="启动游戏" Width="140" Height="73"
+                                    FontSize="14" Click="btnStart_Click"/>
+                            <CheckBox x:Name="chkUsePreconfig" Content="使用预配置文件" Margin="0,10,0,0"
+                                      IsChecked="True"
+                                      ToolTip.Tip="使用预先配置好的最优配置文件来启动游戏，以防止因错误的系统内建配置造成的干扰&#x0a;两者互相独立，取消勾选以使用系统内建配置"/>
+                            <Button x:Name="btnEditConfig" Content="编辑 spicecfg" Width="140" Height="30"
+                                    Margin="0,5,0,0" Click="btnEditConfig_Click"
+                                    ToolTip.Tip="如果你勾选了&quot;使用预配置文件&quot;，则会编辑预配置文件"/>
+                            <Button x:Name="btnOpenLog" Content="查看 log.txt" Width="140" Height="30"
+                                    Margin="0,5,0,0" Click="btnOpenLog_Click"/>
+                        </StackPanel>
+
+                        <!-- Right side: Checkboxes + Dropdowns -->
+                        <StackPanel Margin="165,5,5,0">
+                            <CheckBox x:Name="chkWindowed" Content="窗口化启动" Margin="0,5,0,0"
+                                      ToolTip.Tip="以窗口化模式运行游戏"/>
+                            <CheckBox x:Name="chkNoAsphyxia" Content="不启动氧无" Margin="0,8,0,0"
+                                      ToolTip.Tip="启动时不启动氧无，连接在线服时可勾选"/>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <TextBlock Text="服务器设定：" VerticalAlignment="Center"/>
+                                <Button x:Name="btnManageServer" Content="设定" Width="55" Height="23"
+                                        Margin="5,0,0,0" Click="btnManageServer_Click"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Text="高级选项：" VerticalAlignment="Center"/>
+                                <Button x:Name="btnAdvancedOptions" Content="设定" Width="55" Height="23"
+                                        Margin="5,0,0,0" Click="btnAdvancedOptions_Click"
+                                        ToolTip.Tip="打开高级选项菜单"/>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <TextBlock Text="屏幕旋转：" VerticalAlignment="Center"/>
+                                <ComboBox x:Name="cmbRotation" Width="120" Margin="5,0,5,0"
+                                          ToolTip.Tip="选择你希望屏幕旋转的角度（逆时针）"/>
+                                <Button x:Name="btnSwitchRotation" Content="切换" Width="54" Height="21"
+                                        Click="btnSwitchRotation_Click"/>
+                            </StackPanel>
+
+                            <CheckBox x:Name="chkNoRestoreRotation" Content="退出时不还原屏幕" Margin="0,8,0,0"
+                                      ToolTip.Tip="退出游戏进程时保持当前的旋转方向"/>
+                        </StackPanel>
+                    </Grid>
+                    </Border>
+                </HeaderedContentControl>
+
+                <!-- 工具 GroupBox -->
+                <HeaderedContentControl Margin="5,0,5,5">
+                    <HeaderedContentControl.Header>
+                        <TextBlock Text="工具" FontWeight="Bold"/>
+                    </HeaderedContentControl.Header>
+                    <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Button x:Name="btnClearCache" Content="清除 data_mods 缓存" Grid.Row="0" Grid.Column="0"
+                                Height="32" Margin="5" Click="btnClearCache_Click"
+                                ToolTip.Tip="清除data_mods缓存文件&#x0a;更新游戏后需清除，以重建歌曲类模组数据库"/>
+                        <Button x:Name="btnAddFirewallRule" Content="添加防火墙规则" Grid.Row="0" Grid.Column="1"
+                                Height="32" Margin="5" Click="btnAddFirewallRule_Click"
+                                ToolTip.Tip="添加允许游戏通过防火墙的规则"/>
+                        <Button x:Name="btnAudioPanel" Content="打开音频控制面板" Grid.Row="1" Grid.Column="0"
+                                Height="32" Margin="5" Click="btnAudioPanel_Click"/>
+                        <Button x:Name="btnInstallRuntime" Content="安装运行库" Grid.Row="1" Grid.Column="1"
+                                Height="32" Margin="5" Click="btnInstallRuntime_Click"
+                                ToolTip.Tip="安装必要的游戏运行库"/>
+                        <Button x:Name="btnKillProcesses" Content="结束所有进程" Grid.Row="2" Grid.Column="0"
+                                Grid.ColumnSpan="2" Height="32" Margin="5"
+                                Click="btnKillProcesses_Click"
+                                ToolTip.Tip="强制结束所有游戏相关进程"/>
+                    </Grid>
+                    </Border>
+                </HeaderedContentControl>
+
+                <!-- AMD/Intel 显卡兼容层 GroupBox -->
+                <HeaderedContentControl Margin="5,0,5,5"
+                          ToolTip.Tip="载入AMD/Intel显卡的兼容层">
+                    <HeaderedContentControl.Header>
+                        <TextBlock Text="AMD/Intel 显卡兼容层" FontWeight="Bold"/>
+                    </HeaderedContentControl.Header>
+                    <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="3" Padding="5">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <Grid Grid.Row="0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <Button x:Name="btnLoadCompat" Content="启用" Grid.Column="0"
+                                    Height="36" Margin="5" Click="btnLoadCompat_Click"/>
+                            <Button x:Name="btnUnloadCompat" Content="关闭" Grid.Column="1"
+                                    Height="36" Margin="5" Click="btnUnloadCompat_Click"/>
+                        </Grid>
+
+                        <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="5,5,5,5">
+                            <TextBlock x:Name="lblCompatStatus" Text="● 未知" FontWeight="Bold"
+                                       Foreground="Red" VerticalAlignment="Center" Margin="0,0,15,0"/>
+                            <TextBlock Text="渲染模式：" VerticalAlignment="Center"
+                                       ToolTip.Tip="选择渲染模式&#x0a;dx9on12：默认，通常情况下可提供最好的效果。窗口化可能白屏&#x0a;dxvk：备用，可能会出现轨道缺失等问题。"/>
+                            <ComboBox x:Name="cmbCompatType" Width="121" Margin="5,0,0,0"
+                                      ToolTip.Tip="选择渲染模式&#x0a;dx9on12：默认，通常情况下可提供最好的效果。窗口化可能白屏&#x0a;dxvk：备用，可能会出现轨道缺失等问题。"/>
+                        </StackPanel>
+                    </Grid>
+                    </Border>
+                </HeaderedContentControl>
+
+            </StackPanel>
+
+            <!-- Right Panel: Log -->
+            <Grid Grid.Column="1" Margin="5,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <TextBlock Text="日志输出：" Margin="0,0,0,5"/>
+                <TextBox x:Name="txtLogOutput" Grid.Row="1"
+                         Classes="log-output"
+                         IsReadOnly="True"
+                         AcceptsReturn="True" TextWrapping="NoWrap"
+                         HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                         ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"/>
+            </Grid>
+        </Grid>
+
+        <!-- Bottom: Status -->
+        <Border Grid.Row="2" Background="Transparent" Padding="6,4">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock x:Name="statusLabel" Text="就绪" VerticalAlignment="Center"/>
+                <ProgressBar x:Name="statusProgress" Width="180" Height="16"
+                             Minimum="0" Maximum="100" IsVisible="False" Margin="10,0,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
