@@ -502,16 +502,17 @@ namespace LazyBootstrap
                 if (EnvironmentScan.LastHadError)
                 {
                     var sb = new StringBuilder();
-                    sb.AppendLine("(｡>﹏<｡) 啊哇哇，Near检测到你的系统可能缺少必要的运行组件，可能导致启动失败或功能异常。");
+                    sb.AppendLine("(｡>﹏<｡) 啊哇哇，Near检测到你的系统可能缺少必要的运行组件！");
                     sb.AppendLine();
-                    sb.AppendLine("٩(ˊᗜˋ*)و Noah给出的解决方法：");
-                    sb.AppendLine("- 点击启动器‘安装运行库’按钮安装必要组件");
+                    sb.AppendLine("(* ^∇^)ﾉ Noah给出的解决方法：");
+                    sb.AppendLine("- 点击启动器“安装运行库”按钮安装必要运行组件");
                     sb.AppendLine("- 确保已安装最新的显卡驱动程序");
-                    sb.AppendLine("- 若为 AMD/Intel 显卡，启用‘兼容层’后重试");
+                    sb.AppendLine("- 若为 AMD/Intel 显卡，请启用“显卡兼容层”后重试");
                     sb.AppendLine();
-                    sb.AppendLine("如果‘系统媒体功能包’异常：");
-                    sb.AppendLine("- 检查‘Windows 功能’中是否启用了‘媒体功能包’");
+                    sb.AppendLine("如果“系统媒体功能包”异常：");
+                    sb.AppendLine("- 检查“Windows 功能”中是否启用了“媒体功能包”");
                     sb.AppendLine();
+                    sb.AppendLine("请注意！由于环境不同，这个提示可能会误报！");
                     sb.AppendLine("您可先行尝试启动游戏，若出现问题，再寻求周围帮助。");
 
                     MessageBox.Show(this, sb.ToString(), "环境检测发现问题", MessageBoxButtons.OK, MessageBoxIcon.Warning);
