@@ -1,5 +1,6 @@
 using System;
-using System.Windows.Forms;
+using Avalonia.Controls;
+using Avalonia.Threading;
 
 namespace LazyBootstrap
 {
@@ -12,17 +13,11 @@ namespace LazyBootstrap
             Error
         }
 
-        private static RichTextBox _output;
+        private static TextBox _output;
 
-        public static void Initialize(RichTextBox richTextBox)
+        public static void Initialize(TextBox textBox)
         {
-            _output = richTextBox;
-            if (_output != null)
-            {
-                // ÉîÉ«±³¾°ÓëÇ³É«Ç°¾°
-                _output.BackColor = System.Drawing.Color.Black;
-                _output.ForeColor = System.Drawing.Color.White;
-            }
+            _output = textBox;
         }
 
         public static void Log(string message)
@@ -36,63 +31,51 @@ namespace LazyBootstrap
 
             Action append = () =>
             {
-                // ÖğĞĞÌí¼ÓÊ±¼ä´Á£¬¼æÈİ \n ºÍ \r\n
+                // é€è¡Œæ·»åŠ æ—¶é—´æˆ³ï¼Œå…¼å®¹ \n å’Œ \r\n
                 var normalized = message.Replace("\r\n", "\n");
                 var lines = normalized.Split('\n');
                 foreach (var raw in lines)
                 {
-                    var line = raw; // ²» Trim£¬±£ÁôĞĞÄÚ¿Õ¸ñ
+                    var line = raw;
 
                     if (string.IsNullOrEmpty(line))
                     {
-                        // ¿ÕĞĞÖ±½Ó»»ĞĞ£¬²»¼ÓÊ±¼ä´Á
-                        _output.AppendText(Environment.NewLine);
+                        _output.Text += Environment.NewLine;
                         continue;
                     }
 
                     string timestamp = $"[{DateTime.Now:HH:mm:ss}] ";
 
-                    // ÏÈÊä³öÊ±¼ä´Á£¨Ê¹ÓÃÄ¬ÈÏÑÕÉ«£©
-                    _output.SelectionStart = _output.TextLength;
-                    _output.SelectionLength = 0;
-                    _output.SelectionColor = _output.ForeColor;
-                    _output.AppendText(timestamp);
-
-                    // ¸ù¾İ¼¶±ğÊä³öÏûÏ¢ÄÚÈİ
-                    if (level == LogLevel.Warning || level == LogLevel.Error)
+                    // Avalonia TextBox ä¸æ”¯æŒå¯Œæ–‡æœ¬ç€è‰²ï¼Œä½¿ç”¨å‰ç¼€æ ‡è®°
+                    string prefix = "";
+                    switch (level)
                     {
-                        _output.SelectionStart = _output.TextLength;
-                        _output.SelectionLength = 0;
-                        _output.SelectionColor = level == LogLevel.Error
-                            ? System.Drawing.Color.Red
-                            : System.Drawing.Color.Orange;
-                        _output.AppendText(line);
-                        // ÖØÖÃÑÕÉ«
-                        _output.SelectionColor = _output.ForeColor;
-                    }
-                    else
-                    {
-                        _output.AppendText(line);
+                        case LogLevel.Error:
+                            prefix = "[é”™è¯¯] ";
+                            break;
+                        case LogLevel.Warning:
+                            prefix = "[è­¦å‘Š] ";
+                            break;
                     }
 
-                    _output.AppendText(Environment.NewLine);
+                    _output.Text += timestamp + prefix + line + Environment.NewLine;
                 }
 
+                // æ»šåŠ¨åˆ°åº•éƒ¨
                 try
                 {
-                    _output.SelectionStart = _output.TextLength;
-                    _output.ScrollToCaret();
+                    _output.CaretIndex = _output.Text?.Length ?? 0;
                 }
                 catch { }
             };
 
-            if (_output.InvokeRequired)
+            if (Dispatcher.UIThread.CheckAccess())
             {
-                _output.Invoke((MethodInvoker)(() => append()));
+                append();
             }
             else
             {
-                append();
+                Dispatcher.UIThread.Post(append);
             }
         }
     }

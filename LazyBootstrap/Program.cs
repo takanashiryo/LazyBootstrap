@@ -1,17 +1,17 @@
-﻿// written by Arkito aka Takanashi Ryo, only release in SDVX Lazy Pack.
 using System;
-using System.Windows.Forms;
+using Avalonia;
 
 namespace LazyBootstrap
 {
-    static class Program
+    internal class Program
     {
         [STAThread]
-        static void Main()
-        {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new BootstrapForm());
-        }
+        public static void Main(string[] args) => BuildAvaloniaApp()
+            .StartWithClassicDesktopLifetime(args);
+
+        public static AppBuilder BuildAvaloniaApp()
+            => AppBuilder.Configure<App>()
+                .UsePlatformDetect()
+                .LogToTrace();
     }
 }

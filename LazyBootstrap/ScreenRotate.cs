@@ -84,7 +84,7 @@ public class ScreenRotate
             }
 
             DEVMODE devMode = new DEVMODE();
-            devMode.dmSize = (short)Marshal.SizeOf(typeof(DEVMODE));
+            devMode.dmSize = (short)Marshal.SizeOf<DEVMODE>();
 
             if (!EnumDisplaySettings(deviceName, ENUM_CURRENT_SETTINGS, ref devMode))
             {
