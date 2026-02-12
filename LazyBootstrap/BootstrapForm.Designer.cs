@@ -473,7 +473,7 @@
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.MaximizeBox = false;
             this.Name = "BootstrapForm";
-            this.Text = "SDVX 懒人包 启动程序";
+            this.Text = "SOUND VOLTEX LazyBootstrap";
             this.groupBoxOptions.ResumeLayout(false);
             this.groupBoxOptions.PerformLayout();
             this.groupBoxTools.ResumeLayout(false);
