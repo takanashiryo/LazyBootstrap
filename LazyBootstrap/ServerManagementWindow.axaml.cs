@@ -5,13 +5,14 @@ using System.Linq;
 using System.Text;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using SukiUI.Controls;
 using System.Xml;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 
 namespace LazyBootstrap
 {
-    public partial class ServerManagementWindow : Window
+    public partial class ServerManagementWindow : SukiWindow
     {
         private readonly string _configFilePath;
         private readonly ConfigHandler _configFile;
@@ -27,8 +28,9 @@ namespace LazyBootstrap
             InitializeComponent();
 
             // 获取路径
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            _configFilePath = Path.Combine(baseDir, "config.ini");
+            var envBaseDir = Environment.GetEnvironmentVariable("LAZYBOOTSTRAP_BASEDIR");
+            string baseDir = !string.IsNullOrWhiteSpace(envBaseDir) ? envBaseDir : AppDomain.CurrentDomain.BaseDirectory;
+            _configFilePath = Path.Combine(baseDir, "config.toml");
             _configFile = new ConfigHandler(_configFilePath);
 
             // 初始化预设下拉框
@@ -37,7 +39,7 @@ namespace LazyBootstrap
                 cmbPreset.SelectedIndex = 0;
             }
 
-            // 加载当前配置（优先 XML，config.ini 仅用于记录）
+            // 加载当前配置（优先 XML，config.toml 仅用于记录）
             LoadServerConfig();
         }
 

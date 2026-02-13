@@ -1,5 +1,6 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+﻿<suki:SukiWindow xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         x:Class="LazyBootstrap.AdvancedOptionsWindow"
         Title="高级选项"
         Width="420" Height="560"
@@ -7,12 +8,12 @@
         CanResize="True"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
-    <Window.Styles>
+    <suki:SukiWindow.Styles>
         <Style Selector="Button">
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
-    </Window.Styles>
+    </suki:SukiWindow.Styles>
 
     <ScrollViewer VerticalScrollBarVisibility="Auto"
                   HorizontalScrollBarVisibility="Disabled">
@@ -64,4 +65,4 @@
             </StackPanel>
         </StackPanel>
     </ScrollViewer>
-</Window>
+</suki:SukiWindow>

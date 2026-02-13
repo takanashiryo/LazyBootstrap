@@ -1,10 +1,11 @@
 using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using SukiUI.Controls;
 
 namespace LazyBootstrap
 {
-    public partial class AdvancedOptionsWindow : Window
+    public partial class AdvancedOptionsWindow : SukiWindow
     {
         // 用于传递结果的标志
         public bool Confirmed { get; private set; } = false;

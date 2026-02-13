@@ -1,5 +1,6 @@
-﻿<Window xmlns="https://github.com/avaloniaui"
+﻿<suki:SukiWindow xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
         x:Class="LazyBootstrap.ServerManagementWindow"
         Title="服务器管理"
         Width="460" Height="280"
@@ -7,7 +8,7 @@
         CanResize="True"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
-    <Window.Styles>
+    <suki:SukiWindow.Styles>
         <Style Selector="Button">
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
@@ -17,7 +18,7 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
             <Setter Property="HorizontalAlignment" Value="Right"/>
         </Style>
-    </Window.Styles>
+    </suki:SukiWindow.Styles>
 
     <Grid Margin="16"
           RowDefinitions="Auto,Auto,Auto,*,Auto"
@@ -40,4 +41,4 @@
                     Click="btnCancel_Click"/>
         </StackPanel>
     </Grid>
-</Window>
+</suki:SukiWindow>

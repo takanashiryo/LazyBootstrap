@@ -9,17 +9,18 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using SukiUI.Controls;
+using System.Runtime.InteropServices;
 using System.Xml;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
 
 namespace LazyBootstrap
 {
-    public partial class BootstrapWindow : Window
+    public partial class BootstrapWindow : SukiWindow
     {
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
-        private readonly ConfigHandler _versionFile;
         private bool _usePreconfig = true; // 是否使用预配置文件
         private bool _isLoadingSettings = false; // 标志：是否正在加载设置
 
@@ -37,6 +38,29 @@ namespace LazyBootstrap
 
         private bool _dbgNetDump = false;
         private bool _dbgAsphyxiaDebug = false;
+        private bool _displayConfigEnabled = false;
+        private bool _isDualDisplay = true;
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct DISPLAY_DEVICE
+        {
+            public int cb;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+            public string DeviceName;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceString;
+            public int StateFlags;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceID;
+            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
+            public string DeviceKey;
+        }
+
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        private static extern bool EnumDisplayDevices(string lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
+
+        private const int DISPLAY_DEVICE_ACTIVE = 0x1;
+        private const int DISPLAY_DEVICE_MIRRORING_DRIVER = 0x8;
 
         public BootstrapWindow()
         {
@@ -52,30 +76,9 @@ namespace LazyBootstrap
             _baseDir = !string.IsNullOrEmpty(envBaseDir) ? envBaseDir : AppDomain.CurrentDomain.BaseDirectory;
             _contentsDir = Path.Combine(_baseDir, "contents");
 
-            string configFilePath = Path.Combine(_baseDir, "config.ini");
-            string versionFilePath = Path.Combine(_baseDir, "version.ini");
+            string configFilePath = Path.Combine(_baseDir, "config.toml");
             bool newConfigCreated = !System.IO.File.Exists(configFilePath);
-            bool newVersionCreated = !System.IO.File.Exists(versionFilePath);
             _configFile = new ConfigHandler(configFilePath);
-            _versionFile = new ConfigHandler(versionFilePath);
-
-            if (newVersionCreated)
-            {
-                // 创建版本文件并写入默认版本与修订号
-                _versionFile.WriteString("Version", "version", "YYYYMMDD");
-                _versionFile.WriteString("Version", "revision", "0");
-            }
-            else
-            {
-                if (string.IsNullOrWhiteSpace(_versionFile.ReadString("Version", "version", "")))
-                {
-                    _versionFile.WriteString("Version", "version", "YYYYMMDD");
-                }
-                if (string.IsNullOrWhiteSpace(_versionFile.ReadString("Version", "revision", "")))
-                {
-                    _versionFile.WriteString("Version", "revision", "0");
-                }
-            }
 
             if (newConfigCreated)
             {
@@ -125,6 +128,23 @@ namespace LazyBootstrap
                     _advSubBorderless = dlg.SubBorderless;
                     _advShowCursorTouchSim = dlg.ShowCursorAndTouchSim;
 
+                    bool prev = _isLoadingSettings;
+                    _isLoadingSettings = true;
+                    try
+                    {
+                        if (chkAdvNetDump != null) chkAdvNetDump.IsChecked = _dbgNetDump;
+                        if (chkAdvAsphyxiaDebug != null) chkAdvAsphyxiaDebug.IsChecked = _dbgAsphyxiaDebug;
+                        if (chkAdvDisableSubDisplay != null) chkAdvDisableSubDisplay.IsChecked = _advDisableSubDisplay;
+                        if (cmbAdvWindowMode != null) cmbAdvWindowMode.SelectedIndex = _advWindowModeIndex;
+                        if (chkAdvPCoreOptimization != null) chkAdvPCoreOptimization.IsChecked = _advPCoreOptimization;
+                        if (chkAdvSubBorderless != null) chkAdvSubBorderless.IsChecked = _advSubBorderless;
+                        if (chkAdvShowCursorTouchSim != null) chkAdvShowCursorTouchSim.IsChecked = _advShowCursorTouchSim;
+                    }
+                    finally
+                    {
+                        _isLoadingSettings = prev;
+                    }
+
                     // 立即更新 XML 配置，仅修改对应的 Option
                     UpdateSpiceConfig(
                         new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty),
@@ -158,11 +178,14 @@ namespace LazyBootstrap
         private void InitializeCustomComponents()
         {
             // 设置默认值和下拉列表项
-            cmbRotation.Items.Add("0");
-            cmbRotation.Items.Add("90");
-            cmbRotation.Items.Add("180");
-            cmbRotation.Items.Add("270");
-            cmbRotation.SelectedIndex = 0;
+            if (cmbRotation != null)
+            {
+                cmbRotation.Items.Add("0");
+                cmbRotation.Items.Add("90");
+                cmbRotation.Items.Add("180");
+                cmbRotation.Items.Add("270");
+                cmbRotation.SelectedIndex = 0;
+            }
 
             // 兼容层类型默认值
             if (cmbCompatType != null)
@@ -207,23 +230,263 @@ namespace LazyBootstrap
                 chkNoRestoreRotation.IsCheckedChanged += (s, e) => { SaveSettings(); };
             }
 
+            // 高级选项（页面内控件）
+            if (chkAdvNetDump != null)
+            {
+                chkAdvNetDump.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _dbgNetDump = chkAdvNetDump.IsChecked == true;
+                };
+            }
+            if (chkAdvAsphyxiaDebug != null)
+            {
+                chkAdvAsphyxiaDebug.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _dbgAsphyxiaDebug = chkAdvAsphyxiaDebug.IsChecked == true;
+                };
+            }
+            if (chkAdvDisableSubDisplay != null)
+            {
+                chkAdvDisableSubDisplay.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _advDisableSubDisplay = chkAdvDisableSubDisplay.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty));
+                };
+            }
+            if (cmbAdvWindowMode != null)
+            {
+                cmbAdvWindowMode.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _advWindowModeIndex = cmbAdvWindowMode.SelectedIndex < 0 ? 0 : cmbAdvWindowMode.SelectedIndex;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue()));
+                };
+            }
+            if (chkAdvPCoreOptimization != null)
+            {
+                chkAdvPCoreOptimization.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _advPCoreOptimization = chkAdvPCoreOptimization.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty));
+                };
+            }
+            if (chkAdvSubBorderless != null)
+            {
+                chkAdvSubBorderless.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _advSubBorderless = chkAdvSubBorderless.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : string.Empty));
+                };
+            }
+            if (chkAdvShowCursorTouchSim != null)
+            {
+                chkAdvShowCursorTouchSim.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _advShowCursorTouchSim = chkAdvShowCursorTouchSim.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("s", _advShowCursorTouchSim ? "/ENABLED" : string.Empty));
+                };
+            }
+
             // 使用预配置文件
             if (chkUsePreconfig != null)
             {
                 chkUsePreconfig.IsCheckedChanged += chkUsePreconfig_CheckedChanged;
             }
 
-            LogSystem.Initialize(txtLogOutput);
+            // 服务器设定（并入游戏设定页）
+            if (txtServerAddress != null)
+            {
+                txtServerAddress.TextChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    UpdateSpiceConfig(new OptionUpdate("url", txtServerAddress.Text ?? string.Empty, false));
+                };
+            }
+            if (txtPcbId != null)
+            {
+                txtPcbId.TextChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    UpdateSpiceConfig(new OptionUpdate("p", txtPcbId.Text ?? string.Empty, false));
+                };
+            }
 
-            statusLabel.Text = "就绪";
+            if (txtLogOutput != null)
+            {
+                LogSystem.Initialize(txtLogOutput);
+            }
+
+            InitializeDisplayLayoutControls();
+
+            if (statusLabel != null)
+            {
+                statusLabel.Text = "就绪";
+            }
             this.Closing += Bootstrap_FormClosing;
 
             UpdateCompatLayerStatus();
         }
 
+        private void InitializeDisplayLayoutControls()
+        {
+            List<string> monitorNames = GetMonitorNames();
+
+            if (cmbMainScreen != null && cmbMainScreen.Items.Count == 0)
+            {
+                if (monitorNames.Count > 0)
+                {
+                    for (int i = 0; i < monitorNames.Count; i++)
+                    {
+                        cmbMainScreen.Items.Add(monitorNames[i]);
+                        if (cmbSubScreen != null) cmbSubScreen.Items.Add(monitorNames[i]);
+                    }
+                }
+                else
+                {
+                    cmbMainScreen.Items.Add("主显示器");
+                    if (cmbSubScreen != null) cmbSubScreen.Items.Add("副显示器");
+                }
+
+                cmbMainScreen.SelectedIndex = 0;
+                if (cmbSubScreen != null && cmbSubScreen.Items.Count > 0)
+                    cmbSubScreen.SelectedIndex = Math.Min(1, cmbSubScreen.Items.Count - 1);
+            }
+
+            if (cmbSubRotation != null && cmbSubRotation.Items.Count == 0)
+            {
+                cmbSubRotation.Items.Add("0");
+                cmbSubRotation.Items.Add("90");
+                cmbSubRotation.Items.Add("180");
+                cmbSubRotation.Items.Add("270");
+                cmbSubRotation.SelectedIndex = 0;
+            }
+
+            void FillResolution(ComboBox combo)
+            {
+                if (combo == null || combo.Items.Count > 0) return;
+                combo.Items.Add("1920x1080");
+                combo.Items.Add("1280x720");
+                combo.Items.Add("2560x1440");
+                combo.Items.Add("3840x2160");
+                combo.SelectedIndex = 0;
+            }
+
+            FillResolution(cmbMainResolution);
+            FillResolution(cmbSubResolution);
+
+            if (txtMainRefreshRate != null && string.IsNullOrWhiteSpace(txtMainRefreshRate.Text)) txtMainRefreshRate.Text = "60";
+            if (txtSubRefreshRate != null && string.IsNullOrWhiteSpace(txtSubRefreshRate.Text)) txtSubRefreshRate.Text = "60";
+
+            if (tglDisplayConfigEnabled != null)
+            {
+                tglDisplayConfigEnabled.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _displayConfigEnabled = tglDisplayConfigEnabled.IsChecked == true;
+                    UpdateDisplayLayoutControlsEnabled();
+                    SaveSettings();
+                };
+            }
+
+            if (cmbDisplayMode != null)
+            {
+                cmbDisplayMode.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _isDualDisplay = cmbDisplayMode.SelectedIndex != 0;
+                    UpdateDisplayLayoutControlsEnabled();
+                    SaveSettings();
+                };
+            }
+
+            UpdateDisplayLayoutControlsEnabled();
+        }
+
+        private void UpdateDisplayLayoutControlsEnabled()
+        {
+            bool enabled = _displayConfigEnabled;
+            if (cmbMainScreen != null) cmbMainScreen.IsEnabled = enabled;
+            if (cmbRotation != null) cmbRotation.IsEnabled = enabled;
+            if (cmbMainResolution != null) cmbMainResolution.IsEnabled = enabled;
+            if (txtMainRefreshRate != null) txtMainRefreshRate.IsEnabled = enabled;
+            bool subEnabled = enabled && _isDualDisplay;
+            if (cardSubScreen != null) cardSubScreen.IsVisible = _isDualDisplay;
+            if (cmbSubScreen != null) cmbSubScreen.IsEnabled = subEnabled;
+            if (cmbSubRotation != null) cmbSubRotation.IsEnabled = subEnabled;
+            if (cmbSubResolution != null) cmbSubResolution.IsEnabled = subEnabled;
+            if (txtSubRefreshRate != null) txtSubRefreshRate.IsEnabled = subEnabled;
+            if (btnApplyDisplaySettings != null) btnApplyDisplaySettings.IsEnabled = enabled;
+        }
+
+        private List<string> GetMonitorNames()
+        {
+            var names = new List<string>();
+            try
+            {
+                var dedup = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                uint adapterIndex = 0;
+                while (true)
+                {
+                    var adapter = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
+                    if (!EnumDisplayDevices(null, adapterIndex, ref adapter, 0))
+                    {
+                        break;
+                    }
+
+                    bool adapterActive = (adapter.StateFlags & DISPLAY_DEVICE_ACTIVE) != 0;
+                    bool adapterMirroring = (adapter.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) != 0;
+                    if (!adapterActive || adapterMirroring)
+                    {
+                        adapterIndex++;
+                        continue;
+                    }
+
+                    uint monitorIndex = 0;
+                    while (true)
+                    {
+                        var monitor = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
+                        if (!EnumDisplayDevices(adapter.DeviceName, monitorIndex, ref monitor, 0))
+                        {
+                            break;
+                        }
+
+                        bool monitorActive = (monitor.StateFlags & DISPLAY_DEVICE_ACTIVE) != 0;
+                        if (monitorActive)
+                        {
+                            var name = string.IsNullOrWhiteSpace(monitor.DeviceString)
+                                ? monitor.DeviceName?.Trim()
+                                : monitor.DeviceString.Trim();
+
+                            if (!string.IsNullOrWhiteSpace(name) && dedup.Add(name))
+                            {
+                                names.Add(name);
+                            }
+                        }
+
+                        monitorIndex++;
+                    }
+
+                    adapterIndex++;
+                }
+            }
+            catch
+            {
+            }
+
+            return names;
+        }
+
         private bool TryGetRotationAngle(out int angle)
         {
             angle = 0;
+            if (cmbRotation == null) return true;
             var selected = cmbRotation.SelectedItem?.ToString();
             if (string.IsNullOrEmpty(selected)) return true; // 不选则按 0 处理
             return int.TryParse(selected, out angle);
@@ -261,11 +524,20 @@ namespace LazyBootstrap
                 {
                     _usePreconfig = true;
                 }
-                chkUsePreconfig.IsChecked = _usePreconfig;
+                if (chkUsePreconfig != null)
+                {
+                    chkUsePreconfig.IsChecked = _usePreconfig;
+                }
 
-                // 加载其他启动选项（窗口化与大小核由 XML 驱动，故不再从 config.ini 读取）
+                // 加载其他启动选项（窗口化与大小核由 XML 驱动，故不再从 config.toml 读取）
                 chkNoAsphyxia.IsChecked = bool.TryParse(_configFile.ReadString("Settings", "noasphyxia", "false"), out var noAsphyxia) && noAsphyxia;
-                chkNoRestoreRotation.IsChecked = bool.TryParse(_configFile.ReadString("Settings", "norestorerotation", "false"), out var noRestoreRotation) && noRestoreRotation;
+                bool noRestoreRotation = bool.TryParse(_configFile.ReadString("Settings", "norestorerotation", "false"), out var noRestore) && noRestore;
+                chkNoRestoreRotation.IsChecked = !noRestoreRotation;
+
+                _displayConfigEnabled = bool.TryParse(_configFile.ReadString("Settings", "displayconfigure", "false"), out var displayCfg) && displayCfg;
+                if (tglDisplayConfigEnabled != null) tglDisplayConfigEnabled.IsChecked = _displayConfigEnabled;
+                _isDualDisplay = !string.Equals(_configFile.ReadString("Display", "mode", "dual"), "single", StringComparison.OrdinalIgnoreCase);
+                if (cmbDisplayMode != null) cmbDisplayMode.SelectedIndex = _isDualDisplay ? 1 : 0;
 
                 // 渲染模式（兼容层实现）
                 try
@@ -286,19 +558,55 @@ namespace LazyBootstrap
                 }
                 catch { }
 
-                // 读取当前版本
-                string version = _versionFile.ReadString("Version", "version", "Unknown");
+                // 读取机台属性（优先 ea3-ident.xml，回退 ea3-config.xml）
+                string machineProperty = ResolveMachineProperty();
                 if (txtCurrentVersion != null)
                 {
-                    txtCurrentVersion.Text = version;
+                    txtCurrentVersion.Text = machineProperty;
                 }
 
-                // 读取懒人包修订号
-                string revision = _versionFile.ReadString("Version", "revision", "Unknown");
+                // 读取当前游戏版本（bootstrap.xml/release_code）
+                string currentGameVersion = ResolveCurrentGameVersion();
                 if (txtRevision != null)
                 {
-                    txtRevision.Text = revision;
+                    txtRevision.Text = currentGameVersion;
                 }
+
+                if (cmbMainScreen != null)
+                {
+                    int.TryParse(_configFile.ReadString("Display", "mainscreen", "0"), out var mainScreenIndex);
+                    if (mainScreenIndex >= 0 && mainScreenIndex < cmbMainScreen.Items.Count) cmbMainScreen.SelectedIndex = mainScreenIndex;
+                }
+                if (cmbSubScreen != null)
+                {
+                    int.TryParse(_configFile.ReadString("Display", "subscreen", "0"), out var subScreenIndex);
+                    if (subScreenIndex >= 0 && subScreenIndex < cmbSubScreen.Items.Count) cmbSubScreen.SelectedIndex = subScreenIndex;
+                }
+                if (cmbSubRotation != null)
+                {
+                    int.TryParse(_configFile.ReadString("Display", "subrotation", "0"), out var subRotationIndex);
+                    if (subRotationIndex >= 0 && subRotationIndex < cmbSubRotation.Items.Count) cmbSubRotation.SelectedIndex = subRotationIndex;
+                }
+                if (cmbMainResolution != null)
+                {
+                    var res = _configFile.ReadString("Display", "mainresolution", "");
+                    if (!string.IsNullOrWhiteSpace(res)) cmbMainResolution.SelectedItem = res;
+                }
+                if (cmbSubResolution != null)
+                {
+                    var res = _configFile.ReadString("Display", "subresolution", "");
+                    if (!string.IsNullOrWhiteSpace(res)) cmbSubResolution.SelectedItem = res;
+                }
+                if (txtMainRefreshRate != null)
+                {
+                    txtMainRefreshRate.Text = _configFile.ReadString("Display", "mainrefresh", txtMainRefreshRate.Text ?? "60");
+                }
+                if (txtSubRefreshRate != null)
+                {
+                    txtSubRefreshRate.Text = _configFile.ReadString("Display", "subrefresh", txtSubRefreshRate.Text ?? "60");
+                }
+
+                UpdateDisplayLayoutControlsEnabled();
             }
             catch (Exception ex)
             {
@@ -323,11 +631,11 @@ namespace LazyBootstrap
             {
                 _configFile.WriteString("Settings", "usepreconfig", _usePreconfig.ToString().ToLowerInvariant());
 
-                // 保存仍通过 config.ini 管理的选项
+                // 保存仍通过 config.toml 管理的选项
                 if (chkNoAsphyxia != null)
                     _configFile.WriteString("Settings", "noasphyxia", (chkNoAsphyxia.IsChecked == true).ToString().ToLowerInvariant());
                 if (chkNoRestoreRotation != null)
-                    _configFile.WriteString("Settings", "norestorerotation", (chkNoRestoreRotation.IsChecked == true).ToString().ToLowerInvariant());
+                    _configFile.WriteString("Settings", "norestorerotation", (chkNoRestoreRotation.IsChecked != true).ToString().ToLowerInvariant());
 
                 // 保存渲染模式（兼容层实现）
                 if (cmbCompatType != null && cmbCompatType.SelectedItem != null)
@@ -335,10 +643,97 @@ namespace LazyBootstrap
                     string renderMode = cmbCompatType.SelectedItem.ToString();
                     _configFile.WriteString("Settings", "rendermode", renderMode);
                 }
+
+                _configFile.WriteString("Settings", "displayconfigure", _displayConfigEnabled.ToString().ToLowerInvariant());
+                _configFile.WriteString("Display", "mode", _isDualDisplay ? "dual" : "single");
+
+                if (cmbMainScreen != null) _configFile.WriteString("Display", "mainscreen", cmbMainScreen.SelectedIndex.ToString());
+                if (cmbSubScreen != null) _configFile.WriteString("Display", "subscreen", cmbSubScreen.SelectedIndex.ToString());
+                if (cmbSubRotation != null) _configFile.WriteString("Display", "subrotation", cmbSubRotation.SelectedIndex.ToString());
+                if (cmbMainResolution != null && cmbMainResolution.SelectedItem != null) _configFile.WriteString("Display", "mainresolution", cmbMainResolution.SelectedItem.ToString());
+                if (cmbSubResolution != null && cmbSubResolution.SelectedItem != null) _configFile.WriteString("Display", "subresolution", cmbSubResolution.SelectedItem.ToString());
+                if (txtMainRefreshRate != null) _configFile.WriteString("Display", "mainrefresh", txtMainRefreshRate.Text ?? "");
+                if (txtSubRefreshRate != null) _configFile.WriteString("Display", "subrefresh", txtSubRefreshRate.Text ?? "");
             }
             catch (Exception ex)
             {
                 LogSystem.Log($"保存出错: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private string ResolveMachineProperty()
+        {
+            var identPath = Path.Combine(_contentsDir, "prop", "ea3-ident.xml");
+            var result = TryReadMachinePropertyFromEa3(identPath);
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                return result;
+            }
+
+            var configPath = Path.Combine(_contentsDir, "prop", "ea3-config.xml");
+            result = TryReadMachinePropertyFromEa3(configPath);
+            if (!string.IsNullOrWhiteSpace(result))
+            {
+                return result;
+            }
+
+            return "未知";
+        }
+
+        private static string TryReadMachinePropertyFromEa3(string filePath)
+        {
+            try
+            {
+                if (!File.Exists(filePath))
+                {
+                    return null;
+                }
+
+                var doc = XDocument.Load(filePath);
+                var softNode = doc.Root?.Element("soft");
+                if (softNode == null)
+                {
+                    return null;
+                }
+
+                var model = softNode.Element("model")?.Value?.Trim();
+                var dest = softNode.Element("dest")?.Value?.Trim();
+                var spec = softNode.Element("spec")?.Value?.Trim();
+                var rev = softNode.Element("rev")?.Value?.Trim();
+
+                if (string.IsNullOrWhiteSpace(model) ||
+                    string.IsNullOrWhiteSpace(dest) ||
+                    string.IsNullOrWhiteSpace(spec) ||
+                    string.IsNullOrWhiteSpace(rev))
+                {
+                    return null;
+                }
+
+                return $"{model}:{dest}:{spec}:{rev}";
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private string ResolveCurrentGameVersion()
+        {
+            try
+            {
+                var bootstrapPath = Path.Combine(_contentsDir, "prop", "bootstrap.xml");
+                if (!File.Exists(bootstrapPath))
+                {
+                    return "未知";
+                }
+
+                var doc = XDocument.Load(bootstrapPath);
+                var releaseCode = doc.Root?.Element("release_code")?.Value?.Trim();
+                return string.IsNullOrWhiteSpace(releaseCode) ? "未知" : releaseCode;
+            }
+            catch
+            {
+                return "未知";
             }
         }
 
@@ -454,11 +849,14 @@ namespace LazyBootstrap
             try
             {
                 SetControlsEnabled(false);
-                statusLabel.Text = "正在进行环境检测...";
-                statusProgress.IsVisible = true;
-                statusProgress.Value = 0;
-                statusProgress.Minimum = 0;
-                statusProgress.Maximum = 100;
+                if (statusLabel != null) statusLabel.Text = "正在进行环境检测...";
+                if (statusProgress != null)
+                {
+                    statusProgress.IsVisible = true;
+                    statusProgress.Value = 0;
+                    statusProgress.Minimum = 0;
+                    statusProgress.Maximum = 100;
+                }
 
                 // 记录开始
                 LogSystem.Log("开始环境检测...");
@@ -476,7 +874,10 @@ namespace LazyBootstrap
                     if (value > 100) value = 100;
                     try
                     {
-                        Dispatcher.UIThread.Post(() => { statusProgress.Value = value; });
+                        if (statusProgress != null)
+                        {
+                            Dispatcher.UIThread.Post(() => { statusProgress.Value = value; });
+                        }
                     }
                     catch { }
                 });
@@ -509,10 +910,13 @@ namespace LazyBootstrap
             }
             finally
             {
-                statusLabel.Text = "就绪";
+                if (statusLabel != null) statusLabel.Text = "就绪";
                 // 检测完成后隐藏进度条并复位
-                try { statusProgress.Value = 0; } catch { }
-                statusProgress.IsVisible = false;
+                if (statusProgress != null)
+                {
+                    try { statusProgress.Value = 0; } catch { }
+                    statusProgress.IsVisible = false;
+                }
                 SetControlsEnabled(true);
             }
         }
@@ -522,7 +926,7 @@ namespace LazyBootstrap
         {
             // Lock Element
             SetControlsEnabled(false);
-            statusLabel.Text = "正在启动...";
+            if (statusLabel != null) statusLabel.Text = "正在启动...";
             if (txtLogOutput != null)
             {
                 try
@@ -552,7 +956,7 @@ namespace LazyBootstrap
                 await Task.Delay(500); // 等待旋转生效
 
                 // Launch Asphyxia
-                if (chkNoAsphyxia.IsChecked != true)
+                if (chkNoAsphyxia?.IsChecked != true)
                 {
                     LogSystem.Log("\n正在启动 Asphyxia Core...");
                     string asphyxiaPath = GetAsphyxiaPath();
@@ -585,7 +989,7 @@ namespace LazyBootstrap
                     {
                         LogSystem.Log($"错误: 未找到 Asphyxia Core, 路径: {asphyxiaPath}", LogSystem.LogLevel.Error);
                         SetControlsEnabled(true);
-                        statusLabel.Text = "启动失败";
+                        if (statusLabel != null) statusLabel.Text = "启动失败";
                         return;
                     }
                 }
@@ -621,7 +1025,7 @@ namespace LazyBootstrap
                 {
                     LogSystem.Log($"\n错误: 未找到游戏主程序, 路径: {spicePath}", LogSystem.LogLevel.Error);
                     SetControlsEnabled(true);
-                    statusLabel.Text = "启动失败";
+                    if (statusLabel != null) statusLabel.Text = "启动失败";
                     return;
                 }
 
@@ -638,14 +1042,14 @@ namespace LazyBootstrap
 
                 _gameProcess.Start();
 
-                statusLabel.Text = "游戏已启动";
+                if (statusLabel != null) statusLabel.Text = "游戏已启动";
                 LogSystem.Log("\n游戏进程已启动。");
             }
             catch (Exception ex)
             {
                 LogSystem.Log($"\n启动过程中发生严重错误: {ex.Message}", LogSystem.LogLevel.Error);
                 SetControlsEnabled(true);
-                statusLabel.Text = "启动失败";
+                if (statusLabel != null) statusLabel.Text = "启动失败";
             }
         }
 
@@ -683,7 +1087,7 @@ namespace LazyBootstrap
                     LogSystem.Log($"未找到正在运行的 Asphyxia Core 进程。{ex.Message}", LogSystem.LogLevel.Warning);
                 }
 
-                if (chkNoRestoreRotation.IsChecked != true)
+                if (chkNoRestoreRotation?.IsChecked == true)
                 {
                     LogSystem.Log("正在还原屏幕旋转...");
                     string deviceName = null;
@@ -696,7 +1100,7 @@ namespace LazyBootstrap
                     LogSystem.Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
                 }
 
-                statusLabel.Text = "就绪";
+                if (statusLabel != null) statusLabel.Text = "就绪";
                 SetControlsEnabled(true);
                 if (_gameProcess != null)
                 {
@@ -820,8 +1224,7 @@ namespace LazyBootstrap
             return count;
         }
 
-        // ScreenRotate manually
-        private void btnSwitchRotation_Click(object sender, RoutedEventArgs e)
+        private bool ApplyCurrentRotation()
         {
             try
             {
@@ -831,17 +1234,32 @@ namespace LazyBootstrap
                 if (string.IsNullOrEmpty(deviceName))
                 {
                     LogSystem.Log("无法获取主显示器信息，已取消旋转。", LogSystem.LogLevel.Error);
-                    return;
+                    return false;
                 }
 
                 bool success = ScreenRotate.Rotate(deviceName, angle);
                 LogSystem.Log(success ? $"屏幕旋转至 {angle} 度成功。" : "屏幕旋转失败。",
                     success ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Error);
+                return success;
             }
             catch (Exception ex)
             {
                 LogSystem.Log($"旋转时发生错误: {ex.Message}", LogSystem.LogLevel.Error);
+                return false;
             }
+        }
+
+        // ScreenRotate manually
+        private void btnSwitchRotation_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyCurrentRotation();
+        }
+
+        private void btnApplyDisplaySettings_Click(object sender, RoutedEventArgs e)
+        {
+            SaveSettings();
+            ApplyCurrentRotation();
+            LogSystem.Log("显示配置已应用。", LogSystem.LogLevel.Info);
         }
 
         // Clear ifs_hook cache
@@ -1065,31 +1483,53 @@ namespace LazyBootstrap
 
         private void SetControlsEnabled(bool enabled)
         {
-            btnStart.IsEnabled = enabled;
+            if (btnStart != null) btnStart.IsEnabled = enabled;
             if (btnLoadCompat != null) btnLoadCompat.IsEnabled = enabled;
             if (btnUnloadCompat != null) btnUnloadCompat.IsEnabled = enabled;
             if (cmbCompatType != null) cmbCompatType.IsEnabled = enabled;
 
             // Options group controls
-            chkUsePreconfig.IsEnabled = enabled;
-            chkWindowed.IsEnabled = enabled;
-            chkNoAsphyxia.IsEnabled = enabled;
-            chkNoRestoreRotation.IsEnabled = enabled;
-            btnEditConfig.IsEnabled = enabled;
-            btnOpenLog.IsEnabled = enabled;
-            btnManageServer.IsEnabled = enabled;
-            btnAdvancedOptions.IsEnabled = enabled;
-            cmbRotation.IsEnabled = enabled;
-            btnSwitchRotation.IsEnabled = enabled;
+            if (chkUsePreconfig != null) chkUsePreconfig.IsEnabled = enabled;
+            if (chkWindowed != null) chkWindowed.IsEnabled = enabled;
+            if (chkNoAsphyxia != null) chkNoAsphyxia.IsEnabled = enabled;
+            if (chkNoRestoreRotation != null) chkNoRestoreRotation.IsEnabled = enabled;
+            if (btnEditConfig != null) btnEditConfig.IsEnabled = enabled;
+            if (btnOpenLog != null) btnOpenLog.IsEnabled = enabled;
+            if (btnTouchPanel != null) btnTouchPanel.IsEnabled = enabled;
+            if (btnGotoGameSettings != null) btnGotoGameSettings.IsEnabled = enabled;
+            if (chkAdvNetDump != null) chkAdvNetDump.IsEnabled = enabled;
+            if (chkAdvAsphyxiaDebug != null) chkAdvAsphyxiaDebug.IsEnabled = enabled;
+            if (chkAdvDisableSubDisplay != null) chkAdvDisableSubDisplay.IsEnabled = enabled;
+            if (cmbAdvWindowMode != null) cmbAdvWindowMode.IsEnabled = enabled;
+            if (chkAdvPCoreOptimization != null) chkAdvPCoreOptimization.IsEnabled = enabled;
+            if (chkAdvSubBorderless != null) chkAdvSubBorderless.IsEnabled = enabled;
+            if (chkAdvShowCursorTouchSim != null) chkAdvShowCursorTouchSim.IsEnabled = enabled;
+            if (txtServerAddress != null) txtServerAddress.IsEnabled = enabled;
+            if (txtPcbId != null) txtPcbId.IsEnabled = enabled;
+            if (tglDisplayConfigEnabled != null) tglDisplayConfigEnabled.IsEnabled = enabled;
+            if (cmbDisplayMode != null) cmbDisplayMode.IsEnabled = enabled;
+            if (cmbMainScreen != null) cmbMainScreen.IsEnabled = enabled;
+            if (cmbMainResolution != null) cmbMainResolution.IsEnabled = enabled;
+            if (txtMainRefreshRate != null) txtMainRefreshRate.IsEnabled = enabled;
+            if (cmbSubScreen != null) cmbSubScreen.IsEnabled = enabled;
+            if (cmbSubRotation != null) cmbSubRotation.IsEnabled = enabled;
+            if (cmbSubResolution != null) cmbSubResolution.IsEnabled = enabled;
+            if (txtSubRefreshRate != null) txtSubRefreshRate.IsEnabled = enabled;
+            if (cmbRotation != null) cmbRotation.IsEnabled = enabled;
+            if (btnApplyDisplaySettings != null) btnApplyDisplaySettings.IsEnabled = enabled;
 
-            btnClearCache.IsEnabled = enabled;
-            btnInstallRuntime.IsEnabled = enabled;
-            btnAddFirewallRule.IsEnabled = enabled;
-            btnAudioPanel.IsEnabled = enabled;
-            btnKillProcesses.IsEnabled = true; // 始终启用
+            if (btnClearCache != null) btnClearCache.IsEnabled = enabled;
+            if (btnInstallRuntime != null) btnInstallRuntime.IsEnabled = enabled;
+            if (btnAddFirewallRule != null) btnAddFirewallRule.IsEnabled = enabled;
+            if (btnAudioPanel != null) btnAudioPanel.IsEnabled = enabled;
+            if (btnKillProcesses != null) btnKillProcesses.IsEnabled = true; // 始终启用
 
             // After enabling, re-apply compat layer status logic
-            if (enabled) UpdateCompatLayerStatus();
+            if (enabled)
+            {
+                UpdateCompatLayerStatus();
+                UpdateDisplayLayoutControlsEnabled();
+            }
         }
 
         private void btnAddFirewallRule_Click(object sender, RoutedEventArgs e)
@@ -1150,6 +1590,40 @@ namespace LazyBootstrap
             {
                 LogSystem.Log($"打开音频控制面板失败: {ex.Message}", LogSystem.LogLevel.Error);
             }
+        }
+
+        private void btnTouchPanel_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = "control.exe",
+                    Arguments = "/name Microsoft.TabletPCSettings",
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"打开触控屏设置失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private void btnGotoGameSettings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (mainSideMenu != null)
+                {
+                    var target = mainSideMenu.Items?.OfType<object>().Skip(2).FirstOrDefault();
+                    if (target != null)
+                    {
+                        mainSideMenu.SelectedItem = target;
+                    }
+                }
+            }
+            catch { }
         }
 
         private void UpdateSpiceConfig(params OptionUpdate[] updates)
@@ -1279,6 +1753,17 @@ namespace LazyBootstrap
                 else _advWindowModeIndex = 0;
                 _advSubBorderless = string.Equals(GetValue("sdvxwsubborderless"), "/ENABLED", StringComparison.Ordinal);
                 _advShowCursorTouchSim = string.Equals(GetValue("s"), "/ENABLED", StringComparison.Ordinal);
+                if (txtServerAddress != null) txtServerAddress.Text = GetValue("url");
+                if (txtPcbId != null) txtPcbId.Text = GetValue("p");
+
+                // 回填高级选项页面控件
+                if (chkAdvNetDump != null) chkAdvNetDump.IsChecked = _dbgNetDump;
+                if (chkAdvAsphyxiaDebug != null) chkAdvAsphyxiaDebug.IsChecked = _dbgAsphyxiaDebug;
+                if (chkAdvDisableSubDisplay != null) chkAdvDisableSubDisplay.IsChecked = _advDisableSubDisplay;
+                if (cmbAdvWindowMode != null) cmbAdvWindowMode.SelectedIndex = _advWindowModeIndex;
+                if (chkAdvPCoreOptimization != null) chkAdvPCoreOptimization.IsChecked = _advPCoreOptimization;
+                if (chkAdvSubBorderless != null) chkAdvSubBorderless.IsChecked = _advSubBorderless;
+                if (chkAdvShowCursorTouchSim != null) chkAdvShowCursorTouchSim.IsChecked = _advShowCursorTouchSim;
             }
             catch (Exception ex)
             {
@@ -1299,6 +1784,8 @@ namespace LazyBootstrap
             yield return new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue());
             yield return new OptionUpdate("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("s", _advShowCursorTouchSim ? "/ENABLED" : string.Empty);
+            if (txtServerAddress != null) yield return new OptionUpdate("url", txtServerAddress.Text ?? string.Empty, false);
+            if (txtPcbId != null) yield return new OptionUpdate("p", txtPcbId.Text ?? string.Empty, false);
         }
 
         private string ResolveWindowBorderValue()

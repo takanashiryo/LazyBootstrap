@@ -85,7 +85,9 @@ namespace LazyBootstrap
             {
                 try
                 {
-                    var cfgPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "config.ini");
+                    var envBaseDir = Environment.GetEnvironmentVariable("LAZYBOOTSTRAP_BASEDIR");
+                    var baseDir = !string.IsNullOrWhiteSpace(envBaseDir) ? envBaseDir : AppDomain.CurrentDomain.BaseDirectory;
+                    var cfgPath = Path.Combine(baseDir, "config.toml");
                     if (!File.Exists(cfgPath)) return false;
                     var cfg = new ConfigHandler(cfgPath);
                     var s = cfg.ReadString("Settings", "compatlayerenabled", "false");

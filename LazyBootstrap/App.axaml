@@ -1,8 +1,9 @@
 <Application xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:sukiUi="clr-namespace:SukiUI;assembly=SukiUI"
              x:Class="LazyBootstrap.App"
              RequestedThemeVariant="Default">
     <Application.Styles>
-        <FluentTheme />
+        <sukiUi:SukiTheme Locale="zh-CN" ThemeColor="Blue" />
     </Application.Styles>
 </Application>
