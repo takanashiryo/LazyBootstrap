@@ -364,7 +364,9 @@ FodyWeavers.xsd
 
 # Custom
 Instructions.md
+Instructions-*.md
 .vscode/
 .github/
 build/
 .idea/
+.agents/

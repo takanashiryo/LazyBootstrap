@@ -42,6 +42,11 @@ namespace LazyBootstrap
         {
             InitializeComponent();
 
+            if (Design.IsDesignMode)
+            {
+                return;
+            }
+
             // 优先使用启动器传递的根目录，否则使用当前程序所在目录
             var envBaseDir = Environment.GetEnvironmentVariable("LAZYBOOTSTRAP_BASEDIR");
             _baseDir = !string.IsNullOrEmpty(envBaseDir) ? envBaseDir : AppDomain.CurrentDomain.BaseDirectory;
