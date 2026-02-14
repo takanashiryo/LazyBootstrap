@@ -8,9 +8,11 @@ using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.Media;
 using Avalonia.Threading;
 using SukiUI.Controls;
-using System.Runtime.InteropServices;
+using SukiUI.Dialogs;
+using SukiUI.MessageBox;
 using System.Xml;
 using System.Xml.Linq;
 using System.Text.RegularExpressions;
@@ -40,27 +42,19 @@ namespace LazyBootstrap
         private bool _dbgAsphyxiaDebug = false;
         private bool _displayConfigEnabled = false;
         private bool _isDualDisplay = true;
+        private readonly List<DisplayConfigure.DisplayInfo> _displayInfos = new List<DisplayConfigure.DisplayInfo>();
+        private readonly Dictionary<string, DisplayConfigure.DisplayState> _displayRestoreStates = new Dictionary<string, DisplayConfigure.DisplayState>(StringComparer.OrdinalIgnoreCase);
+        private DisplaySelectionTarget _selectedDisplayTarget = DisplaySelectionTarget.None;
+        private DispatcherTimer _displayPulseTimer;
+        private double _displayPulsePhase = 0d;
+        private static readonly ISukiDialogManager _dialogManager = new SukiDialogManager();
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
-        private struct DISPLAY_DEVICE
+        private enum DisplaySelectionTarget
         {
-            public int cb;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-            public string DeviceName;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-            public string DeviceString;
-            public int StateFlags;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-            public string DeviceID;
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)]
-            public string DeviceKey;
+            None,
+            Main,
+            Sub
         }
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        private static extern bool EnumDisplayDevices(string lpDevice, uint iDevNum, ref DISPLAY_DEVICE lpDisplayDevice, uint dwFlags);
-
-        private const int DISPLAY_DEVICE_ACTIVE = 0x1;
-        private const int DISPLAY_DEVICE_MIRRORING_DRIVER = 0x8;
 
         public BootstrapWindow()
         {
@@ -69,6 +63,11 @@ namespace LazyBootstrap
             if (Design.IsDesignMode)
             {
                 return;
+            }
+
+            if (DialogHost != null)
+            {
+                DialogHost.Manager = _dialogManager;
             }
 
             // 优先使用启动器传递的根目录，否则使用当前程序所在目录
@@ -88,6 +87,7 @@ namespace LazyBootstrap
                 _configFile.WriteString("Settings", "compatlayerenabled", "false");
             }
 
+            _isLoadingSettings = true;
             InitializeCustomComponents();
             LogSystem.Log("本包体免费，如果你是付费获取的，请窒息");
             LoadSettings();
@@ -335,16 +335,17 @@ namespace LazyBootstrap
 
         private void InitializeDisplayLayoutControls()
         {
-            List<string> monitorNames = GetMonitorNames();
+            _displayInfos.Clear();
+            _displayInfos.AddRange(DisplayConfigure.GetDisplays());
 
             if (cmbMainScreen != null && cmbMainScreen.Items.Count == 0)
             {
-                if (monitorNames.Count > 0)
+                if (_displayInfos.Count > 0)
                 {
-                    for (int i = 0; i < monitorNames.Count; i++)
+                    foreach (var display in _displayInfos)
                     {
-                        cmbMainScreen.Items.Add(monitorNames[i]);
-                        if (cmbSubScreen != null) cmbSubScreen.Items.Add(monitorNames[i]);
+                        cmbMainScreen.Items.Add(display.FriendlyName);
+                        if (cmbSubScreen != null) cmbSubScreen.Items.Add(display.FriendlyName);
                     }
                 }
                 else
@@ -358,30 +359,94 @@ namespace LazyBootstrap
                     cmbSubScreen.SelectedIndex = Math.Min(1, cmbSubScreen.Items.Count - 1);
             }
 
-            if (cmbSubRotation != null && cmbSubRotation.Items.Count == 0)
+            InitializeRotationCombo(cmbRotation);
+            InitializeRotationCombo(cmbSubRotation);
+
+            if (cmbMainScreen != null)
             {
-                cmbSubRotation.Items.Add("0");
-                cmbSubRotation.Items.Add("90");
-                cmbSubRotation.Items.Add("180");
-                cmbSubRotation.Items.Add("270");
-                cmbSubRotation.SelectedIndex = 0;
+                cmbMainScreen.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    RefreshMainOptions();
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
             }
 
-            void FillResolution(ComboBox combo)
+            if (cmbSubScreen != null)
             {
-                if (combo == null || combo.Items.Count > 0) return;
-                combo.Items.Add("1920x1080");
-                combo.Items.Add("1280x720");
-                combo.Items.Add("2560x1440");
-                combo.Items.Add("3840x2160");
-                combo.SelectedIndex = 0;
+                cmbSubScreen.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    RefreshSubOptions();
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
             }
 
-            FillResolution(cmbMainResolution);
-            FillResolution(cmbSubResolution);
+            if (cmbRotation != null)
+            {
+                cmbRotation.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    RefreshMainOptions(refreshResolutionList: true, refreshRateList: true);
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
+            }
 
-            if (txtMainRefreshRate != null && string.IsNullOrWhiteSpace(txtMainRefreshRate.Text)) txtMainRefreshRate.Text = "60";
-            if (txtSubRefreshRate != null && string.IsNullOrWhiteSpace(txtSubRefreshRate.Text)) txtSubRefreshRate.Text = "60";
+            if (cmbSubRotation != null)
+            {
+                cmbSubRotation.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    RefreshSubOptions(refreshResolutionList: true, refreshRateList: true);
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
+            }
+
+            if (cmbMainResolution != null)
+            {
+                cmbMainResolution.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    RefreshMainOptions(refreshResolutionList: false, refreshRateList: true);
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
+            }
+
+            if (cmbSubResolution != null)
+            {
+                cmbSubResolution.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    RefreshSubOptions(refreshResolutionList: false, refreshRateList: true);
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
+            }
+
+            if (cmbMainRefreshRate != null)
+            {
+                cmbMainRefreshRate.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
+            }
+
+            if (cmbSubRefreshRate != null)
+            {
+                cmbSubRefreshRate.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    UpdateDisplayInfoTexts();
+                    SaveSettings();
+                };
+            }
 
             if (tglDisplayConfigEnabled != null)
             {
@@ -401,11 +466,30 @@ namespace LazyBootstrap
                     if (_isLoadingSettings) return;
                     _isDualDisplay = cmbDisplayMode.SelectedIndex != 0;
                     UpdateDisplayLayoutControlsEnabled();
+                    UpdateDisplayInfoTexts();
                     SaveSettings();
                 };
             }
 
+            RefreshMainOptions();
+            RefreshSubOptions();
+            SelectDisplayTarget(DisplaySelectionTarget.None);
             UpdateDisplayLayoutControlsEnabled();
+            StartDisplayPulseAnimation();
+        }
+
+        private static void InitializeRotationCombo(ComboBox combo)
+        {
+            if (combo == null || combo.Items.Count > 0)
+            {
+                return;
+            }
+
+            combo.Items.Add("0");
+            combo.Items.Add("90");
+            combo.Items.Add("180");
+            combo.Items.Add("270");
+            combo.SelectedIndex = 0;
         }
 
         private void UpdateDisplayLayoutControlsEnabled()
@@ -414,82 +498,405 @@ namespace LazyBootstrap
             if (cmbMainScreen != null) cmbMainScreen.IsEnabled = enabled;
             if (cmbRotation != null) cmbRotation.IsEnabled = enabled;
             if (cmbMainResolution != null) cmbMainResolution.IsEnabled = enabled;
-            if (txtMainRefreshRate != null) txtMainRefreshRate.IsEnabled = enabled;
+            if (cmbMainRefreshRate != null) cmbMainRefreshRate.IsEnabled = enabled;
+            if (btnPreviewDisplaySettings != null) btnPreviewDisplaySettings.IsEnabled = enabled;
             bool subEnabled = enabled && _isDualDisplay;
-            if (cardSubScreen != null) cardSubScreen.IsVisible = _isDualDisplay;
+            if (btnSelectMainScreenArea != null) btnSelectMainScreenArea.IsEnabled = enabled;
+            if (btnSelectSubScreenArea != null)
+            {
+                btnSelectSubScreenArea.IsVisible = _isDualDisplay;
+                btnSelectSubScreenArea.IsEnabled = subEnabled;
+            }
+            if (dotSubCore != null) dotSubCore.IsVisible = _isDualDisplay;
+            if (dotSubGlow != null) dotSubGlow.IsVisible = _isDualDisplay;
+            if (dotSubSelectedRing != null) dotSubSelectedRing.IsVisible = _isDualDisplay && _selectedDisplayTarget == DisplaySelectionTarget.Sub;
             if (cmbSubScreen != null) cmbSubScreen.IsEnabled = subEnabled;
             if (cmbSubRotation != null) cmbSubRotation.IsEnabled = subEnabled;
             if (cmbSubResolution != null) cmbSubResolution.IsEnabled = subEnabled;
-            if (txtSubRefreshRate != null) txtSubRefreshRate.IsEnabled = subEnabled;
-            if (btnApplyDisplaySettings != null) btnApplyDisplaySettings.IsEnabled = enabled;
+            if (cmbSubRefreshRate != null) cmbSubRefreshRate.IsEnabled = subEnabled;
+
+            if (!_isDualDisplay && _selectedDisplayTarget == DisplaySelectionTarget.Sub)
+            {
+                SelectDisplayTarget(DisplaySelectionTarget.None);
+            }
         }
 
-        private List<string> GetMonitorNames()
+        private void RefreshMainOptions(bool refreshResolutionList = true, bool refreshRateList = true)
         {
-            var names = new List<string>();
-            try
+            RefreshDisplayOptions(cmbMainScreen, cmbRotation, cmbMainResolution, cmbMainRefreshRate, refreshResolutionList, refreshRateList);
+        }
+
+        private void RefreshSubOptions(bool refreshResolutionList = true, bool refreshRateList = true)
+        {
+            RefreshDisplayOptions(cmbSubScreen, cmbSubRotation, cmbSubResolution, cmbSubRefreshRate, refreshResolutionList, refreshRateList);
+        }
+
+        private void RefreshDisplayOptions(ComboBox displayCombo, ComboBox rotationCombo, ComboBox resolutionCombo, ComboBox refreshCombo, bool refreshResolutionList, bool refreshRateList)
+        {
+            if (displayCombo == null || resolutionCombo == null || refreshCombo == null)
             {
-                var dedup = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                return;
+            }
 
-                uint adapterIndex = 0;
-                while (true)
+            var displayInfo = GetSelectedDisplayInfo(displayCombo);
+            if (displayInfo == null)
+            {
+                if (refreshResolutionList)
                 {
-                    var adapter = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
-                    if (!EnumDisplayDevices(null, adapterIndex, ref adapter, 0))
+                    resolutionCombo.Items.Clear();
+                }
+                if (refreshRateList)
+                {
+                    refreshCombo.Items.Clear();
+                }
+                return;
+            }
+
+            var supportedModes = DisplayConfigure.GetSupportedModes(displayInfo.DeviceName);
+            int rotation = ParseRotationValue(rotationCombo);
+
+            string previousResolution = resolutionCombo.SelectedItem?.ToString() ?? string.Empty;
+            if (refreshResolutionList)
+            {
+                var resolutions = supportedModes
+                    .Select(m => NormalizeResolutionByRotation(m.Width, m.Height, rotation))
+                    .Distinct(StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                resolutionCombo.Items.Clear();
+                foreach (var resolution in resolutions)
+                {
+                    resolutionCombo.Items.Add(resolution);
+                }
+
+                if (resolutions.Count > 0)
+                {
+                    if (!string.IsNullOrEmpty(previousResolution) && resolutions.Contains(previousResolution, StringComparer.OrdinalIgnoreCase))
                     {
-                        break;
+                        resolutionCombo.SelectedItem = previousResolution;
                     }
-
-                    bool adapterActive = (adapter.StateFlags & DISPLAY_DEVICE_ACTIVE) != 0;
-                    bool adapterMirroring = (adapter.StateFlags & DISPLAY_DEVICE_MIRRORING_DRIVER) != 0;
-                    if (!adapterActive || adapterMirroring)
+                    else
                     {
-                        adapterIndex++;
-                        continue;
+                        resolutionCombo.SelectedIndex = 0;
                     }
-
-                    uint monitorIndex = 0;
-                    while (true)
-                    {
-                        var monitor = new DISPLAY_DEVICE { cb = Marshal.SizeOf<DISPLAY_DEVICE>() };
-                        if (!EnumDisplayDevices(adapter.DeviceName, monitorIndex, ref monitor, 0))
-                        {
-                            break;
-                        }
-
-                        bool monitorActive = (monitor.StateFlags & DISPLAY_DEVICE_ACTIVE) != 0;
-                        if (monitorActive)
-                        {
-                            var name = string.IsNullOrWhiteSpace(monitor.DeviceString)
-                                ? monitor.DeviceName?.Trim()
-                                : monitor.DeviceString.Trim();
-
-                            if (!string.IsNullOrWhiteSpace(name) && dedup.Add(name))
-                            {
-                                names.Add(name);
-                            }
-                        }
-
-                        monitorIndex++;
-                    }
-
-                    adapterIndex++;
                 }
             }
-            catch
+
+            if (!refreshRateList)
             {
+                return;
             }
 
-            return names;
+            string selectedResolution = resolutionCombo.SelectedItem?.ToString() ?? string.Empty;
+            string previousRefresh = refreshCombo.SelectedItem?.ToString() ?? string.Empty;
+
+            var rates = supportedModes
+                .Where(m => string.Equals(NormalizeResolutionByRotation(m.Width, m.Height, rotation), selectedResolution, StringComparison.OrdinalIgnoreCase))
+                .Select(m => m.RefreshRate)
+                .Distinct()
+                .OrderBy(v => v)
+                .Select(v => v.ToString())
+                .ToList();
+
+            refreshCombo.Items.Clear();
+            foreach (var rate in rates)
+            {
+                refreshCombo.Items.Add(rate);
+            }
+
+            if (rates.Count > 0)
+            {
+                if (!string.IsNullOrEmpty(previousRefresh) && rates.Contains(previousRefresh, StringComparer.OrdinalIgnoreCase))
+                {
+                    refreshCombo.SelectedItem = previousRefresh;
+                }
+                else
+                {
+                    refreshCombo.SelectedIndex = 0;
+                }
+            }
         }
 
-        private bool TryGetRotationAngle(out int angle)
+        private static string NormalizeResolutionByRotation(int width, int height, int rotation)
         {
-            angle = 0;
-            if (cmbRotation == null) return true;
-            var selected = cmbRotation.SelectedItem?.ToString();
-            if (string.IsNullOrEmpty(selected)) return true; // 不选则按 0 处理
-            return int.TryParse(selected, out angle);
+            bool vertical = rotation == 90 || rotation == 270;
+            int w = width;
+            int h = height;
+
+            if (vertical)
+            {
+                if (w > h)
+                {
+                    int temp = w;
+                    w = h;
+                    h = temp;
+                }
+                return $"{w}x{h}";
+            }
+
+            if (w < h)
+            {
+                int temp = w;
+                w = h;
+                h = temp;
+            }
+            return $"{w}x{h}";
+        }
+
+        private void StartDisplayPulseAnimation()
+        {
+            if (_displayPulseTimer != null)
+            {
+                return;
+            }
+
+            _displayPulseTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(33)
+            };
+            _displayPulseTimer.Tick += (s, e) =>
+            {
+                _displayPulsePhase += 0.08;
+                if (_displayPulsePhase > Math.PI * 2)
+                {
+                    _displayPulsePhase = 0;
+                }
+
+                double t = (Math.Sin(_displayPulsePhase) + 1d) / 2d;
+                ApplyPulseVisual(dotMainGlow, 0.18, 0.58, 1.0, 1.45, t);
+                ApplyPulseVisual(dotSubGlow, 0.18, 0.58, 1.0, 1.45, t);
+            };
+            _displayPulseTimer.Start();
+        }
+
+        private static void ApplyPulseVisual(Control control, double minOpacity, double maxOpacity, double minScale, double maxScale, double t)
+        {
+            if (control == null)
+            {
+                return;
+            }
+
+            control.Opacity = minOpacity + (maxOpacity - minOpacity) * t;
+            double scale = minScale + (maxScale - minScale) * t;
+            control.RenderTransformOrigin = Avalonia.RelativePoint.Center;
+            control.RenderTransform = new ScaleTransform(scale, scale);
+        }
+
+        private async void btnPreviewDisplaySettings_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (!_displayConfigEnabled)
+                {
+                    LogSystem.Log("显示器配置未启用，无法预览。", LogSystem.LogLevel.Warning);
+                    return;
+                }
+
+                SaveSettings();
+                var backupStates = CaptureCurrentSelectedDisplayStates();
+
+                bool applied = ApplyDisplaySettingsForLaunch();
+                if (!applied)
+                {
+                    LogSystem.Log("预览应用存在失败项，请检查当前显示器参数。", LogSystem.LogLevel.Warning);
+                }
+
+                var result = await ShowPreviewDecisionDialogAsync();
+                if (result == PreviewDecision.Restore)
+                {
+                    int restored = RestoreDisplayStates(backupStates);
+                    LogSystem.Log(restored > 0 ? $"已还原 {restored} 个显示器设置。" : "未还原任何显示器设置。", restored > 0 ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Warning);
+                    UpdateDisplayInfoTexts();
+                    return;
+                }
+
+                LogSystem.Log("已保持当前预览设置。", LogSystem.LogLevel.Info);
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"预览显示器设置失败: {ex.Message}", LogSystem.LogLevel.Error);
+            }
+        }
+
+        private enum PreviewDecision
+        {
+            Keep,
+            Restore
+        }
+
+        private Task<PreviewDecision> ShowPreviewDecisionDialogAsync()
+        {
+            return ShowPreviewDecisionMessageBoxAsync();
+        }
+
+        private async Task<PreviewDecision> ShowPreviewDecisionMessageBoxAsync()
+        {
+            var restoreButton = SukiMessageBoxButtonsFactory.CreateButton("还原", SukiMessageBoxResult.No, "Flat Accent");
+            var keepButton = SukiMessageBoxButtonsFactory.CreateButton("保持现状", SukiMessageBoxResult.Yes, "Flat");
+
+            var result = await SukiMessageBox.ShowDialog(new SukiMessageBoxHost
+            {
+                UseAlternativeHeaderStyle = true,
+                IconPreset = SukiMessageBoxIcons.Question,
+                Header = "显示器预览",
+                Content = "已应用当前预览设置。\n\n点击“还原”将恢复到预览前状态；点击“保持现状”将不做修改并关闭弹窗。",
+                ActionButtonsSource = [restoreButton, keepButton]
+            });
+
+            if (result is SukiMessageBoxResult messageBoxResult)
+            {
+                return messageBoxResult switch
+                {
+                    SukiMessageBoxResult.No => PreviewDecision.Restore,
+                    SukiMessageBoxResult.Yes => PreviewDecision.Keep,
+                    _ => PreviewDecision.Keep
+                };
+            }
+
+            return PreviewDecision.Keep;
+        }
+
+        private Dictionary<string, DisplayConfigure.DisplayState> CaptureCurrentSelectedDisplayStates()
+        {
+            var result = new Dictionary<string, DisplayConfigure.DisplayState>(StringComparer.OrdinalIgnoreCase);
+
+            void Capture(ComboBox combo)
+            {
+                var info = GetSelectedDisplayInfo(combo);
+                if (info == null || result.ContainsKey(info.DeviceName))
+                {
+                    return;
+                }
+
+                if (DisplayConfigure.TryGetCurrentState(info.DeviceName, out var state))
+                {
+                    result[info.DeviceName] = state;
+                }
+            }
+
+            Capture(cmbMainScreen);
+            if (_isDualDisplay)
+            {
+                Capture(cmbSubScreen);
+            }
+
+            return result;
+        }
+
+        private static int RestoreDisplayStates(Dictionary<string, DisplayConfigure.DisplayState> states)
+        {
+            int restored = 0;
+            if (states == null)
+            {
+                return restored;
+            }
+
+            foreach (var state in states.Values)
+            {
+                if (DisplayConfigure.RestoreDisplaySettings(state))
+                {
+                    restored++;
+                }
+            }
+
+            return restored;
+        }
+
+        private static int ParseRotationValue(ComboBox combo)
+        {
+            if (combo == null)
+            {
+                return 0;
+            }
+
+            var selected = combo.SelectedItem?.ToString();
+            if (int.TryParse(selected, out var value))
+            {
+                return value;
+            }
+            return 0;
+        }
+
+        private DisplayConfigure.DisplayInfo GetSelectedDisplayInfo(ComboBox combo)
+        {
+            if (combo == null)
+            {
+                return null;
+            }
+
+            int idx = combo.SelectedIndex;
+            if (idx < 0 || idx >= _displayInfos.Count)
+            {
+                return null;
+            }
+
+            return _displayInfos[idx];
+        }
+
+        private void SelectDisplayTarget(DisplaySelectionTarget target)
+        {
+            if (target == DisplaySelectionTarget.Sub && !_isDualDisplay)
+            {
+                target = DisplaySelectionTarget.None;
+            }
+
+            _selectedDisplayTarget = target;
+
+            if (panelNoScreenSelected != null) panelNoScreenSelected.IsVisible = target == DisplaySelectionTarget.None;
+            if (panelMainScreenConfig != null) panelMainScreenConfig.IsVisible = target == DisplaySelectionTarget.Main;
+            if (panelSubScreenConfig != null) panelSubScreenConfig.IsVisible = target == DisplaySelectionTarget.Sub;
+
+            if (dotMainSelectedRing != null) dotMainSelectedRing.IsVisible = target == DisplaySelectionTarget.Main;
+            if (dotSubSelectedRing != null) dotSubSelectedRing.IsVisible = _isDualDisplay && target == DisplaySelectionTarget.Sub;
+
+            UpdateDisplayInfoTexts();
+        }
+
+        private void UpdateDisplayInfoTexts()
+        {
+            UpdateDisplayInfoText(cmbMainScreen, cmbRotation, cmbMainResolution, cmbMainRefreshRate, txtMainOutputInfo, txtMainStartupInfo);
+            UpdateDisplayInfoText(cmbSubScreen, cmbSubRotation, cmbSubResolution, cmbSubRefreshRate, txtSubOutputInfo, txtSubStartupInfo);
+        }
+
+        private void UpdateDisplayInfoText(ComboBox displayCombo, ComboBox rotationCombo, ComboBox resolutionCombo, ComboBox refreshCombo, TextBlock outputText, TextBlock startupText)
+        {
+            if (outputText == null || startupText == null)
+            {
+                return;
+            }
+
+            var info = GetSelectedDisplayInfo(displayCombo);
+            if (info == null)
+            {
+                outputText.Text = "未知";
+                startupText.Text = "未配置";
+                return;
+            }
+
+            if (DisplayConfigure.TryGetCurrentState(info.DeviceName, out var current))
+            {
+                int currentAngle = DisplayConfigure.OrientationToAngle(current.Orientation);
+                outputText.Text = $"设备: {info.FriendlyName} ({info.DeviceName})\n当前: {current.Width}x{current.Height} @ {current.RefreshRate}Hz, 旋转 {currentAngle}°";
+            }
+            else
+            {
+                outputText.Text = $"设备: {info.FriendlyName} ({info.DeviceName})\n当前: 未知";
+            }
+
+            int startupRotation = ParseRotationValue(rotationCombo);
+            string startupResolution = resolutionCombo?.SelectedItem?.ToString() ?? "未设置";
+            string startupRefresh = refreshCombo?.SelectedItem?.ToString() ?? "未设置";
+            startupText.Text = $"旋转: {startupRotation}°\n分辨率: {startupResolution}\n刷新率: {startupRefresh}Hz";
+        }
+
+        private void btnSelectMainScreenArea_Click(object sender, RoutedEventArgs e)
+        {
+            SelectDisplayTarget(DisplaySelectionTarget.Main);
+        }
+
+        private void btnSelectSubScreenArea_Click(object sender, RoutedEventArgs e)
+        {
+            SelectDisplayTarget(DisplaySelectionTarget.Sub);
         }
 
         private string GetAsphyxiaPath()
@@ -587,6 +994,15 @@ namespace LazyBootstrap
                     int.TryParse(_configFile.ReadString("Display", "subrotation", "0"), out var subRotationIndex);
                     if (subRotationIndex >= 0 && subRotationIndex < cmbSubRotation.Items.Count) cmbSubRotation.SelectedIndex = subRotationIndex;
                 }
+                if (cmbRotation != null)
+                {
+                    int.TryParse(_configFile.ReadString("Display", "mainrotation", "0"), out var mainRotationIndex);
+                    if (mainRotationIndex >= 0 && mainRotationIndex < cmbRotation.Items.Count) cmbRotation.SelectedIndex = mainRotationIndex;
+                }
+
+                RefreshMainOptions();
+                RefreshSubOptions();
+
                 if (cmbMainResolution != null)
                 {
                     var res = _configFile.ReadString("Display", "mainresolution", "");
@@ -597,16 +1013,22 @@ namespace LazyBootstrap
                     var res = _configFile.ReadString("Display", "subresolution", "");
                     if (!string.IsNullOrWhiteSpace(res)) cmbSubResolution.SelectedItem = res;
                 }
-                if (txtMainRefreshRate != null)
+                RefreshMainOptions(refreshResolutionList: false, refreshRateList: true);
+                RefreshSubOptions(refreshResolutionList: false, refreshRateList: true);
+
+                if (cmbMainRefreshRate != null)
                 {
-                    txtMainRefreshRate.Text = _configFile.ReadString("Display", "mainrefresh", txtMainRefreshRate.Text ?? "60");
+                    var refresh = _configFile.ReadString("Display", "mainrefresh", "");
+                    if (!string.IsNullOrWhiteSpace(refresh)) cmbMainRefreshRate.SelectedItem = refresh;
                 }
-                if (txtSubRefreshRate != null)
+                if (cmbSubRefreshRate != null)
                 {
-                    txtSubRefreshRate.Text = _configFile.ReadString("Display", "subrefresh", txtSubRefreshRate.Text ?? "60");
+                    var refresh = _configFile.ReadString("Display", "subrefresh", "");
+                    if (!string.IsNullOrWhiteSpace(refresh)) cmbSubRefreshRate.SelectedItem = refresh;
                 }
 
                 UpdateDisplayLayoutControlsEnabled();
+                UpdateDisplayInfoTexts();
             }
             catch (Exception ex)
             {
@@ -650,10 +1072,11 @@ namespace LazyBootstrap
                 if (cmbMainScreen != null) _configFile.WriteString("Display", "mainscreen", cmbMainScreen.SelectedIndex.ToString());
                 if (cmbSubScreen != null) _configFile.WriteString("Display", "subscreen", cmbSubScreen.SelectedIndex.ToString());
                 if (cmbSubRotation != null) _configFile.WriteString("Display", "subrotation", cmbSubRotation.SelectedIndex.ToString());
+                if (cmbRotation != null) _configFile.WriteString("Display", "mainrotation", cmbRotation.SelectedIndex.ToString());
                 if (cmbMainResolution != null && cmbMainResolution.SelectedItem != null) _configFile.WriteString("Display", "mainresolution", cmbMainResolution.SelectedItem.ToString());
                 if (cmbSubResolution != null && cmbSubResolution.SelectedItem != null) _configFile.WriteString("Display", "subresolution", cmbSubResolution.SelectedItem.ToString());
-                if (txtMainRefreshRate != null) _configFile.WriteString("Display", "mainrefresh", txtMainRefreshRate.Text ?? "");
-                if (txtSubRefreshRate != null) _configFile.WriteString("Display", "subrefresh", txtSubRefreshRate.Text ?? "");
+                if (cmbMainRefreshRate != null && cmbMainRefreshRate.SelectedItem != null) _configFile.WriteString("Display", "mainrefresh", cmbMainRefreshRate.SelectedItem.ToString());
+                if (cmbSubRefreshRate != null && cmbSubRefreshRate.SelectedItem != null) _configFile.WriteString("Display", "subrefresh", cmbSubRefreshRate.SelectedItem.ToString());
             }
             catch (Exception ex)
             {
@@ -938,21 +1361,10 @@ namespace LazyBootstrap
 
             try
             {
-                // Screen Rotate
-                LogSystem.Log("正在旋转屏幕...");
-                if (!TryGetRotationAngle(out int rotationAngle)) rotationAngle = 0;
-                string deviceName = null;
-                try
-                {
-                    deviceName = GetPrimaryScreenDeviceName();
-                }
-                catch { deviceName = null; }
-                bool rotationSuccess = false;
-                if (!string.IsNullOrEmpty(deviceName))
-                {
-                    rotationSuccess = ScreenRotate.Rotate(deviceName, rotationAngle);
-                }
-                LogSystem.Log(rotationSuccess ? $"屏幕已旋转至 {rotationAngle} 度。" : "屏幕旋转失败或无需旋转。");
+                // Display Configure
+                LogSystem.Log("正在应用显示器配置...");
+                bool displayApplySuccess = ApplyDisplaySettingsForLaunch();
+                LogSystem.Log(displayApplySuccess ? "显示器配置应用完成。" : "显示器配置部分失败，游戏将继续启动。");
                 await Task.Delay(500); // 等待旋转生效
 
                 // Launch Asphyxia
@@ -1053,20 +1465,88 @@ namespace LazyBootstrap
             }
         }
 
-        // 获取主屏幕设备名
-        private string GetPrimaryScreenDeviceName()
+        private bool ApplyDisplaySettingsForLaunch()
         {
-            var devMode = new ScreenRotate.DEVMODE();
-            devMode.dmSize = (short)System.Runtime.InteropServices.Marshal.SizeOf<ScreenRotate.DEVMODE>();
-            for (int i = 0; i < 16; i++)
+            _displayRestoreStates.Clear();
+
+            if (!_displayConfigEnabled)
             {
-                string name = $"\\\\.\\DISPLAY{i + 1}";
-                if (ScreenRotate.EnumDisplaySettings(name, ScreenRotate.ENUM_CURRENT_SETTINGS, ref devMode))
-                {
-                    return name;
-                }
+                return true;
             }
-            return null;
+
+            bool allOk = true;
+            allOk &= ApplyDisplayTarget(cmbMainScreen, cmbRotation, cmbMainResolution, cmbMainRefreshRate, "主屏");
+
+            if (_isDualDisplay)
+            {
+                allOk &= ApplyDisplayTarget(cmbSubScreen, cmbSubRotation, cmbSubResolution, cmbSubRefreshRate, "副屏");
+            }
+
+            return allOk;
+        }
+
+        private bool ApplyDisplayTarget(ComboBox screenCombo, ComboBox rotationCombo, ComboBox resolutionCombo, ComboBox refreshCombo, string label)
+        {
+            try
+            {
+                var info = GetSelectedDisplayInfo(screenCombo);
+                if (info == null)
+                {
+                    LogSystem.Log($"{label}未选择有效显示器，已跳过。", LogSystem.LogLevel.Warning);
+                    return false;
+                }
+
+                if (DisplayConfigure.TryGetCurrentState(info.DeviceName, out var currentState))
+                {
+                    _displayRestoreStates[info.DeviceName] = currentState;
+                }
+
+                int rotation = ParseRotationValue(rotationCombo);
+                string resolution = resolutionCombo?.SelectedItem?.ToString() ?? string.Empty;
+                string refreshText = refreshCombo?.SelectedItem?.ToString() ?? string.Empty;
+
+                if (!TryParseResolution(resolution, out int width, out int height))
+                {
+                    LogSystem.Log($"{label}分辨率无效: {resolution}", LogSystem.LogLevel.Error);
+                    return false;
+                }
+
+                if (!int.TryParse(refreshText, out int refreshRate))
+                {
+                    LogSystem.Log($"{label}刷新率无效: {refreshText}", LogSystem.LogLevel.Error);
+                    return false;
+                }
+
+                bool ok = DisplayConfigure.ApplyDisplaySettings(info.DeviceName, rotation, width, height, refreshRate);
+                LogSystem.Log(ok
+                    ? $"{label}已应用: {rotation}° / {width}x{height} / {refreshRate}Hz"
+                    : $"{label}应用失败。", ok ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Error);
+                return ok;
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"{label}配置异常: {ex.Message}", LogSystem.LogLevel.Error);
+                return false;
+            }
+        }
+
+        private static bool TryParseResolution(string resolution, out int width, out int height)
+        {
+            width = 0;
+            height = 0;
+
+            if (string.IsNullOrWhiteSpace(resolution))
+            {
+                return false;
+            }
+
+            var parts = resolution.Split('x', 'X');
+            if (parts.Length != 2)
+            {
+                return false;
+            }
+
+            return int.TryParse(parts[0], out width) && int.TryParse(parts[1], out height);
         }
 
         // Status
@@ -1089,15 +1569,18 @@ namespace LazyBootstrap
 
                 if (chkNoRestoreRotation?.IsChecked == true)
                 {
-                    LogSystem.Log("正在还原屏幕旋转...");
-                    string deviceName = null;
-                    try { deviceName = GetPrimaryScreenDeviceName(); } catch { deviceName = null; }
-                    bool restored = false;
-                    if (!string.IsNullOrEmpty(deviceName))
+                    LogSystem.Log("正在恢复显示器参数...");
+                    int restoredCount = 0;
+                    foreach (var kv in _displayRestoreStates)
                     {
-                        restored = ScreenRotate.Rotate(deviceName, 0);
+                        if (DisplayConfigure.RestoreDisplaySettings(kv.Value))
+                        {
+                            restoredCount++;
+                        }
                     }
-                    LogSystem.Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
+                    LogSystem.Log(restoredCount > 0
+                        ? $"已恢复 {restoredCount} 个显示器参数。"
+                        : "未恢复任何显示器参数。", restoredCount > 0 ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Warning);
                 }
 
                 if (statusLabel != null) statusLabel.Text = "就绪";
@@ -1222,44 +1705,6 @@ namespace LazyBootstrap
             }
 
             return count;
-        }
-
-        private bool ApplyCurrentRotation()
-        {
-            try
-            {
-                if (!TryGetRotationAngle(out int angle)) angle = 0;
-                string deviceName = null;
-                try { deviceName = GetPrimaryScreenDeviceName(); } catch { deviceName = null; }
-                if (string.IsNullOrEmpty(deviceName))
-                {
-                    LogSystem.Log("无法获取主显示器信息，已取消旋转。", LogSystem.LogLevel.Error);
-                    return false;
-                }
-
-                bool success = ScreenRotate.Rotate(deviceName, angle);
-                LogSystem.Log(success ? $"屏幕旋转至 {angle} 度成功。" : "屏幕旋转失败。",
-                    success ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Error);
-                return success;
-            }
-            catch (Exception ex)
-            {
-                LogSystem.Log($"旋转时发生错误: {ex.Message}", LogSystem.LogLevel.Error);
-                return false;
-            }
-        }
-
-        // ScreenRotate manually
-        private void btnSwitchRotation_Click(object sender, RoutedEventArgs e)
-        {
-            ApplyCurrentRotation();
-        }
-
-        private void btnApplyDisplaySettings_Click(object sender, RoutedEventArgs e)
-        {
-            SaveSettings();
-            ApplyCurrentRotation();
-            LogSystem.Log("显示配置已应用。", LogSystem.LogLevel.Info);
         }
 
         // Clear ifs_hook cache
@@ -1510,13 +1955,15 @@ namespace LazyBootstrap
             if (cmbDisplayMode != null) cmbDisplayMode.IsEnabled = enabled;
             if (cmbMainScreen != null) cmbMainScreen.IsEnabled = enabled;
             if (cmbMainResolution != null) cmbMainResolution.IsEnabled = enabled;
-            if (txtMainRefreshRate != null) txtMainRefreshRate.IsEnabled = enabled;
+            if (cmbMainRefreshRate != null) cmbMainRefreshRate.IsEnabled = enabled;
             if (cmbSubScreen != null) cmbSubScreen.IsEnabled = enabled;
             if (cmbSubRotation != null) cmbSubRotation.IsEnabled = enabled;
             if (cmbSubResolution != null) cmbSubResolution.IsEnabled = enabled;
-            if (txtSubRefreshRate != null) txtSubRefreshRate.IsEnabled = enabled;
+            if (cmbSubRefreshRate != null) cmbSubRefreshRate.IsEnabled = enabled;
             if (cmbRotation != null) cmbRotation.IsEnabled = enabled;
-            if (btnApplyDisplaySettings != null) btnApplyDisplaySettings.IsEnabled = enabled;
+            if (btnPreviewDisplaySettings != null) btnPreviewDisplaySettings.IsEnabled = enabled;
+            if (btnSelectMainScreenArea != null) btnSelectMainScreenArea.IsEnabled = enabled;
+            if (btnSelectSubScreenArea != null) btnSelectSubScreenArea.IsEnabled = enabled && _isDualDisplay;
 
             if (btnClearCache != null) btnClearCache.IsEnabled = enabled;
             if (btnInstallRuntime != null) btnInstallRuntime.IsEnabled = enabled;

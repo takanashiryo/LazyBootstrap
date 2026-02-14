@@ -11,7 +11,7 @@ namespace LazyBootstrap
             string spicePath = Path.GetFullPath(programPath);
             if (!File.Exists(spicePath))
             {
-                log?.Invoke($"Î´ÕÒµ½Ä¿±ê³ÌĞò£¬ÎŞ·¨Ìí¼Ó·À»ğÇ½¹æÔò: {spicePath}");
+                log?.Invoke($"æœªæ‰¾åˆ°ç›®æ ‡ç¨‹åºï¼Œæ— æ³•æ·»åŠ é˜²ç«å¢™è§„åˆ™: {spicePath}");
                 return;
             }
             try
@@ -27,23 +27,23 @@ namespace LazyBootstrap
                 using (var addProcess = Process.Start(addProcessInfo))
                 {
                     addProcess.WaitForExit();
-                    LogSystem.Log("·À»ğÇ½¹æÔòÌí¼ÓÍê³É¡£");
+                    LogSystem.Log("é˜²ç«å¢™è§„åˆ™æ·»åŠ å®Œæˆã€‚");
                 }
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
                 if (ex.NativeErrorCode == 1223)
                 {
-                    LogSystem.Log("ÓÃ»§È¡ÏûÁË UAC ÌáÊ¾£¬·À»ğÇ½¹æÔòÎ´Ìí¼Ó¡£", LogSystem.LogLevel.Warning);
+                    LogSystem.Log("ç”¨æˆ·å–æ¶ˆäº† UAC æç¤ºï¼Œé˜²ç«å¢™è§„åˆ™æœªæ·»åŠ ã€‚", LogSystem.LogLevel.Warning);
                 }
                 else
                 {
-                    LogSystem.Log($"·À»ğÇ½¹æÔò´¦ÀíÊ§°Ü: {ex.Message}", LogSystem.LogLevel.Error);
+                    LogSystem.Log($"é˜²ç«å¢™è§„åˆ™å¤„ç†å¤±è´¥: {ex.Message}", LogSystem.LogLevel.Error);
                 }
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"·À»ğÇ½¹æÔò´¦ÀíÊ§°Ü: {ex.Message}", LogSystem.LogLevel.Error);
+                LogSystem.Log($"é˜²ç«å¢™è§„åˆ™å¤„ç†å¤±è´¥: {ex.Message}", LogSystem.LogLevel.Error);
             }
         }
     }

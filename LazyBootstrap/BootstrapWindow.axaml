@@ -6,6 +6,10 @@
                  Width="1180" Height="780"
                  MinWidth="1060" MinHeight="700"
                  WindowStartupLocation="CenterScreen">
+    <suki:SukiWindow.Hosts>
+        <suki:SukiDialogHost x:Name="DialogHost"/>
+    </suki:SukiWindow.Hosts>
+
     <suki:SukiWindow.Styles>
         <Style Selector="Button">
             <Setter Property="MinHeight" Value="36"/>
@@ -15,8 +19,8 @@
         </Style>
     </suki:SukiWindow.Styles>
 
-    <Grid RowDefinitions="*,Auto">
-        <suki:SukiSideMenu x:Name="mainSideMenu" Grid.Row="0" IsSearchEnabled="False">
+    <Grid>
+        <suki:SukiSideMenu x:Name="mainSideMenu" IsSearchEnabled="False">
             <suki:SukiSideMenu.HeaderContent>
                 <StackPanel Margin="12,10,12,12">
                     <TextBlock Text="LazyBootstrap" FontSize="20" FontWeight="SemiBold"/>
@@ -55,37 +59,54 @@
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
 
-                <suki:SukiSideMenuItem Header="显示器布局">
+                <suki:SukiSideMenuItem Header="显示器配置">
                     <suki:SukiSideMenuItem.Icon>
                         <PathIcon Data="M1,2 L15,2 L15,11 L1,11 Z M6,12 L10,12 L10,14 L6,14 Z" Width="14" Height="14"/>
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <Grid Margin="14" RowDefinitions="Auto,*" ColumnDefinitions="360,*" ColumnSpacing="14">
-                            <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="10" Margin="0,0,0,10">
-                                <TextBlock Text="显示配置" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                        <Grid Margin="14" RowDefinitions="Auto,*,Auto" ColumnDefinitions="360,*" ColumnSpacing="14" RowSpacing="10">
+                            <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10" Margin="0,0,0,10">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="显示器配置" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                                    <TextBlock Text="Switch to enable display configure" Opacity="0.7"/>
+                                </StackPanel>
                                 <Grid Grid.Column="1"/>
                                 <ToggleSwitch x:Name="tglDisplayConfigEnabled" Grid.Column="2" VerticalAlignment="Center" IsChecked="False"/>
                                 <ComboBox x:Name="cmbDisplayMode" Grid.Column="3" Width="120" SelectedIndex="1">
                                     <ComboBoxItem Content="单屏"/>
                                     <ComboBoxItem Content="双屏"/>
                                 </ComboBox>
-                                <Button x:Name="btnApplyDisplaySettings" Grid.Column="4" Content="应用设置" Click="btnApplyDisplaySettings_Click"/>
                             </Grid>
 
                             <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="*,Auto" RowSpacing="12">
                                 <suki:GlassCard>
-                                    <Viewbox Stretch="Fill">
-                                        <Canvas Width="1541.41" Height="1192.22">
-                                            <Path Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent" Data="M11.73,178.39L2.51,371.71c-.05,1.02.09,2.04.42,3.01l13.07,38.81c1.58,4.69-1.32,9.7-6.17,10.67l-2.73.55c-4.73.95-7.63,5.75-6.26,10.37l59.54,201.54c.64,2.16.36,4.49-.77,6.44l-11.49,19.82c-1.11,1.91-1.4,4.18-.81,6.3l39.3,142.28c.41,1.49,1.23,2.83,2.37,3.87l27.03,24.74c1.14,1.04,1.96,2.38,2.37,3.86l33.56,121.08c1.75,6.3-4.22,12.02-10.44,10l-108.85-35.28c-4.17-1.35-8.66.81-10.21,4.91l-13.85,36.67c-.62,1.65-.7,3.46-.21,5.16l40.88,143.08c.5,1.75,1.57,3.29,3.04,4.36l10.49,7.69c1.76,1.29,2.94,3.24,3.26,5.4l5.67,37.7c.61,4.03,7.05,7,11.12,6.99h735.04c3.75-.01,11.47-5.1,12.39-8.74l10.26-40.63c.38-1.51,1.19-2.88,2.32-3.95l15.71-14.86c1.11-1.05,1.9-2.38,2.29-3.85l36-134.99c.41-1.54.36-3.17-.14-4.69l-12.71-38.55c-1.41-4.28-6.01-6.62-10.3-5.25l-110.65,35.45c-6.22,1.99-12.16-3.72-10.41-10.01l33.03-119c.42-1.52,1.28-2.89,2.46-3.94l30.73-27.26c1.2-1.06,2.06-2.46,2.48-4.01l36.93-137.32c.6-2.25.23-4.64-1.04-6.6l-14.03-21.65c-1.32-2.03-1.67-4.54-.97-6.85l60.26-198.13c1.62-5.31-2.4-10.66-7.95-10.6h0c-5.65.06-9.67-5.46-7.88-10.81l13.96-41.68c.31-.93.45-1.91.42-2.89l-6.8-195.03c-.19-5.51-5.66-9.27-10.87-7.48l-107.53,37.01c-6.68,2.3-12.95-4.36-10.26-10.89l21.4-51.91c2.42-5.86-2.45-12.14-8.73-11.26l-152.99,21.41c-1.79.25-3.45,1.09-4.72,2.38l-14.1,14.36c-1.53,1.56-3.61,2.44-5.79,2.46l-297.53,2.27c-2.45.02-4.78-1.06-6.35-2.93l-11.7-13.94c-1.3-1.54-3.12-2.56-5.11-2.85l-150.42-21.75c-6.08-.88-10.94,4.99-8.94,10.8l18.4,53.41c2.23,6.46-3.96,12.66-10.43,10.44l-105.94-36.4c-5.17-1.78-10.6,1.91-10.87,7.37Z"/>
-                                            <Path Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent" Data="M161.34,239.32l50,100.99c.48.96,1.39,1.63,2.45,1.8l83.88,13.06c.51.08,1.02.04,1.51-.12l21.53-6.85c.32-.1.65-.15.99-.16l265.13-1.03c.42,0,.85.08,1.24.24l19.2,7.68c.58.23,1.2.29,1.81.18l80.72-14.54c1.01-.18,1.87-.82,2.34-1.72l51.94-99.48c1.04-2-.17-4.43-2.39-4.79l-54.37-8.98c-.39-.06-.76-.2-1.1-.39l-28.72-16.34c-.5-.28-1.06-.43-1.64-.43h-138.91c-.56,0-1.11.14-1.6.41l-18.16,10.03c-.49.27-1.04.41-1.6.41h-85.25c-.5,0-1-.11-1.45-.34l-20.86-10.19c-.45-.22-.95-.34-1.45-.34h-133.37c-.54,0-1.06.13-1.54.38l-30.35,15.92c-.31.16-.64.27-.99.33l-56.62,9.52c-2.19.37-3.4,2.74-2.41,4.73Z"/>
-                                            <Ellipse Canvas.Left="749.85" Canvas.Top="274.62" Width="103.92" Height="103.92" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent"/>
-                                            <Ellipse Canvas.Left="697.89" Canvas.Top="1043.43" Width="103.92" Height="103.92" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent"/>
-                                            <Ellipse Canvas.Left="51.7" Canvas.Top="280.08" Width="103.92" Height="103.92" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent"/>
-                                            <Ellipse Canvas.Left="103.67" Canvas.Top="1043.43" Width="103.92" Height="103.92" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent"/>
-                                            <Rectangle Canvas.Left="252.43" Canvas.Top="403.37" Width="402.27" Height="628.73" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent"/>
-                                            <Polygon Points="654.7,1191.71 252.69,1191.71 286.04,1054.68 626,1053.86" Stroke="{DynamicResource ThemeForegroundBrush}" StrokeThickness="5" Fill="Transparent"/>
+                                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="300" Height="540">
+                                        <Image Source="/Assets/cabinet.png" Stretch="Uniform"/>
+
+                                        <Canvas Width="300" Height="540" IsHitTestVisible="False">
+                                            <Ellipse x:Name="dotMainGlow" Canvas.Left="124" Canvas.Top="157" Width="52" Height="52" Fill="#35FFFFFF"/>
+                                            <Ellipse x:Name="dotMainCore" Canvas.Left="139" Canvas.Top="172" Width="22" Height="22" Fill="White"/>
+                                            <Ellipse x:Name="dotMainSelectedRing" Canvas.Left="127" Canvas.Top="160" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
+
+                                            <Ellipse x:Name="dotSubGlow" Canvas.Left="124" Canvas.Top="303" Width="52" Height="52" Fill="#35FFFFFF"/>
+                                            <Ellipse x:Name="dotSubCore" Canvas.Left="139" Canvas.Top="318" Width="22" Height="22" Fill="White"/>
+                                            <Ellipse x:Name="dotSubSelectedRing" Canvas.Left="127" Canvas.Top="306" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
                                         </Canvas>
-                                    </Viewbox>
+
+                                        <Button x:Name="btnSelectMainScreenArea"
+                                                Width="54" Height="54"
+                                                HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                Margin="0,155,0,0"
+                                                Background="Transparent" BorderBrush="Transparent"
+                                                Click="btnSelectMainScreenArea_Click"/>
+
+                                        <Button x:Name="btnSelectSubScreenArea"
+                                                Width="54" Height="54"
+                                                HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                Margin="0,301,0,0"
+                                                Background="Transparent" BorderBrush="Transparent"
+                                                Click="btnSelectSubScreenArea_Click"/>
+                                    </Grid>
                                 </suki:GlassCard>
 
                                 <suki:GlassCard Grid.Row="1">
@@ -102,41 +123,85 @@
                                 </suki:GlassCard>
                             </Grid>
 
-                            <Grid Grid.Row="1" Grid.Column="1" RowDefinitions="*,*" RowSpacing="12">
-                                <suki:GlassCard>
-                                    <Grid Margin="14" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="12" RowSpacing="10">
-                                        <StackPanel Grid.ColumnSpan="2" Margin="0,0,0,4">
-                                            <TextBlock Text="主屏幕" FontSize="16" FontWeight="SemiBold"/>
-                                            <TextBlock Text="主屏幕参数" Opacity="0.7"/>
-                                        </StackPanel>
-                                        <TextBlock Grid.Row="1" Text="显示器" VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="cmbMainScreen" Grid.Row="1" Grid.Column="1"/>
-                                        <TextBlock Grid.Row="2" Text="旋转" VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="cmbRotation" Grid.Row="2" Grid.Column="1"/>
-                                        <TextBlock Grid.Row="3" Text="分辨率" VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="cmbMainResolution" Grid.Row="3" Grid.Column="1"/>
-                                        <TextBlock Grid.Row="4" Text="刷新率" VerticalAlignment="Center"/>
-                                        <TextBox x:Name="txtMainRefreshRate" Grid.Row="4" Grid.Column="1" Watermark="输入刷新率"/>
-                                    </Grid>
-                                </suki:GlassCard>
+                            <suki:GlassCard Grid.Row="1" Grid.Column="1">
+                                <Grid Margin="14">
+                                    <StackPanel x:Name="panelNoScreenSelected" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                        <TextBlock Text="请选择屏幕" FontSize="18" Opacity="0.75"/>
+                                    </StackPanel>
 
-                                <suki:GlassCard x:Name="cardSubScreen" Grid.Row="1">
-                                    <Grid Margin="14" RowDefinitions="Auto,Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="12" RowSpacing="10">
-                                        <StackPanel Grid.ColumnSpan="2" Margin="0,0,0,4">
-                                            <TextBlock Text="副屏幕" FontSize="16" FontWeight="SemiBold"/>
-                                            <TextBlock Text="副屏幕参数" Opacity="0.7"/>
+                                    <StackPanel x:Name="panelMainScreenConfig" Spacing="12" IsVisible="False">
+                                        <StackPanel>
+                                            <TextBlock Text="主屏设置" FontSize="16" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Settings of main screen" Opacity="0.7"/>
                                         </StackPanel>
-                                        <TextBlock Grid.Row="1" Text="显示器" VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="cmbSubScreen" Grid.Row="1" Grid.Column="1"/>
-                                        <TextBlock Grid.Row="2" Text="旋转" VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="cmbSubRotation" Grid.Row="2" Grid.Column="1"/>
-                                        <TextBlock Grid.Row="3" Text="分辨率" VerticalAlignment="Center"/>
-                                        <ComboBox x:Name="cmbSubResolution" Grid.Row="3" Grid.Column="1"/>
-                                        <TextBlock Grid.Row="4" Text="刷新率" VerticalAlignment="Center"/>
-                                        <TextBox x:Name="txtSubRefreshRate" Grid.Row="4" Grid.Column="1" Watermark="输入刷新率"/>
-                                    </Grid>
-                                </suki:GlassCard>
-                            </Grid>
+
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="当前输出信息" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="txtMainOutputInfo" Text="未知" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </suki:GlassCard>
+
+                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="12" RowSpacing="10">
+                                            <TextBlock Text="显示器" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbMainScreen" Grid.Column="1"/>
+                                            <TextBlock Grid.Row="1" Text="旋转" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbRotation" Grid.Row="1" Grid.Column="1"/>
+                                            <TextBlock Grid.Row="2" Text="分辨率" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbMainResolution" Grid.Row="2" Grid.Column="1"/>
+                                            <TextBlock Grid.Row="3" Text="刷新率" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbMainRefreshRate" Grid.Row="3" Grid.Column="1"/>
+                                        </Grid>
+
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="启动应用参数" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="txtMainStartupInfo" Text="未配置" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </suki:GlassCard>
+                                    </StackPanel>
+
+                                    <StackPanel x:Name="panelSubScreenConfig" Spacing="12" IsVisible="False">
+                                        <StackPanel>
+                                            <TextBlock Text="副屏设置" FontSize="16" FontWeight="SemiBold"/>
+                                            <TextBlock Text="Settings of sub screen" Opacity="0.7"/>
+                                        </StackPanel>
+
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="当前输出信息" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="txtSubOutputInfo" Text="未知" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </suki:GlassCard>
+
+                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="12" RowSpacing="10">
+                                            <TextBlock Text="显示器" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbSubScreen" Grid.Column="1"/>
+                                            <TextBlock Grid.Row="1" Text="旋转" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbSubRotation" Grid.Row="1" Grid.Column="1"/>
+                                            <TextBlock Grid.Row="2" Text="分辨率" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbSubResolution" Grid.Row="2" Grid.Column="1"/>
+                                            <TextBlock Grid.Row="3" Text="刷新率" VerticalAlignment="Center"/>
+                                            <ComboBox x:Name="cmbSubRefreshRate" Grid.Row="3" Grid.Column="1"/>
+                                        </Grid>
+
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="启动应用参数" FontWeight="SemiBold"/>
+                                                <TextBlock x:Name="txtSubStartupInfo" Text="未配置" TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </suki:GlassCard>
+                                    </StackPanel>
+                                </Grid>
+                            </suki:GlassCard>
+
+                            <Button x:Name="btnPreviewDisplaySettings"
+                                    Grid.Row="2"
+                                    Grid.Column="1"
+                                    Classes="Flat"
+                                    HorizontalAlignment="Right"
+                                    Content="预览"
+                                    Click="btnPreviewDisplaySettings_Click"/>
                         </Grid>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
@@ -277,12 +342,9 @@
                 </suki:SukiSideMenuItem>
             </suki:SukiSideMenu.Items>
         </suki:SukiSideMenu>
-
-        <Border Grid.Row="1" Padding="12,8">
-            <StackPanel Orientation="Horizontal" Spacing="10">
-                <TextBlock x:Name="statusLabel" Text="就绪" VerticalAlignment="Center"/>
-                <ProgressBar x:Name="statusProgress" Width="200" Height="14" Minimum="0" Maximum="100" IsVisible="False"/>
-            </StackPanel>
-        </Border>
+        <Canvas IsVisible="False" IsHitTestVisible="False">
+            <TextBlock x:Name="statusLabel" Text="就绪"/>
+            <ProgressBar x:Name="statusProgress" Width="200" Height="14" Minimum="0" Maximum="100"/>
+        </Canvas>
     </Grid>
 </suki:SukiWindow>

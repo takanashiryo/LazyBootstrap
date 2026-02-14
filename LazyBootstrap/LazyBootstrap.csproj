@@ -36,4 +36,9 @@
     <PackageReference Include="SukiUI" Version="6.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\*.ttf" />
+    <AvaloniaResource Include="Assets\*.png" />
+  </ItemGroup>
+
 </Project>

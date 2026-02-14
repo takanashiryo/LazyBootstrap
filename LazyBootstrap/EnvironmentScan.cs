@@ -1,4 +1,4 @@
-using Microsoft.Win32; // ¿ÉÒÆ³ıÈç²»ÔÙĞèÒª Registry
+using Microsoft.Win32; // å¯ç§»é™¤å¦‚ä¸å†éœ€è¦ Registry
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,9 +10,9 @@ namespace LazyBootstrap
 {
     public static class EnvironmentScan
     {
-        private const int StepCount = 7; // CPU / GPU / NVIDIA API / DirectX9.0c / ÏµÍ³Ã½Ìå¹¦ÄÜ°ü / VC2010 x86 / VC2010 x64
+        private const int StepCount = 7; // CPU / GPU / NVIDIA API / DirectX9.0c / ç³»ç»Ÿåª’ä½“åŠŸèƒ½åŒ… / VC2010 x86 / VC2010 x64
 
-        // ×î½üÒ»´ÎÉ¨ÃèµÄ´íÎó×´Ì¬ÓëÕªÒª
+        // æœ€è¿‘ä¸€æ¬¡æ‰«æçš„é”™è¯¯çŠ¶æ€ä¸æ‘˜è¦
         private static bool _lastHadError;
         private static string _lastErrorSummary;
         public static bool LastHadError => _lastHadError;
@@ -20,22 +20,22 @@ namespace LazyBootstrap
 
         public static async Task RunAsync(Action<int, string> progress)
         {
-            // Í³Ò»µÄ½ø¶ÈÉÏ±¨£¨²»´«µİ message ÄÚÈİ£¬½öÊıÖµ£©
+            // ç»Ÿä¸€çš„è¿›åº¦ä¸ŠæŠ¥ï¼ˆä¸ä¼ é€’ message å†…å®¹ï¼Œä»…æ•°å€¼ï¼‰
             void Report(int stepIndex) { try { progress?.Invoke((int)Math.Round((double)stepIndex * 100 / StepCount), ""); } catch { } }
 
-            bool hadIssue = false; // Warning »ò Error
-            bool hadError = false; // ½ö Error
+            bool hadIssue = false; // Warning æˆ– Error
+            bool hadError = false; // ä»… Error
             var errorSummary = new StringBuilder();
 
             void LogInfo(string msg) => LogSystem.Log(msg);
             void LogWarn(string msg) { hadIssue = true; LogSystem.Log(msg, LogSystem.LogLevel.Warning); }
             void LogError(string msg) { hadIssue = true; hadError = true; errorSummary.AppendLine(msg); LogSystem.Log(msg, LogSystem.LogLevel.Error); }
 
-            LogInfo("³õÊ¼»¯»·¾³¼ì²â...");
+            LogInfo("åˆå§‹åŒ–ç¯å¢ƒæ£€æµ‹...");
             Report(0);
             await Task.Delay(120);
 
-            // ¾Ö²¿º¯Êı£ºÎŞ¶ÔÍâ±©Â¶£¬±£³Öµ¥·½·¨½á¹¹
+            // å±€éƒ¨å‡½æ•°ï¼šæ— å¯¹å¤–æš´éœ²ï¼Œä¿æŒå•æ–¹æ³•ç»“æ„
             string GetCpuName()
             {
                 try
@@ -47,7 +47,7 @@ namespace LazyBootstrap
                     }
                 }
                 catch { }
-                return "Î´Öª´¦ÀíÆ÷";
+                return "æœªçŸ¥å¤„ç†å™¨";
             }
 
             List<string> GetGpuNames()
@@ -107,7 +107,7 @@ namespace LazyBootstrap
                 LogInfo("GPU:");
                 var gpus = GetGpuNames();
                 if (gpus.Count == 0)
-                    LogWarn("  - Î´¼ì²âµ½");
+                    LogWarn("  - æœªæ£€æµ‹åˆ°");
                 else
                     foreach (var g in gpus) LogInfo("  - " + g);
             }
@@ -117,7 +117,7 @@ namespace LazyBootstrap
                 LogInfo("NVIDIA API (System32):");
                 if (IsCompatLayerEnabled())
                 {
-                    LogInfo("  - ÒÑÆôÓÃ¼æÈİ²ã£¬×Ô¶¯Ìø¹ıÏµÍ³¿â¼ì²â");
+                    LogInfo("  - å·²å¯ç”¨å…¼å®¹å±‚ï¼Œè‡ªåŠ¨è·³è¿‡ç³»ç»Ÿåº“æ£€æµ‹");
                     return;
                 }
                 try
@@ -126,12 +126,12 @@ namespace LazyBootstrap
                     foreach (var f in new[] { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" })
                     {
                         bool ok = File.Exists(Path.Combine(sys32, f));
-                        if (ok) LogInfo($"  - {f}: ÒÑ¼ì²âµ½"); else LogError($"  - {f}: Î´¼ì²âµ½");
+                        if (ok) LogInfo($"  - {f}: å·²æ£€æµ‹åˆ°"); else LogError($"  - {f}: æœªæ£€æµ‹åˆ°");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogError($"  - ¼ì²âÊ§°Ü: {ex.Message}");
+                    LogError($"  - æ£€æµ‹å¤±è´¥: {ex.Message}");
                 }
             }
 
@@ -143,31 +143,31 @@ namespace LazyBootstrap
                     var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
                     bool hasCore = File.Exists(Path.Combine(sys32, "d3d9.dll"));
                     bool hasJun = File.Exists(Path.Combine(sys32, "d3dx9_43.dll"));
-                    if (hasCore) LogInfo("  - d3d9.dll: ÒÑ¼ì²âµ½"); else LogError("  - d3d9.dll: Î´¼ì²âµ½");
-                    if (hasJun) LogInfo("  - d3dx9_43.dll: ÒÑ¼ì²âµ½"); else LogError("  - d3dx9_43.dll: Î´¼ì²âµ½");
+                    if (hasCore) LogInfo("  - d3d9.dll: å·²æ£€æµ‹åˆ°"); else LogError("  - d3d9.dll: æœªæ£€æµ‹åˆ°");
+                    if (hasJun) LogInfo("  - d3dx9_43.dll: å·²æ£€æµ‹åˆ°"); else LogError("  - d3dx9_43.dll: æœªæ£€æµ‹åˆ°");
                 }
                 catch (Exception ex)
                 {
-                    LogError($"  - ¼ì²âÊ§°Ü: {ex.Message}");
+                    LogError($"  - æ£€æµ‹å¤±è´¥: {ex.Message}");
                 }
             }
 
-            // ĞÂÔö£ºÏµÍ³Ã½Ìå¹¦ÄÜ°ü£¨MF.dll¡¢MFPLAT.dll¡¢WMVCore.dll£©
+            // æ–°å¢ï¼šç³»ç»Ÿåª’ä½“åŠŸèƒ½åŒ…ï¼ˆMF.dllã€MFPLAT.dllã€WMVCore.dllï¼‰
             void LogMediaFeaturePack()
             {
-                LogInfo("ÏµÍ³Ã½Ìå¹¦ÄÜ°ü:");
+                LogInfo("ç³»ç»Ÿåª’ä½“åŠŸèƒ½åŒ…:");
                 try
                 {
                     var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
                     foreach (var f in new[] { "MF.dll", "MFPLAT.dll", "WMVCore.dll" })
                     {
                         bool ok = File.Exists(Path.Combine(sys32, f));
-                        if (ok) LogInfo($"  - {f}: ÒÑ¼ì²âµ½"); else LogError($"  - {f}: Î´¼ì²âµ½");
+                        if (ok) LogInfo($"  - {f}: å·²æ£€æµ‹åˆ°"); else LogError($"  - {f}: æœªæ£€æµ‹åˆ°");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogError($"  - ¼ì²âÊ§°Ü: {ex.Message}");
+                    LogError($"  - æ£€æµ‹å¤±è´¥: {ex.Message}");
                 }
             }
 
@@ -183,16 +183,16 @@ namespace LazyBootstrap
                     foreach (var d in dlls)
                     {
                         bool ok = File.Exists(Path.Combine(dllDir, d));
-                        if (ok) LogInfo($"  - {d}: ÒÑ¼ì²âµ½"); else LogError($"  - {d}: Î´¼ì²âµ½");
+                        if (ok) LogInfo($"  - {d}: å·²æ£€æµ‹åˆ°"); else LogError($"  - {d}: æœªæ£€æµ‹åˆ°");
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogError($"  - ¼ì²âÊ§°Ü: {ex.Message}");
+                    LogError($"  - æ£€æµ‹å¤±è´¥: {ex.Message}");
                 }
             }
 
-            // ²½Öè¶¨ÒåÊı×é£¬Ñ­»·Ö´ĞĞ
+            // æ­¥éª¤å®šä¹‰æ•°ç»„ï¼Œå¾ªç¯æ‰§è¡Œ
             var steps = new Action[]
             {
                 LogCpu,
@@ -207,17 +207,17 @@ namespace LazyBootstrap
             for (int i = 0; i < steps.Length; i++)
             {
                 try { steps[i](); }
-                catch (Exception ex) { LogError($"²½Öè {i+1} Î´Ô¤ÆÚÒì³£: {ex.Message}"); }
+                catch (Exception ex) { LogError($"æ­¥éª¤ {i+1} æœªé¢„æœŸå¼‚å¸¸: {ex.Message}"); }
                 Report(i + 1);
                 await Task.Delay(160);
             }
 
             if (hadIssue)
             {
-                LogError("»·¾³¼à²âÒì³££¡");
+                LogError("ç¯å¢ƒç›‘æµ‹å¼‚å¸¸ï¼");
             }
 
-            // ±£´æ½á¹û¹© UI Ê¹ÓÃ
+            // ä¿å­˜ç»“æœä¾› UI ä½¿ç”¨
             _lastHadError = hadError;
             _lastErrorSummary = errorSummary.ToString();
 

@@ -3,7 +3,18 @@
              xmlns:sukiUi="clr-namespace:SukiUI;assembly=SukiUI"
              x:Class="LazyBootstrap.App"
              RequestedThemeVariant="Default">
+    <Application.Resources>
+        <ResourceDictionary>
+            <FontFamily x:Key="DefaultFontFamily">avares://LazyBootstrap/Assets/HarmonyOS_Sans_SC_Medium.ttf#HarmonyOS Sans SC Medium, Microsoft YaHei UI, Segoe UI</FontFamily>
+        </ResourceDictionary>
+    </Application.Resources>
     <Application.Styles>
         <sukiUi:SukiTheme Locale="zh-CN" ThemeColor="Blue" />
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{DynamicResource DefaultFontFamily}" />
+        </Style>
+        <Style Selector="TextBlock">
+            <Setter Property="FontFamily" Value="{DynamicResource DefaultFontFamily}" />
+        </Style>
     </Application.Styles>
 </Application>
