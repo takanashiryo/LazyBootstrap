@@ -28,6 +28,9 @@ foreach (var arg in args)
     startInfo.ArgumentList.Add(arg);
 }
 
+// 显式传递根目录参数，避免提权重启后环境变量丢失
+startInfo.ArgumentList.Add($"--basedir={baseDir}");
+
 try
 {
     Process.Start(startInfo);
