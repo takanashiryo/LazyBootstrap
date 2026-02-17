@@ -11,6 +11,8 @@ using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Controls.Notifications;
 using Avalonia.Media;
+using Avalonia.Media.Imaging;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using SukiUI.Controls;
 using SukiUI.Dialogs;
@@ -35,6 +37,9 @@ namespace LazyBootstrap
         private readonly string _contentsDir;
 
         private string _compatTypeTooltipCache;
+
+        private static Bitmap _warningDialogIconCache;
+        private static Bitmap _errorDialogIconCache;
 
         private bool _advDisableSubDisplay = false;
         private int _advWindowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口
@@ -66,6 +71,9 @@ namespace LazyBootstrap
         private const string NonePresetName = "无";
         private const string AsphyxiaPresetName = "Asphyxia";
         private const string AsphyxiaDefaultUrl = "http://localhost:8083";
+        private const string SettingSectionName = "Setting";
+        private const string LegacySettingsSectionName = "Settings";
+        private const string DisplaySectionName = "Display";
         private string _activeServerPreset = NonePresetName;
         private readonly List<ServerPresetItem> _serverPresets = new List<ServerPresetItem>();
         private readonly Dictionary<string, string> _lastKnownSpiceValues = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -74,6 +82,9 @@ namespace LazyBootstrap
         private bool _isUpdatingCompatUi;
         private bool _isUpdatingPreconfigUi;
         private bool _isUpdatingSpiceToggleUi;
+        private bool _isLaunchLogVisible;
+        private bool _isLaunchLogAppendAnimating;
+        private bool _isLaunchLogAppendAnimationPending;
 
         private enum DisplaySelectionTarget
         {
@@ -132,19 +143,17 @@ namespace LazyBootstrap
 
             string configFilePath = Path.Combine(_baseDir, "config.toml");
             bool newConfigCreated = !System.IO.File.Exists(configFilePath);
-            _configFile = new ConfigHandler(configFilePath);
-
             if (newConfigCreated)
             {
-                _configFile.WriteString("Settings", "usepreconfig", "false");
-                _configFile.WriteString("Settings", "noasphyxia", "false");
-                _configFile.WriteString("Settings", "norestorerotation", "false");
-                _configFile.WriteString("Settings", "compatlayerenabled", "false");
+                WriteInitialConfigToml(configFilePath);
             }
+
+            _configFile = new ConfigHandler(configFilePath);
+            EnsureConfigSchema();
 
             _isLoadingSettings = true;
             InitializeCustomComponents();
-            LogSystem.Log("本包体免费，如果你是付费获取的，请窒息");
+            HideLaunchLogArea(true);
             LoadSettings();
 
             // 窗体显示后进行环境检测
@@ -222,12 +231,12 @@ namespace LazyBootstrap
                 await dlg.ShowDialog(this);
                 if (dlg.Confirmed)
                 {
-                    LogSystem.Log("服务器配置已更新。");
+                    ShowInfoToast("服务器配置", "服务器配置已更新。");
                 }
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"打开服务器管理对话框时出错: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("打开服务器管理失败", ex.Message);
             }
         }
 
@@ -553,11 +562,6 @@ namespace LazyBootstrap
                 };
             }
 
-            if (txtLogOutput != null)
-            {
-                LogSystem.Initialize(txtLogOutput);
-            }
-
             InitializeDisplayLayoutControls();
 
             if (statusLabel != null)
@@ -731,16 +735,24 @@ namespace LazyBootstrap
         private void UpdateDisplayLayoutControlsEnabled()
         {
             bool enabled = _displayConfigEnabled;
+            if (displayConfigDisabledMask != null)
+            {
+                displayConfigDisabledMask.IsBusy = !enabled;
+            }
             if (cmbMainScreen != null) cmbMainScreen.IsEnabled = enabled;
             if (cmbRotation != null) cmbRotation.IsEnabled = enabled;
             if (cmbMainResolution != null) cmbMainResolution.IsEnabled = enabled;
             if (cmbMainRefreshRate != null) cmbMainRefreshRate.IsEnabled = enabled;
             if (btnPreviewDisplaySettings != null) btnPreviewDisplaySettings.IsEnabled = enabled;
             bool subEnabled = enabled && _isDualDisplay;
-            if (btnSelectMainScreenArea != null) btnSelectMainScreenArea.IsEnabled = enabled;
+            if (btnSelectMainScreenArea != null)
+            {
+                btnSelectMainScreenArea.IsVisible = enabled;
+                btnSelectMainScreenArea.IsEnabled = enabled;
+            }
             if (btnSelectSubScreenArea != null)
             {
-                btnSelectSubScreenArea.IsVisible = _isDualDisplay;
+                btnSelectSubScreenArea.IsVisible = enabled && _isDualDisplay;
                 btnSelectSubScreenArea.IsEnabled = subEnabled;
             }
             if (dotSubCore != null) dotSubCore.IsVisible = _isDualDisplay;
@@ -924,7 +936,7 @@ namespace LazyBootstrap
             {
                 if (!_displayConfigEnabled)
                 {
-                    LogSystem.Log("显示器配置未启用，无法预览。", LogSystem.LogLevel.Warning);
+                    ShowWarningToast("显示器预览", "显示器配置未启用，无法预览。");
                     return;
                 }
 
@@ -934,23 +946,23 @@ namespace LazyBootstrap
                 bool applied = ApplyDisplaySettingsForLaunch();
                 if (!applied)
                 {
-                    LogSystem.Log("预览应用存在失败项，请检查当前显示器参数。", LogSystem.LogLevel.Warning);
+                    ShowWarningToast("显示器预览", "预览应用存在失败项，请检查当前显示器参数。");
                 }
 
                 var result = await ShowPreviewDecisionDialogAsync();
                 if (result == PreviewDecision.Restore)
                 {
                     int restored = RestoreDisplayStates(backupStates);
-                    LogSystem.Log(restored > 0 ? $"已还原 {restored} 个显示器设置。" : "未还原任何显示器设置。", restored > 0 ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Warning);
+                    ShowInfoToast("显示器预览", restored > 0 ? $"已还原 {restored} 个显示器设置。" : "未还原任何显示器设置。");
                     UpdateDisplayInfoTexts();
                     return;
                 }
 
-                LogSystem.Log("已保持当前预览设置。", LogSystem.LogLevel.Info);
+                ShowInfoToast("显示器预览", "已保持当前预览设置。");
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"预览显示器设置失败: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("显示器预览失败", ex.Message);
             }
         }
 
@@ -1198,6 +1210,194 @@ namespace LazyBootstrap
                 .Queue();
         }
 
+        private void ShowWarningToast(string title, string content)
+        {
+            _toastManager.CreateToast()
+                .WithTitle(title)
+                .WithContent(content)
+                .OfType(NotificationType.Warning)
+                .Dismiss().After(TimeSpan.FromSeconds(4))
+                .Dismiss().ByClicking()
+                .Queue();
+        }
+
+        private void AppendLaunchOutput(string message, NotificationType type = NotificationType.Information)
+        {
+            if (txtLogOutput == null || string.IsNullOrEmpty(message))
+            {
+                return;
+            }
+
+            void AppendAction()
+            {
+                var normalized = message.Replace("\r\n", "\n");
+                var lines = normalized.Split('\n');
+                foreach (var line in lines)
+                {
+                    if (string.IsNullOrEmpty(line))
+                    {
+                        txtLogOutput.Text += Environment.NewLine;
+                        continue;
+                    }
+
+                    string prefix = type switch
+                    {
+                        NotificationType.Error => "[错误] ",
+                        NotificationType.Warning => "[警告] ",
+                        _ => string.Empty
+                    };
+
+                    txtLogOutput.Text += $"[{DateTime.Now:HH:mm:ss}] {prefix}{line}{Environment.NewLine}";
+                }
+
+                if (launchLogScrollViewer != null)
+                {
+                    launchLogScrollViewer.Offset = new Vector(launchLogScrollViewer.Offset.X, double.MaxValue);
+                }
+
+                _ = AnimateLaunchLogAppendAsync();
+            }
+
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                AppendAction();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(AppendAction);
+            }
+        }
+
+        private async Task AnimateLaunchLogAppendAsync()
+        {
+            if (txtLogOutput == null)
+            {
+                return;
+            }
+
+            if (_isLaunchLogAppendAnimating)
+            {
+                _isLaunchLogAppendAnimationPending = true;
+                return;
+            }
+
+            _isLaunchLogAppendAnimating = true;
+            try
+            {
+                do
+                {
+                    _isLaunchLogAppendAnimationPending = false;
+                    txtLogOutput.RenderTransformOrigin = Avalonia.RelativePoint.Center;
+                    var scale = txtLogOutput.RenderTransform as ScaleTransform;
+                    if (scale == null)
+                    {
+                        scale = new ScaleTransform(0.985, 0.985);
+                        txtLogOutput.RenderTransform = scale;
+                    }
+
+                    txtLogOutput.Opacity = 0.55;
+                    scale.ScaleX = 0.985;
+                    scale.ScaleY = 0.985;
+
+                    const int steps = 6;
+                    for (int i = 0; i <= steps; i++)
+                    {
+                        double t = (double)i / steps;
+                        double eased = 1 - Math.Pow(1 - t, 3);
+                        txtLogOutput.Opacity = 0.55 + 0.45 * eased;
+                        double currentScale = 0.985 + 0.015 * eased;
+                        scale.ScaleX = currentScale;
+                        scale.ScaleY = currentScale;
+                        await Task.Delay(12);
+                    }
+
+                    txtLogOutput.Opacity = 1;
+                    scale.ScaleX = 1;
+                    scale.ScaleY = 1;
+                }
+                while (_isLaunchLogAppendAnimationPending);
+            }
+            finally
+            {
+                _isLaunchLogAppendAnimating = false;
+            }
+        }
+
+        private async Task ShowLaunchLogAreaWithAnimationAsync()
+        {
+            if (launchLogContainer == null)
+            {
+                return;
+            }
+
+            if (_isLaunchLogVisible && launchLogContainer.IsVisible)
+            {
+                return;
+            }
+
+            _isLaunchLogVisible = true;
+            launchLogContainer.IsVisible = true;
+            launchLogContainer.Opacity = 0;
+            launchLogContainer.RenderTransformOrigin = Avalonia.RelativePoint.TopLeft;
+            UpdateLaunchLogToggleButtonText();
+
+            var scale = launchLogContainer.RenderTransform as ScaleTransform;
+            if (scale == null)
+            {
+                scale = new ScaleTransform(0.12, 0.12);
+                launchLogContainer.RenderTransform = scale;
+            }
+
+            scale.ScaleX = 0.12;
+            scale.ScaleY = 0.12;
+
+            const int steps = 14;
+            for (int i = 0; i <= steps; i++)
+            {
+                double t = (double)i / steps;
+                double eased = 1 - Math.Pow(1 - t, 3);
+                double currentScale = 0.12 + (0.88 * eased);
+                launchLogContainer.Opacity = eased;
+                scale.ScaleX = currentScale;
+                scale.ScaleY = currentScale;
+                await Task.Delay(16);
+            }
+
+            launchLogContainer.Opacity = 1;
+            scale.ScaleX = 1;
+            scale.ScaleY = 1;
+        }
+
+        private void HideLaunchLogArea(bool clearOutput = false)
+        {
+            _isLaunchLogVisible = false;
+            if (launchLogContainer == null)
+            {
+                return;
+            }
+
+            launchLogContainer.IsVisible = false;
+            launchLogContainer.Opacity = 0;
+            launchLogContainer.RenderTransformOrigin = Avalonia.RelativePoint.TopLeft;
+            launchLogContainer.RenderTransform = new ScaleTransform(0.12, 0.12);
+            UpdateLaunchLogToggleButtonText();
+
+            if (clearOutput && txtLogOutput != null)
+            {
+                txtLogOutput.Text = string.Empty;
+            }
+        }
+
+        private void UpdateLaunchLogToggleButtonText()
+        {
+            if (btnToggleLaunchLog == null)
+            {
+                return;
+            }
+
+            btnToggleLaunchLog.Content = _isLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
+        }
+
         private static string UnquoteTomlString(string rawValue)
         {
             var value = rawValue?.Trim() ?? string.Empty;
@@ -1223,6 +1423,60 @@ namespace LazyBootstrap
                 .Replace("\r", "\\r")
                 .Replace("\n", "\\n")
                 .Replace("\t", "\\t");
+        }
+
+        private static void WriteInitialConfigToml(string configPath)
+        {
+            var dir = Path.GetDirectoryName(configPath);
+            if (!string.IsNullOrWhiteSpace(dir))
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            var lines = new List<string>
+            {
+                "[Setting]",
+                "usepreconfig = \"false\"",
+                "noasphyxia = \"false\"",
+                "compatlayerenabled = \"false\"",
+                "rendermode = \"dx9on12\"",
+                string.Empty,
+                "[Display]",
+                "displayconfigure = \"false\"",
+                "norestorerotation = \"false\"",
+                "mode = \"dual\"",
+                "mainscreen = \"0\"",
+                "subscreen = \"0\"",
+                "subrotation = \"0\"",
+                "mainrotation = \"0\"",
+                "mainresolution = \"640x480\"",
+                "subresolution = \"640x480\"",
+                "mainrefresh = \"59\"",
+                "subrefresh = \"59\"",
+                string.Empty,
+                "[Server]",
+                "activepreset = \"Asphyxia\"",
+                string.Empty,
+                "[[Server.Presets]]",
+                "name = \"Asphyxia\"",
+                "serverurl = \"http://localhost:8083\"",
+                "pcbid = \"\""
+            };
+
+            File.WriteAllText(configPath, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
+        }
+
+        private void EnsureConfigSchema()
+        {
+            try
+            {
+                _configFile.RenameSection(LegacySettingsSectionName, SettingSectionName);
+                _configFile.MoveKey(SettingSectionName, DisplaySectionName, "displayconfigure");
+                _configFile.MoveKey(SettingSectionName, DisplaySectionName, "norestorerotation");
+            }
+            catch
+            {
+            }
         }
 
         private void LoadServerPresetsFromConfig()
@@ -1364,7 +1618,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"读取服务器预设失败: {ex.Message}", LogSystem.LogLevel.Warning);
+                ShowWarningToast("服务器预设读取异常", ex.Message);
                 EnsureAsphyxiaPresetInList();
             }
 
@@ -1450,18 +1704,35 @@ namespace LazyBootstrap
 
             kept.Add("[Server]");
             kept.Add($"activepreset = \"{EscapeTomlString(_activeServerPreset ?? NonePresetName)}\"");
-            kept.Add(string.Empty);
 
             foreach (var preset in _serverPresets.Where(p => !string.Equals(p.Name, NonePresetName, StringComparison.OrdinalIgnoreCase)))
             {
+                kept.Add(string.Empty);
                 kept.Add("[[Server.Presets]]");
                 kept.Add($"name = \"{EscapeTomlString(preset.Name)}\"");
                 kept.Add($"serverurl = \"{EscapeTomlString(preset.ServerUrl)}\"");
                 kept.Add($"pcbid = \"{EscapeTomlString(preset.PcbId)}\"");
-                kept.Add(string.Empty);
             }
 
-            File.WriteAllText(configPath, string.Join("\r\n", kept), new UTF8Encoding(false));
+            for (int i = kept.Count - 1; i >= 0; i--)
+            {
+                if (!string.IsNullOrWhiteSpace(kept[i]))
+                {
+                    break;
+                }
+
+                kept.RemoveAt(i);
+            }
+
+            for (int i = kept.Count - 1; i > 0; i--)
+            {
+                if (string.IsNullOrWhiteSpace(kept[i]) && string.IsNullOrWhiteSpace(kept[i - 1]))
+                {
+                    kept.RemoveAt(i);
+                }
+            }
+
+            File.WriteAllText(configPath, string.Join(Environment.NewLine, kept), new UTF8Encoding(false));
         }
 
         private void RefreshServerPresetCombo()
@@ -1563,6 +1834,72 @@ namespace LazyBootstrap
             await CreateServerPresetInteractiveAsync();
         }
 
+        private async void btnDeleteServerPreset_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (cmbServerPreset?.SelectedItem is not ServerPresetItem preset)
+                {
+                    ShowWarningToast("删除预设", "请先选择要删除的预设。");
+                    return;
+                }
+
+                if (string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    ShowWarningToast("删除预设", "“无”是内置项，不能删除。");
+                    return;
+                }
+
+                if (string.Equals(preset.Name, AsphyxiaPresetName, StringComparison.OrdinalIgnoreCase))
+                {
+                    ShowWarningToast("删除预设", "Asphyxia 是内置预设，不能删除。");
+                    return;
+                }
+
+                var dialogBuilder = _dialogManager
+                    .CreateDialog()
+                    .OfType(NotificationType.Warning)
+                    .WithTitle("删除服务器预设")
+                    .WithContent($"确定删除预设“{preset.Name}”吗？")
+                    .WithYesNoResult("删除", "取消", "Flat")
+                    .Dismiss().ByClickingBackground();
+                ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Warning);
+                bool confirmed = await dialogBuilder.TryShowAsync();
+                if (!confirmed)
+                {
+                    return;
+                }
+
+                _serverPresets.RemoveAll(p => string.Equals(p.Name, preset.Name, StringComparison.OrdinalIgnoreCase));
+
+                if (string.Equals(_activeServerPreset, preset.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    _activeServerPreset = NonePresetName;
+                }
+
+                RefreshServerPresetCombo();
+                if (cmbServerPreset != null)
+                {
+                    var fallback = _serverPresets.FirstOrDefault(p => string.Equals(p.Name, NonePresetName, StringComparison.OrdinalIgnoreCase));
+                    if (fallback != null)
+                    {
+                        cmbServerPreset.SelectedItem = fallback;
+                    }
+                    else if (_serverPresets.Count > 0)
+                    {
+                        cmbServerPreset.SelectedItem = _serverPresets[0];
+                    }
+                }
+
+                SaveServerPresetsToConfig();
+                ShowInfoToast("删除预设", $"已删除预设：{preset.Name}");
+            }
+            catch (Exception ex)
+            {
+                ShowErrorToast("删除预设失败", ex.Message);
+            }
+        }
+
         private async Task<bool> CreateServerPresetInteractiveAsync()
         {
             try
@@ -1641,7 +1978,7 @@ namespace LazyBootstrap
             {
                 _isLoadingSettings = true; // 标记正在加载设置
                 // 加载预配置选项
-                string usePreconfigStr = _configFile.ReadString("Settings", "usepreconfig", "false");
+                string usePreconfigStr = _configFile.ReadString(SettingSectionName, "usepreconfig", "false");
                 if (!bool.TryParse(usePreconfigStr, out _usePreconfig))
                 {
                     _usePreconfig = false;
@@ -1654,19 +1991,19 @@ namespace LazyBootstrap
                 LoadServerPresetsFromConfig();
 
                 // 加载其他启动选项（窗口化与大小核由 XML 驱动，故不再从 config.toml 读取）
-                chkNoAsphyxia.IsChecked = bool.TryParse(_configFile.ReadString("Settings", "noasphyxia", "false"), out var noAsphyxia) && noAsphyxia;
-                bool noRestoreRotation = bool.TryParse(_configFile.ReadString("Settings", "norestorerotation", "false"), out var noRestore) && noRestore;
+                chkNoAsphyxia.IsChecked = bool.TryParse(_configFile.ReadString(SettingSectionName, "noasphyxia", "false"), out var noAsphyxia) && noAsphyxia;
+                bool noRestoreRotation = bool.TryParse(_configFile.ReadString(DisplaySectionName, "norestorerotation", "false"), out var noRestore) && noRestore;
                 chkNoRestoreRotation.IsChecked = !noRestoreRotation;
 
-                _displayConfigEnabled = bool.TryParse(_configFile.ReadString("Settings", "displayconfigure", "false"), out var displayCfg) && displayCfg;
+                _displayConfigEnabled = bool.TryParse(_configFile.ReadString(DisplaySectionName, "displayconfigure", "false"), out var displayCfg) && displayCfg;
                 if (tglDisplayConfigEnabled != null) tglDisplayConfigEnabled.IsChecked = _displayConfigEnabled;
-                _isDualDisplay = !string.Equals(_configFile.ReadString("Display", "mode", "dual"), "single", StringComparison.OrdinalIgnoreCase);
+                _isDualDisplay = !string.Equals(_configFile.ReadString(DisplaySectionName, "mode", "dual"), "single", StringComparison.OrdinalIgnoreCase);
                 if (cmbDisplayMode != null) cmbDisplayMode.SelectedIndex = _isDualDisplay ? 1 : 0;
 
                 // 渲染模式（兼容层实现）
                 try
                 {
-                    string renderMode = _configFile.ReadString("Settings", "rendermode", "dx9on12");
+                    string renderMode = _configFile.ReadString(SettingSectionName, "rendermode", "dx9on12");
                     if (cmbCompatType != null)
                     {
                         // 保证项存在
@@ -1706,22 +2043,22 @@ namespace LazyBootstrap
 
                 if (cmbMainScreen != null)
                 {
-                    int.TryParse(_configFile.ReadString("Display", "mainscreen", "0"), out var mainScreenIndex);
+                    int.TryParse(_configFile.ReadString(DisplaySectionName, "mainscreen", "0"), out var mainScreenIndex);
                     if (mainScreenIndex >= 0 && mainScreenIndex < cmbMainScreen.Items.Count) cmbMainScreen.SelectedIndex = mainScreenIndex;
                 }
                 if (cmbSubScreen != null)
                 {
-                    int.TryParse(_configFile.ReadString("Display", "subscreen", "0"), out var subScreenIndex);
+                    int.TryParse(_configFile.ReadString(DisplaySectionName, "subscreen", "0"), out var subScreenIndex);
                     if (subScreenIndex >= 0 && subScreenIndex < cmbSubScreen.Items.Count) cmbSubScreen.SelectedIndex = subScreenIndex;
                 }
                 if (cmbSubRotation != null)
                 {
-                    int.TryParse(_configFile.ReadString("Display", "subrotation", "0"), out var subRotationIndex);
+                    int.TryParse(_configFile.ReadString(DisplaySectionName, "subrotation", "0"), out var subRotationIndex);
                     if (subRotationIndex >= 0 && subRotationIndex < cmbSubRotation.Items.Count) cmbSubRotation.SelectedIndex = subRotationIndex;
                 }
                 if (cmbRotation != null)
                 {
-                    int.TryParse(_configFile.ReadString("Display", "mainrotation", "0"), out var mainRotationIndex);
+                    int.TryParse(_configFile.ReadString(DisplaySectionName, "mainrotation", "0"), out var mainRotationIndex);
                     if (mainRotationIndex >= 0 && mainRotationIndex < cmbRotation.Items.Count) cmbRotation.SelectedIndex = mainRotationIndex;
                 }
 
@@ -1730,12 +2067,12 @@ namespace LazyBootstrap
 
                 if (cmbMainResolution != null)
                 {
-                    var res = _configFile.ReadString("Display", "mainresolution", "");
+                    var res = _configFile.ReadString(DisplaySectionName, "mainresolution", "");
                     if (!string.IsNullOrWhiteSpace(res)) cmbMainResolution.SelectedItem = res;
                 }
                 if (cmbSubResolution != null)
                 {
-                    var res = _configFile.ReadString("Display", "subresolution", "");
+                    var res = _configFile.ReadString(DisplaySectionName, "subresolution", "");
                     if (!string.IsNullOrWhiteSpace(res)) cmbSubResolution.SelectedItem = res;
                 }
                 RefreshMainOptions(refreshResolutionList: false, refreshRateList: true);
@@ -1743,12 +2080,12 @@ namespace LazyBootstrap
 
                 if (cmbMainRefreshRate != null)
                 {
-                    var refresh = _configFile.ReadString("Display", "mainrefresh", "");
+                    var refresh = _configFile.ReadString(DisplaySectionName, "mainrefresh", "");
                     if (!string.IsNullOrWhiteSpace(refresh)) cmbMainRefreshRate.SelectedItem = refresh;
                 }
                 if (cmbSubRefreshRate != null)
                 {
-                    var refresh = _configFile.ReadString("Display", "subrefresh", "");
+                    var refresh = _configFile.ReadString(DisplaySectionName, "subrefresh", "");
                     if (!string.IsNullOrWhiteSpace(refresh)) cmbSubRefreshRate.SelectedItem = refresh;
                 }
 
@@ -1758,7 +2095,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"加载配置文件时出错: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("加载配置失败", ex.Message);
                 if (txtCurrentVersion != null) txtCurrentVersion.Text = "读取失败";
                 if (txtRevision != null) txtRevision.Text = "读取失败";
                 if (txtLauncherVersion != null) txtLauncherVersion.Text = "读取失败";
@@ -1778,36 +2115,36 @@ namespace LazyBootstrap
 
             try
             {
-                _configFile.WriteString("Settings", "usepreconfig", _usePreconfig.ToString().ToLowerInvariant());
+                _configFile.WriteString(SettingSectionName, "usepreconfig", _usePreconfig.ToString().ToLowerInvariant());
 
                 // 保存仍通过 config.toml 管理的选项
                 if (chkNoAsphyxia != null)
-                    _configFile.WriteString("Settings", "noasphyxia", (chkNoAsphyxia.IsChecked == true).ToString().ToLowerInvariant());
+                    _configFile.WriteString(SettingSectionName, "noasphyxia", (chkNoAsphyxia.IsChecked == true).ToString().ToLowerInvariant());
                 if (chkNoRestoreRotation != null)
-                    _configFile.WriteString("Settings", "norestorerotation", (chkNoRestoreRotation.IsChecked != true).ToString().ToLowerInvariant());
+                    _configFile.WriteString(DisplaySectionName, "norestorerotation", (chkNoRestoreRotation.IsChecked != true).ToString().ToLowerInvariant());
 
                 // 保存渲染模式（兼容层实现）
                 if (cmbCompatType != null && cmbCompatType.SelectedItem != null)
                 {
                     string renderMode = cmbCompatType.SelectedItem.ToString();
-                    _configFile.WriteString("Settings", "rendermode", renderMode);
+                    _configFile.WriteString(SettingSectionName, "rendermode", renderMode);
                 }
 
-                _configFile.WriteString("Settings", "displayconfigure", _displayConfigEnabled.ToString().ToLowerInvariant());
-                _configFile.WriteString("Display", "mode", _isDualDisplay ? "dual" : "single");
+                _configFile.WriteString(DisplaySectionName, "displayconfigure", _displayConfigEnabled.ToString().ToLowerInvariant());
+                _configFile.WriteString(DisplaySectionName, "mode", _isDualDisplay ? "dual" : "single");
 
-                if (cmbMainScreen != null) _configFile.WriteString("Display", "mainscreen", cmbMainScreen.SelectedIndex.ToString());
-                if (cmbSubScreen != null) _configFile.WriteString("Display", "subscreen", cmbSubScreen.SelectedIndex.ToString());
-                if (cmbSubRotation != null) _configFile.WriteString("Display", "subrotation", cmbSubRotation.SelectedIndex.ToString());
-                if (cmbRotation != null) _configFile.WriteString("Display", "mainrotation", cmbRotation.SelectedIndex.ToString());
-                if (cmbMainResolution != null && cmbMainResolution.SelectedItem != null) _configFile.WriteString("Display", "mainresolution", cmbMainResolution.SelectedItem.ToString());
-                if (cmbSubResolution != null && cmbSubResolution.SelectedItem != null) _configFile.WriteString("Display", "subresolution", cmbSubResolution.SelectedItem.ToString());
-                if (cmbMainRefreshRate != null && cmbMainRefreshRate.SelectedItem != null) _configFile.WriteString("Display", "mainrefresh", cmbMainRefreshRate.SelectedItem.ToString());
-                if (cmbSubRefreshRate != null && cmbSubRefreshRate.SelectedItem != null) _configFile.WriteString("Display", "subrefresh", cmbSubRefreshRate.SelectedItem.ToString());
+                if (cmbMainScreen != null) _configFile.WriteString(DisplaySectionName, "mainscreen", cmbMainScreen.SelectedIndex.ToString());
+                if (cmbSubScreen != null) _configFile.WriteString(DisplaySectionName, "subscreen", cmbSubScreen.SelectedIndex.ToString());
+                if (cmbSubRotation != null) _configFile.WriteString(DisplaySectionName, "subrotation", cmbSubRotation.SelectedIndex.ToString());
+                if (cmbRotation != null) _configFile.WriteString(DisplaySectionName, "mainrotation", cmbRotation.SelectedIndex.ToString());
+                if (cmbMainResolution != null && cmbMainResolution.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "mainresolution", cmbMainResolution.SelectedItem.ToString());
+                if (cmbSubResolution != null && cmbSubResolution.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "subresolution", cmbSubResolution.SelectedItem.ToString());
+                if (cmbMainRefreshRate != null && cmbMainRefreshRate.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "mainrefresh", cmbMainRefreshRate.SelectedItem.ToString());
+                if (cmbSubRefreshRate != null && cmbSubRefreshRate.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "subrefresh", cmbSubRefreshRate.SelectedItem.ToString());
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"保存出错: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("保存配置失败", ex.Message);
             }
         }
 
@@ -1926,8 +2263,14 @@ namespace LazyBootstrap
 
             if (!newUsePreconfig)
             {
-                // 用户取消勾选，日志记录警告
-                LogSystem.Log("警告：如果不使用预配置文件，你需要重新手动设置所有选项与补丁（等同于纯净版），请确保你拥有相关知识！", LogSystem.LogLevel.Warning);
+                var dialogBuilder = _dialogManager.CreateDialog()
+                    .OfType(NotificationType.Warning)
+                    .WithTitle("预配置提示")
+                    .WithContent("如果不使用预配置文件，你需要重新手动设置所有选项与补丁（等同于纯净版），请确保你拥有相关知识！")
+                    .WithActionButton("我知道了", _ => { }, true, "Flat")
+                    .Dismiss().ByClickingBackground();
+                ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Warning);
+                dialogBuilder.TryShow();
             }
 
             _usePreconfig = newUsePreconfig;
@@ -1945,7 +2288,7 @@ namespace LazyBootstrap
             }
 
             SaveSettings();
-            LogSystem.Log(_usePreconfig
+            ShowInfoToast("预配置切换", _usePreconfig
                 ? $"当前使用预配置 XML: {activeXmlPath}"
                 : $"当前使用系统 XML: {activeXmlPath}");
 
@@ -2063,7 +2406,7 @@ namespace LazyBootstrap
         {
             try
             {
-                var s = _configFile.ReadString("Settings", "compatlayerenabled", "false");
+                var s = _configFile.ReadString(SettingSectionName, "compatlayerenabled", "false");
                 bool enabled;
                 return bool.TryParse(s, out enabled) && enabled;
             }
@@ -2189,7 +2532,7 @@ namespace LazyBootstrap
                     sb.AppendLine("有这些东西异常！");
                     sb.AppendLine(EnvironmentScan.LastErrorSummary);
                     sb.AppendLine("(* ^∇^)ﾉ Noah给出的解决方法：");
-                    sb.AppendLine("- 在工具页点击\u201c安装运行库\u201d按钮安装必要运行组件");
+                    sb.AppendLine("- 在工具页点击“安装运行库”按钮安装必要运行组件");
                     sb.AppendLine("- 确保已安装最新的显卡驱动程序");
                     sb.AppendLine("- 若为 AMD/Intel 显卡，请启用\u201c显卡兼容层\u201d后重试");
                     sb.AppendLine();
@@ -2200,13 +2543,14 @@ namespace LazyBootstrap
                     sb.AppendLine("您可先行尝试启动游戏，若出现问题，再寻求周围帮助！");
                     sb.AppendLine();
 
-                    _dialogManager.CreateDialog()
-                        .OfType(NotificationType.Warning)
+                    var dialogBuilder = _dialogManager.CreateDialog()
+                        .OfType(NotificationType.Error)
                         .WithTitle("环境检测提示")
                         .WithContent(sb.ToString())
                         .WithActionButton("关闭", _ => { }, true, "Flat")
-                        .Dismiss().ByClickingBackground()
-                        .TryShow();
+                        .Dismiss().ByClickingBackground();
+                    ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Error);
+                    dialogBuilder.TryShow();
                 }
             }
             catch (Exception ex)
@@ -2293,7 +2637,7 @@ namespace LazyBootstrap
             {
                 var row = new Grid
                 {
-                    ColumnDefinitions = new ColumnDefinitions("170,80,*"),
+                    ColumnDefinitions = new ColumnDefinitions("300,80,*"),
                     ColumnSpacing = 8,
                     Margin = new Thickness(indentLeft, 0, 0, 0)
                 };
@@ -2341,15 +2685,36 @@ namespace LazyBootstrap
 
                 AddRow(group.Key, groupItem, false, 0);
 
+                bool noStatusGroup = string.Equals(group.Key, "CPU", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(group.Key, "GPU", StringComparison.OrdinalIgnoreCase);
+
                 foreach (var child in group.Value)
                 {
                     var slashIndex = child.Item.IndexOf('/');
                     var childSuffix = slashIndex >= 0 && slashIndex < child.Item.Length - 1
                         ? child.Item.Substring(slashIndex + 1)
                         : child.Item;
-                    var childLabel = string.IsNullOrWhiteSpace(child.Detail) ? childSuffix : $"{childSuffix} - {child.Detail}";
+                    bool isVm = !string.IsNullOrWhiteSpace(child.Detail)
+                        && child.Detail.IndexOf("虚拟机", StringComparison.OrdinalIgnoreCase) >= 0;
 
-                    AddRow(childLabel, child, true, 28);
+                    string childLabel;
+                    if (noStatusGroup)
+                    {
+                        if (string.Equals(group.Key, "CPU", StringComparison.OrdinalIgnoreCase))
+                        {
+                            childLabel = string.IsNullOrWhiteSpace(child.Detail) ? childSuffix : child.Detail;
+                        }
+                        else
+                        {
+                            childLabel = childSuffix;
+                        }
+                    }
+                    else
+                    {
+                        childLabel = string.IsNullOrWhiteSpace(child.Detail) ? childSuffix : $"{childSuffix} - {child.Detail}";
+                    }
+
+                    AddRow(childLabel, child, noStatusGroup ? isVm : true, 28);
                 }
             }
         }
@@ -2360,15 +2725,9 @@ namespace LazyBootstrap
             // Lock Element
             SetControlsEnabled(false);
             if (statusLabel != null) statusLabel.Text = "正在启动...";
-
-            if (txtLogOutput != null)
-            {
-                try
-                {
-                    txtLogOutput.Text = string.Empty;
-                }
-                catch { }
-            }
+            await ShowLaunchLogAreaWithAnimationAsync();
+            if (txtLogOutput != null) txtLogOutput.Text = string.Empty;
+            AppendLaunchOutput("正在启动...");
 
             try
             {
@@ -2378,7 +2737,7 @@ namespace LazyBootstrap
                 if (!File.Exists(spicePath))
                 {
                     ShowErrorToast("启动失败", $"未找到 spice64.exe: {spicePath}");
-                    LogSystem.Log($"错误: 未找到游戏主程序, 路径: {spicePath}", LogSystem.LogLevel.Error);
+                    AppendLaunchOutput($"未找到游戏主程序：{spicePath}", NotificationType.Error);
                     SetControlsEnabled(true);
                     if (statusLabel != null) statusLabel.Text = "启动失败";
                     return;
@@ -2388,7 +2747,7 @@ namespace LazyBootstrap
                 if (startAsphyxia && !File.Exists(asphyxiaPath))
                 {
                     ShowErrorToast("启动失败", $"未找到 asphyxia-core-x64.exe: {asphyxiaPath}");
-                    LogSystem.Log($"错误: 未找到 Asphyxia Core, 路径: {asphyxiaPath}", LogSystem.LogLevel.Error);
+                    AppendLaunchOutput($"未找到 Asphyxia Core：{asphyxiaPath}", NotificationType.Error);
                     SetControlsEnabled(true);
                     if (statusLabel != null) statusLabel.Text = "启动失败";
                     return;
@@ -2396,16 +2755,16 @@ namespace LazyBootstrap
 
                 if (_displayConfigEnabled)
                 {
-                    LogSystem.Log("正在应用显示器配置...");
+                    AppendLaunchOutput("正在应用显示器配置...");
                     bool displayApplySuccess = ApplyDisplaySettingsForLaunch();
-                    LogSystem.Log(displayApplySuccess ? "显示器配置应用完成。" : "显示器配置部分失败，游戏将继续启动。");
+                    AppendLaunchOutput(displayApplySuccess ? "显示器配置应用完成。" : "显示器配置部分失败，游戏将继续启动。", displayApplySuccess ? NotificationType.Information : NotificationType.Warning);
                     await Task.Delay(5000);
                 }
 
                 // Launch Asphyxia
                 if (startAsphyxia)
                 {
-                    LogSystem.Log("\n正在启动 Asphyxia Core...");
+                    AppendLaunchOutput("正在启动 Asphyxia Core...");
                     var asphyxiaStartInfo = new ProcessStartInfo
                     {
                         FileName = asphyxiaPath,
@@ -2418,16 +2777,17 @@ namespace LazyBootstrap
                     if (asphyxiaProcess == null)
                     {
                         ShowErrorToast("启动失败", "Asphyxia 启动失败：进程未创建。");
+                        AppendLaunchOutput("Asphyxia 启动失败：进程未创建。", NotificationType.Error);
                         SetControlsEnabled(true);
                         if (statusLabel != null) statusLabel.Text = "启动失败";
                         return;
                     }
 
-                    LogSystem.Log("Asphyxia Core 已启动。", LogSystem.LogLevel.Info);
+                    AppendLaunchOutput("Asphyxia Core 已启动。");
                 }
                 else
                 {
-                    LogSystem.Log("\n已跳过启动 Asphyxia Core。");
+                    AppendLaunchOutput("已跳过启动 Asphyxia Core。");
                 }
 
                 // 在启动前写入 XML 选项，替代命令行参数
@@ -2443,8 +2803,8 @@ namespace LazyBootstrap
                 }
 
                 // Booting
-                LogSystem.Log("\n正在启动游戏...");
-                LogSystem.Log($"  - 启动参数: {argsBuilder.ToString()}");
+                AppendLaunchOutput("正在启动游戏...");
+                AppendLaunchOutput($"启动参数: {argsBuilder.ToString()}");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -2459,6 +2819,7 @@ namespace LazyBootstrap
                 if (!_gameProcess.Start())
                 {
                     ShowErrorToast("启动失败", "spice64 启动失败：进程未创建。");
+                    AppendLaunchOutput("spice64 启动失败：进程未创建。", NotificationType.Error);
                     SetControlsEnabled(true);
                     if (statusLabel != null) statusLabel.Text = "启动失败";
                     _gameProcess.Dispose();
@@ -2469,11 +2830,12 @@ namespace LazyBootstrap
                 _gameProcess.Exited += GameProcess_Exited;
 
                 if (statusLabel != null) statusLabel.Text = "游戏已启动";
-                LogSystem.Log("\n游戏进程已启动。");
+                AppendLaunchOutput("游戏进程已启动。");
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"\n启动过程中发生严重错误: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("启动失败", ex.Message);
+                AppendLaunchOutput($"启动过程中发生严重错误：{ex.Message}", NotificationType.Error);
                 SetControlsEnabled(true);
                 if (statusLabel != null) statusLabel.Text = "启动失败";
             }
@@ -2507,7 +2869,6 @@ namespace LazyBootstrap
                 var info = GetSelectedDisplayInfo(screenCombo);
                 if (info == null)
                 {
-                    LogSystem.Log($"{label}未选择有效显示器，已跳过。", LogSystem.LogLevel.Warning);
                     return false;
                 }
 
@@ -2522,25 +2883,19 @@ namespace LazyBootstrap
 
                 if (!TryParseResolution(resolution, out int width, out int height))
                 {
-                    LogSystem.Log($"{label}分辨率无效: {resolution}", LogSystem.LogLevel.Error);
                     return false;
                 }
 
                 if (!int.TryParse(refreshText, out int refreshRate))
                 {
-                    LogSystem.Log($"{label}刷新率无效: {refreshText}", LogSystem.LogLevel.Error);
                     return false;
                 }
 
                 bool ok = DisplayConfigure.ApplyDisplaySettings(info.DeviceName, rotation, width, height, refreshRate);
-                LogSystem.Log(ok
-                    ? $"{label}已应用: {rotation}° / {width}x{height} / {refreshRate}Hz"
-                    : $"{label}应用失败。", ok ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Error);
                 return ok;
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                LogSystem.Log($"{label}配置异常: {ex.Message}", LogSystem.LogLevel.Error);
                 return false;
             }
         }
@@ -2584,9 +2939,9 @@ namespace LazyBootstrap
 
             Dispatcher.UIThread.Post(() =>
             {
-                LogSystem.Log(abnormalExit
-                    ? $"\n游戏进程异常退出（ExitCode: {exitCode}）。"
-                    : "\n游戏进程已退出。");
+                AppendLaunchOutput(abnormalExit
+                    ? $"游戏进程异常退出（ExitCode: {exitCode}）。"
+                    : "游戏进程已退出。", abnormalExit ? NotificationType.Warning : NotificationType.Information);
 
                 if (abnormalExit)
                 {
@@ -2594,20 +2949,20 @@ namespace LazyBootstrap
                     _ = ShowLogDialogAsync();
                 }
 
-                LogSystem.Log("正在关闭 Asphyxia Core...");
+                AppendLaunchOutput("正在关闭 Asphyxia Core...");
                 try
                 {
                     KillProcessesByName("asphyxia-core-x64");
-                    LogSystem.Log("Asphyxia Core 已关闭");
+                    AppendLaunchOutput("Asphyxia Core 已关闭");
                 }
                 catch (Exception ex)
                 {
-                    LogSystem.Log($"未找到正在运行的 Asphyxia Core 进程。{ex.Message}", LogSystem.LogLevel.Warning);
+                    ShowWarningToast("Asphyxia 关闭提示", $"未找到正在运行的 Asphyxia Core 进程。{ex.Message}");
                 }
 
                 if (chkNoRestoreRotation?.IsChecked == true)
                 {
-                    LogSystem.Log("正在恢复显示器参数...");
+                    AppendLaunchOutput("正在恢复显示器参数...");
                     int restoredCount = 0;
                     foreach (var kv in _displayRestoreStates)
                     {
@@ -2616,9 +2971,9 @@ namespace LazyBootstrap
                             restoredCount++;
                         }
                     }
-                    LogSystem.Log(restoredCount > 0
+                    AppendLaunchOutput(restoredCount > 0
                         ? $"已恢复 {restoredCount} 个显示器参数。"
-                        : "未恢复任何显示器参数。", restoredCount > 0 ? LogSystem.LogLevel.Info : LogSystem.LogLevel.Warning);
+                        : "未恢复任何显示器参数。", restoredCount > 0 ? NotificationType.Information : NotificationType.Warning);
                 }
 
                 if (statusLabel != null) statusLabel.Text = "就绪";
@@ -2634,9 +2989,9 @@ namespace LazyBootstrap
         // kill process
         private void btnKillProcesses_Click(object sender, RoutedEventArgs e)
         {
-            LogSystem.Log("\n正在尝试结束所有相关进程...");
-            KillProcessesByName("spice64");
-            KillProcessesByName("asphyxia-core-x64");
+            int killedSpice = KillProcessesByName("spice64");
+            int killedAsphyxia = KillProcessesByName("asphyxia-core-x64");
+            ShowInfoToast("结束进程", $"处理完成：spice64 {killedSpice} 个，asphyxia-core-x64 {killedAsphyxia} 个。");
         }
 
         private int KillProcessesByName(string processName)
@@ -2649,7 +3004,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"  - 获取进程列表 {processName} 时出错: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("结束进程失败", $"获取进程列表 {processName} 时出错：{ex.Message}");
                 return 0;
             }
 
@@ -2666,7 +3021,7 @@ namespace LazyBootstrap
                     if (!p.WaitForExit(3000))
                     {
                         // 如果3秒后还没退出，使用强制终止
-                        LogSystem.Log($"  - 进程 {processName} (PID: {pid}) 未响应，尝试强制终止...", LogSystem.LogLevel.Warning);
+                        ShowWarningToast("进程未响应", $"{processName}.exe (PID: {pid}) 未响应，尝试强制终止。");
 
                         try
                         {
@@ -2685,28 +3040,21 @@ namespace LazyBootstrap
                             {
                                 taskKillProcess.WaitForExit(2000);
                             }
-
-                            LogSystem.Log($"  - 已强制结束进程: {processName}.exe (PID: {pid})");
                         }
                         catch (Exception ex)
                         {
-                            LogSystem.Log($"  - 强制终止进程失败: {ex.Message}", LogSystem.LogLevel.Error);
+                            ShowErrorToast("强制终止失败", ex.Message);
                         }
-                    }
-                    else
-                    {
-                        LogSystem.Log($"  - 已结束进程: {processName}.exe (PID: {pid})");
                     }
 
                     count++;
                 }
                 catch (InvalidOperationException)
                 {
-                    LogSystem.Log($"  - 进程 {processName} 已退出，无需结束。");
                 }
                 catch (System.ComponentModel.Win32Exception ex)
                 {
-                    LogSystem.Log($"  - 结束进程 {processName} 时权限不足: {ex.Message}", LogSystem.LogLevel.Error);
+                    ShowErrorToast("结束进程权限不足", ex.Message);
 
                     // 尝试使用管理员权限的 taskkill
                     try
@@ -2721,16 +3069,15 @@ namespace LazyBootstrap
                         };
 
                         Process.Start(taskKillInfo);
-                        LogSystem.Log($"  - 已使用管理员权限尝试终止 {processName}");
                     }
                     catch (Exception ex2)
                     {
-                        LogSystem.Log($"  - 管理员权限终止失败: {ex2.Message}", LogSystem.LogLevel.Error);
+                        ShowErrorToast("管理员终止失败", ex2.Message);
                     }
                 }
                 catch (Exception ex)
                 {
-                    LogSystem.Log($"  - 结束进程 {processName} 时出错: {ex.Message}", LogSystem.LogLevel.Error);
+                    ShowErrorToast("结束进程失败", ex.Message);
                 }
                 finally
                 {
@@ -2754,16 +3101,16 @@ namespace LazyBootstrap
                 if (Directory.Exists(cachePath))
                 {
                     Directory.Delete(cachePath, true);
-                    LogSystem.Log("缓存已成功清除！");
+                    ShowInfoToast("缓存清理", "缓存已成功清除！");
                 }
                 else
                 {
-                    LogSystem.Log("缓存文件不存在。", LogSystem.LogLevel.Warning);
+                    ShowWarningToast("缓存清理", "缓存文件不存在。");
                 }
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"清除缓存失败: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("缓存清理失败", ex.Message);
             }
         }
 
@@ -2848,12 +3195,11 @@ namespace LazyBootstrap
             {
                 if (!File.Exists(installBatPath))
                 {
-                    LogSystem.Log($"错误: 未找到 runtime/install.bat", LogSystem.LogLevel.Error);
+                    ShowErrorToast("安装运行库失败", "未找到 runtime/install.bat");
                     return;
                 }
 
-                LogSystem.Log("\n正在安装 Runtime 组件...");
-                LogSystem.Log($"  - 执行脚本: {installBatPath}");
+                ShowInfoToast("安装运行库", "正在启动 Runtime 安装脚本（可能会弹出 UAC）。");
 
                 var startInfo = new ProcessStartInfo
                 {
@@ -2869,16 +3215,16 @@ namespace LazyBootstrap
             {
                 if (ex.NativeErrorCode == 1223)
                 {
-                    LogSystem.Log("用户已取消。", LogSystem.LogLevel.Warning);
+                    ShowWarningToast("安装运行库", "用户已取消操作。");
                 }
                 else
                 {
-                    LogSystem.Log($"启动 Runtime 安装失败: {ex.Message}", LogSystem.LogLevel.Error);
+                    ShowErrorToast("安装运行库失败", ex.Message);
                 }
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"启动 Runtime 安装时发生错误: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("安装运行库失败", ex.Message);
             }
         }
 
@@ -2921,7 +3267,7 @@ namespace LazyBootstrap
 
             try
             {
-                _configFile.WriteString("Settings", "compatlayerenabled", enable ? "true" : "false");
+                _configFile.WriteString(SettingSectionName, "compatlayerenabled", enable ? "true" : "false");
             }
             catch (Exception ex)
             {
@@ -3108,6 +3454,7 @@ namespace LazyBootstrap
             if (btnEditConfig != null) btnEditConfig.IsEnabled = enabled;
             if (cmbServerPreset != null) cmbServerPreset.IsEnabled = enabled;
             if (btnAddServerPreset != null) btnAddServerPreset.IsEnabled = enabled;
+            if (btnDeleteServerPreset != null) btnDeleteServerPreset.IsEnabled = enabled;
             if (tglCompatLayer != null) tglCompatLayer.IsEnabled = enabled;
             if (rbCompatDx9on12 != null) rbCompatDx9on12.IsEnabled = enabled;
             if (rbCompatDx9on12External != null) rbCompatDx9on12External.IsEnabled = enabled;
@@ -3161,16 +3508,117 @@ namespace LazyBootstrap
             }
         }
 
-        private void btnAddFirewallRule_Click(object sender, RoutedEventArgs e)
+        private async void btnAddFirewallRule_Click(object sender, RoutedEventArgs e)
         {
             const string ruleName = "SpiceTools";
             string spicePath = GetSpicePath();
-            FirewallHelper.EnsureFirewallRule(ruleName, spicePath, LogSystem.Log);
+
+            var dialogBuilder = _dialogManager
+                .CreateDialog()
+                .OfType(NotificationType.Warning)
+                .WithTitle("添加防火墙规则")
+                .WithContent("确定要执行吗？\n如果之前已经添加过，请勿重复添加")
+                .WithYesNoResult("确定", "取消", "Flat")
+                .Dismiss().ByClickingBackground();
+            ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Warning);
+            var confirmed = await dialogBuilder.TryShowAsync();
+
+            if (!confirmed)
+            {
+                return;
+            }
+
+            if (!File.Exists(spicePath))
+            {
+                ShowErrorToast("添加防火墙规则失败", $"未找到目标程序：{spicePath}");
+                return;
+            }
+
+            try
+            {
+                var addProcessInfo = new ProcessStartInfo
+                {
+                    FileName = "netsh",
+                    Arguments = $"advfirewall firewall add rule name=\"{ruleName}\" dir=in action=allow program=\"{spicePath}\" enable=yes profile=public,private",
+                    UseShellExecute = true,
+                    Verb = "runas",
+                    CreateNoWindow = true
+                };
+
+                using (var addProcess = Process.Start(addProcessInfo))
+                {
+                    addProcess.WaitForExit();
+                    ShowInfoToast("防火墙规则", "防火墙规则添加完成。");
+                }
+            }
+            catch (System.ComponentModel.Win32Exception ex)
+            {
+                if (ex.NativeErrorCode == 1223)
+                {
+                    ShowWarningToast("防火墙规则", "用户取消了 UAC 提示，防火墙规则未添加。");
+                }
+                else
+                {
+                    ShowErrorToast("防火墙规则失败", ex.Message);
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowErrorToast("防火墙规则失败", ex.Message);
+            }
         }
 
         private async void btnOpenLog_Click(object sender, RoutedEventArgs e)
         {
             await ShowLogDialogAsync();
+        }
+
+        private async void btnToggleLaunchLog_Click(object sender, RoutedEventArgs e)
+        {
+            if (_isLaunchLogVisible)
+            {
+                HideLaunchLogArea();
+                return;
+            }
+
+            await ShowLaunchLogAreaWithAnimationAsync();
+        }
+
+        private static void ApplyDialogNotificationIcon(SukiDialogBuilder builder, NotificationType type)
+        {
+            if (builder?.Dialog == null)
+            {
+                return;
+            }
+
+            var iconBitmap = type switch
+            {
+                NotificationType.Warning => _warningDialogIconCache ??= TryLoadDialogNotificationBitmap("warning.png"),
+                NotificationType.Error => _errorDialogIconCache ??= TryLoadDialogNotificationBitmap("error.png"),
+                _ => null
+            };
+
+            if (iconBitmap == null)
+            {
+                return;
+            }
+
+            builder.Dialog.Icon = iconBitmap;
+            builder.Dialog.IconColor = null;
+        }
+
+        private static Bitmap TryLoadDialogNotificationBitmap(string assetFileName)
+        {
+            try
+            {
+                var assetUri = new Uri($"avares://LazyBootstrap/Assets/{assetFileName}");
+                var stream = AssetLoader.Open(assetUri);
+                return new Bitmap(stream);
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         private async Task ShowLogDialogAsync()
@@ -3252,7 +3700,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"打开音频控制面板失败: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("打开音频控制面板失败", ex.Message);
             }
         }
 
@@ -3270,7 +3718,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"打开触控屏设置失败: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("打开触控屏设置失败", ex.Message);
             }
         }
 
@@ -3280,7 +3728,7 @@ namespace LazyBootstrap
             {
                 if (mainSideMenu != null)
                 {
-                    var target = mainSideMenu.Items?.OfType<object>().Skip(2).FirstOrDefault();
+                    var target = mainSideMenu.Items?.OfType<object>().Skip(1).FirstOrDefault();
                     if (target != null)
                     {
                         mainSideMenu.SelectedItem = target;
@@ -3394,7 +3842,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"更新 SpiceTools 配置失败: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("保存设定失败", ex.Message);
             }
         }
 
@@ -3481,7 +3929,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"读取 XML 失败: {ex.Message}", LogSystem.LogLevel.Error);
+                ShowErrorToast("读取配置失败", ex.Message);
             }
             finally
             {
@@ -3662,7 +4110,7 @@ namespace LazyBootstrap
             var root = doc.Root;
             if (root == null)
             {
-                LogSystem.Log("SpiceTools 配置 XML 根节点为空。", LogSystem.LogLevel.Error);
+                ShowErrorToast("读取配置失败", "SpiceTools 配置 XML 根节点为空。");
                 return false;
             }
 
@@ -3673,7 +4121,7 @@ namespace LazyBootstrap
             });
             if (soundVoltex == null)
             {
-                LogSystem.Log("未找到游戏条目: Sound Voltex。", LogSystem.LogLevel.Warning);
+                ShowWarningToast("读取配置异常", "未找到游戏条目: Sound Voltex。");
                 return false;
             }
 
@@ -3783,7 +4231,7 @@ namespace LazyBootstrap
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"规范化自闭合标签格式失败: {ex.Message}", LogSystem.LogLevel.Warning);
+                ShowWarningToast("配置格式修复失败", ex.Message);
             }
         }
 

@@ -6,6 +6,10 @@
     <Application.Resources>
         <ResourceDictionary>
             <FontFamily x:Key="DefaultFontFamily">avares://LazyBootstrap/Assets/HarmonyOS_Sans_SC_Medium.ttf#HarmonyOS Sans SC Medium, Microsoft YaHei UI, Segoe UI</FontFamily>
+            <FontFamily x:Key="FontAwesomeSolidFamily">avares://LazyBootstrap/Assets/Font Awesome 7 Free-Solid-900.otf#Font Awesome 7 Free Solid</FontFamily>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://LazyBootstrap/Styles/SukiDialogOverride.axaml" />
+            </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
     <Application.Styles>

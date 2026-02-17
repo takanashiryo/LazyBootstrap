@@ -27,23 +27,23 @@ namespace LazyBootstrap
                 using (var addProcess = Process.Start(addProcessInfo))
                 {
                     addProcess.WaitForExit();
-                    LogSystem.Log("防火墙规则添加完成。");
+                    log?.Invoke("防火墙规则添加完成。");
                 }
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
                 if (ex.NativeErrorCode == 1223)
                 {
-                    LogSystem.Log("用户取消了 UAC 提示，防火墙规则未添加。", LogSystem.LogLevel.Warning);
+                    log?.Invoke("用户取消了 UAC 提示，防火墙规则未添加。");
                 }
                 else
                 {
-                    LogSystem.Log($"防火墙规则处理失败: {ex.Message}", LogSystem.LogLevel.Error);
+                    log?.Invoke($"防火墙规则处理失败: {ex.Message}");
                 }
             }
             catch (Exception ex)
             {
-                LogSystem.Log($"防火墙规则处理失败: {ex.Message}", LogSystem.LogLevel.Error);
+                log?.Invoke($"防火墙规则处理失败: {ex.Message}");
             }
         }
     }

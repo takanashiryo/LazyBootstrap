@@ -38,6 +38,7 @@
 
   <ItemGroup>
     <AvaloniaResource Include="Assets\*.ttf" />
+    <AvaloniaResource Include="Assets\*.otf" />
     <AvaloniaResource Include="Assets\*.png" />
   </ItemGroup>
 

@@ -116,7 +116,7 @@ namespace LazyBootstrap
                     var cfgPath = Path.Combine(baseDir, "config.toml");
                     if (!File.Exists(cfgPath)) return false;
                     var cfg = new ConfigHandler(cfgPath);
-                    var s = cfg.ReadString("Settings", "compatlayerenabled", "false");
+                    var s = cfg.ReadString("Setting", "compatlayerenabled", "false");
                     bool enabled; return bool.TryParse(s, out enabled) && enabled;
                 }
                 catch { return false; }

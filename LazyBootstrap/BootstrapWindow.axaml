@@ -20,6 +20,11 @@
             <Setter Property="HorizontalContentAlignment" Value="Center"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
+        <Style Selector="TextBlock.FaIcon">
+            <Setter Property="FontFamily" Value="{DynamicResource FontAwesomeSolidFamily}"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextAlignment" Value="Center"/>
+        </Style>
     </suki:SukiWindow.Styles>
 
     <Grid>
@@ -30,36 +35,41 @@
                     <TextBlock Text="SukiUI 6.0.3" Opacity="0.75"/>
                 </StackPanel>
             </suki:SukiSideMenu.HeaderContent>
-
+            
             <suki:SukiSideMenu.Items>
                 <suki:SukiSideMenuItem Header="启动">
                     <suki:SukiSideMenuItem.Icon>
-                        <PathIcon Data="M3,2 L13,8 L3,14 Z" Width="14" Height="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14"/>
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <Grid Margin="14" RowDefinitions="*,Auto" RowSpacing="12">
-                            <suki:GlassCard>
-                                <Grid Margin="12">
-                                    <TextBox x:Name="txtLogOutput"
-                                             IsReadOnly="True"
-                                             AcceptsReturn="True"
-                                             TextWrapping="NoWrap"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
-                                             ScrollViewer.VerticalScrollBarVisibility="Auto"/>
-                                </Grid>
-                            </suki:GlassCard>
+                        <Grid Margin="14" RowDefinitions="Auto,*,Auto" RowSpacing="12">
+                            <Grid ColumnDefinitions="Auto,*">
+                                <Button x:Name="btnToggleLaunchLog" Grid.Column="0" Classes="Basic" Click="btnToggleLaunchLog_Click" Content="显示启动日志"/>
+                                <Grid Grid.Column="1"/>
+                            </Grid>
 
-                            <Grid Grid.Row="1" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Bottom">
+                            <Grid x:Name="launchLogContainer" Grid.Row="1" IsVisible="False" Opacity="0">
+                                <ScrollViewer x:Name="launchLogScrollViewer"
+                                              VerticalScrollBarVisibility="Auto"
+                                              HorizontalScrollBarVisibility="Disabled">
+                                    <TextBlock x:Name="txtLogOutput"
+                                               FontSize="18"
+                                               TextWrapping="Wrap"
+                                               Opacity="1"/>
+                                </ScrollViewer>
+                            </Grid>
+
+                            <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Bottom">
                                 <Button x:Name="btnGotoGameSettings" Grid.Column="0" Classes="Basic" Click="btnGotoGameSettings_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <PathIcon Data="M22.7,19 L13.6,9.9 C14.5,7.6 14,5 12.3,3.3 C10.6,1.6 8,1.1 5.7,2 L9.6,5.9 L6.7,8.8 L2.8,4.9 C1.9,7.2 2.4,9.8 4.1,11.5 C5.8,13.2 8.4,13.7 10.7,12.8 L19.8,21.9 C20.2,22.3 20.8,22.3 21.2,21.9 L22.7,20.4 C23.1,20 23.1,19.4 22.7,19 Z" Width="14" Height="14"/>
+                                        <TextBlock Classes="FaIcon" Text="&#xF085;" FontSize="14"/>
                                         <TextBlock Text="设定游戏" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
 
                                 <Button x:Name="btnOpenLog" Grid.Column="1" Classes="Basic" HorizontalContentAlignment="Left" Click="btnOpenLog_Click">
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <PathIcon Data="M2,2 L12,2 L12,14 L2,14 Z M4,5 L10,5 M4,8 L10,8 M4,11 L8,11" Width="14" Height="14"/>
+                                        <TextBlock Classes="FaIcon" Text="&#xF15C;" FontSize="14"/>
                                         <TextBlock Text="查看log" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
@@ -69,13 +79,13 @@
                                 <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="10">
                                     <Button x:Name="btnKillProcesses" Classes="Danger" Click="btnKillProcesses_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <PathIcon Data="M3,3 L13,13 M13,3 L3,13" Width="14" Height="14"/>
+                                            <TextBlock Classes="FaIcon" Text="&#xF00D;" FontSize="14"/>
                                             <TextBlock Text="结束所有进程" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
                                     <Button x:Name="btnStart" Classes="Flat Large" MinWidth="150" Click="btnStart_Click">
                                         <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                            <PathIcon Data="M3,2 L13,8 L3,14 Z" Width="14" Height="14"/>
+                                            <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14"/>
                                             <TextBlock Text="启动" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
@@ -87,7 +97,7 @@
 
                 <suki:SukiSideMenuItem Header="设定">
                     <suki:SukiSideMenuItem.Icon>
-                        <PathIcon Data="M22.7,19 L13.6,9.9 C14.5,7.6 14,5 12.3,3.3 C10.6,1.6 8,1.1 5.7,2 L9.6,5.9 L6.7,8.8 L2.8,4.9 C1.9,7.2 2.4,9.8 4.1,11.5 C5.8,13.2 8.4,13.7 10.7,12.8 L19.8,21.9 C20.2,22.3 20.8,22.3 21.2,21.9 L22.7,20.4 C23.1,20 23.1,19.4 22.7,19 Z" Width="14" Height="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF013;" FontSize="14"/>
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
                         <suki:BusyArea x:Name="settingsBusyArea" Margin="20,14" BusyText="spicecfg 运行中..." HorizontalAlignment="Center" MaxWidth="1240">
@@ -152,9 +162,10 @@
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                                            <ComboBox x:Name="cmbServerPreset" Width="220" HorizontalAlignment="Left"/>
-                                                            <Button x:Name="btnAddServerPreset" Grid.Column="1" Content="新建预设" Click="btnAddServerPreset_Click" MinWidth="20" Classes="Flat"/>
+                                                        <Grid ColumnDefinitions="220,Auto,Auto,*" ColumnSpacing="6">
+                                                            <ComboBox x:Name="cmbServerPreset" Grid.Column="0" Width="220" HorizontalAlignment="Left"/>
+                                                            <Button x:Name="btnAddServerPreset" Grid.Column="1" Content="新建" Click="btnAddServerPreset_Click" MinWidth="56" MinHeight="28" Padding="10,4" Classes="Flat"/>
+                                                            <Button x:Name="btnDeleteServerPreset" Grid.Column="2" Content="删除" Click="btnDeleteServerPreset_Click" MinWidth="56" MinHeight="28" Padding="10,4" Classes="Flat"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
                                                             <TextBlock Text="服务器地址" VerticalAlignment="Center"/>
@@ -311,14 +322,14 @@
                 
                 <suki:SukiSideMenuItem Header="显示器配置">
                     <suki:SukiSideMenuItem.Icon>
-                        <PathIcon Data="M1,2 L15,2 L15,11 L1,11 Z M6,12 L10,12 L10,14 L6,14 Z" Width="14" Height="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF390;" FontSize="14"/>
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
                         <Grid Margin="14" RowDefinitions="Auto,*,Auto" ColumnDefinitions="360,*" ColumnSpacing="14" RowSpacing="10">
                             <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10" Margin="0,0,0,10">
                                 <StackPanel Spacing="2">
                                     <TextBlock Text="显示器配置" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                    <TextBlock Text="Switch to enable display configure" Opacity="0.7"/>
+                                    <TextBlock Text="点击开关启用自动显示器配置" Opacity="0.7"/>
                                 </StackPanel>
                                 <Grid Grid.Column="1"/>
                                 <ToggleSwitch x:Name="tglDisplayConfigEnabled" Grid.Column="2" VerticalAlignment="Center" IsChecked="False"/>
@@ -330,33 +341,37 @@
 
                             <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="*,Auto" RowSpacing="12">
                                 <suki:GlassCard>
-                                    <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="300" Height="540">
-                                        <Image Source="/Assets/cabinet.png" Stretch="Uniform"/>
+                                    <suki:BusyArea x:Name="displayConfigDisabledMask"
+                                                   IsBusy="True"
+                                                   BusyText="显示器配置未启用">
+                                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="300" Height="540">
+                                            <Image Source="/Assets/cabinet.png" Stretch="Uniform"/>
 
-                                        <Canvas Width="300" Height="540" IsHitTestVisible="False">
-                                            <Ellipse x:Name="dotMainGlow" Canvas.Left="124" Canvas.Top="157" Width="52" Height="52" Fill="#35FFFFFF"/>
-                                            <Ellipse x:Name="dotMainCore" Canvas.Left="139" Canvas.Top="172" Width="22" Height="22" Fill="White"/>
-                                            <Ellipse x:Name="dotMainSelectedRing" Canvas.Left="127" Canvas.Top="160" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
+                                            <Canvas Width="300" Height="540" IsHitTestVisible="False">
+                                                <Ellipse x:Name="dotMainGlow" Canvas.Left="124" Canvas.Top="157" Width="52" Height="52" Fill="#35FFFFFF"/>
+                                                <Ellipse x:Name="dotMainCore" Canvas.Left="139" Canvas.Top="172" Width="22" Height="22" Fill="White"/>
+                                                <Ellipse x:Name="dotMainSelectedRing" Canvas.Left="127" Canvas.Top="160" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
 
-                                            <Ellipse x:Name="dotSubGlow" Canvas.Left="124" Canvas.Top="303" Width="52" Height="52" Fill="#35FFFFFF"/>
-                                            <Ellipse x:Name="dotSubCore" Canvas.Left="139" Canvas.Top="318" Width="22" Height="22" Fill="White"/>
-                                            <Ellipse x:Name="dotSubSelectedRing" Canvas.Left="127" Canvas.Top="306" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
-                                        </Canvas>
+                                                <Ellipse x:Name="dotSubGlow" Canvas.Left="124" Canvas.Top="303" Width="52" Height="52" Fill="#35FFFFFF"/>
+                                                <Ellipse x:Name="dotSubCore" Canvas.Left="139" Canvas.Top="318" Width="22" Height="22" Fill="White"/>
+                                                <Ellipse x:Name="dotSubSelectedRing" Canvas.Left="127" Canvas.Top="306" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
+                                            </Canvas>
 
-                                        <Button x:Name="btnSelectMainScreenArea"
-                                                Width="54" Height="54"
-                                                HorizontalAlignment="Center" VerticalAlignment="Top"
-                                                Margin="0,155,0,0"
-                                                Background="Transparent" BorderBrush="Transparent"
-                                                Click="btnSelectMainScreenArea_Click"/>
+                                            <Button x:Name="btnSelectMainScreenArea"
+                                                    Width="54" Height="54"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                    Margin="0,155,0,0"
+                                                    Background="Transparent" BorderBrush="Transparent"
+                                                    Click="btnSelectMainScreenArea_Click"/>
 
-                                        <Button x:Name="btnSelectSubScreenArea"
-                                                Width="54" Height="54"
-                                                HorizontalAlignment="Center" VerticalAlignment="Top"
-                                                Margin="0,301,0,0"
-                                                Background="Transparent" BorderBrush="Transparent"
-                                                Click="btnSelectSubScreenArea_Click"/>
-                                    </Grid>
+                                            <Button x:Name="btnSelectSubScreenArea"
+                                                    Width="54" Height="54"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                    Margin="0,301,0,0"
+                                                    Background="Transparent" BorderBrush="Transparent"
+                                                    Click="btnSelectSubScreenArea_Click"/>
+                                        </Grid>
+                                    </suki:BusyArea>
                                 </suki:GlassCard>
 
                                 <suki:GlassCard Grid.Row="1">
@@ -382,7 +397,7 @@
                                     <StackPanel x:Name="panelMainScreenConfig" Spacing="12" IsVisible="False">
                                         <StackPanel>
                                             <TextBlock Text="主屏设置" FontSize="16" FontWeight="SemiBold"/>
-                                            <TextBlock Text="Settings of main screen" Opacity="0.7"/>
+                                            <TextBlock Text="设置主屏启动时参数" Opacity="0.7"/>
                                         </StackPanel>
 
                                         <suki:GlassCard>
@@ -414,7 +429,7 @@
                                     <StackPanel x:Name="panelSubScreenConfig" Spacing="12" IsVisible="False">
                                         <StackPanel>
                                             <TextBlock Text="副屏设置" FontSize="16" FontWeight="SemiBold"/>
-                                            <TextBlock Text="Settings of sub screen" Opacity="0.7"/>
+                                            <TextBlock Text="设置副屏启动时参数" Opacity="0.7"/>
                                         </StackPanel>
 
                                         <suki:GlassCard>
@@ -458,44 +473,64 @@
 
                 <suki:SukiSideMenuItem Header="工具">
                     <suki:SukiSideMenuItem.Icon>
-                        <PathIcon Data="M2,3 L6,3 L6,1 L10,1 L10,3 L14,3 L14,14 L2,14 Z" Width="14" Height="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF552;" FontSize="14"/>
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <Grid Margin="14" RowDefinitions="Auto,*">
-                            <TextBlock Text="常用工具" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,10"/>
-                            <Grid Grid.Row="1" ColumnDefinitions="*,*" RowDefinitions="*,*" ColumnSpacing="12" RowSpacing="12">
-                                <suki:GlassCard Grid.Row="0" Grid.Column="0">
-                                    <StackPanel Margin="14" Spacing="10">
-                                        <TextBlock Text="清除 Data_Mods 缓存" FontWeight="SemiBold"/>
-                                        <Button x:Name="btnClearCache" Content="执行" Click="btnClearCache_Click"/>
-                                    </StackPanel>
+                        <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <StackPanel Spacing="10">
+                                <TextBlock Text="常用工具" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6"/>
+
+                                <suki:GlassCard>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF51A;" FontSize="18"/>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="清除模组缓存" FontWeight="SemiBold"/>
+                                            <TextBlock Text="清除 data_mods 的缓存，更新游戏后必须清除以重建缓存" Opacity="0.72" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button x:Name="btnClearCache" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="btnClearCache_Click"/>
+                                    </Grid>
                                 </suki:GlassCard>
-                                <suki:GlassCard Grid.Row="0" Grid.Column="1">
-                                    <StackPanel Margin="14" Spacing="10">
-                                        <TextBlock Text="添加防火墙规则" FontWeight="SemiBold"/>
-                                        <Button x:Name="btnAddFirewallRule" Content="执行" Click="btnAddFirewallRule_Click"/>
-                                    </StackPanel>
+
+                                <suki:GlassCard>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF3ED;" FontSize="18"/>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="添加防火墙规则" FontWeight="SemiBold"/>
+                                            <TextBlock Text="为游戏主程序放行网络权限，避免连接被系统阻止出现NETWORK ERROR" Opacity="0.72" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button x:Name="btnAddFirewallRule" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="btnAddFirewallRule_Click"/>
+                                    </Grid>
                                 </suki:GlassCard>
-                                <suki:GlassCard Grid.Row="1" Grid.Column="0">
-                                    <StackPanel Margin="14" Spacing="10">
-                                        <TextBlock Text="打开音频控制面板" FontWeight="SemiBold"/>
-                                        <Button x:Name="btnAudioPanel" Content="执行" Click="btnAudioPanel_Click"/>
-                                    </StackPanel>
+
+                                <suki:GlassCard>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF028;" FontSize="18"/>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="打开音频控制面板" FontWeight="SemiBold"/>
+                                            <TextBlock Text="快捷打开旧版音频控制面板" Opacity="0.72" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button x:Name="btnAudioPanel" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="btnAudioPanel_Click"/>
+                                    </Grid>
                                 </suki:GlassCard>
-                                <suki:GlassCard Grid.Row="1" Grid.Column="1">
-                                    <StackPanel Margin="14" Spacing="10">
-                                        <TextBlock Text="安装运行库" FontWeight="SemiBold"/>
-                                        <Button x:Name="btnInstallRuntime" Content="执行" Click="btnInstallRuntime_Click"/>
-                                    </StackPanel>
+
+                                <suki:GlassCard>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF019;" FontSize="18"/>
+                                        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                            <TextBlock Text="安装运行库" FontWeight="SemiBold"/>
+                                            <TextBlock Text="安装必要运行库，例如Direct X、Visual C++ Redist" Opacity="0.72" TextWrapping="Wrap"/>
+                                        </StackPanel>
+                                        <Button x:Name="btnInstallRuntime" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="btnInstallRuntime_Click"/>
+                                    </Grid>
                                 </suki:GlassCard>
-                            </Grid>
-                        </Grid>
+                            </StackPanel>
+                        </ScrollViewer>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
 
                 <suki:SukiSideMenuItem Header="信息">
                     <suki:SukiSideMenuItem.Icon>
-                        <PathIcon Data="M8,1 A7,7 0 1 1 7.99,1 Z M7.2,6 L8.8,6 L8.8,12 L7.2,12 Z M7.2,4 L8.8,4 L8.8,5.2 L7.2,5.2 Z" Width="14" Height="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF05A;" FontSize="14"/>
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
                         <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
@@ -514,7 +549,7 @@
                                 <suki:GlassCard>
                                     <StackPanel Margin="14" Spacing="10">
                                         <TextBlock Text="环境检测结果" FontSize="16" FontWeight="SemiBold"/>
-                                        <StackPanel x:Name="panelEnvScanResults" Spacing="6"/>
+                                        <StackPanel x:Name="panelEnvScanResults" Spacing="8"/>
                                     </StackPanel>
                                 </suki:GlassCard>
                             </StackPanel>

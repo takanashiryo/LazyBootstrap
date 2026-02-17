@@ -363,11 +363,10 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Custom
-Instructions.md
-Instructions-*.md
 .vscode/
 .github/
 build/
 .idea/
 .agents/
 Design/
+SUKIUI_DEMO_ANALYSIS.md
