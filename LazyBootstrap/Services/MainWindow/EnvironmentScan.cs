@@ -64,6 +64,11 @@ namespace LazyBootstrap
             // 局部函数：无对外暴露，保持单方法结构
             string GetCpuName()
             {
+                if (!OperatingSystem.IsWindows())
+                {
+                    return "未知处理器";
+                }
+
                 try
                 {
                     using (var k = Registry.LocalMachine.OpenSubKey(@"HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0"))
@@ -79,6 +84,11 @@ namespace LazyBootstrap
             List<string> GetGpuNames()
             {
                 var set = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                if (!OperatingSystem.IsWindows())
+                {
+                    return set.ToList();
+                }
+
                 try
                 {
                     using (var root = Registry.LocalMachine.OpenSubKey(@"SYSTEM\\CurrentControlSet\\Control\\Video"))

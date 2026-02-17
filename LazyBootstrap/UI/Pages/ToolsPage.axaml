@@ -1,0 +1,54 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             x:Class="LazyBootstrap.UI.Pages.ToolsPage">
+    <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="10">
+            <TextBlock Text="常用工具" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6"/>
+
+            <suki:GlassCard>
+                <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                    <TextBlock Classes="FaIcon" Text="&#xF51A;" FontSize="18"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="清除模组缓存" FontWeight="SemiBold"/>
+                        <TextBlock Text="清除 data_mods 的缓存，更新游戏后必须清除以重建缓存" Opacity="0.72" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button x:Name="ClearCacheButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>
+                </Grid>
+            </suki:GlassCard>
+
+            <suki:GlassCard>
+                <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                    <TextBlock Classes="FaIcon" Text="&#xF3ED;" FontSize="18"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="添加防火墙规则" FontWeight="SemiBold"/>
+                        <TextBlock Text="为游戏主程序放行网络权限，避免连接被系统阻止出现NETWORK ERROR" Opacity="0.72" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button x:Name="AddFirewallRuleButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>
+                </Grid>
+            </suki:GlassCard>
+
+            <suki:GlassCard>
+                <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                    <TextBlock Classes="FaIcon" Text="&#xF028;" FontSize="18"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="打开音频控制面板" FontWeight="SemiBold"/>
+                        <TextBlock Text="快捷打开旧版音频控制面板" Opacity="0.72" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button x:Name="AudioPanelButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>
+                </Grid>
+            </suki:GlassCard>
+
+            <suki:GlassCard>
+                <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                    <TextBlock Classes="FaIcon" Text="&#xF019;" FontSize="18"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="安装运行库" FontWeight="SemiBold"/>
+                        <TextBlock Text="安装必要运行库，例如Direct X、Visual C++ Redist" Opacity="0.72" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button x:Name="InstallRuntimeButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>
+                </Grid>
+            </suki:GlassCard>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,26 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             x:Class="LazyBootstrap.UI.Pages.InfoPage">
+    <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Spacing="12">
+            <suki:GlassCard>
+                <Grid Margin="14" ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto">
+                    <TextBlock Text="机台属性" VerticalAlignment="Center"/>
+                    <TextBox x:Name="CurrentVersionTextBox" Grid.Column="1" IsReadOnly="True"/>
+                    <TextBlock Text="当前游戏版本" Grid.Row="1" VerticalAlignment="Center" Margin="0,8,0,0"/>
+                    <TextBox x:Name="RevisionTextBox" Grid.Row="1" Grid.Column="1" Margin="0,8,0,0" IsReadOnly="True"/>
+                    <TextBlock Text="启动器版本" Grid.Row="2" VerticalAlignment="Center" Margin="0,8,0,0"/>
+                    <TextBox x:Name="LauncherVersionTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8,0,0" IsReadOnly="True"/>
+                </Grid>
+            </suki:GlassCard>
+
+            <suki:GlassCard>
+                <StackPanel Margin="14" Spacing="10">
+                    <TextBlock Text="环境检测结果" FontSize="16" FontWeight="SemiBold"/>
+                    <StackPanel x:Name="PanelEnvScanResults" Spacing="8"/>
+                </StackPanel>
+            </suki:GlassCard>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

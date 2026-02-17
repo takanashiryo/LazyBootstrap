@@ -228,72 +228,12 @@ public class ConfigHandler
 
     private static string BuildTomlLine(string key, string value)
     {
-        return $"{key} = \"{EscapeTomlString(value)}\"";
+        return $"{key} = \"{TomlTextShared.EscapeTomlString(value)}\"";
     }
 
     private static void NormalizeBlankLines(List<string> lines)
     {
-        if (lines == null || lines.Count == 0)
-        {
-            return;
-        }
-
-        var normalized = new List<string>(lines.Count);
-        bool lastWasBlank = false;
-        foreach (var line in lines)
-        {
-            bool isBlank = string.IsNullOrWhiteSpace(line);
-            if (isBlank)
-            {
-                if (lastWasBlank)
-                {
-                    continue;
-                }
-                normalized.Add(string.Empty);
-                lastWasBlank = true;
-            }
-            else
-            {
-                normalized.Add(line);
-                lastWasBlank = false;
-            }
-        }
-
-        while (normalized.Count > 0 && string.IsNullOrWhiteSpace(normalized[^1]))
-        {
-            normalized.RemoveAt(normalized.Count - 1);
-        }
-
-        for (int i = normalized.Count - 1; i >= 0; i--)
-        {
-            if (!string.IsNullOrWhiteSpace(normalized[i]))
-            {
-                continue;
-            }
-
-            int prev = i - 1;
-            int next = i + 1;
-            if (prev < 0 || next >= normalized.Count)
-            {
-                normalized.RemoveAt(i);
-                continue;
-            }
-
-            string prevLine = normalized[prev].Trim();
-            string nextLine = normalized[next].Trim();
-            bool keepAsSectionSeparator = !string.IsNullOrWhiteSpace(prevLine)
-                && !string.IsNullOrWhiteSpace(nextLine)
-                && !prevLine.StartsWith("[", StringComparison.Ordinal)
-                && nextLine.StartsWith("[", StringComparison.Ordinal);
-
-            if (!keepAsSectionSeparator)
-            {
-                normalized.RemoveAt(i);
-            }
-        }
-
-        lines.Clear();
-        lines.AddRange(normalized);
+        TomlTextShared.NormalizeBlankLines(lines, preserveSectionSeparator: true);
     }
 
     private static bool TryGetSectionBounds(List<string> lines, string sectionName, out int headerIndex, out int contentStart, out int contentEndExclusive)
@@ -606,7 +546,7 @@ public class ConfigHandler
                 sb.Append(kv.Key)
                   .Append(" = ")
                   .Append('"')
-                  .Append(EscapeTomlString(kv.Value ?? string.Empty))
+                                    .Append(TomlTextShared.EscapeTomlString(kv.Value ?? string.Empty))
                                     .Append('"')
                                     .AppendLine();
             }
@@ -685,13 +625,4 @@ public class ConfigHandler
         return rawValue;
     }
 
-    private static string EscapeTomlString(string value)
-    {
-        return value
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\r", "\\r")
-            .Replace("\n", "\\n")
-            .Replace("\t", "\\t");
-    }
 }

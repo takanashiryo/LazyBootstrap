@@ -26,6 +26,11 @@ namespace LazyBootstrap
 
         private static bool EnsureElevated(string[] args)
         {
+            if (!OperatingSystem.IsWindows())
+            {
+                return true;
+            }
+
             try
             {
                 using (var identity = WindowsIdentity.GetCurrent())
