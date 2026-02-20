@@ -36,6 +36,8 @@ namespace LazyBootstrap
 
         public static Task RunAsync(Action<int, string> progress)
         {
+            return Task.Run(() =>
+            {
             // 统一的进度上报（不传递 message 内容，仅数值）
             void Report(int stepIndex) { try { progress?.Invoke((int)Math.Round((double)stepIndex * 100 / StepCount), ""); } catch { } }
 
@@ -278,7 +280,7 @@ namespace LazyBootstrap
             _lastItems = items;
 
             Report(StepCount);
-            return Task.CompletedTask;
+            });
         }
     }
 }

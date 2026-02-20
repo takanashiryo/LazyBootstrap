@@ -48,7 +48,7 @@ public class ConfigHandler
                 Directory.CreateDirectory(dir);
             }
 
-            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
+            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), TomlTextShared.Utf8NoBom);
         }
     }
 
@@ -101,7 +101,7 @@ public class ConfigHandler
             }
 
             NormalizeBlankLines(lines);
-            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
+            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), TomlTextShared.Utf8NoBom);
         }
     }
 
@@ -160,7 +160,7 @@ public class ConfigHandler
             }
 
             NormalizeBlankLines(lines);
-            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
+            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), TomlTextShared.Utf8NoBom);
         }
     }
 
@@ -552,7 +552,7 @@ public class ConfigHandler
             }
         }
 
-        File.WriteAllText(_path, sb.ToString(), new UTF8Encoding(false));
+        File.WriteAllText(_path, sb.ToString(), TomlTextShared.Utf8NoBom);
     }
 
     private static string ParseTomlValue(string rawValue)

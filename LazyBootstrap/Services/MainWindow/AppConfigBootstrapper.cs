@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 
 namespace LazyBootstrap
 {
@@ -99,7 +98,7 @@ namespace LazyBootstrap
                 "pcbid = \"\""
             };
 
-            File.WriteAllText(configPath, string.Join(Environment.NewLine, lines), new UTF8Encoding(false));
+            File.WriteAllText(configPath, string.Join(Environment.NewLine, lines), TomlTextShared.Utf8NoBom);
         }
     }
 }

@@ -472,7 +472,7 @@ namespace LazyBootstrap
                 var normalized = Regex.Replace(original, "(?<=\\S)[ \\\t]+/>", "/>" );
                 if (!string.Equals(original, normalized, StringComparison.Ordinal))
                 {
-                    File.WriteAllText(filePath, normalized, new UTF8Encoding(false));
+                    File.WriteAllText(filePath, normalized, TomlTextShared.Utf8NoBom);
                 }
             }
             catch (Exception ex)

@@ -218,7 +218,7 @@ namespace LazyBootstrap
             }
 
             NormalizeBlankLines(kept);
-            File.WriteAllText(_configPath, string.Join(Environment.NewLine, kept), new UTF8Encoding(false));
+            File.WriteAllText(_configPath, string.Join(Environment.NewLine, kept), TomlTextShared.Utf8NoBom);
         }
 
         private static void NormalizeBlankLines(List<string> lines)

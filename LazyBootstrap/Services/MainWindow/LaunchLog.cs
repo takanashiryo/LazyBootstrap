@@ -40,21 +40,41 @@ namespace LazyBootstrap
                 var lines = normalized.Split('\n');
                 foreach (var line in lines)
                 {
+                    string entry;
                     if (string.IsNullOrEmpty(line))
                     {
-                        LogOutputTextBlock.Text += Environment.NewLine;
-                        continue;
+                        entry = string.Empty;
+                    }
+                    else
+                    {
+                        string prefix = type switch
+                        {
+                            NotificationType.Error => "[错误] ",
+                            NotificationType.Warning => "[警告] ",
+                            _ => string.Empty
+                        };
+
+                        entry = $"[{DateTime.Now:HH:mm:ss}] {prefix}{line}";
                     }
 
-                    string prefix = type switch
-                    {
-                        NotificationType.Error => "[错误] ",
-                        NotificationType.Warning => "[警告] ",
-                        _ => string.Empty
-                    };
+                    _launchLogLineQueue.Enqueue(entry);
+                    _launchLogBuffer.AppendLine(entry);
 
-                    LogOutputTextBlock.Text += $"[{DateTime.Now:HH:mm:ss}] {prefix}{line}{Environment.NewLine}";
+                    while (_launchLogLineQueue.Count > MaxLaunchLogLines)
+                    {
+                        var removed = _launchLogLineQueue.Dequeue();
+                        int removeLength = removed.Length + Environment.NewLine.Length;
+                        if (removeLength >= _launchLogBuffer.Length)
+                        {
+                            _launchLogBuffer.Clear();
+                            break;
+                        }
+
+                        _launchLogBuffer.Remove(0, removeLength);
+                    }
                 }
+
+                LogOutputTextBlock.Text = _launchLogBuffer.ToString();
 
                 if (LaunchLogScrollViewer != null)
                 {
@@ -188,7 +208,18 @@ namespace LazyBootstrap
             LaunchLogContainer.RenderTransform = new ScaleTransform(0.12, 0.12);
             UpdateLaunchLogToggleButtonText();
 
-            if (clearOutput && LogOutputTextBlock != null)
+            if (clearOutput)
+            {
+                ClearLaunchOutput();
+            }
+        }
+
+        private void ClearLaunchOutput()
+        {
+            _launchLogLineQueue.Clear();
+            _launchLogBuffer.Clear();
+
+            if (LogOutputTextBlock != null)
             {
                 LogOutputTextBlock.Text = string.Empty;
             }

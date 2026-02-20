@@ -242,27 +242,10 @@ namespace LazyBootstrap
                     if (RuntimeStatusText != null) RuntimeStatusText.Text = "正在安装 DirectX...";
                     await Task.Delay(200); // Allow UI to update
 
-                    var dxResult = await Task.Run(() =>
-                    {
-                        try
-                        {
-                            var startInfo = new ProcessStartInfo
-                            {
-                                FileName = dxSetupPath,
-                                Arguments = "/silent",
-                                WorkingDirectory = Path.Combine(runtimePath, "directx"),
-                                UseShellExecute = true,
-                                Verb = "runas"
-                            };
-                            var process = Process.Start(startInfo);
-                            process?.WaitForExit();
-                            return process?.ExitCode ?? -1;
-                        }
-                        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
-                        {
-                            return -1223; // User cancelled UAC
-                        }
-                    });
+                    var dxResult = await RunElevatedInstallerAsync(
+                        dxSetupPath,
+                        "/silent",
+                        Path.Combine(runtimePath, "directx"));
 
                     if (dxResult == -1223)
                     {
@@ -281,27 +264,10 @@ namespace LazyBootstrap
                     if (RuntimeStatusText != null) RuntimeStatusText.Text = "正在安装 Visual C++ Redistributable...";
                     await Task.Delay(200);
 
-                    var vcResult = await Task.Run(() =>
-                    {
-                        try
-                        {
-                            var startInfo = new ProcessStartInfo
-                            {
-                                FileName = vcRedistPath,
-                                Arguments = "/y",
-                                WorkingDirectory = Path.Combine(runtimePath, "vcredist"),
-                                UseShellExecute = true,
-                                Verb = "runas"
-                            };
-                            var process = Process.Start(startInfo);
-                            process?.WaitForExit();
-                            return process?.ExitCode ?? -1;
-                        }
-                        catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
-                        {
-                            return -1223;
-                        }
-                    });
+                    var vcResult = await RunElevatedInstallerAsync(
+                        vcRedistPath,
+                        "/y",
+                        Path.Combine(runtimePath, "vcredist"));
 
                     if (vcResult == -1223)
                     {
@@ -333,6 +299,37 @@ namespace LazyBootstrap
                     RuntimeInstallOverlay.IsVisible = false;
                 }
                 SetControlsEnabled(true);
+            }
+        }
+
+        private static async Task<int> RunElevatedInstallerAsync(string filePath, string arguments, string workingDirectory)
+        {
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = filePath,
+                    Arguments = arguments,
+                    WorkingDirectory = workingDirectory,
+                    UseShellExecute = true,
+                    Verb = "runas"
+                };
+
+                using (var process = Process.Start(startInfo))
+                {
+                    if (process == null)
+                    {
+                        return -1;
+                    }
+
+                    await process.WaitForExitAsync();
+                    return process.ExitCode;
+                }
+            }
+            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                // UAC cancelled by user.
+                return -1223;
             }
         }
 

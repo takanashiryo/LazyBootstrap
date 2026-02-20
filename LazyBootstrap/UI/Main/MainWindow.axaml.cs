@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
@@ -80,6 +81,9 @@ namespace LazyBootstrap
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
+        private const int MaxLaunchLogLines = 1200;
+        private readonly StringBuilder _launchLogBuffer = new StringBuilder(16 * 1024);
+        private readonly Queue<string> _launchLogLineQueue = new Queue<string>(MaxLaunchLogLines + 64);
 
         private enum DisplaySelectionTarget
         {

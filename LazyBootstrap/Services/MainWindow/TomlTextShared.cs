@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 
 internal static class TomlTextShared
 {
+    public static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
+
     public static string EscapeTomlString(string value)
     {
         return (value ?? string.Empty)

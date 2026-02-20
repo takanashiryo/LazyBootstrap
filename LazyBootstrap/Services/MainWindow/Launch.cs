@@ -22,7 +22,7 @@ namespace LazyBootstrap
             SetControlsEnabled(false);
             if (StatusLabel != null) StatusLabel.Text = "启动中...";
             await ShowLaunchLogAreaWithAnimationAsync();
-            if (LogOutputTextBlock != null) LogOutputTextBlock.Text = string.Empty;
+            ClearLaunchOutput();
             AppendLaunchOutput("开始启动...");
 
             try
