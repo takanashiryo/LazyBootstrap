@@ -21,14 +21,15 @@
                         </suki:SettingsLayoutItem.Content>
                     </suki:SettingsLayoutItem>
 
-                    <suki:SettingsLayoutItem Header="兼容层">
+                    <suki:SettingsLayoutItem Header="AMD/Intel显卡兼容层">
                         <suki:SettingsLayoutItem.Content>
                             <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                 <StackPanel Spacing="12">
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                                        <TextBlock Text="启用兼容层" VerticalAlignment="Center"/>
+                                        <TextBlock Text="启用显卡兼容层" VerticalAlignment="Center"/>
                                         <ToggleSwitch x:Name="CompatLayerToggleSwitch" Grid.Column="1"/>
                                     </Grid>
+                                    <TextBlock Text="AMD与Intel显卡必须要开启，NVIDIA显卡一定不能开启" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-20,0,0"/>
                                     <suki:BusyArea x:Name="CompatRenderModeBusyArea" BusyText="兼容层启用中...">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <RadioButton x:Name="CompatDx9on12RadioButton" GroupName="CompatType" Classes="GigaChips" IsChecked="True">
@@ -63,8 +64,8 @@
                                 <StackPanel Spacing="12">
                                     <Grid ColumnDefinitions="220,Auto,Auto,*" ColumnSpacing="6">
                                         <ComboBox x:Name="ServerPresetComboBox" Grid.Column="0" Width="220" HorizontalAlignment="Left"/>
-                                        <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" MinWidth="56" MinHeight="28" Padding="10,4" Classes="Flat"/>
-                                        <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" MinWidth="56" MinHeight="28" Padding="10,4" Classes="Flat"/>
+                                        <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic"/>
+                                        <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic"/>
                                     </Grid>
                                     <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
                                         <TextBlock Text="服务器地址" VerticalAlignment="Center"/>
