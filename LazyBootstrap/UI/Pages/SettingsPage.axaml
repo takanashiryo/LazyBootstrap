@@ -1,0 +1,165 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:generic="clr-namespace:System.Collections.Generic;assembly=System.Collections"
+             xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+             x:Class="LazyBootstrap.UI.Pages.SettingsPage">
+    <suki:BusyArea x:Name="SettingsBusyArea" Margin="20,14" BusyText="spicecfg 运行中..." HorizontalAlignment="Center" MaxWidth="1240">
+        <suki:SettingsLayout x:Name="GameSettingsLayout" Margin="0,6,0,0">
+            <suki:SettingsLayout.Items>
+                <generic:List x:TypeArguments="suki:SettingsLayoutItem">
+                    <suki:SettingsLayoutItem Header="基础">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Button x:Name="EditConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="编辑 spicecfg"/>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                        <TextBlock Text="不启动氧无" VerticalAlignment="Center"/>
+                                        <ToggleSwitch x:Name="NoAsphyxiaToggleSwitch" Grid.Column="1"/>
+                                    </Grid>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="AMD/Intel显卡兼容层">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                        <TextBlock Text="启用显卡兼容层" VerticalAlignment="Center"/>
+                                        <ToggleSwitch x:Name="CompatLayerToggleSwitch" Grid.Column="1"/>
+                                    </Grid>
+                                    <TextBlock Text="AMD与Intel显卡必须要开启，NVIDIA显卡一定不能开启" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-20,0,0"/>
+                                    <suki:BusyArea x:Name="CompatRenderModeBusyArea" BusyText="兼容层启用中...">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <RadioButton x:Name="CompatDx9on12RadioButton" GroupName="CompatType" Classes="GigaChips" IsChecked="True">
+                                                <StackPanel Spacing="1">
+                                                    <TextBlock Text="dx9on12" FontSize="16" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="spice2x内置，最常用的模式" Opacity="0.7"/>
+                                                </StackPanel>
+                                            </RadioButton>
+                                            <RadioButton x:Name="CompatDx9on12ExternalRadioButton" GroupName="CompatType" Classes="GigaChips">
+                                                <StackPanel Spacing="1">
+                                                    <TextBlock Text="dx9on12 (External)" FontSize="16" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="外置版，可能比内置的快" Opacity="0.7"/>
+                                                </StackPanel>
+                                            </RadioButton>
+                                            <RadioButton x:Name="CompatDxvkRadioButton" GroupName="CompatType" Classes="GigaChips">
+                                                <StackPanel Spacing="1">
+                                                    <TextBlock Text="dxvk" FontSize="16" FontWeight="SemiBold"/>
+                                                    <TextBlock Text="Vulkan 转译模式" Opacity="0.7"/>
+                                                </StackPanel>
+                                            </RadioButton>
+                                        </StackPanel>
+                                    </suki:BusyArea>
+                                    <TextBlock x:Name="CompatStatusTextBlock" Text="" Opacity="0.75"/>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="服务器设置">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="220,Auto,Auto,*" ColumnSpacing="6">
+                                        <ComboBox x:Name="ServerPresetComboBox" Grid.Column="0" Width="220" HorizontalAlignment="Left"/>
+                                        <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic"/>
+                                        <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
+                                        <TextBlock Text="服务器地址" VerticalAlignment="Center"/>
+                                        <TextBox x:Name="ServerAddressTextBox" Grid.Column="1"/>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
+                                        <TextBlock Text="PCBID" VerticalAlignment="Center"/>
+                                        <TextBox x:Name="PcbIdTextBox" Grid.Column="1"/>
+                                    </Grid>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="游戏设定">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="禁用副屏" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvDisableSubDisplayToggleSwitch" Grid.Column="1"/></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="网络抓包（NetDump）" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvNetDumpToggleSwitch" Grid.Column="1"/></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="大小核优化" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvPCoreOptimizationToggleSwitch" Grid.Column="1"/></Grid>
+                                    <TextBlock Text="针对 Intel 第12代酷睿及之后的处理器" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="显示光标 &amp; 触控模拟" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvShowCursorTouchSimToggleSwitch" Grid.Column="1"/></Grid>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="图形设定">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口化启动" VerticalAlignment="Center"/><ToggleSwitch x:Name="WindowedToggleSwitch" Grid.Column="1"/></Grid>
+                                    <TextBlock Text="开启时副屏也会窗口化" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                    <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口模式" VerticalAlignment="Center"/><ComboBox x:Name="AdvWindowModeComboBox" Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="默认"/><ComboBoxItem Content="无边框"/><ComboBoxItem Content="可变窗口"/></ComboBox></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="副屏无边框" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSubBorderlessToggleSwitch" Grid.Column="1"/></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvWindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
+                                    <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口大小" VerticalAlignment="Center"/><TextBox x:Name="AdvWindowSizeTextBox" Grid.Column="1" Watermark="1080,1920"/></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="使用单一显示适配器" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSingleAdapterToggleSwitch" Grid.Column="1"/></Grid>
+                                    <TextBlock Text="针对笔记本等独显核显混合输出设备，开启后仅连接主屏所属显卡" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="图形（副屏）">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSubWindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="强制进行渲染" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSubForceRenderToggleSwitch" Grid.Column="1"/></Grid>
+                                    <TextBlock Text="若副屏黑屏、闪烁、一帧一帧显示，可尝试开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="原生触控输入" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvNativeTouchToggleSwitch" Grid.Column="1"/></Grid>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="音频">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="ASIO驱动" VerticalAlignment="Center"/><TextBox x:Name="AdvAsioDriverTextBox" Grid.Column="1" Watermark="驱动名"/></Grid>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="读卡器">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="CardIO HID Reader支持" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvCardIoToggleSwitch" Grid.Column="1"/></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="HID SmartCard支持" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvHidSmartCardToggleSwitch" Grid.Column="1"/></Grid>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+
+                    <suki:SettingsLayoutItem Header="杂项">
+                        <suki:SettingsLayoutItem.Content>
+                            <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                <StackPanel Spacing="12">
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="切换至便携模式" VerticalAlignment="Center"/><ToggleSwitch x:Name="PortableModeToggleSwitch" Grid.Column="1" IsChecked="False"/></Grid>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="False">
+                                        <Button x:Name="LoadCompatButton" Content="加载兼容层"/>
+                                        <Button x:Name="UnloadCompatButton" Content="卸载兼容层"/>
+                                        <ComboBox x:Name="CompatTypeComboBox" Width="150"/>
+                                    </StackPanel>
+                                    <TextBlock Text="更多功能请前往spicecfg调整" Opacity="0.7" FontSize="12" Margin="0,2,0,4" HorizontalAlignment="Center" TextAlignment="Center"/>
+                                </StackPanel>
+                            </suki:GlassCard>
+                        </suki:SettingsLayoutItem.Content>
+                    </suki:SettingsLayoutItem>
+                </generic:List>
+            </suki:SettingsLayout.Items>
+        </suki:SettingsLayout>
+    </suki:BusyArea>
+</UserControl>

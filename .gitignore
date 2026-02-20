@@ -362,7 +362,11 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 
-Introduction.md
-dist/
+# Custom
 .vscode/
 .github/
+build/
+.idea/
+.agents/
+Design/
+SUKIUI_DEMO_ANALYSIS.md
