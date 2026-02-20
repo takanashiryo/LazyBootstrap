@@ -37,7 +37,7 @@
 
             <suki:GlassCard Grid.Row="1">
                 <StackPanel Margin="14" Spacing="10">
-                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="退出游戏后恢复显示器布局" VerticalAlignment="Center"/><ToggleSwitch x:Name="NoRestoreRotationToggleSwitch" Grid.Column="1" VerticalAlignment="Center" IsChecked="True"/></Grid>
+                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="退出游戏后恢复显示器布局" VerticalAlignment="Center"/><ToggleSwitch x:Name="ExitRestoreToggleSwitch" Grid.Column="1" VerticalAlignment="Center" IsChecked="False"/></Grid>
                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="Windows触控屏设置" VerticalAlignment="Center"/><Button x:Name="TouchPanelButton" Grid.Column="1" Content="打开" MinWidth="86"/></Grid>
                 </StackPanel>
             </suki:GlassCard>

@@ -22,8 +22,8 @@ namespace LazyBootstrap
                 LoadServerPresetsFromConfig();
 
                 NoAsphyxiaToggleSwitch.IsChecked = bool.TryParse(_configFile.ReadString(SettingSectionName, "noasphyxia", "false"), out var noAsphyxia) && noAsphyxia;
-                bool noRestoreRotation = bool.TryParse(_configFile.ReadString(DisplaySectionName, "norestorerotation", "false"), out var noRestore) && noRestore;
-                NoRestoreRotationToggleSwitch.IsChecked = !noRestoreRotation;
+                bool exitRestore = bool.TryParse(_configFile.ReadString(DisplaySectionName, "exitrestore", "false"), out var restoreOnExit) && restoreOnExit;
+                ExitRestoreToggleSwitch.IsChecked = exitRestore;
 
                 _displayConfigEnabled = bool.TryParse(_configFile.ReadString(DisplaySectionName, "displayconfigure", "false"), out var displayCfg) && displayCfg;
                 if (DisplayConfigEnabledToggleSwitch != null) DisplayConfigEnabledToggleSwitch.IsChecked = _displayConfigEnabled;
@@ -147,8 +147,8 @@ namespace LazyBootstrap
 
                 if (NoAsphyxiaToggleSwitch != null)
                     _configFile.WriteString(SettingSectionName, "noasphyxia", (NoAsphyxiaToggleSwitch.IsChecked == true).ToString().ToLowerInvariant());
-                if (NoRestoreRotationToggleSwitch != null)
-                    _configFile.WriteString(DisplaySectionName, "norestorerotation", (NoRestoreRotationToggleSwitch.IsChecked != true).ToString().ToLowerInvariant());
+                if (ExitRestoreToggleSwitch != null)
+                    _configFile.WriteString(DisplaySectionName, "exitrestore", (ExitRestoreToggleSwitch.IsChecked == true).ToString().ToLowerInvariant());
 
                 if (CompatTypeComboBox != null && CompatTypeComboBox.SelectedItem != null)
                 {

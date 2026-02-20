@@ -1,16 +1,28 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Interactivity;
 using Avalonia.Controls.Notifications;
+using Avalonia.Platform.Storage;
+using LazyBootstrap.UI.Dialogs;
 using SukiUI.Dialogs;
 
 namespace LazyBootstrap
 {
     public partial class MainWindow
     {
+        private static readonly string[] SavedataRelativePaths =
+        {
+            @"asphyxia\savedata",
+            @"asphyxia\config.ini",
+            @"contents\card0.txt",
+            @"contents\card1.txt"
+        };
+
         private void OnGoToGameSettingsClick(object sender, RoutedEventArgs e)
         {
             GoToGameSettingsCore();
@@ -398,6 +410,223 @@ namespace LazyBootstrap
             OpenControlPanel("mmsys.cpl", "打开音频面板失败");
         }
 
+        private async void OnSavedataBackupImportClick(object sender, RoutedEventArgs e)
+        {
+            var window = new SavedataBackupImportWindow(BackupSavedataAsync, ImportSavedataAsync);
+            await window.ShowDialog(this);
+        }
+
+        private async Task BackupSavedataAsync()
+        {
+            string sevenZipPath = ResolveSevenZipExecutablePath();
+            if (!File.Exists(sevenZipPath))
+            {
+                ShowErrorToast("存档备份失败", $"未找到 7za.exe：{sevenZipPath}");
+                return;
+            }
+
+            var existingEntries = GetExistingSavedataEntries();
+            if (existingEntries.Count == 0)
+            {
+                ShowWarningToast("存档备份", "未找到可备份的存档内容。");
+                return;
+            }
+
+            string backupDir = Path.Combine(_baseDir, "savedata_backup");
+            Directory.CreateDirectory(backupDir);
+            string backupFilePath = Path.Combine(backupDir, $"savedata_{DateTime.Now:yyyyMMdd_HHmmss}.7z");
+
+            var argsBuilder = new StringBuilder("a -t7z ");
+            argsBuilder.Append('"').Append(backupFilePath).Append('"');
+            foreach (var entry in existingEntries)
+            {
+                argsBuilder.Append(' ').Append('"').Append(entry).Append('"');
+            }
+            argsBuilder.Append(" -mx=9");
+
+            var result = await RunProcessCaptureAsync(sevenZipPath, argsBuilder.ToString(), _baseDir);
+            if (result.ExitCode == 0)
+            {
+                ShowInfoToast("存档备份完成", $"已备份到：{backupFilePath}");
+                return;
+            }
+
+            ShowErrorToast("存档备份失败", GetProcessErrorDetail(result));
+        }
+
+        private async Task ImportSavedataAsync()
+        {
+            string sevenZipPath = ResolveSevenZipExecutablePath();
+            if (!File.Exists(sevenZipPath))
+            {
+                ShowErrorToast("存档导入失败", $"未找到 7za.exe：{sevenZipPath}");
+                return;
+            }
+
+            var selectedFiles = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+            {
+                Title = "选择存档备份文件",
+                AllowMultiple = false,
+                FileTypeFilter = new List<FilePickerFileType>
+                {
+                    new("7z 备份文件")
+                    {
+                        Patterns = new[] { "*.7z" }
+                    }
+                }
+            });
+
+            if (selectedFiles == null || selectedFiles.Count == 0)
+            {
+                return;
+            }
+
+            string archivePath = selectedFiles[0].TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(archivePath))
+            {
+                ShowErrorToast("存档导入失败", "当前选择的文件不可直接访问，请选择本地磁盘文件。");
+                return;
+            }
+
+            CloseSavedataBackupImportWindow();
+
+            bool hasExistingSavedata = SavedataRelativePaths.Any(IsSavedataPathPresent);
+            if (hasExistingSavedata)
+            {
+                var warningDialogBuilder = _dialogManager
+                    .CreateDialog()
+                    .OfType(NotificationType.Warning)
+                    .WithTitle("存档导入覆盖提示")
+                    .WithContent("检测到已有存档文件，是否直接覆盖？")
+                    .WithYesNoResult("覆盖", "取消", "Flat")
+                    .Dismiss().ByClickingBackground();
+                ApplyDialogNotificationIcon(warningDialogBuilder, NotificationType.Warning);
+
+                var confirmed = await warningDialogBuilder.TryShowAsync();
+                if (!confirmed)
+                {
+                    return;
+                }
+            }
+
+            string arguments = $"x \"{archivePath}\" -o\"{_baseDir}\" -y";
+            var result = await RunProcessCaptureAsync(sevenZipPath, arguments, _baseDir);
+            if (result.ExitCode == 0)
+            {
+                ShowInfoToast("存档导入完成", "已按备份原始目录结构恢复。");
+                return;
+            }
+
+            ShowErrorToast("存档导入失败", GetProcessErrorDetail(result));
+        }
+
+        private void CloseSavedataBackupImportWindow()
+        {
+            if (OwnedWindows == null || OwnedWindows.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var window in OwnedWindows)
+            {
+                if (window is SavedataBackupImportWindow)
+                {
+                    window.Close();
+                    break;
+                }
+            }
+        }
+
+        private List<string> GetExistingSavedataEntries()
+        {
+            var existing = new List<string>();
+            foreach (var relativePath in SavedataRelativePaths)
+            {
+                if (IsSavedataPathPresent(relativePath))
+                {
+                    existing.Add(relativePath);
+                }
+            }
+
+            return existing;
+        }
+
+        private bool IsSavedataPathPresent(string relativePath)
+        {
+            string normalizedPath = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
+            string absolutePath = Path.Combine(_baseDir, normalizedPath);
+            return Directory.Exists(absolutePath) || File.Exists(absolutePath);
+        }
+
+        private string ResolveSevenZipExecutablePath()
+        {
+            string mainProgramDir = AppDomain.CurrentDomain.BaseDirectory;
+            string mainProgramDirPath = Path.Combine(mainProgramDir, "7za.exe");
+            if (File.Exists(mainProgramDirPath))
+            {
+                return mainProgramDirPath;
+            }
+
+            string baseDirPath = Path.Combine(_baseDir, "7za.exe");
+            if (File.Exists(baseDirPath))
+            {
+                return baseDirPath;
+            }
+
+            return Path.Combine(_baseDir, "launcher", "7za.exe");
+        }
+
+        private static async Task<(int ExitCode, string StdOut, string StdErr)> RunProcessCaptureAsync(string fileName, string arguments, string workingDirectory)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = false,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true
+            };
+
+            using (var process = Process.Start(startInfo))
+            {
+                if (process == null)
+                {
+                    return (-1, string.Empty, "进程创建失败");
+                }
+
+                var stdOutTask = process.StandardOutput.ReadToEndAsync();
+                var stdErrTask = process.StandardError.ReadToEndAsync();
+
+                await process.WaitForExitAsync();
+
+                string stdOut = await stdOutTask;
+                string stdErr = await stdErrTask;
+                return (process.ExitCode, stdOut, stdErr);
+            }
+        }
+
+        private static string GetProcessErrorDetail((int ExitCode, string StdOut, string StdErr) processResult)
+        {
+            string detail = !string.IsNullOrWhiteSpace(processResult.StdErr)
+                ? processResult.StdErr
+                : processResult.StdOut;
+
+            if (string.IsNullOrWhiteSpace(detail))
+            {
+                return $"命令执行失败，退出码：{processResult.ExitCode}";
+            }
+
+            string compactDetail = detail.Trim();
+            if (compactDetail.Length > 180)
+            {
+                compactDetail = compactDetail.Substring(0, 180) + "...";
+            }
+
+            return $"退出码：{processResult.ExitCode}，{compactDetail}";
+        }
+
         private void OnTouchPanelClick(object sender, RoutedEventArgs e)
         {
             OpenControlPanel("/name Microsoft.TabletPCSettings", "打开触摸面板失败");
@@ -447,7 +676,7 @@ namespace LazyBootstrap
             if (PortableModeToggleSwitch != null) PortableModeToggleSwitch.IsEnabled = enabled;
             if (WindowedToggleSwitch != null) WindowedToggleSwitch.IsEnabled = enabled;
             if (NoAsphyxiaToggleSwitch != null) NoAsphyxiaToggleSwitch.IsEnabled = enabled;
-            if (NoRestoreRotationToggleSwitch != null) NoRestoreRotationToggleSwitch.IsEnabled = enabled;
+            if (ExitRestoreToggleSwitch != null) ExitRestoreToggleSwitch.IsEnabled = enabled;
             if (EditConfigButton != null) EditConfigButton.IsEnabled = enabled;
             if (ServerPresetComboBox != null) ServerPresetComboBox.IsEnabled = enabled;
             if (AddServerPresetButton != null) AddServerPresetButton.IsEnabled = enabled;
@@ -460,7 +689,6 @@ namespace LazyBootstrap
             if (TouchPanelButton != null) TouchPanelButton.IsEnabled = enabled;
             if (GotoGameSettingsButton != null) GotoGameSettingsButton.IsEnabled = enabled;
             if (AdvNetDumpToggleSwitch != null) AdvNetDumpToggleSwitch.IsEnabled = enabled;
-            if (AdvAsphyxiaDebugToggleSwitch != null) AdvAsphyxiaDebugToggleSwitch.IsEnabled = enabled;
             if (AdvDisableSubDisplayToggleSwitch != null) AdvDisableSubDisplayToggleSwitch.IsEnabled = enabled;
             if (AdvWindowModeComboBox != null) AdvWindowModeComboBox.IsEnabled = enabled;
             if (AdvPCoreOptimizationToggleSwitch != null) AdvPCoreOptimizationToggleSwitch.IsEnabled = enabled;
@@ -495,6 +723,7 @@ namespace LazyBootstrap
             if (InstallRuntimeButton != null) InstallRuntimeButton.IsEnabled = enabled;
             if (AddFirewallRuleButton != null) AddFirewallRuleButton.IsEnabled = enabled;
             if (AudioPanelButton != null) AudioPanelButton.IsEnabled = enabled;
+            if (SavedataBackupImportButton != null) SavedataBackupImportButton.IsEnabled = enabled;
             if (KillProcessesButton != null) KillProcessesButton.IsEnabled = true;
 
             if (enabled)

@@ -42,4 +42,22 @@
     <AvaloniaResource Include="Assets\*.png" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="SevenZip\7za.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>7za.exe</TargetPath>
+    </None>
+    <None Include="SevenZip\7za.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>7za.dll</TargetPath>
+    </None>
+    <None Include="SevenZip\7zxa.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>7zxa.dll</TargetPath>
+    </None>
+  </ItemGroup>
+
 </Project>

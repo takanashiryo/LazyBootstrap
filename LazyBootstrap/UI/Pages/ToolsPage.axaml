@@ -49,6 +49,17 @@
                     <Button x:Name="InstallRuntimeButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>
                 </Grid>
             </suki:GlassCard>
+
+            <suki:GlassCard>
+                <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
+                    <TextBlock Classes="FaIcon" Text="&#xF0C7;" FontSize="18"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Text="存档备份与导入" FontWeight="SemiBold"/>
+                        <TextBlock Text="备份或导入氧无存档与卡号" Opacity="0.72" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Button x:Name="SavedataBackupImportButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>
+                </Grid>
+            </suki:GlassCard>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

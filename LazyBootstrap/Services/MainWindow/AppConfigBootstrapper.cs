@@ -19,7 +19,19 @@ namespace LazyBootstrap
 
             config.RenameSection(LegacySettingsSectionName, SettingSectionName);
             config.MoveKey(SettingSectionName, DisplaySectionName, "displayconfigure");
-            config.MoveKey(SettingSectionName, DisplaySectionName, "norestorerotation");
+
+            var legacyNoRestore = config.ReadString(DisplaySectionName, "norestorerotation", string.Empty);
+            if (string.IsNullOrWhiteSpace(legacyNoRestore))
+            {
+                legacyNoRestore = config.ReadString(SettingSectionName, "norestorerotation", string.Empty);
+            }
+
+            var existingExitRestore = config.ReadString(DisplaySectionName, "exitrestore", string.Empty);
+            if (string.IsNullOrWhiteSpace(existingExitRestore) && !string.IsNullOrWhiteSpace(legacyNoRestore))
+            {
+                bool noRestore = bool.TryParse(legacyNoRestore, out var parsedNoRestore) && parsedNoRestore;
+                config.WriteString(DisplaySectionName, "exitrestore", (!noRestore).ToString().ToLowerInvariant());
+            }
 
             // Migrate old usepreconfig key to portablemode
             var oldValue = config.ReadString(SettingSectionName, "usepreconfig", string.Empty);
@@ -39,7 +51,7 @@ namespace LazyBootstrap
             EnsureDefault(config, SettingSectionName, "rendermode", "dx9on12");
 
             EnsureDefault(config, DisplaySectionName, "displayconfigure", "false");
-            EnsureDefault(config, DisplaySectionName, "norestorerotation", "false");
+            EnsureDefault(config, DisplaySectionName, "exitrestore", "false");
             EnsureDefault(config, DisplaySectionName, "mode", "dual");
             EnsureDefault(config, DisplaySectionName, "mainscreen", "0");
             EnsureDefault(config, DisplaySectionName, "subscreen", "0");
@@ -78,7 +90,7 @@ namespace LazyBootstrap
                 string.Empty,
                 "[Display]",
                 "displayconfigure = \"false\"",
-                "norestorerotation = \"false\"",
+                "exitrestore = \"false\"",
                 "mode = \"dual\"",
                 "mainscreen = \"0\"",
                 "subscreen = \"0\"",

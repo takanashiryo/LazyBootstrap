@@ -12,12 +12,23 @@ namespace LazyBootstrap
 {
     public partial class MainWindow
     {
-        private async void OnStartButtonClick(object sender, RoutedEventArgs e)
+        private enum LaunchMode
         {
-            await StartGameCoreAsync();
+            Normal,
+            AsphyxiaDevOnly
         }
 
-        private async Task StartGameCoreAsync()
+        private async void OnStartButtonClick(object sender, RoutedEventArgs e)
+        {
+            await StartGameCoreAsync(LaunchMode.Normal);
+        }
+
+        private async void OnStartAsphyxiaDevMenuItemClick(object sender, RoutedEventArgs e)
+        {
+            await StartGameCoreAsync(LaunchMode.AsphyxiaDevOnly);
+        }
+
+        private async Task StartGameCoreAsync(LaunchMode launchMode)
         {
             SetControlsEnabled(false);
             if (StatusLabel != null) StatusLabel.Text = "启动中...";
@@ -29,8 +40,9 @@ namespace LazyBootstrap
             {
                 string spicePath = GetSpicePath();
                 string asphyxiaPath = GetAsphyxiaPath();
+                bool asphyxiaDevOnly = launchMode == LaunchMode.AsphyxiaDevOnly;
 
-                if (!File.Exists(spicePath))
+                if (!asphyxiaDevOnly && !File.Exists(spicePath))
                 {
                     ShowErrorToast("启动失败", $"未找到 spice64.exe: {spicePath}");
                     AppendLaunchOutput($"未找到游戏程序：{spicePath}", NotificationType.Error);
@@ -39,7 +51,7 @@ namespace LazyBootstrap
                     return;
                 }
 
-                bool startAsphyxia = NoAsphyxiaToggleSwitch?.IsChecked != true;
+                bool startAsphyxia = asphyxiaDevOnly || NoAsphyxiaToggleSwitch?.IsChecked != true;
                 if (startAsphyxia && !File.Exists(asphyxiaPath))
                 {
                     ShowErrorToast("启动失败", $"未找到 asphyxia-core-x64.exe: {asphyxiaPath}");
@@ -49,7 +61,7 @@ namespace LazyBootstrap
                     return;
                 }
 
-                if (_displayConfigEnabled)
+                if (!asphyxiaDevOnly && _displayConfigEnabled)
                 {
                     AppendLaunchOutput("正在应用显示器配置...");
                     bool displayApplySuccess = ApplyDisplaySettingsForLaunch();
@@ -60,13 +72,21 @@ namespace LazyBootstrap
                 if (startAsphyxia)
                 {
                     AppendLaunchOutput("正在启动 Asphyxia Core...");
-                    var asphyxiaStartInfo = new ProcessStartInfo
-                    {
-                        FileName = asphyxiaPath,
-                        Arguments = _dbgAsphyxiaDebug ? "--dev" : string.Empty,
-                        UseShellExecute = true,
-                        WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
-                    };
+                    var asphyxiaStartInfo = asphyxiaDevOnly
+                        ? new ProcessStartInfo
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = $"/k \"\"{asphyxiaPath}\" --dev\"",
+                            UseShellExecute = true,
+                            WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                        }
+                        : new ProcessStartInfo
+                        {
+                            FileName = asphyxiaPath,
+                            Arguments = string.Empty,
+                            UseShellExecute = true,
+                            WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                        };
 
                     var asphyxiaProcess = Process.Start(asphyxiaStartInfo);
                     if (asphyxiaProcess == null)
@@ -83,6 +103,14 @@ namespace LazyBootstrap
                 else
                 {
                     AppendLaunchOutput("已跳过启动 Asphyxia Core。", NotificationType.Warning);
+                }
+
+                if (asphyxiaDevOnly)
+                {
+                    AppendLaunchOutput("已按调试模式启动 Asphyxia Core（--dev），未启动 spice64。", NotificationType.Information);
+                    if (StatusLabel != null) StatusLabel.Text = "调试模式就绪";
+                    SetControlsEnabled(true);
+                    return;
                 }
 
                 UpdateSpiceConfig();
@@ -274,7 +302,7 @@ namespace LazyBootstrap
                     ShowWarningToast("Asphyxia 关闭提示", $"未找到正在运行的 Asphyxia Core 进程。{ex.Message}");
                 }
 
-                if (NoRestoreRotationToggleSwitch?.IsChecked == true)
+                if (_displayConfigEnabled && ExitRestoreToggleSwitch?.IsChecked == true)
                 {
                     AppendLaunchOutput("正在恢复显示器设置...");
                     int restoredCount = 0;

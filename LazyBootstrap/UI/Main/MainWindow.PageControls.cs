@@ -13,7 +13,8 @@ namespace LazyBootstrap
         private Button GotoGameSettingsButton => LaunchPageView.GetControl<Button>("GotoGameSettingsButton");
         private Button OpenLogButton => LaunchPageView.GetControl<Button>("OpenLogButton");
         private Button KillProcessesButton => LaunchPageView.GetControl<Button>("KillProcessesButton");
-        private Button StartButton => LaunchPageView.GetControl<Button>("StartButton");
+        private SplitButton StartButton => LaunchPageView.GetControl<SplitButton>("StartButton");
+        private MenuItem StartAsphyxiaDevMenuItem => LaunchPageView.GetControl<MenuItem>("StartAsphyxiaDevMenuItem");
 
         private BusyArea SettingsBusyArea => SettingsPageView.GetControl<BusyArea>("SettingsBusyArea");
         private SettingsLayout GameSettingsLayout => SettingsPageView.GetControl<SettingsLayout>("GameSettingsLayout");
@@ -47,7 +48,6 @@ namespace LazyBootstrap
         private ToggleSwitch AdvCardIoToggleSwitch => SettingsPageView.GetControl<ToggleSwitch>("AdvCardIoToggleSwitch");
         private ToggleSwitch AdvHidSmartCardToggleSwitch => SettingsPageView.GetControl<ToggleSwitch>("AdvHidSmartCardToggleSwitch");
         private ToggleSwitch PortableModeToggleSwitch => SettingsPageView.GetControl<ToggleSwitch>("PortableModeToggleSwitch");
-        private ToggleSwitch AdvAsphyxiaDebugToggleSwitch => SettingsPageView.GetControl<ToggleSwitch>("AdvAsphyxiaDebugToggleSwitch");
         private Button LoadCompatButton => SettingsPageView.GetControl<Button>("LoadCompatButton");
         private Button UnloadCompatButton => SettingsPageView.GetControl<Button>("UnloadCompatButton");
         private ComboBox CompatTypeComboBox => SettingsPageView.GetControl<ComboBox>("CompatTypeComboBox");
@@ -63,7 +63,7 @@ namespace LazyBootstrap
         private Ellipse DotSubSelectedRing => DisplayPageView.GetControl<Ellipse>("DotSubSelectedRing");
         private Button SelectMainScreenAreaButton => DisplayPageView.GetControl<Button>("SelectMainScreenAreaButton");
         private Button SelectSubScreenAreaButton => DisplayPageView.GetControl<Button>("SelectSubScreenAreaButton");
-        private ToggleSwitch NoRestoreRotationToggleSwitch => DisplayPageView.GetControl<ToggleSwitch>("NoRestoreRotationToggleSwitch");
+        private ToggleSwitch ExitRestoreToggleSwitch => DisplayPageView.GetControl<ToggleSwitch>("ExitRestoreToggleSwitch");
         private Button TouchPanelButton => DisplayPageView.GetControl<Button>("TouchPanelButton");
         private StackPanel PanelNoScreenSelected => DisplayPageView.GetControl<StackPanel>("PanelNoScreenSelected");
         private StackPanel PanelMainScreenConfig => DisplayPageView.GetControl<StackPanel>("PanelMainScreenConfig");
@@ -86,6 +86,7 @@ namespace LazyBootstrap
         private Button AddFirewallRuleButton => ToolsPageView.GetControl<Button>("AddFirewallRuleButton");
         private Button AudioPanelButton => ToolsPageView.GetControl<Button>("AudioPanelButton");
         private Button InstallRuntimeButton => ToolsPageView.GetControl<Button>("InstallRuntimeButton");
+        private Button SavedataBackupImportButton => ToolsPageView.GetControl<Button>("SavedataBackupImportButton");
 
         private TextBox CurrentVersionTextBox => InfoPageView.GetControl<TextBox>("CurrentVersionTextBox");
         private TextBox RevisionTextBox => InfoPageView.GetControl<TextBox>("RevisionTextBox");

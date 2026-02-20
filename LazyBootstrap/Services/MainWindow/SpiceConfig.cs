@@ -180,7 +180,6 @@ namespace LazyBootstrap
                 if (PcbIdTextBox != null) PcbIdTextBox.Text = GetValue("p");
 
                 if (AdvNetDumpToggleSwitch != null) AdvNetDumpToggleSwitch.IsChecked = _dbgNetDump;
-                if (AdvAsphyxiaDebugToggleSwitch != null) AdvAsphyxiaDebugToggleSwitch.IsChecked = _dbgAsphyxiaDebug;
                 if (AdvDisableSubDisplayToggleSwitch != null) AdvDisableSubDisplayToggleSwitch.IsChecked = _advDisableSubDisplay;
                 if (AdvWindowModeComboBox != null) AdvWindowModeComboBox.SelectedIndex = _advWindowModeIndex;
                 if (AdvPCoreOptimizationToggleSwitch != null) AdvPCoreOptimizationToggleSwitch.IsChecked = _advPCoreOptimization;

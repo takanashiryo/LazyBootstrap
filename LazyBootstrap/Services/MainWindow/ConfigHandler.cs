@@ -14,7 +14,6 @@ public class ConfigHandler
     public ConfigHandler(string tomlPath)
     {
         _path = new FileInfo(tomlPath).FullName;
-        TryMigrateLegacyIni();
     }
 
     // 写入字符串
@@ -452,107 +451,6 @@ public class ConfigHandler
         }
 
         return result;
-    }
-
-    private void TryMigrateLegacyIni()
-    {
-        try
-        {
-            if (File.Exists(_path))
-            {
-                return;
-            }
-
-            string iniPath = Path.ChangeExtension(_path, ".ini");
-            if (!File.Exists(iniPath))
-            {
-                return;
-            }
-
-            var data = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase);
-            string currentSection = "Setting";
-
-            foreach (var rawLine in File.ReadAllLines(iniPath, Encoding.UTF8))
-            {
-                var line = rawLine.Trim();
-                if (string.IsNullOrWhiteSpace(line) ||
-                    line.StartsWith(";", StringComparison.Ordinal) ||
-                    line.StartsWith("#", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (line.StartsWith("[", StringComparison.Ordinal) && line.EndsWith("]", StringComparison.Ordinal) && line.Length > 2)
-                {
-                    currentSection = line.Substring(1, line.Length - 2).Trim();
-                    if (!data.ContainsKey(currentSection))
-                    {
-                        data[currentSection] = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    }
-                    continue;
-                }
-
-                int eqIndex = line.IndexOf('=');
-                if (eqIndex <= 0)
-                {
-                    continue;
-                }
-
-                string key = line.Substring(0, eqIndex).Trim();
-                string value = line.Substring(eqIndex + 1).Trim();
-
-                if (!data.TryGetValue(currentSection, out var sectionData))
-                {
-                    sectionData = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-                    data[currentSection] = sectionData;
-                }
-
-                sectionData[key] = value;
-            }
-
-            SaveToml(data);
-        }
-        catch
-        {
-            // 迁移失败时保持静默，后续按默认行为运行
-        }
-    }
-
-    private void SaveToml(Dictionary<string, Dictionary<string, string>> data)
-    {
-        var dir = Path.GetDirectoryName(_path);
-        if (!string.IsNullOrEmpty(dir))
-        {
-            Directory.CreateDirectory(dir);
-        }
-
-        var sb = new StringBuilder();
-        bool firstSection = true;
-        foreach (var section in data)
-        {
-            if (!firstSection)
-            {
-                sb.AppendLine();
-            }
-            firstSection = false;
-
-            if (!string.IsNullOrWhiteSpace(section.Key))
-            {
-                sb.Append('[').Append(section.Key).AppendLine("]");
-            }
-
-            foreach (var kv in section.Value)
-            {
-                sb.Append(kv.Key)
-                  .Append(" = ")
-                  .Append('"')
-                                    .Append(TomlTextShared.EscapeTomlString(kv.Value ?? string.Empty))
-                                    .Append('"')
-                                    .AppendLine();
-            }
-        }
-
-        File.WriteAllText(_path, sb.ToString(), TomlTextShared.Utf8NoBom);
     }
 
     private static string ParseTomlValue(string rawValue)

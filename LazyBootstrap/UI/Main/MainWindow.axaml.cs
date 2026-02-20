@@ -54,7 +54,6 @@ namespace LazyBootstrap
         private bool _advHidSmartCard = false;
 
         private bool _dbgNetDump = false;
-        private bool _dbgAsphyxiaDebug = false;
         private bool _displayConfigEnabled = false;
         private bool _isDualDisplay = true;
         private readonly List<DisplayConfigure.DisplayInfo> _displayInfos = new List<DisplayConfigure.DisplayInfo>();
@@ -153,6 +152,10 @@ namespace LazyBootstrap
             {
                 StartButton.Click += OnStartButtonClick;
             }
+            if (StartAsphyxiaDevMenuItem != null)
+            {
+                StartAsphyxiaDevMenuItem.Click += OnStartAsphyxiaDevMenuItemClick;
+            }
             if (EditConfigButton != null)
             {
                 EditConfigButton.Click += OnEditConfigClick;
@@ -225,6 +228,10 @@ namespace LazyBootstrap
             {
                 InstallRuntimeButton.Click += OnInstallRuntimeClick;
             }
+            if (SavedataBackupImportButton != null)
+            {
+                SavedataBackupImportButton.Click += OnSavedataBackupImportClick;
+            }
 
             if (ServerPresetComboBox != null)
             {
@@ -294,9 +301,9 @@ namespace LazyBootstrap
             {
                 NoAsphyxiaToggleSwitch.IsCheckedChanged += (s, e) => { SaveSettings(); };
             }
-            if (NoRestoreRotationToggleSwitch != null)
+            if (ExitRestoreToggleSwitch != null)
             {
-                NoRestoreRotationToggleSwitch.IsCheckedChanged += (s, e) => { SaveSettings(); };
+                ExitRestoreToggleSwitch.IsCheckedChanged += (s, e) => { SaveSettings(); };
             }
 
             // 高级选项（主窗口内控件）
@@ -312,14 +319,6 @@ namespace LazyBootstrap
 
                     _dbgNetDump = AdvNetDumpToggleSwitch.IsChecked == true;
                     UpdateSpiceConfig(new OptionUpdate("netdump", _dbgNetDump ? "/ENABLED" : string.Empty));
-                };
-            }
-            if (AdvAsphyxiaDebugToggleSwitch != null)
-            {
-                AdvAsphyxiaDebugToggleSwitch.IsCheckedChanged += (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _dbgAsphyxiaDebug = AdvAsphyxiaDebugToggleSwitch.IsChecked == true;
                 };
             }
             if (AdvDisableSubDisplayToggleSwitch != null)
