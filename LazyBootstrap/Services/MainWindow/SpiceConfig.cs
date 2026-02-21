@@ -344,8 +344,13 @@ namespace LazyBootstrap
 
         private bool TryGetSpiceOptionsContext(LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context)
         {
-            context = null;
             string spiceXmlPath = GetSpiceXmlPath();
+            return TryGetSpiceOptionsContext(spiceXmlPath, loadOptions, createOptionsWhenMissing, out context);
+        }
+
+        private bool TryGetSpiceOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context)
+        {
+            context = null;
             if (!File.Exists(spiceXmlPath))
             {
                 return false;

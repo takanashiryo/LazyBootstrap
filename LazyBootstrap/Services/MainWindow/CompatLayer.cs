@@ -50,7 +50,7 @@ namespace LazyBootstrap
         {
             try
             {
-                var s = _configFile.ReadString(SettingSectionName, "compatlayerenabled", "false");
+                var s = _configFile.ReadString(SettingSectionName, "compatlayer", "false");
                 bool enabled;
                 return bool.TryParse(s, out enabled) && enabled;
             }
@@ -171,7 +171,7 @@ namespace LazyBootstrap
 
             try
             {
-                _configFile.WriteString(SettingSectionName, "compatlayerenabled", enable ? "true" : "false");
+                _configFile.WriteString(SettingSectionName, "compatlayer", enable ? "true" : "false");
             }
             catch (Exception ex)
             {

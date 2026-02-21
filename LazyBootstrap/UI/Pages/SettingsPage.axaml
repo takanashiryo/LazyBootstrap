@@ -12,6 +12,7 @@
                             <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                 <StackPanel Spacing="12">
                                     <Button x:Name="EditConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="编辑 spicecfg"/>
+                                    <Button x:Name="ImportRecommendedSpiceConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="导入推荐spice2x配置"/>
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                         <TextBlock Text="不启动氧无" VerticalAlignment="Center"/>
                                         <ToggleSwitch x:Name="NoAsphyxiaToggleSwitch" Grid.Column="1"/>
@@ -41,7 +42,7 @@
                                             <RadioButton x:Name="CompatDx9on12ExternalRadioButton" GroupName="CompatType" Classes="GigaChips">
                                                 <StackPanel Spacing="1">
                                                     <TextBlock Text="dx9on12 (External)" FontSize="16" FontWeight="SemiBold"/>
-                                                    <TextBlock Text="外置版，可能比内置的快" Opacity="0.7"/>
+                                                    <TextBlock Text="外置版，有人说比内置的好" Opacity="0.7"/>
                                                 </StackPanel>
                                             </RadioButton>
                                             <RadioButton x:Name="CompatDxvkRadioButton" GroupName="CompatType" Classes="GigaChips">

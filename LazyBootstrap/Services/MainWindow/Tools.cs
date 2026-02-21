@@ -678,6 +678,7 @@ namespace LazyBootstrap
             if (NoAsphyxiaToggleSwitch != null) NoAsphyxiaToggleSwitch.IsEnabled = enabled;
             if (ExitRestoreToggleSwitch != null) ExitRestoreToggleSwitch.IsEnabled = enabled;
             if (EditConfigButton != null) EditConfigButton.IsEnabled = enabled;
+            if (ImportRecommendedSpiceConfigButton != null) ImportRecommendedSpiceConfigButton.IsEnabled = enabled;
             if (ServerPresetComboBox != null) ServerPresetComboBox.IsEnabled = enabled;
             if (AddServerPresetButton != null) AddServerPresetButton.IsEnabled = enabled;
             if (DeleteServerPresetButton != null) DeleteServerPresetButton.IsEnabled = enabled;

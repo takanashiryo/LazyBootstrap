@@ -123,13 +123,31 @@ namespace LazyBootstrap
             {
                 try
                 {
-                    var envBaseDir = Environment.GetEnvironmentVariable("LAZYBOOTSTRAP_BASEDIR");
-                    var baseDir = !string.IsNullOrWhiteSpace(envBaseDir) ? envBaseDir : AppDomain.CurrentDomain.BaseDirectory;
+                    var baseDir = AppPathResolver.ResolveBaseDir();
                     var cfgPath = Path.Combine(baseDir, "config.toml");
-                    if (!File.Exists(cfgPath)) return false;
-                    var cfg = new ConfigHandler(cfgPath);
-                    var s = cfg.ReadString("Setting", "compatlayerenabled", "false");
-                    bool enabled; return bool.TryParse(s, out enabled) && enabled;
+
+                    bool enabledByConfig = false;
+                    if (File.Exists(cfgPath))
+                    {
+                        var cfg = new ConfigHandler(cfgPath);
+                        var s = cfg.ReadString("Setting", "compatlayer", "false");
+                        bool enabled;
+                        enabledByConfig = bool.TryParse(s, out enabled) && enabled;
+                    }
+
+                    string modulesDir = Path.Combine(baseDir, "contents", "modules");
+                    string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
+                    int stubCount = 0;
+                    foreach (var file in compatFiles)
+                    {
+                        if (File.Exists(Path.Combine(modulesDir, file)))
+                        {
+                            stubCount++;
+                        }
+                    }
+
+                    bool enabledByFiles = stubCount >= 1;
+                    return enabledByConfig || enabledByFiles;
                 }
                 catch { return false; }
             }
@@ -183,7 +201,7 @@ namespace LazyBootstrap
             {
                 if (IsCompatLayerEnabled())
                 {
-                    AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过", ScanResultLevel.Success);
+                    AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", ScanResultLevel.Success);
                     return;
                 }
                 try

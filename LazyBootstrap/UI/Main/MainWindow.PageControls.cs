@@ -19,6 +19,7 @@ namespace LazyBootstrap
         private BusyArea SettingsBusyArea => SettingsPageView.GetControl<BusyArea>("SettingsBusyArea");
         private SettingsLayout GameSettingsLayout => SettingsPageView.GetControl<SettingsLayout>("GameSettingsLayout");
         private Button EditConfigButton => SettingsPageView.GetControl<Button>("EditConfigButton");
+        private Button ImportRecommendedSpiceConfigButton => SettingsPageView.GetControl<Button>("ImportRecommendedSpiceConfigButton");
         private ToggleSwitch NoAsphyxiaToggleSwitch => SettingsPageView.GetControl<ToggleSwitch>("NoAsphyxiaToggleSwitch");
         private ToggleSwitch CompatLayerToggleSwitch => SettingsPageView.GetControl<ToggleSwitch>("CompatLayerToggleSwitch");
         private BusyArea CompatRenderModeBusyArea => SettingsPageView.GetControl<BusyArea>("CompatRenderModeBusyArea");

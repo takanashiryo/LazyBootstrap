@@ -160,6 +160,10 @@ namespace LazyBootstrap
             {
                 EditConfigButton.Click += OnEditConfigClick;
             }
+            if (ImportRecommendedSpiceConfigButton != null)
+            {
+                ImportRecommendedSpiceConfigButton.Click += OnImportRecommendedSpiceConfigClick;
+            }
             if (CompatLayerToggleSwitch != null)
             {
                 CompatLayerToggleSwitch.IsCheckedChanged += OnCompatLayerToggleChanged;

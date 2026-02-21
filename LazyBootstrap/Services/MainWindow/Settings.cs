@@ -18,6 +18,7 @@ namespace LazyBootstrap
                 {
                     PortableModeToggleSwitch.IsChecked = _portableMode;
                 }
+                UpdateRecommendedSpiceConfigButtonVisibility();
 
                 LoadServerPresetsFromConfig();
 
@@ -32,7 +33,7 @@ namespace LazyBootstrap
 
                 try
                 {
-                    string renderMode = _configFile.ReadString(SettingSectionName, "rendermode", "dx9on12");
+                    string renderMode = _configFile.ReadString(SettingSectionName, "cl-rendermode", "dx9on12");
                     if (CompatTypeComboBox != null)
                     {
                         if (CompatTypeComboBox.Items.Count == 0)
@@ -153,7 +154,7 @@ namespace LazyBootstrap
                 if (CompatTypeComboBox != null && CompatTypeComboBox.SelectedItem != null)
                 {
                     string renderMode = CompatTypeComboBox.SelectedItem.ToString();
-                    _configFile.WriteString(SettingSectionName, "rendermode", renderMode);
+                    _configFile.WriteString(SettingSectionName, "cl-rendermode", renderMode);
                 }
 
                 _configFile.WriteString(DisplaySectionName, "displayconfigure", _displayConfigEnabled.ToString().ToLowerInvariant());
