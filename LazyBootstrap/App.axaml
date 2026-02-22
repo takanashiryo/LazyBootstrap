@@ -13,7 +13,7 @@
         </ResourceDictionary>
     </Application.Resources>
     <Application.Styles>
-        <sukiUi:SukiTheme Locale="zh-CN" ThemeColor="Blue" />
+        <sukiUi:SukiTheme Locale="zh-CN" ThemeColor="Green" />
         <Style Selector="Control">
             <Setter Property="TextElement.FontFamily" Value="{DynamicResource DefaultFontFamily}" />
         </Style>
