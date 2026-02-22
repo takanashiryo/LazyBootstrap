@@ -80,6 +80,10 @@ namespace LazyBootstrap
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
+        private bool _isApplyingAspectRatio;
+        private double _lastNormalWidth;
+        private double _lastNormalHeight;
+        private const double MainWindowAspectRatio = 16d / 9d;
         private const int MaxLaunchLogLines = 1200;
         private readonly StringBuilder _launchLogBuffer = new StringBuilder(16 * 1024);
         private readonly Queue<string> _launchLogLineQueue = new Queue<string>(MaxLaunchLogLines + 64);
@@ -99,8 +103,6 @@ namespace LazyBootstrap
             {
                 return;
             }
-
-            ConfigureWindowBackdrop();
 
             if (DialogHost != null)
             {
@@ -123,63 +125,83 @@ namespace LazyBootstrap
             InitializeCustomComponents();
             HideLaunchLogArea(true);
             LoadSettings();
+            _lastNormalWidth = Width;
+            _lastNormalHeight = Height;
+            SizeChanged += OnMainWindowSizeChanged;
 
             // 窗口显示后执行初始化流程
             this.Opened += async (s, e) =>
             {
-                EnsureBackdropEffectIsApplied();
-                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-                EnsureBackdropEffectIsApplied();
                 await RunEnvironmentScanAsync();
                 LoadSpiceConfig();
             };
         }
 
-        private void ConfigureWindowBackdrop()
+        private void OnMainWindowSizeChanged(object sender, SizeChangedEventArgs e)
         {
-            if (!OperatingSystem.IsWindows())
+            if (_isApplyingAspectRatio || WindowState != WindowState.Normal)
             {
                 return;
             }
 
-            Background = Brushes.Transparent;
-            TransparencyBackgroundFallback = new SolidColorBrush(Color.FromArgb(0xE6, 0x08, 0x08, 0x08));
-
-            TransparencyLevelHint =
-            [
-                WindowTransparencyLevel.Blur
-            ];
-        }
-
-        private void EnsureBackdropEffectIsApplied()
-        {
-            if (!OperatingSystem.IsWindows())
+            var width = Width;
+            var height = Height;
+            if (width <= 0 || height <= 0)
             {
                 return;
             }
 
-            if (ActualTransparencyLevel == WindowTransparencyLevel.Blur)
+            if (_lastNormalWidth <= 0 || _lastNormalHeight <= 0)
+            {
+                _lastNormalWidth = width;
+                _lastNormalHeight = height;
+                return;
+            }
+
+            var deltaWidth = Math.Abs(width - _lastNormalWidth);
+            var deltaHeight = Math.Abs(height - _lastNormalHeight);
+            if (deltaWidth < 0.5 && deltaHeight < 0.5)
             {
                 return;
             }
 
-            TransparencyLevelHint =
-            [
-                WindowTransparencyLevel.AcrylicBlur,
-                WindowTransparencyLevel.Blur
-            ];
-
-            if (ActualTransparencyLevel == WindowTransparencyLevel.AcrylicBlur
-                || ActualTransparencyLevel == WindowTransparencyLevel.Blur)
+            double targetWidth;
+            double targetHeight;
+            if (deltaWidth >= deltaHeight)
             {
-                return;
+                targetWidth = width;
+                targetHeight = targetWidth / MainWindowAspectRatio;
+            }
+            else
+            {
+                targetHeight = height;
+                targetWidth = targetHeight * MainWindowAspectRatio;
             }
 
-            TransparencyLevelHint =
-            [
-                WindowTransparencyLevel.None
-            ];
-            Background = new SolidColorBrush(Color.FromArgb(0xF2, 0x10, 0x10, 0x10));
+            if (targetWidth < MinWidth)
+            {
+                targetWidth = MinWidth;
+                targetHeight = targetWidth / MainWindowAspectRatio;
+            }
+
+            if (targetHeight < MinHeight)
+            {
+                targetHeight = MinHeight;
+                targetWidth = targetHeight * MainWindowAspectRatio;
+            }
+
+            _isApplyingAspectRatio = true;
+            try
+            {
+                Width = targetWidth;
+                Height = targetHeight;
+                _lastNormalWidth = targetWidth;
+                _lastNormalHeight = targetHeight;
+            }
+            finally
+            {
+                _isApplyingAspectRatio = false;
+            }
         }
 
         private void InitializeCustomComponents()
@@ -713,7 +735,7 @@ namespace LazyBootstrap
         {
             try
             {
-                var assetUri = new Uri($"avares://LazyBootstrap/Assets/{assetFileName}");
+                var assetUri = new Uri($"avares://LazyBootstrap/Assets/Images/{assetFileName}");
                 var stream = AssetLoader.Open(assetUri);
                 return new Bitmap(stream);
             }

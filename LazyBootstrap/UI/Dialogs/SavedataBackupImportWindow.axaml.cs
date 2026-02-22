@@ -1,11 +1,7 @@
 using System;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
-using Avalonia.Media;
-using Avalonia.Platform;
-using Avalonia.Threading;
 using SukiUI.Controls;
 
 namespace LazyBootstrap.UI.Dialogs
@@ -22,14 +18,6 @@ namespace LazyBootstrap.UI.Dialogs
         public SavedataBackupImportWindow()
         {
             InitializeComponent();
-
-            ConfigureWindowBackdrop();
-            Opened += async (_, _) =>
-            {
-                EnsureBackdropEffectIsApplied();
-                await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Background);
-                EnsureBackdropEffectIsApplied();
-            };
         }
 
         public SavedataBackupImportWindow(Func<Task> onBackupRequested, Func<Task> onImportRequested)
@@ -102,50 +90,5 @@ namespace LazyBootstrap.UI.Dialogs
             }
         }
 
-        private void ConfigureWindowBackdrop()
-        {
-            if (!OperatingSystem.IsWindows())
-            {
-                return;
-            }
-
-            Background = Brushes.Transparent;
-            TransparencyBackgroundFallback = new SolidColorBrush(Color.FromArgb(0xE6, 0x08, 0x08, 0x08));
-            TransparencyLevelHint =
-            [
-                WindowTransparencyLevel.Blur
-            ];
-        }
-
-        private void EnsureBackdropEffectIsApplied()
-        {
-            if (!OperatingSystem.IsWindows())
-            {
-                return;
-            }
-
-            if (ActualTransparencyLevel == WindowTransparencyLevel.Blur)
-            {
-                return;
-            }
-
-            TransparencyLevelHint =
-            [
-                WindowTransparencyLevel.AcrylicBlur,
-                WindowTransparencyLevel.Blur
-            ];
-
-            if (ActualTransparencyLevel == WindowTransparencyLevel.AcrylicBlur
-                || ActualTransparencyLevel == WindowTransparencyLevel.Blur)
-            {
-                return;
-            }
-
-            TransparencyLevelHint =
-            [
-                WindowTransparencyLevel.None
-            ];
-            Background = new SolidColorBrush(Color.FromArgb(0xF2, 0x10, 0x10, 0x10));
-        }
     }
 }

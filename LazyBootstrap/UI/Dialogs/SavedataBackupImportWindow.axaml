@@ -5,38 +5,10 @@
                  Title="存档备份与导入"
                  Width="720"
                  Height="320"
-                 Background="Transparent"
-                 RootCornerRadius="0"
-                 BackgroundAnimationEnabled="False"
+                 BackgroundAnimationEnabled="True"
+                 BackgroundStyle="Gradient"
                  CanResize="False"
                  WindowStartupLocation="CenterOwner">
-    <suki:SukiWindow.Styles>
-        <Style Selector="suki|SukiWindow /template/ suki|SukiMainHost /template/ suki|SukiBackground#PART_Background">
-            <Setter Property="Opacity" Value="0"/>
-            <Setter Property="IsHitTestVisible" Value="False"/>
-        </Style>
-
-        <Style Selector="suki|SukiWindow /template/ suki|GlassCard#PART_TitleBarBackground">
-            <Setter Property="Background" Value="#F4141414"/>
-            <Setter Property="BorderBrush" Value="#66FFFFFF"/>
-            <Setter Property="CornerRadius" Value="0"/>
-        </Style>
-
-        <Style Selector="suki|SukiWindow /template/ Panel#PART_Root">
-            <Setter Property="Background" Value="#86101010"/>
-        </Style>
-
-        <Style Selector="suki|SukiWindow /template/ ContentPresenter#PART_ContentPresenter">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="CornerRadius" Value="0"/>
-        </Style>
-
-        <Style Selector="suki|GlassCard">
-            <Setter Property="Background" Value="#D6101010"/>
-            <Setter Property="BorderBrush" Value="#50FFFFFF"/>
-        </Style>
-    </suki:SukiWindow.Styles>
-
     <Grid Margin="16" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*" RowSpacing="10">
         <TextBlock Grid.Row="0"
                    Text="*导入仅支持使用当前启动器备份的文件"

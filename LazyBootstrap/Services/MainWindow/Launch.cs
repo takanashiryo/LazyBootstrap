@@ -7,7 +7,6 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Avalonia.Platform;
 
 namespace LazyBootstrap
 {
@@ -409,18 +408,11 @@ namespace LazyBootstrap
         {
             if (minimized)
             {
-                TransparencyLevelHint =
-                [
-                    WindowTransparencyLevel.None
-                ];
-                Background = new Avalonia.Media.SolidColorBrush(Avalonia.Media.Color.FromArgb(0xFF, 0x10, 0x10, 0x10));
                 BackgroundForceSoftwareRendering = true;
                 return;
             }
 
             BackgroundForceSoftwareRendering = false;
-            ConfigureWindowBackdrop();
-            EnsureBackdropEffectIsApplied();
         }
 
         private void RestoreLauncherAfterGameExit()

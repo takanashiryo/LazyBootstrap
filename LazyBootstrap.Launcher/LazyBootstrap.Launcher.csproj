@@ -11,12 +11,18 @@
     <StackTraceSupport>false</StackTraceSupport>
     <OptimizationPreference>Size</OptimizationPreference>
     <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
-    <ApplicationIcon>SOUND VOLTEX EXCEED GEAR.ico</ApplicationIcon>
+    <ApplicationIcon>..\Resources\SOUND VOLTEX EXCEED GEAR.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
     <PublishAot>true</PublishAot>
     <PublishTrimmed>true</PublishTrimmed>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\Resources\SOUND VOLTEX EXCEED GEAR.ico">
+      <Link>SOUND VOLTEX EXCEED GEAR.ico</Link>
+    </None>
+  </ItemGroup>
 
 </Project>
