@@ -11,7 +11,7 @@
     <StackTraceSupport>false</StackTraceSupport>
     <OptimizationPreference>Size</OptimizationPreference>
     <IlcFoldIdenticalMethodBodies>true</IlcFoldIdenticalMethodBodies>
-    <ApplicationIcon>..\Resources\SOUND VOLTEX EXCEED GEAR.ico</ApplicationIcon>
+    <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
@@ -20,8 +20,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="..\Resources\SOUND VOLTEX EXCEED GEAR.ico">
-      <Link>SOUND VOLTEX EXCEED GEAR.ico</Link>
+    <None Include="..\Resources\vii\vii_icon.ico">
+      <Link>vii_icon.ico</Link>
     </None>
   </ItemGroup>
 
