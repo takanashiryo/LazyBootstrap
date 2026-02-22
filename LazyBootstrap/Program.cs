@@ -21,6 +21,15 @@ namespace LazyBootstrap
 
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
+                .With(new Win32PlatformOptions
+                {
+                    CompositionMode =
+                    [
+                        Win32CompositionMode.WinUIComposition,
+                        Win32CompositionMode.DirectComposition,
+                        Win32CompositionMode.RedirectionSurface
+                    ]
+                })
                 .UsePlatformDetect()
                 .LogToTrace();
 
