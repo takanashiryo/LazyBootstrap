@@ -354,7 +354,7 @@ namespace LazyBootstrap
 
             if (ServerAddressTextBox != null)
             {
-                ServerAddressTextBox.Watermark = "http://SERVERURL:PORT";
+                ServerAddressTextBox.Watermark = "http://SERVER:PORT";
             }
             if (PcbIdTextBox != null)
             {

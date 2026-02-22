@@ -3,7 +3,7 @@
                  xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
                  xmlns:pages="clr-namespace:LazyBootstrap.UI.Pages"
                  x:Class="LazyBootstrap.MainWindow"
-                 Title="LazyBootstrap"
+                 Title="SOUND VOLTEX LazyBootstrap"
                  Width="1536" Height="864"
                  MinWidth="1280" MinHeight="720"
                  BackgroundAnimationEnabled="False"

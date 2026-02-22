@@ -232,7 +232,7 @@ namespace LazyBootstrap
 
             if (!File.Exists(dxSetupPath) && !File.Exists(vcRedistPath))
             {
-                ShowErrorToast("安装运行库失败", "未找到运行库安装程序。请确保 runtime/directx/DXSETUP.exe 和 runtime/vcredist/VisualCppRedist_AIO_x86_x64.exe 存在。");
+                ShowErrorToast("安装运行库失败", "未找到运行库安装程序。请确保文件存在。");
                 return;
             }
 
@@ -354,7 +354,7 @@ namespace LazyBootstrap
                 .CreateDialog()
                 .OfType(NotificationType.Warning)
                 .WithTitle("添加防火墙规则")
-                .WithContent("确认要执行吗？\n如果之前已经添加过规则，可能会重复。")
+                .WithContent("确认要执行吗？\n如果之前已经添加过规则，将会重复添加。")
                 .WithYesNoResult("确认", "取消", "Flat")
                 .Dismiss().ByClickingBackground();
             ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Warning);
@@ -513,7 +513,7 @@ namespace LazyBootstrap
             var result = await RunProcessCaptureAsync(sevenZipPath, arguments, _baseDir);
             if (result.ExitCode == 0)
             {
-                ShowInfoToast("存档导入完成", "已按备份原始目录结构恢复。");
+                ShowInfoToast("存档导入完成", "已恢复。");
                 return;
             }
 
@@ -629,7 +629,7 @@ namespace LazyBootstrap
 
         private void OnTouchPanelClick(object sender, RoutedEventArgs e)
         {
-            OpenControlPanel("/name Microsoft.TabletPCSettings", "打开触摸面板失败");
+            OpenControlPanel("/name Microsoft.TabletPCSettings", "打开面板失败");
         }
 
         private void OpenControlPanel(string arguments, string errorTitle)

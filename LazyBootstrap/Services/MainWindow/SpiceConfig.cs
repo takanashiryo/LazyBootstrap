@@ -26,14 +26,14 @@ namespace LazyBootstrap
                 string spiceXmlPath = GetSpiceXmlPath();
                 if (!File.Exists(spiceXmlPath))
                 {
-                    ShowErrorToast("保存设定失败", "未找到 spicetools.xml，已恢复上一次状态。");
+                    ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
                     RestoreUiFromLastKnownSpiceValues();
                     return;
                 }
 
                 if (!TryGetSpiceOptionsContext(LoadOptions.PreserveWhitespace, true, out var context))
                 {
-                    ShowErrorToast("保存设定失败", "配置写入失败，已恢复上一次状态。");
+                    ShowErrorToast("保存设定失败", "配置写入失败。");
                     RestoreUiFromLastKnownSpiceValues();
                     return;
                 }
@@ -311,7 +311,7 @@ namespace LazyBootstrap
                 return true;
             }
 
-            ShowErrorToast("保存设定失败", "未找到 spicetools.xml，已恢复上一次状态。");
+            ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
 
             _isUpdatingSpiceToggleUi = true;
             try
@@ -360,7 +360,7 @@ namespace LazyBootstrap
             var root = doc.Root;
             if (root == null)
             {
-                ShowErrorToast("读取配置失败", "SpiceTools 配置 XML 根节点为空。");
+                ShowErrorToast("读取配置失败", "SpiceTools XML 根节点为空。");
                 return false;
             }
 
