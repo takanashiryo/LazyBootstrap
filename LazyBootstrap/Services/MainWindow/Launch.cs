@@ -376,7 +376,6 @@ namespace LazyBootstrap
                         ApplyLauncherRenderingOptimization(true);
                         WindowState = WindowState.Minimized;
                         _launcherMinimizedForGame = true;
-                        AppendLaunchOutput("启动器已自动最小化，并暂停背景渲染以降低 GPU 占用。");
                     }
                 });
             }

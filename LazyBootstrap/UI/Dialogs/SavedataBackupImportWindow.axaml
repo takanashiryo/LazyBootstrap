@@ -11,7 +11,7 @@
                  WindowStartupLocation="CenterOwner">
     <Grid Margin="16" RowDefinitions="Auto,Auto,*" ColumnDefinitions="*" RowSpacing="10">
         <TextBlock Grid.Row="0"
-                   Text="*导入仅支持使用当前启动器备份的文件"
+                   Text="*导入暂时仅支持从启动器备份的文件，请勿导入外部文件"
                    Foreground="{DynamicResource ErrorBrush}"
                    FontWeight="SemiBold"
                    TextWrapping="Wrap"/>
