@@ -1,11 +1,12 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 // LazyBootstrap Launcher — 最小化启动器
 // 启动 launcher 文件夹内的 LazyBootstrap 主程序
 
-string baseDir = AppContext.BaseDirectory;
+string baseDir = Path.GetFullPath(AppContext.BaseDirectory);
 string targetExe = Path.Combine(baseDir, "launcher", "LazyBootstrap.exe");
 
 if (!File.Exists(targetExe))
@@ -16,20 +17,10 @@ if (!File.Exists(targetExe))
 var startInfo = new ProcessStartInfo
 {
     FileName = targetExe,
-    UseShellExecute = false
+    UseShellExecute = true,
+    WorkingDirectory = Path.GetDirectoryName(targetExe) ?? baseDir,
+    Arguments = BuildForwardedArguments(args, baseDir)
 };
-
-// 传递基础目录，让主程序知道根目录位置
-startInfo.Environment["LAZYBOOTSTRAP_BASEDIR"] = baseDir;
-
-// 透传命令行参数
-foreach (var arg in args)
-{
-    startInfo.ArgumentList.Add(arg);
-}
-
-// 显式传递根目录参数，避免提权重启后环境变量丢失
-startInfo.ArgumentList.Add($"--basedir={baseDir}");
 
 try
 {
@@ -38,4 +29,23 @@ try
 catch
 {
     Environment.Exit(1);
+}
+
+static string BuildForwardedArguments(string[] sourceArgs, string resolvedBaseDir)
+{
+    var allArgs = sourceArgs.Select(QuoteArg).ToList();
+    allArgs.Add(QuoteArg($"--basedir={resolvedBaseDir}"));
+    return string.Join(" ", allArgs);
+}
+
+static string QuoteArg(string arg)
+{
+    if (string.IsNullOrEmpty(arg))
+    {
+        return "\"\"";
+    }
+
+    return arg.IndexOfAny([' ', '\t', '"']) >= 0
+        ? "\"" + arg.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""
+        : arg;
 }

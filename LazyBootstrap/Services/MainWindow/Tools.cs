@@ -158,12 +158,12 @@ namespace LazyBootstrap
         {
             string cfgToolPath = Path.Combine(_contentsDir, "spicecfg.exe");
             string arguments = "";
+            string xmlPath = GetSpiceXmlPath();
             if (_portableMode)
             {
                 arguments = "-cmdoverride -cfgpath lazy/spicetools.xml -patchcfgpath lazy/spicetools_patch_manager.json -modules modules";
             }
 
-            string xmlPath = GetSpiceXmlPath();
             string configPath = GetConfigTomlPath();
 
             try
@@ -173,7 +173,7 @@ namespace LazyBootstrap
                     ShowErrorToast("无法启动 spicecfg", $"未找到程序: {cfgToolPath}");
                     return;
                 }
-                if (!File.Exists(xmlPath))
+                if (_portableMode && !File.Exists(xmlPath))
                 {
                     ShowErrorToast("无法启动 spicecfg", $"未找到配置文件: {xmlPath}");
                     return;
