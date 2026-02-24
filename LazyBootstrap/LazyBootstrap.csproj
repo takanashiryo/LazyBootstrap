@@ -5,7 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>LazyBootstrap</RootNamespace>
     <AssemblyName>LazyBootstrap</AssemblyName>
-    <ApplicationIcon>SOUND VOLTEX EXCEED GEAR.ico</ApplicationIcon>
+    <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -14,7 +14,7 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <AssemblyVersion>26.0.0.0</AssemblyVersion>
     <FileVersion>26.0.0.0</FileVersion>
-    <InformationalVersion>25.2</InformationalVersion>
+<!--    <InformationalVersion>26.0</InformationalVersion>-->
     <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
     <Description>only compatible with sdvx</Description>
     <Company>LazyBootstrap - Lazy SDVX</Company>
@@ -37,12 +37,17 @@
   </ItemGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\*.ttf" />
-    <AvaloniaResource Include="Assets\*.otf" />
-    <AvaloniaResource Include="Assets\*.png" />
+    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
+    <AvaloniaResource Include="Assets\Fonts\*.otf" />
+    <AvaloniaResource Include="Assets\Images\*.png" />
+    <AvaloniaResource Include="Assets\Images\*.jpg" />
+    <AvaloniaResource Include="Assets\Images\*.jpeg" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="..\Resources\vii\vii_icon.ico">
+      <Link>vii_icon.ico</Link>
+    </None>
     <None Include="SevenZip\7za.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>

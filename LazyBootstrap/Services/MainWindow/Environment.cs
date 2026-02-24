@@ -9,6 +9,7 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Media;
 using Avalonia.Threading;
 using SukiUI.Dialogs;
+using SukiUI.Controls;
 
 namespace LazyBootstrap
 {
@@ -47,28 +48,26 @@ namespace LazyBootstrap
 
                 if (EnvironmentScan.LastHadError)
                 {
-                    var sb = new StringBuilder();
-                    sb.AppendLine("(> _<) 啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！");
-                    sb.AppendLine();
-                    sb.AppendLine("以下是检查异常项：");
-                    sb.AppendLine(EnvironmentScan.LastErrorSummary);
-                    sb.AppendLine("(* ^_^) Noah 建议的操作步骤：");
-                    sb.AppendLine("- 在工具页点击「安装运行库」按钮安装必要运行环境");
-                    sb.AppendLine("- 确保已安装最新的显卡驱动程序");
-                    sb.AppendLine("- 如为 AMD/Intel 显卡请启用\u201c显卡兼容层\u201d功能");
-                    sb.AppendLine();
-                    sb.AppendLine("如\u201c系统媒体功能包\u201d异常：");
-                    sb.AppendLine("- 检查\u201cWindows 设置\u201d中是否已启用\u201c媒体功能包\u201d");
-                    sb.AppendLine();
-                    sb.AppendLine("请注意！由于硬件不同，检查结果可能会误报！");
-                    sb.AppendLine("如果所有游戏运行正常没有问题，请忽略以上提示。");
-                    sb.AppendLine();
+                    const string errorContent =
+                        "(*´ - `*）啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
+                        "c(*´∇｀)っNoah 建议的操作步骤：\n" +
+                        "- 在工具页点击「安装运行库」按钮安装必要运行环境\n" +
+                        "- 确保已安装最新的显卡驱动程序\n" +
+                        "- 如为 AMD/Intel 显卡请启用“显卡兼容层”功能\n\n" +
+                        "如“系统媒体功能包”异常：\n" +
+                        "- 检查“Windows 设置”中是否已启用“媒体功能包”\n\n" +
+                        "请注意！由于硬件不同，检查结果可能会误报！\n" +
+                        "如果所有游戏运行正常没有问题，请忽略以上提示。";
 
                     var dialogBuilder = _dialogManager.CreateDialog()
                         .OfType(NotificationType.Error)
                         .WithTitle("环境检查提示")
-                        .WithContent(sb.ToString())
-                        .WithActionButton("关闭", _ => { }, true, "Flat")
+                        .WithContent(errorContent)
+                        .WithActionButton("查看异常项", _ =>
+                        {
+                            GoToInfoPageCore();
+                        }, true, "Flat")
+                        .WithActionButton("关闭", _ => { }, true, "Basic")
                         .Dismiss().ByClickingBackground();
                     ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Error);
                     dialogBuilder.TryShow();
@@ -87,6 +86,34 @@ namespace LazyBootstrap
                     StatusProgress.IsVisible = false;
                 }
                 SetControlsEnabled(true);
+            }
+        }
+
+        private void GoToInfoPageCore()
+        {
+            try
+            {
+                if (MainSideMenu == null)
+                {
+                    return;
+                }
+
+                var target = MainSideMenu.Items?
+                    .OfType<SukiSideMenuItem>()
+                    .FirstOrDefault(item => string.Equals(item.Header?.ToString(), "信息", StringComparison.Ordinal));
+
+                if (target == null)
+                {
+                    target = MainSideMenu.Items?.OfType<SukiSideMenuItem>().Skip(4).FirstOrDefault();
+                }
+
+                if (target != null)
+                {
+                    MainSideMenu.SelectedItem = target;
+                }
+            }
+            catch
+            {
             }
         }
 

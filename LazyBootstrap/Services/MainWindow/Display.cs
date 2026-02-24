@@ -782,6 +782,7 @@ namespace LazyBootstrap
             SelectPresetByCurrentFields();
             UpdateCompatLayerStatus();
             SyncCompatModeButtonsFromCombo();
+            UpdateRecommendedSpiceConfigButtonVisibility();
         }
 
         private void ApplyPortableModeToggleState(bool enabled)

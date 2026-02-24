@@ -89,5 +89,6 @@ namespace LazyBootstrap.UI.Dialogs
                 _backupProgressPanel.IsVisible = inProgress;
             }
         }
+
     }
 }

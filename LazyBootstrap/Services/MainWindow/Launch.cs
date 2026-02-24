@@ -12,6 +12,9 @@ namespace LazyBootstrap
 {
     public partial class MainWindow
     {
+        private System.Threading.CancellationTokenSource _autoMinimizeCts;
+        private bool _launcherMinimizedForGame;
+
         private enum LaunchMode
         {
             Normal,
@@ -30,6 +33,7 @@ namespace LazyBootstrap
 
         private async Task StartGameCoreAsync(LaunchMode launchMode)
         {
+            CancelAutoMinimizeSchedule();
             SetControlsEnabled(false);
             if (StatusLabel != null) StatusLabel.Text = "启动中...";
             await ShowLaunchLogAreaWithAnimationAsync();
@@ -151,6 +155,7 @@ namespace LazyBootstrap
 
                 if (StatusLabel != null) StatusLabel.Text = "游戏运行中";
                 AppendLaunchOutput("游戏已启动并进入运行状态。");
+                ScheduleAutoMinimizeAfterLaunch();
             }
             catch (Exception ex)
             {
@@ -281,6 +286,7 @@ namespace LazyBootstrap
 
             Dispatcher.UIThread.Post(() =>
             {
+                CancelAutoMinimizeSchedule();
                 AppendLaunchOutput(abnormalExit
                     ? $"游戏进程异常退出（ExitCode: {exitCode}）。"
                     : "游戏进程已正常退出。", abnormalExit ? NotificationType.Warning : NotificationType.Information);
@@ -320,12 +326,106 @@ namespace LazyBootstrap
 
                 if (StatusLabel != null) StatusLabel.Text = "就绪";
                 SetControlsEnabled(true);
+                RestoreLauncherAfterGameExit();
                 if (_gameProcess != null)
                 {
                     _gameProcess.Dispose();
                     _gameProcess = null;
                 }
             });
+        }
+
+        private void ScheduleAutoMinimizeAfterLaunch()
+        {
+            CancelAutoMinimizeSchedule();
+            _autoMinimizeCts = new System.Threading.CancellationTokenSource();
+            _ = AutoMinimizeLauncherAfterDelayAsync(_autoMinimizeCts.Token);
+        }
+
+        private async Task AutoMinimizeLauncherAfterDelayAsync(System.Threading.CancellationToken cancellationToken)
+        {
+            try
+            {
+                await Task.Delay(3000, cancellationToken);
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
+                }
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (_gameProcess == null)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        if (_gameProcess.HasExited)
+                        {
+                            return;
+                        }
+                    }
+                    catch
+                    {
+                        return;
+                    }
+
+                    if (WindowState != WindowState.Minimized)
+                    {
+                        ApplyLauncherRenderingOptimization(true);
+                        WindowState = WindowState.Minimized;
+                        _launcherMinimizedForGame = true;
+                    }
+                });
+            }
+            catch (TaskCanceledException)
+            {
+            }
+        }
+
+        private void CancelAutoMinimizeSchedule()
+        {
+            if (_autoMinimizeCts == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _autoMinimizeCts.Cancel();
+            }
+            catch
+            {
+            }
+
+            _autoMinimizeCts.Dispose();
+            _autoMinimizeCts = null;
+        }
+
+        private void ApplyLauncherRenderingOptimization(bool minimized)
+        {
+            if (minimized)
+            {
+                BackgroundForceSoftwareRendering = true;
+                return;
+            }
+
+            BackgroundForceSoftwareRendering = false;
+        }
+
+        private void RestoreLauncherAfterGameExit()
+        {
+            if (!_launcherMinimizedForGame)
+            {
+                return;
+            }
+
+            ApplyLauncherRenderingOptimization(false);
+            WindowState = WindowState.Normal;
+            Show();
+            Activate();
+            _launcherMinimizedForGame = false;
         }
     }
 }

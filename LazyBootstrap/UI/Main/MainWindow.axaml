@@ -3,9 +3,11 @@
                  xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
                  xmlns:pages="clr-namespace:LazyBootstrap.UI.Pages"
                  x:Class="LazyBootstrap.MainWindow"
-                 Title="LazyBootstrap"
-                 Width="1560" Height="900"
-                 MinWidth="1440" MinHeight="900"
+                 Title="SOUND VOLTEX LazyBootstrap"
+                 Width="1536" Height="864"
+                 MinWidth="1280" MinHeight="720"
+                 BackgroundAnimationEnabled="False"
+                 BackgroundStyle="Gradient"
                  CanResize="True"
                  WindowStartupLocation="CenterScreen">
     <suki:SukiWindow.Hosts>
@@ -28,17 +30,28 @@
             <Setter Property="Padding" Value="0,1,0,1"/>
             <Setter Property="LineHeight" Value="20"/>
         </Style>
+
+        <Style Selector="suki|SukiWindow /template/ suki|GlassCard#PART_TitleBarBackground">
+            <Setter Property="Background" Value="#33000000"/>
+        </Style>
+
+        <Style Selector="suki|SukiSideMenu /template/ suki|GlassCard#Glass">
+            <Setter Property="Background" Value="#33000000"/>
+        </Style>
+
+        <Style Selector="suki|SukiSideMenu /template/ Border#ContentBorder">
+            <Setter Property="Background" Value="#22000000"/>
+        </Style>
+
     </suki:SukiWindow.Styles>
 
     <Grid>
-        <suki:SukiSideMenu x:Name="MainSideMenu" IsSearchEnabled="False">
-            <suki:SukiSideMenu.HeaderContent>
-                <StackPanel Margin="12,10,12,12">
-                    <TextBlock Text="LazyBootstrap" FontSize="20" FontWeight="SemiBold"/>
-                    <TextBlock Text="SukiUI 6.0.3" Opacity="0.75"/>
-                </StackPanel>
-            </suki:SukiSideMenu.HeaderContent>
+        <Image Source="avares://LazyBootstrap/Assets/Images/background.jpg"
+               Stretch="UniformToFill"
+               Opacity="0.05"
+               IsHitTestVisible="False"/>
 
+        <suki:SukiSideMenu x:Name="MainSideMenu" IsSearchEnabled="False">
             <suki:SukiSideMenu.Items>
                 <suki:SukiSideMenuItem Header="启动">
                     <suki:SukiSideMenuItem.Icon>

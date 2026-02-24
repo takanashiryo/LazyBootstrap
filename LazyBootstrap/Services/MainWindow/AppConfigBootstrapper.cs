@@ -20,6 +20,20 @@ namespace LazyBootstrap
             config.RenameSection(LegacySettingsSectionName, SettingSectionName);
             config.MoveKey(SettingSectionName, DisplaySectionName, "displayconfigure");
 
+            var legacyCompatLayer = config.ReadString(SettingSectionName, "compatlayerenabled", string.Empty);
+            var currentCompatLayer = config.ReadString(SettingSectionName, "compatlayer", string.Empty);
+            if (string.IsNullOrWhiteSpace(currentCompatLayer) && !string.IsNullOrWhiteSpace(legacyCompatLayer))
+            {
+                config.WriteString(SettingSectionName, "compatlayer", legacyCompatLayer);
+            }
+
+            var legacyRenderMode = config.ReadString(SettingSectionName, "rendermode", string.Empty);
+            var currentRenderMode = config.ReadString(SettingSectionName, "cl-rendermode", string.Empty);
+            if (string.IsNullOrWhiteSpace(currentRenderMode) && !string.IsNullOrWhiteSpace(legacyRenderMode))
+            {
+                config.WriteString(SettingSectionName, "cl-rendermode", legacyRenderMode);
+            }
+
             var legacyNoRestore = config.ReadString(DisplaySectionName, "norestorerotation", string.Empty);
             if (string.IsNullOrWhiteSpace(legacyNoRestore))
             {
@@ -47,8 +61,8 @@ namespace LazyBootstrap
         {
             EnsureDefault(config, SettingSectionName, "portablemode", "false");
             EnsureDefault(config, SettingSectionName, "noasphyxia", "false");
-            EnsureDefault(config, SettingSectionName, "compatlayerenabled", "false");
-            EnsureDefault(config, SettingSectionName, "rendermode", "dx9on12");
+            EnsureDefault(config, SettingSectionName, "compatlayer", "false");
+            EnsureDefault(config, SettingSectionName, "cl-rendermode", "dx9on12");
 
             EnsureDefault(config, DisplaySectionName, "displayconfigure", "false");
             EnsureDefault(config, DisplaySectionName, "exitrestore", "false");
@@ -85,8 +99,8 @@ namespace LazyBootstrap
                 "[Setting]",
                 "portablemode = \"false\"",
                 "noasphyxia = \"false\"",
-                "compatlayerenabled = \"false\"",
-                "rendermode = \"dx9on12\"",
+                "compatlayer = \"false\"",
+                "cl-rendermode = \"dx9on12\"",
                 string.Empty,
                 "[Display]",
                 "displayconfigure = \"false\"",
