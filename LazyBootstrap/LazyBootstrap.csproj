@@ -12,8 +12,8 @@
     <PublishAot>false</PublishAot>
     <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <AssemblyVersion>26.0.0.0</AssemblyVersion>
-    <FileVersion>26.0.0.0</FileVersion>
+    <AssemblyVersion>26.0.1</AssemblyVersion>
+    <FileVersion>26.0.1</FileVersion>
 <!--    <InformationalVersion>26.0</InformationalVersion>-->
     <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
     <Description>only compatible with sdvx</Description>

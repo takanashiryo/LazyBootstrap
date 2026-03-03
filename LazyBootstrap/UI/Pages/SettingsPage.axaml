@@ -102,7 +102,6 @@
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口化启动" VerticalAlignment="Center"/><ToggleSwitch x:Name="WindowedToggleSwitch" Grid.Column="1"/></Grid>
                                     <TextBlock Text="开启时副屏也会窗口化" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                     <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口模式" VerticalAlignment="Center"/><ComboBox x:Name="AdvWindowModeComboBox" Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="默认"/><ComboBoxItem Content="无边框"/><ComboBoxItem Content="可变窗口"/></ComboBox></Grid>
-                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="副屏无边框" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSubBorderlessToggleSwitch" Grid.Column="1"/></Grid>
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvWindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
                                     <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口大小" VerticalAlignment="Center"/><TextBox x:Name="AdvWindowSizeTextBox" Grid.Column="1" Watermark="1080,1920"/></Grid>
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="使用单一显示适配器" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSingleAdapterToggleSwitch" Grid.Column="1"/></Grid>
@@ -117,9 +116,11 @@
                             <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                 <StackPanel Spacing="12">
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSubWindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
+                                    <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="副屏无边框" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSubBorderlessToggleSwitch" Grid.Column="1"/></Grid>
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="强制进行渲染" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvSubForceRenderToggleSwitch" Grid.Column="1"/></Grid>
                                     <TextBlock Text="若副屏黑屏、闪烁、一帧一帧显示，可尝试开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="原生触控输入" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvNativeTouchToggleSwitch" Grid.Column="1"/></Grid>
+                                    <TextBlock Text="使用Windows原生触控API，若出现触摸双击可开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                 </StackPanel>
                             </suki:GlassCard>
                         </suki:SettingsLayoutItem.Content>
@@ -139,6 +140,7 @@
                                 <StackPanel Spacing="12">
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="CardIO HID Reader支持" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvCardIoToggleSwitch" Grid.Column="1"/></Grid>
                                     <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="HID SmartCard支持" VerticalAlignment="Center"/><ToggleSwitch x:Name="AdvHidSmartCardToggleSwitch" Grid.Column="1"/></Grid>
+                                    <TextBlock Text="备选，优先使用CardIO" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                 </StackPanel>
                             </suki:GlassCard>
                         </suki:SettingsLayoutItem.Content>
