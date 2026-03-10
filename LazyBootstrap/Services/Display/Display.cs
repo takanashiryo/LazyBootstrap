@@ -751,28 +751,37 @@ namespace LazyBootstrap
 
         private void ApplyPortableMode(bool enabled)
         {
-            _portableMode = enabled;
-            ApplyPortableModeToggleState(enabled);
-
-            var activeXmlPath = GetSpiceXmlPath();
-            if (!File.Exists(activeXmlPath))
+            bool previousMode = _portableMode;
+            var targetXmlPath = GetSpiceXmlPathForMode(enabled);
+            if (!File.Exists(targetXmlPath))
             {
-                ShowErrorToast("切换失败", "未找到 spicetools.xml，已自动关闭该选项。");
+                ShowErrorToast("切换失败", $"未找到 spicetools.xml：{targetXmlPath}");
 
-                _portableMode = false;
-                ApplyPortableModeToggleState(false);
-                RefreshSettingsPanelAfterPortableModeSwitch();
-
-                SaveSettings();
+                _portableMode = previousMode;
+                ApplyPortableModeToggleState(previousMode);
                 return;
             }
 
+            _portableMode = enabled;
+            ApplyPortableModeToggleState(enabled);
+
             SaveSettings();
             ShowInfoToast("便携模式切换", _portableMode
-                ? $"已切换至便携模式，XML: {activeXmlPath}"
-                : $"已切换至系统模式，XML: {activeXmlPath}");
+                ? $"已切换至便携模式，XML: {targetXmlPath}"
+                : $"已切换至系统模式，XML: {targetXmlPath}");
 
             RefreshSettingsPanelAfterPortableModeSwitch();
+        }
+
+        private string GetSpiceXmlPathForMode(bool portableMode)
+        {
+            if (portableMode)
+            {
+                return Path.Combine(_contentsDir, "lazy", "spicetools.xml");
+            }
+
+            string appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+            return Path.Combine(appDataDir, "spicetools.xml");
         }
 
         private void RefreshSettingsPanelAfterPortableModeSwitch()

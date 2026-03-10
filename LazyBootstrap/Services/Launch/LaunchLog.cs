@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
@@ -54,7 +54,7 @@ namespace LazyBootstrap
                             _ => string.Empty
                         };
 
-                        entry = $"[{DateTime.Now:HH:mm:ss}] {prefix}{line}";
+                        entry = $"[{DateTime.UtcNow:HH:mm:ss}] {prefix}{line}";
                     }
 
                     _launchLogLineQueue.Enqueue(entry);
