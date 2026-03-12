@@ -20,6 +20,9 @@
     <Company>LazyBootstrap - Lazy SDVX</Company>
     <Copyright>Copyright © 2025 Takanashi Ryo</Copyright>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <!-- Avoid duplicate assembly attributes generated during Avalonia builds. -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
@@ -33,7 +36,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.12" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
-    <PackageReference Include="SukiUI" Version="6.0.4-nightly20260124" />
+    <PackageReference Include="SukiUI" Version="6.0.4-nightly20260303" />
   </ItemGroup>
 
   <ItemGroup>

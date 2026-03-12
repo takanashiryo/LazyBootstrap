@@ -382,11 +382,15 @@ namespace LazyBootstrap
                     CreateNoWindow = true
                 };
 
-                using (var addProcess = Process.Start(addProcessInfo))
+                using var addProcess = Process.Start(addProcessInfo);
+                if (addProcess == null)
                 {
-                    addProcess.WaitForExit();
-                    ShowInfoToast("防火墙规则", "防火墙规则添加完成。");
+                    ShowErrorToast("添加防火墙规则失败", "未能启动 netsh。");
+                    return;
                 }
+
+                await addProcess.WaitForExitAsync();
+                ShowInfoToast("防火墙规则", "防火墙规则添加完成。");
             }
             catch (System.ComponentModel.Win32Exception ex)
             {
@@ -396,12 +400,12 @@ namespace LazyBootstrap
                 }
                 else
                 {
-                    ShowErrorToast("防火墙规则失败", ex.Message);
+                    ShowErrorToast("添加防火墙规则失败", ex.Message);
                 }
             }
             catch (Exception ex)
             {
-                ShowErrorToast("防火墙规则失败", ex.Message);
+                ShowErrorToast("添加防火墙规则失败", ex.Message);
             }
         }
 

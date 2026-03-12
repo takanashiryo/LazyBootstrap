@@ -5,6 +5,7 @@ using System.Xml.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
+using SukiUI.Dialogs;
 
 namespace LazyBootstrap
 {
