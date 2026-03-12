@@ -38,20 +38,20 @@ namespace LazyBootstrap
         private static Bitmap _warningDialogIconCache;
         private static Bitmap _errorDialogIconCache;
 
-        private bool _advDisableSubDisplay = false;
-        private int _advWindowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口
-        private bool _advSubBorderless = false;
-        private bool _advShowCursorTouchSim = false;
-        private bool _advPCoreOptimization = false;
-        private bool _advWindowTopMost = false;
-        private string _advWindowSize = string.Empty;
-        private bool _advSingleAdapter = false;
-        private bool _advSubWindowTopMost = false;
-        private bool _advSubForceRender = false;
-        private bool _advNativeTouch = false;
-        private string _advAsioDriver = string.Empty;
-        private bool _advCardIo = false;
-        private bool _advHidSmartCard = false;
+        private bool _disableSubDisplay = false;
+        private int _windowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口
+        private bool _subBorderless = false;
+        private bool _showCursorTouchSim = false;
+        private bool _pCoreOptimization = false;
+        private bool _windowTopMost = false;
+        private string _windowSize = string.Empty;
+        private bool _singleAdapter = false;
+        private bool _subWindowTopMost = false;
+        private bool _subForceRender = false;
+        private bool _nativeTouch = false;
+        private string _asioDriver = string.Empty;
+        private bool _cardIo = false;
+        private bool _hidSmartCard = false;
 
         private bool _dbgNetDump = false;
         private bool _displayConfigEnabled = false;
@@ -225,7 +225,7 @@ namespace LazyBootstrap
 
         private void RefreshAsioDriverChoices(string selectedValue)
         {
-            if (AdvAsioDriverComboBox == null)
+            if (AsioDriverComboBox == null)
             {
                 return;
             }
@@ -253,13 +253,13 @@ namespace LazyBootstrap
             _isUpdatingAsioDriverUi = true;
             try
             {
-                AdvAsioDriverComboBox.Items.Clear();
+                AsioDriverComboBox.Items.Clear();
                 foreach (var choice in choices)
                 {
-                    AdvAsioDriverComboBox.Items.Add(choice);
+                    AsioDriverComboBox.Items.Add(choice);
                 }
 
-                AdvAsioDriverComboBox.SelectedItem = targetChoice;
+                AsioDriverComboBox.SelectedItem = targetChoice;
             }
             finally
             {
@@ -269,7 +269,7 @@ namespace LazyBootstrap
 
         private string GetSelectedAsioDriverValue()
         {
-            return AdvAsioDriverComboBox?.SelectedItem is AsioDriverChoice choice
+            return AsioDriverComboBox?.SelectedItem is AsioDriverChoice choice
                 ? choice.Value
                 : string.Empty;
         }
@@ -468,216 +468,216 @@ namespace LazyBootstrap
             }
 
             // 高级选项（主窗口内控件）
-            if (AdvNetDumpToggleSwitch != null)
+            if (NetDumpToggleSwitch != null)
             {
-                AdvNetDumpToggleSwitch.IsCheckedChanged += (s, e) =>
+                NetDumpToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvNetDumpToggleSwitch, () => _dbgNetDump = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(NetDumpToggleSwitch, () => _dbgNetDump = false))
                     {
                         return;
                     }
 
-                    _dbgNetDump = AdvNetDumpToggleSwitch.IsChecked == true;
+                    _dbgNetDump = NetDumpToggleSwitch.IsChecked == true;
                     UpdateSpiceConfig(new OptionUpdate("netdump", _dbgNetDump ? "/ENABLED" : string.Empty));
                 };
             }
-            if (AdvDisableSubDisplayToggleSwitch != null)
+            if (DisableSubDisplayToggleSwitch != null)
             {
-                AdvDisableSubDisplayToggleSwitch.IsCheckedChanged += (s, e) =>
+                DisableSubDisplayToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvDisableSubDisplayToggleSwitch, () => _advDisableSubDisplay = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(DisableSubDisplayToggleSwitch, () => _disableSubDisplay = false))
                     {
                         return;
                     }
 
-                    _advDisableSubDisplay = AdvDisableSubDisplayToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty));
+                    _disableSubDisplay = DisableSubDisplayToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxnosub", _disableSubDisplay ? "/ENABLED" : string.Empty));
                 };
             }
-            if (AdvWindowModeComboBox != null)
+            if (WindowModeComboBox != null)
             {
-                AdvWindowModeComboBox.SelectionChanged += (s, e) =>
+                WindowModeComboBox.SelectionChanged += (s, e) =>
                 {
                     if (_isLoadingSettings) return;
-                    _advWindowModeIndex = AdvWindowModeComboBox.SelectedIndex < 0 ? 0 : AdvWindowModeComboBox.SelectedIndex;
+                    _windowModeIndex = WindowModeComboBox.SelectedIndex < 0 ? 0 : WindowModeComboBox.SelectedIndex;
                     UpdateSpiceConfig(new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue()));
                 };
             }
-            if (AdvPCoreOptimizationToggleSwitch != null)
+            if (PCoreOptimizationToggleSwitch != null)
             {
-                AdvPCoreOptimizationToggleSwitch.IsCheckedChanged += (s, e) =>
+                PCoreOptimizationToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvPCoreOptimizationToggleSwitch, () => _advPCoreOptimization = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(PCoreOptimizationToggleSwitch, () => _pCoreOptimization = false))
                     {
                         return;
                     }
 
-                    _advPCoreOptimization = AdvPCoreOptimizationToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty));
+                    _pCoreOptimization = PCoreOptimizationToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-processefficiency", _pCoreOptimization ? "pcores" : string.Empty));
                 };
             }
-            if (AdvSubBorderlessToggleSwitch != null)
+            if (SubBorderlessToggleSwitch != null)
             {
-                AdvSubBorderlessToggleSwitch.IsCheckedChanged += (s, e) =>
+                SubBorderlessToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvSubBorderlessToggleSwitch, () => _advSubBorderless = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SubBorderlessToggleSwitch, () => _subBorderless = false))
                     {
                         return;
                     }
 
-                    _advSubBorderless = AdvSubBorderlessToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : string.Empty));
+                    _subBorderless = SubBorderlessToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sdvxwsubborderless", _subBorderless ? "/ENABLED" : string.Empty));
                 };
             }
-            if (AdvShowCursorTouchSimToggleSwitch != null)
+            if (ShowCursorTouchSimToggleSwitch != null)
             {
-                AdvShowCursorTouchSimToggleSwitch.IsCheckedChanged += (s, e) =>
+                ShowCursorTouchSimToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvShowCursorTouchSimToggleSwitch, () => _advShowCursorTouchSim = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(ShowCursorTouchSimToggleSwitch, () => _showCursorTouchSim = false))
                     {
                         return;
                     }
 
-                    _advShowCursorTouchSim = AdvShowCursorTouchSimToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("s", _advShowCursorTouchSim ? "/ENABLED" : string.Empty));
+                    _showCursorTouchSim = ShowCursorTouchSimToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("s", _showCursorTouchSim ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvWindowTopMostToggleSwitch != null)
+            if (WindowTopMostToggleSwitch != null)
             {
-                AdvWindowTopMostToggleSwitch.IsCheckedChanged += (s, e) =>
+                WindowTopMostToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvWindowTopMostToggleSwitch, () => _advWindowTopMost = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(WindowTopMostToggleSwitch, () => _windowTopMost = false))
                     {
                         return;
                     }
 
-                    _advWindowTopMost = AdvWindowTopMostToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("sp2x-windowalwaysontop", _advWindowTopMost ? "/ENABLED" : string.Empty));
+                    _windowTopMost = WindowTopMostToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-windowalwaysontop", _windowTopMost ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvSingleAdapterToggleSwitch != null)
+            if (SingleAdapterToggleSwitch != null)
             {
-                AdvSingleAdapterToggleSwitch.IsCheckedChanged += (s, e) =>
+                SingleAdapterToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvSingleAdapterToggleSwitch, () => _advSingleAdapter = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SingleAdapterToggleSwitch, () => _singleAdapter = false))
                     {
                         return;
                     }
 
-                    _advSingleAdapter = AdvSingleAdapterToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("graphics-force-single-adapter", _advSingleAdapter ? "/ENABLED" : string.Empty));
+                    _singleAdapter = SingleAdapterToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("graphics-force-single-adapter", _singleAdapter ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvSubWindowTopMostToggleSwitch != null)
+            if (SubWindowTopMostToggleSwitch != null)
             {
-                AdvSubWindowTopMostToggleSwitch.IsCheckedChanged += (s, e) =>
+                SubWindowTopMostToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvSubWindowTopMostToggleSwitch, () => _advSubWindowTopMost = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SubWindowTopMostToggleSwitch, () => _subWindowTopMost = false))
                     {
                         return;
                     }
 
-                    _advSubWindowTopMost = AdvSubWindowTopMostToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("sdvxwsubtop", _advSubWindowTopMost ? "/ENABLED" : string.Empty));
+                    _subWindowTopMost = SubWindowTopMostToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sdvxwsubtop", _subWindowTopMost ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvSubForceRenderToggleSwitch != null)
+            if (SubForceRenderToggleSwitch != null)
             {
-                AdvSubForceRenderToggleSwitch.IsCheckedChanged += (s, e) =>
+                SubForceRenderToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvSubForceRenderToggleSwitch, () => _advSubForceRender = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SubForceRenderToggleSwitch, () => _subForceRender = false))
                     {
                         return;
                     }
 
-                    _advSubForceRender = AdvSubForceRenderToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxsubredraw", _advSubForceRender ? "/ENABLED" : string.Empty));
+                    _subForceRender = SubForceRenderToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxsubredraw", _subForceRender ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvNativeTouchToggleSwitch != null)
+            if (NativeTouchToggleSwitch != null)
             {
-                AdvNativeTouchToggleSwitch.IsCheckedChanged += (s, e) =>
+                NativeTouchToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvNativeTouchToggleSwitch, () => _advNativeTouch = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(NativeTouchToggleSwitch, () => _nativeTouch = false))
                     {
                         return;
                     }
 
-                    _advNativeTouch = AdvNativeTouchToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("sdvxnativetouch", _advNativeTouch ? "/ENABLED" : string.Empty));
+                    _nativeTouch = NativeTouchToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sdvxnativetouch", _nativeTouch ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvCardIoToggleSwitch != null)
+            if (CardIoToggleSwitch != null)
             {
-                AdvCardIoToggleSwitch.IsCheckedChanged += (s, e) =>
+                CardIoToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvCardIoToggleSwitch, () => _advCardIo = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(CardIoToggleSwitch, () => _cardIo = false))
                     {
                         return;
                     }
 
-                    _advCardIo = AdvCardIoToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("cardio", _advCardIo ? "/ENABLED" : string.Empty));
+                    _cardIo = CardIoToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("cardio", _cardIo ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvHidSmartCardToggleSwitch != null)
+            if (HidSmartCardToggleSwitch != null)
             {
-                AdvHidSmartCardToggleSwitch.IsCheckedChanged += (s, e) =>
+                HidSmartCardToggleSwitch.IsCheckedChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(AdvHidSmartCardToggleSwitch, () => _advHidSmartCard = false))
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(HidSmartCardToggleSwitch, () => _hidSmartCard = false))
                     {
                         return;
                     }
 
-                    _advHidSmartCard = AdvHidSmartCardToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new OptionUpdate("scard", _advHidSmartCard ? "/ENABLED" : string.Empty));
+                    _hidSmartCard = HidSmartCardToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("scard", _hidSmartCard ? "/ENABLED" : string.Empty));
                 };
             }
 
-            if (AdvWindowSizeTextBox != null)
+            if (WindowSizeTextBox != null)
             {
-                AdvWindowSizeTextBox.TextChanged += (s, e) =>
+                WindowSizeTextBox.TextChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForTextOrRevert(AdvWindowSizeTextBox, "sp2x-windowsize"))
+                    if (!EnsureSpiceXmlExistsForTextOrRevert(WindowSizeTextBox, "sp2x-windowsize"))
                     {
                         return;
                     }
 
-                    _advWindowSize = AdvWindowSizeTextBox.Text ?? string.Empty;
-                    UpdateSpiceConfig(new OptionUpdate("sp2x-windowsize", _advWindowSize));
+                    _windowSize = WindowSizeTextBox.Text ?? string.Empty;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-windowsize", _windowSize));
                 };
             }
 
-            if (AdvAsioDriverComboBox != null)
+            if (AsioDriverComboBox != null)
             {
-                RefreshAsioDriverChoices(_advAsioDriver);
+                RefreshAsioDriverChoices(_asioDriver);
 
-                AdvAsioDriverComboBox.DropDownOpened += (s, e) =>
+                AsioDriverComboBox.DropDownOpened += (s, e) =>
                 {
                     RefreshAsioDriverChoices(GetSelectedAsioDriverValue());
                 };
 
-                AdvAsioDriverComboBox.SelectionChanged += (s, e) =>
+                AsioDriverComboBox.SelectionChanged += (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingSpiceToggleUi || _isUpdatingAsioDriverUi) return;
                     if (!EnsureSpiceXmlExistsForAsioOrRevert())
@@ -685,8 +685,8 @@ namespace LazyBootstrap
                         return;
                     }
 
-                    _advAsioDriver = GetSelectedAsioDriverValue();
-                    UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxasio", _advAsioDriver));
+                    _asioDriver = GetSelectedAsioDriverValue();
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxasio", _asioDriver));
                 };
             }
 

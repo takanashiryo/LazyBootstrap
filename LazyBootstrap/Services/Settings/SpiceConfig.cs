@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -157,43 +157,43 @@ namespace LazyBootstrap
                 if (WindowedToggleSwitch != null) WindowedToggleSwitch.IsChecked = windowed;
 
                 var peVal = GetValue("sp2x-processefficiency");
-                _advPCoreOptimization = string.Equals(peVal, "pcores", StringComparison.OrdinalIgnoreCase);
+                _pCoreOptimization = string.Equals(peVal, "pcores", StringComparison.OrdinalIgnoreCase);
 
-                _advDisableSubDisplay = string.Equals(GetValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.Ordinal);
+                _disableSubDisplay = string.Equals(GetValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.Ordinal);
                 var wborder = GetValue("sp2x-windowborder");
-                if (string.Equals(wborder, "1", StringComparison.Ordinal)) _advWindowModeIndex = 1;
-                else if (string.Equals(wborder, "2", StringComparison.Ordinal)) _advWindowModeIndex = 2;
-                else _advWindowModeIndex = 0;
-                _advSubBorderless = string.Equals(GetValue("sdvxwsubborderless"), "/ENABLED", StringComparison.Ordinal);
-                _advShowCursorTouchSim = string.Equals(GetValue("s"), "/ENABLED", StringComparison.Ordinal);
-                _advWindowTopMost = string.Equals(GetValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.Ordinal);
-                _advWindowSize = GetValue("sp2x-windowsize") ?? string.Empty;
-                _advSingleAdapter = string.Equals(GetValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.Ordinal);
-                _advSubWindowTopMost = string.Equals(GetValue("sdvxwsubtop"), "/ENABLED", StringComparison.Ordinal);
-                _advSubForceRender = string.Equals(GetValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.Ordinal);
-                _advNativeTouch = string.Equals(GetValue("sdvxnativetouch"), "/ENABLED", StringComparison.Ordinal);
-                _advAsioDriver = GetValue("sp2x-sdvxasio") ?? string.Empty;
-                _advCardIo = string.Equals(GetValue("cardio"), "/ENABLED", StringComparison.Ordinal);
-                _advHidSmartCard = string.Equals(GetValue("scard"), "/ENABLED", StringComparison.Ordinal);
+                if (string.Equals(wborder, "1", StringComparison.Ordinal)) _windowModeIndex = 1;
+                else if (string.Equals(wborder, "2", StringComparison.Ordinal)) _windowModeIndex = 2;
+                else _windowModeIndex = 0;
+                _subBorderless = string.Equals(GetValue("sdvxwsubborderless"), "/ENABLED", StringComparison.Ordinal);
+                _showCursorTouchSim = string.Equals(GetValue("s"), "/ENABLED", StringComparison.Ordinal);
+                _windowTopMost = string.Equals(GetValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.Ordinal);
+                _windowSize = GetValue("sp2x-windowsize") ?? string.Empty;
+                _singleAdapter = string.Equals(GetValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.Ordinal);
+                _subWindowTopMost = string.Equals(GetValue("sdvxwsubtop"), "/ENABLED", StringComparison.Ordinal);
+                _subForceRender = string.Equals(GetValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.Ordinal);
+                _nativeTouch = string.Equals(GetValue("sdvxnativetouch"), "/ENABLED", StringComparison.Ordinal);
+                _asioDriver = GetValue("sp2x-sdvxasio") ?? string.Empty;
+                _cardIo = string.Equals(GetValue("cardio"), "/ENABLED", StringComparison.Ordinal);
+                _hidSmartCard = string.Equals(GetValue("scard"), "/ENABLED", StringComparison.Ordinal);
                 _dbgNetDump = string.Equals(GetValue("netdump"), "/ENABLED", StringComparison.Ordinal);
                 if (ServerAddressTextBox != null) ServerAddressTextBox.Text = GetValue("url");
                 if (PcbIdTextBox != null) PcbIdTextBox.Text = GetValue("p");
 
-                if (AdvNetDumpToggleSwitch != null) AdvNetDumpToggleSwitch.IsChecked = _dbgNetDump;
-                if (AdvDisableSubDisplayToggleSwitch != null) AdvDisableSubDisplayToggleSwitch.IsChecked = _advDisableSubDisplay;
-                if (AdvWindowModeComboBox != null) AdvWindowModeComboBox.SelectedIndex = _advWindowModeIndex;
-                if (AdvPCoreOptimizationToggleSwitch != null) AdvPCoreOptimizationToggleSwitch.IsChecked = _advPCoreOptimization;
-                if (AdvSubBorderlessToggleSwitch != null) AdvSubBorderlessToggleSwitch.IsChecked = _advSubBorderless;
-                if (AdvShowCursorTouchSimToggleSwitch != null) AdvShowCursorTouchSimToggleSwitch.IsChecked = _advShowCursorTouchSim;
-                if (AdvWindowTopMostToggleSwitch != null) AdvWindowTopMostToggleSwitch.IsChecked = _advWindowTopMost;
-                if (AdvWindowSizeTextBox != null) AdvWindowSizeTextBox.Text = _advWindowSize;
-                if (AdvSingleAdapterToggleSwitch != null) AdvSingleAdapterToggleSwitch.IsChecked = _advSingleAdapter;
-                if (AdvSubWindowTopMostToggleSwitch != null) AdvSubWindowTopMostToggleSwitch.IsChecked = _advSubWindowTopMost;
-                if (AdvSubForceRenderToggleSwitch != null) AdvSubForceRenderToggleSwitch.IsChecked = _advSubForceRender;
-                if (AdvNativeTouchToggleSwitch != null) AdvNativeTouchToggleSwitch.IsChecked = _advNativeTouch;
-                RefreshAsioDriverChoices(_advAsioDriver);
-                if (AdvCardIoToggleSwitch != null) AdvCardIoToggleSwitch.IsChecked = _advCardIo;
-                if (AdvHidSmartCardToggleSwitch != null) AdvHidSmartCardToggleSwitch.IsChecked = _advHidSmartCard;
+                if (NetDumpToggleSwitch != null) NetDumpToggleSwitch.IsChecked = _dbgNetDump;
+                if (DisableSubDisplayToggleSwitch != null) DisableSubDisplayToggleSwitch.IsChecked = _disableSubDisplay;
+                if (WindowModeComboBox != null) WindowModeComboBox.SelectedIndex = _windowModeIndex;
+                if (PCoreOptimizationToggleSwitch != null) PCoreOptimizationToggleSwitch.IsChecked = _pCoreOptimization;
+                if (SubBorderlessToggleSwitch != null) SubBorderlessToggleSwitch.IsChecked = _subBorderless;
+                if (ShowCursorTouchSimToggleSwitch != null) ShowCursorTouchSimToggleSwitch.IsChecked = _showCursorTouchSim;
+                if (WindowTopMostToggleSwitch != null) WindowTopMostToggleSwitch.IsChecked = _windowTopMost;
+                if (WindowSizeTextBox != null) WindowSizeTextBox.Text = _windowSize;
+                if (SingleAdapterToggleSwitch != null) SingleAdapterToggleSwitch.IsChecked = _singleAdapter;
+                if (SubWindowTopMostToggleSwitch != null) SubWindowTopMostToggleSwitch.IsChecked = _subWindowTopMost;
+                if (SubForceRenderToggleSwitch != null) SubForceRenderToggleSwitch.IsChecked = _subForceRender;
+                if (NativeTouchToggleSwitch != null) NativeTouchToggleSwitch.IsChecked = _nativeTouch;
+                RefreshAsioDriverChoices(_asioDriver);
+                if (CardIoToggleSwitch != null) CardIoToggleSwitch.IsChecked = _cardIo;
+                if (HidSmartCardToggleSwitch != null) HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
 
                 SelectPresetByCurrentFields();
             }
@@ -233,41 +233,41 @@ namespace LazyBootstrap
                     WindowedToggleSwitch.IsChecked = string.Equals(GetLastKnownSpiceValue("w"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 }
 
-                _advPCoreOptimization = string.Equals(GetLastKnownSpiceValue("sp2x-processefficiency"), "pcores", StringComparison.OrdinalIgnoreCase);
-                _advDisableSubDisplay = string.Equals(GetLastKnownSpiceValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advSubBorderless = string.Equals(GetLastKnownSpiceValue("sdvxwsubborderless"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advShowCursorTouchSim = string.Equals(GetLastKnownSpiceValue("s"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advWindowTopMost = string.Equals(GetLastKnownSpiceValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advWindowSize = GetLastKnownSpiceValue("sp2x-windowsize");
-                _advSingleAdapter = string.Equals(GetLastKnownSpiceValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advSubWindowTopMost = string.Equals(GetLastKnownSpiceValue("sdvxwsubtop"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advSubForceRender = string.Equals(GetLastKnownSpiceValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advNativeTouch = string.Equals(GetLastKnownSpiceValue("sdvxnativetouch"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advAsioDriver = GetLastKnownSpiceValue("sp2x-sdvxasio");
-                _advCardIo = string.Equals(GetLastKnownSpiceValue("cardio"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _advHidSmartCard = string.Equals(GetLastKnownSpiceValue("scard"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _pCoreOptimization = string.Equals(GetLastKnownSpiceValue("sp2x-processefficiency"), "pcores", StringComparison.OrdinalIgnoreCase);
+                _disableSubDisplay = string.Equals(GetLastKnownSpiceValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _subBorderless = string.Equals(GetLastKnownSpiceValue("sdvxwsubborderless"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _showCursorTouchSim = string.Equals(GetLastKnownSpiceValue("s"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _windowTopMost = string.Equals(GetLastKnownSpiceValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _windowSize = GetLastKnownSpiceValue("sp2x-windowsize");
+                _singleAdapter = string.Equals(GetLastKnownSpiceValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _subWindowTopMost = string.Equals(GetLastKnownSpiceValue("sdvxwsubtop"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _subForceRender = string.Equals(GetLastKnownSpiceValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _nativeTouch = string.Equals(GetLastKnownSpiceValue("sdvxnativetouch"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _asioDriver = GetLastKnownSpiceValue("sp2x-sdvxasio");
+                _cardIo = string.Equals(GetLastKnownSpiceValue("cardio"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
+                _hidSmartCard = string.Equals(GetLastKnownSpiceValue("scard"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 _dbgNetDump = string.Equals(GetLastKnownSpiceValue("netdump"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
 
                 var wborder = GetLastKnownSpiceValue("sp2x-windowborder");
-                if (string.Equals(wborder, "1", StringComparison.Ordinal)) _advWindowModeIndex = 1;
-                else if (string.Equals(wborder, "2", StringComparison.Ordinal)) _advWindowModeIndex = 2;
-                else _advWindowModeIndex = 0;
+                if (string.Equals(wborder, "1", StringComparison.Ordinal)) _windowModeIndex = 1;
+                else if (string.Equals(wborder, "2", StringComparison.Ordinal)) _windowModeIndex = 2;
+                else _windowModeIndex = 0;
 
-                if (AdvDisableSubDisplayToggleSwitch != null) AdvDisableSubDisplayToggleSwitch.IsChecked = _advDisableSubDisplay;
-                if (AdvNetDumpToggleSwitch != null) AdvNetDumpToggleSwitch.IsChecked = _dbgNetDump;
-                if (AdvPCoreOptimizationToggleSwitch != null) AdvPCoreOptimizationToggleSwitch.IsChecked = _advPCoreOptimization;
-                if (AdvSubBorderlessToggleSwitch != null) AdvSubBorderlessToggleSwitch.IsChecked = _advSubBorderless;
-                if (AdvShowCursorTouchSimToggleSwitch != null) AdvShowCursorTouchSimToggleSwitch.IsChecked = _advShowCursorTouchSim;
-                if (AdvWindowTopMostToggleSwitch != null) AdvWindowTopMostToggleSwitch.IsChecked = _advWindowTopMost;
-                if (AdvWindowSizeTextBox != null) AdvWindowSizeTextBox.Text = _advWindowSize;
-                if (AdvSingleAdapterToggleSwitch != null) AdvSingleAdapterToggleSwitch.IsChecked = _advSingleAdapter;
-                if (AdvSubWindowTopMostToggleSwitch != null) AdvSubWindowTopMostToggleSwitch.IsChecked = _advSubWindowTopMost;
-                if (AdvSubForceRenderToggleSwitch != null) AdvSubForceRenderToggleSwitch.IsChecked = _advSubForceRender;
-                if (AdvNativeTouchToggleSwitch != null) AdvNativeTouchToggleSwitch.IsChecked = _advNativeTouch;
-                RefreshAsioDriverChoices(_advAsioDriver);
-                if (AdvCardIoToggleSwitch != null) AdvCardIoToggleSwitch.IsChecked = _advCardIo;
-                if (AdvHidSmartCardToggleSwitch != null) AdvHidSmartCardToggleSwitch.IsChecked = _advHidSmartCard;
-                if (AdvWindowModeComboBox != null) AdvWindowModeComboBox.SelectedIndex = _advWindowModeIndex;
+                if (DisableSubDisplayToggleSwitch != null) DisableSubDisplayToggleSwitch.IsChecked = _disableSubDisplay;
+                if (NetDumpToggleSwitch != null) NetDumpToggleSwitch.IsChecked = _dbgNetDump;
+                if (PCoreOptimizationToggleSwitch != null) PCoreOptimizationToggleSwitch.IsChecked = _pCoreOptimization;
+                if (SubBorderlessToggleSwitch != null) SubBorderlessToggleSwitch.IsChecked = _subBorderless;
+                if (ShowCursorTouchSimToggleSwitch != null) ShowCursorTouchSimToggleSwitch.IsChecked = _showCursorTouchSim;
+                if (WindowTopMostToggleSwitch != null) WindowTopMostToggleSwitch.IsChecked = _windowTopMost;
+                if (WindowSizeTextBox != null) WindowSizeTextBox.Text = _windowSize;
+                if (SingleAdapterToggleSwitch != null) SingleAdapterToggleSwitch.IsChecked = _singleAdapter;
+                if (SubWindowTopMostToggleSwitch != null) SubWindowTopMostToggleSwitch.IsChecked = _subWindowTopMost;
+                if (SubForceRenderToggleSwitch != null) SubForceRenderToggleSwitch.IsChecked = _subForceRender;
+                if (NativeTouchToggleSwitch != null) NativeTouchToggleSwitch.IsChecked = _nativeTouch;
+                RefreshAsioDriverChoices(_asioDriver);
+                if (CardIoToggleSwitch != null) CardIoToggleSwitch.IsChecked = _cardIo;
+                if (HidSmartCardToggleSwitch != null) HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
+                if (WindowModeComboBox != null) WindowModeComboBox.SelectedIndex = _windowModeIndex;
 
                 if (ServerAddressTextBox != null) ServerAddressTextBox.Text = GetLastKnownSpiceValue("url");
                 if (PcbIdTextBox != null) PcbIdTextBox.Text = GetLastKnownSpiceValue("p");
@@ -283,21 +283,21 @@ namespace LazyBootstrap
         private IEnumerable<OptionUpdate> BuildDefaultOptionUpdates()
         {
             yield return new OptionUpdate("w", WindowedToggleSwitch != null && WindowedToggleSwitch.IsChecked == true ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("sp2x-processefficiency", _advPCoreOptimization ? "pcores" : string.Empty);
+            yield return new OptionUpdate("sp2x-processefficiency", _pCoreOptimization ? "pcores" : string.Empty);
             yield return new OptionUpdate("sp2x-dx9on12", ResolveDxModeValue(), false);
-            yield return new OptionUpdate("sp2x-sdvxnosub", _advDisableSubDisplay ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sp2x-sdvxnosub", _disableSubDisplay ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("sp2x-windowborder", ResolveWindowBorderValue());
-            yield return new OptionUpdate("sdvxwsubborderless", _advSubBorderless ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("s", _advShowCursorTouchSim ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("sp2x-windowalwaysontop", _advWindowTopMost ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("sp2x-windowsize", _advWindowSize ?? string.Empty);
-            yield return new OptionUpdate("graphics-force-single-adapter", _advSingleAdapter ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("sdvxwsubtop", _advSubWindowTopMost ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("sp2x-sdvxsubredraw", _advSubForceRender ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("sdvxnativetouch", _advNativeTouch ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("sp2x-sdvxasio", _advAsioDriver ?? string.Empty);
-            yield return new OptionUpdate("cardio", _advCardIo ? "/ENABLED" : string.Empty);
-            yield return new OptionUpdate("scard", _advHidSmartCard ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sdvxwsubborderless", _subBorderless ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("s", _showCursorTouchSim ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sp2x-windowalwaysontop", _windowTopMost ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sp2x-windowsize", _windowSize ?? string.Empty);
+            yield return new OptionUpdate("graphics-force-single-adapter", _singleAdapter ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sdvxwsubtop", _subWindowTopMost ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sp2x-sdvxsubredraw", _subForceRender ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sdvxnativetouch", _nativeTouch ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("sp2x-sdvxasio", _asioDriver ?? string.Empty);
+            yield return new OptionUpdate("cardio", _cardIo ? "/ENABLED" : string.Empty);
+            yield return new OptionUpdate("scard", _hidSmartCard ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("netdump", _dbgNetDump ? "/ENABLED" : string.Empty);
             if (ServerAddressTextBox != null) yield return new OptionUpdate("url", ServerAddressTextBox.Text ?? string.Empty, false);
             if (PcbIdTextBox != null) yield return new OptionUpdate("p", PcbIdTextBox.Text ?? string.Empty, false);
@@ -331,7 +331,7 @@ namespace LazyBootstrap
 
         private string ResolveWindowBorderValue()
         {
-            switch (_advWindowModeIndex)
+            switch (_windowModeIndex)
             {
                 case 1:
                     return "1";
