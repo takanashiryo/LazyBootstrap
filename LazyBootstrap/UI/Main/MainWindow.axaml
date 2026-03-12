@@ -249,7 +249,10 @@
                                         <suki:SettingsLayoutItem Header="音频">
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="ASIO驱动" VerticalAlignment="Center"/><TextBox x:Name="AdvAsioDriverTextBox" Grid.Column="1" Watermark="驱动名"/></Grid>
+                                                    <StackPanel Spacing="12">
+                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="ASIO驱动" VerticalAlignment="Center"/><ComboBox x:Name="AdvAsioDriverComboBox" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+                                                        <TextBlock Text="若声卡的ASIO不支持8ch，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-10,0,0"/>
+                                                    </StackPanel>
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>
                                         </suki:SettingsLayoutItem>

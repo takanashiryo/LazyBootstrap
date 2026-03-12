@@ -191,7 +191,7 @@ namespace LazyBootstrap
                 if (AdvSubWindowTopMostToggleSwitch != null) AdvSubWindowTopMostToggleSwitch.IsChecked = _advSubWindowTopMost;
                 if (AdvSubForceRenderToggleSwitch != null) AdvSubForceRenderToggleSwitch.IsChecked = _advSubForceRender;
                 if (AdvNativeTouchToggleSwitch != null) AdvNativeTouchToggleSwitch.IsChecked = _advNativeTouch;
-                if (AdvAsioDriverTextBox != null) AdvAsioDriverTextBox.Text = _advAsioDriver;
+                RefreshAsioDriverChoices(_advAsioDriver);
                 if (AdvCardIoToggleSwitch != null) AdvCardIoToggleSwitch.IsChecked = _advCardIo;
                 if (AdvHidSmartCardToggleSwitch != null) AdvHidSmartCardToggleSwitch.IsChecked = _advHidSmartCard;
 
@@ -264,7 +264,7 @@ namespace LazyBootstrap
                 if (AdvSubWindowTopMostToggleSwitch != null) AdvSubWindowTopMostToggleSwitch.IsChecked = _advSubWindowTopMost;
                 if (AdvSubForceRenderToggleSwitch != null) AdvSubForceRenderToggleSwitch.IsChecked = _advSubForceRender;
                 if (AdvNativeTouchToggleSwitch != null) AdvNativeTouchToggleSwitch.IsChecked = _advNativeTouch;
-                if (AdvAsioDriverTextBox != null) AdvAsioDriverTextBox.Text = _advAsioDriver;
+                RefreshAsioDriverChoices(_advAsioDriver);
                 if (AdvCardIoToggleSwitch != null) AdvCardIoToggleSwitch.IsChecked = _advCardIo;
                 if (AdvHidSmartCardToggleSwitch != null) AdvHidSmartCardToggleSwitch.IsChecked = _advHidSmartCard;
                 if (AdvWindowModeComboBox != null) AdvWindowModeComboBox.SelectedIndex = _advWindowModeIndex;

@@ -705,7 +705,7 @@ namespace LazyBootstrap
             if (AdvSubWindowTopMostToggleSwitch != null) AdvSubWindowTopMostToggleSwitch.IsEnabled = enabled;
             if (AdvSubForceRenderToggleSwitch != null) AdvSubForceRenderToggleSwitch.IsEnabled = enabled;
             if (AdvNativeTouchToggleSwitch != null) AdvNativeTouchToggleSwitch.IsEnabled = enabled;
-            if (AdvAsioDriverTextBox != null) AdvAsioDriverTextBox.IsEnabled = enabled;
+            if (AdvAsioDriverComboBox != null) AdvAsioDriverComboBox.IsEnabled = enabled;
             if (AdvCardIoToggleSwitch != null) AdvCardIoToggleSwitch.IsEnabled = enabled;
             if (AdvHidSmartCardToggleSwitch != null) AdvHidSmartCardToggleSwitch.IsEnabled = enabled;
             if (ServerAddressTextBox != null) ServerAddressTextBox.IsEnabled = enabled;

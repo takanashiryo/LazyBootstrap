@@ -81,12 +81,31 @@ namespace LazyBootstrap
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
         private bool _isApplyingAspectRatio;
+        private bool _isUpdatingAsioDriverUi;
         private double _lastNormalWidth;
         private double _lastNormalHeight;
         private const double MainWindowAspectRatio = 16d / 9d;
         private const int MaxLaunchLogLines = 1200;
         private readonly StringBuilder _launchLogBuffer = new StringBuilder(16 * 1024);
         private readonly Queue<string> _launchLogLineQueue = new Queue<string>(MaxLaunchLogLines + 64);
+
+        private sealed class AsioDriverChoice
+        {
+            public AsioDriverChoice(string displayName, string value)
+            {
+                DisplayName = displayName ?? string.Empty;
+                Value = value ?? string.Empty;
+            }
+
+            public string DisplayName { get; }
+
+            public string Value { get; }
+
+            public override string ToString()
+            {
+                return DisplayName;
+            }
+        }
 
         private enum DisplaySelectionTarget
         {
@@ -202,6 +221,70 @@ namespace LazyBootstrap
             {
                 _isApplyingAspectRatio = false;
             }
+        }
+
+        private void RefreshAsioDriverChoices(string selectedValue)
+        {
+            if (AdvAsioDriverComboBox == null)
+            {
+                return;
+            }
+
+            var choices = new List<AsioDriverChoice>
+            {
+                new("未设置", string.Empty)
+            };
+
+            foreach (var driverName in AsioDriverRegistry.GetInstalledDriverNames())
+            {
+                choices.Add(new AsioDriverChoice(driverName, driverName));
+            }
+
+            if (!string.IsNullOrWhiteSpace(selectedValue)
+                && !choices.Any(choice => string.Equals(choice.Value, selectedValue, StringComparison.OrdinalIgnoreCase)))
+            {
+                choices.Add(new AsioDriverChoice($"{selectedValue}（当前配置）", selectedValue));
+            }
+
+            var targetChoice = choices.FirstOrDefault(choice =>
+                string.Equals(choice.Value, selectedValue ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                ?? choices[0];
+
+            _isUpdatingAsioDriverUi = true;
+            try
+            {
+                AdvAsioDriverComboBox.Items.Clear();
+                foreach (var choice in choices)
+                {
+                    AdvAsioDriverComboBox.Items.Add(choice);
+                }
+
+                AdvAsioDriverComboBox.SelectedItem = targetChoice;
+            }
+            finally
+            {
+                _isUpdatingAsioDriverUi = false;
+            }
+        }
+
+        private string GetSelectedAsioDriverValue()
+        {
+            return AdvAsioDriverComboBox?.SelectedItem is AsioDriverChoice choice
+                ? choice.Value
+                : string.Empty;
+        }
+
+        private bool EnsureSpiceXmlExistsForAsioOrRevert()
+        {
+            var xmlPath = GetSpiceXmlPath();
+            if (File.Exists(xmlPath))
+            {
+                return true;
+            }
+
+            ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
+            RefreshAsioDriverChoices(GetLastKnownSpiceValue("sp2x-sdvxasio"));
+            return false;
         }
 
         private void InitializeCustomComponents()
@@ -585,17 +668,24 @@ namespace LazyBootstrap
                 };
             }
 
-            if (AdvAsioDriverTextBox != null)
+            if (AdvAsioDriverComboBox != null)
             {
-                AdvAsioDriverTextBox.TextChanged += (s, e) =>
+                RefreshAsioDriverChoices(_advAsioDriver);
+
+                AdvAsioDriverComboBox.DropDownOpened += (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForTextOrRevert(AdvAsioDriverTextBox, "sp2x-sdvxasio"))
+                    RefreshAsioDriverChoices(GetSelectedAsioDriverValue());
+                };
+
+                AdvAsioDriverComboBox.SelectionChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi || _isUpdatingAsioDriverUi) return;
+                    if (!EnsureSpiceXmlExistsForAsioOrRevert())
                     {
                         return;
                     }
 
-                    _advAsioDriver = AdvAsioDriverTextBox.Text ?? string.Empty;
+                    _advAsioDriver = GetSelectedAsioDriverValue();
                     UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxasio", _advAsioDriver));
                 };
             }
