@@ -25,7 +25,6 @@ namespace LazyBootstrap
     {
         private Process _gameProcess;
         private readonly ConfigHandler _configFile;
-        private readonly ServerPresetStore _serverPresetStore;
         private bool _portableMode = false; // 是否使用便携模式
         private bool _isLoadingSettings = false; // 标记是否正在加载设置
 
@@ -138,7 +137,6 @@ namespace LazyBootstrap
             string configFilePath = Path.Combine(_baseDir, "config.toml");
             _configFile = new ConfigHandler(configFilePath);
             AppConfigBootstrapper.InitializeAndMigrate(configFilePath, _configFile);
-            _serverPresetStore = new ServerPresetStore(configFilePath);
 
             _isLoadingSettings = true;
             InitializeCustomComponents();

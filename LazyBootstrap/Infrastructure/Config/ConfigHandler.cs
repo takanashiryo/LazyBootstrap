@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using LazyBootstrap;
 
 // 一个用于处理 TOML 文件的帮助类（保留原有 ReadString/WriteString 接口）
 public class ConfigHandler
@@ -13,6 +14,7 @@ public class ConfigHandler
     // 构造函数，接收 TOML 文件路径
     public ConfigHandler(string tomlPath)
     {
+        ArgumentException.ThrowIfNullOrWhiteSpace(tomlPath);
         _path = new FileInfo(tomlPath).FullName;
     }
 
@@ -40,14 +42,7 @@ public class ConfigHandler
             }
 
             NormalizeBlankLines(lines);
-
-            var dir = Path.GetDirectoryName(_path);
-            if (!string.IsNullOrEmpty(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), TomlTextShared.Utf8NoBom);
+            WriteLinesUnsafe(lines);
         }
     }
 
@@ -100,7 +95,7 @@ public class ConfigHandler
             }
 
             NormalizeBlankLines(lines);
-            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), TomlTextShared.Utf8NoBom);
+            WriteLinesUnsafe(lines);
         }
     }
 
@@ -159,7 +154,7 @@ public class ConfigHandler
             }
 
             NormalizeBlankLines(lines);
-            File.WriteAllText(_path, string.Join(Environment.NewLine, lines), TomlTextShared.Utf8NoBom);
+            WriteLinesUnsafe(lines);
         }
     }
 
@@ -225,9 +220,282 @@ public class ConfigHandler
         }
     }
 
+    public (List<ServerPresetItem> Presets, string ActivePreset, bool Mutated) LoadServerPresets(string nonePresetName, string asphyxiaPresetName, string asphyxiaDefaultUrl)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(nonePresetName);
+        ArgumentException.ThrowIfNullOrWhiteSpace(asphyxiaPresetName);
+        ArgumentNullException.ThrowIfNull(asphyxiaDefaultUrl);
+
+        lock (_sync)
+        {
+            var presets = new List<ServerPresetItem>
+            {
+                new ServerPresetItem { Name = nonePresetName }
+            };
+
+            string activePreset = nonePresetName;
+            bool hasPresetSection = false;
+            bool mutated = false;
+
+            var lines = LoadLinesUnsafe();
+            if (lines.Count > 0)
+            {
+                ServerPresetItem current = null;
+                bool inServerSection = false;
+                string fileActivePreset = string.Empty;
+
+                void CommitCurrent()
+                {
+                    if (current == null || string.IsNullOrWhiteSpace(current.Name))
+                    {
+                        return;
+                    }
+
+                    if (presets.Any(p => string.Equals(p.Name, current.Name, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return;
+                    }
+
+                    presets.Add(current);
+                }
+
+                foreach (var rawLine in lines)
+                {
+                    var line = rawLine.Trim();
+
+                    if (line.StartsWith("[Server]", StringComparison.OrdinalIgnoreCase))
+                    {
+                        inServerSection = true;
+                        continue;
+                    }
+
+                    if (line.StartsWith("[[Server.Presets]]", StringComparison.OrdinalIgnoreCase)
+                        || line.StartsWith("[[ServerPresets]]", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasPresetSection = true;
+                        inServerSection = false;
+                        CommitCurrent();
+                        current = new ServerPresetItem();
+                        continue;
+                    }
+
+                    if (inServerSection)
+                    {
+                        if (line.StartsWith("[", StringComparison.Ordinal) && !line.StartsWith("[[", StringComparison.Ordinal))
+                        {
+                            inServerSection = false;
+                        }
+                        else
+                        {
+                            if (TryParseTomlKeyValue(line, out var serverKey, out var serverValue)
+                                && string.Equals(serverKey, "activepreset", StringComparison.OrdinalIgnoreCase))
+                            {
+                                fileActivePreset = serverValue;
+                            }
+
+                            continue;
+                        }
+                    }
+
+                    if (current == null)
+                    {
+                        continue;
+                    }
+
+                    if (line.StartsWith("[", StringComparison.Ordinal) && !line.StartsWith("[[", StringComparison.Ordinal))
+                    {
+                        CommitCurrent();
+                        current = null;
+                        continue;
+                    }
+
+                    if (!TryParseTomlKeyValue(line, out var key, out var value))
+                    {
+                        continue;
+                    }
+
+                    if (string.Equals(key, "name", StringComparison.OrdinalIgnoreCase))
+                    {
+                        current.Name = value;
+                    }
+                    else if (string.Equals(key, "serverurl", StringComparison.OrdinalIgnoreCase))
+                    {
+                        current.ServerUrl = value;
+                    }
+                    else if (string.Equals(key, "pcbid", StringComparison.OrdinalIgnoreCase))
+                    {
+                        current.PcbId = value;
+                    }
+                }
+
+                CommitCurrent();
+
+                if (!string.IsNullOrWhiteSpace(fileActivePreset))
+                {
+                    var matched = presets.FirstOrDefault(p => string.Equals(p.Name, fileActivePreset, StringComparison.OrdinalIgnoreCase));
+                    if (matched != null)
+                    {
+                        activePreset = matched.Name;
+                    }
+                }
+            }
+
+            var existingAsphyxia = presets.FirstOrDefault(p => string.Equals(p.Name, asphyxiaPresetName, StringComparison.OrdinalIgnoreCase));
+            if (existingAsphyxia == null)
+            {
+                presets.Add(new ServerPresetItem
+                {
+                    Name = asphyxiaPresetName,
+                    ServerUrl = asphyxiaDefaultUrl,
+                    PcbId = string.Empty
+                });
+                mutated = true;
+            }
+            else if (string.IsNullOrWhiteSpace(existingAsphyxia.ServerUrl))
+            {
+                existingAsphyxia.ServerUrl = asphyxiaDefaultUrl;
+                mutated = true;
+            }
+
+            if (!hasPresetSection)
+            {
+                mutated = true;
+            }
+
+            return (presets, activePreset, mutated);
+        }
+    }
+
+    public void SaveServerPresets(IEnumerable<ServerPresetItem> presets, string activePreset, string nonePresetName)
+    {
+        ArgumentNullException.ThrowIfNull(presets);
+        ArgumentException.ThrowIfNullOrWhiteSpace(nonePresetName);
+
+        lock (_sync)
+        {
+            var lines = LoadLinesUnsafe();
+            var kept = new List<string>();
+            bool skippingOldPresets = false;
+            bool skippingServerSection = false;
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+
+                if (trimmed.StartsWith("[Server]", StringComparison.OrdinalIgnoreCase))
+                {
+                    skippingServerSection = true;
+                    continue;
+                }
+
+                if (trimmed.StartsWith("[[Server.Presets]]", StringComparison.OrdinalIgnoreCase)
+                    || trimmed.StartsWith("[[ServerPresets]]", StringComparison.OrdinalIgnoreCase))
+                {
+                    skippingOldPresets = true;
+                    continue;
+                }
+
+                if (skippingServerSection || skippingOldPresets)
+                {
+                    if (trimmed.StartsWith("[", StringComparison.Ordinal) && !trimmed.StartsWith("[[", StringComparison.Ordinal))
+                    {
+                        skippingServerSection = false;
+                        skippingOldPresets = false;
+                        kept.Add(line);
+                    }
+
+                    continue;
+                }
+
+                kept.Add(line);
+            }
+
+            while (kept.Count > 0 && string.IsNullOrWhiteSpace(kept[^1]))
+            {
+                kept.RemoveAt(kept.Count - 1);
+            }
+
+            if (kept.Count > 0)
+            {
+                kept.Add(string.Empty);
+            }
+
+            kept.Add("[Server]");
+            kept.Add($"activepreset = \"{TomlTextShared.EscapeTomlString(activePreset ?? nonePresetName)}\"");
+
+            foreach (var preset in presets.Where(p =>
+                         p != null
+                         && !string.Equals(p.Name, nonePresetName, StringComparison.OrdinalIgnoreCase)))
+            {
+                kept.Add(string.Empty);
+                kept.Add("[[Server.Presets]]");
+                kept.Add($"name = \"{TomlTextShared.EscapeTomlString(preset.Name)}\"");
+                kept.Add($"serverurl = \"{TomlTextShared.EscapeTomlString(preset.ServerUrl)}\"");
+                kept.Add($"pcbid = \"{TomlTextShared.EscapeTomlString(preset.PcbId)}\"");
+            }
+
+            TomlTextShared.NormalizeBlankLines(kept, preserveSectionSeparator: false);
+            WriteLinesUnsafe(kept);
+        }
+    }
+
     private static string BuildTomlLine(string key, string value)
     {
         return $"{key} = \"{TomlTextShared.EscapeTomlString(value)}\"";
+    }
+
+    private List<string> LoadLinesUnsafe()
+    {
+        return File.Exists(_path)
+            ? File.ReadAllLines(_path, Encoding.UTF8).ToList()
+            : new List<string>();
+    }
+
+    private void WriteLinesUnsafe(List<string> lines)
+    {
+        ArgumentNullException.ThrowIfNull(lines);
+        WriteTextAtomically(string.Join(Environment.NewLine, lines));
+    }
+
+    private void WriteTextAtomically(string content)
+    {
+        var directory = Path.GetDirectoryName(_path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        var tempPath = Path.Combine(
+            directory ?? string.Empty,
+            $"{Path.GetFileName(_path)}.{Guid.NewGuid():N}.tmp");
+
+        File.WriteAllText(tempPath, content ?? string.Empty, TomlTextShared.Utf8NoBom);
+
+        try
+        {
+            if (File.Exists(_path))
+            {
+                try
+                {
+                    File.Replace(tempPath, _path, null, true);
+                }
+                catch (PlatformNotSupportedException)
+                {
+                    File.Move(tempPath, _path, true);
+                }
+            }
+            else
+            {
+                File.Move(tempPath, _path);
+            }
+        }
+        finally
+        {
+            if (File.Exists(tempPath))
+            {
+                File.Delete(tempPath);
+            }
+        }
     }
 
     private static void NormalizeBlankLines(List<string> lines)

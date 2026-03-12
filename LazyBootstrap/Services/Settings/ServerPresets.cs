@@ -24,14 +24,14 @@ namespace LazyBootstrap
         {
             try
             {
-                var result = _serverPresetStore.Load(NonePresetName, AsphyxiaPresetName, AsphyxiaDefaultUrl);
+                var result = _configFile.LoadServerPresets(NonePresetName, AsphyxiaPresetName, AsphyxiaDefaultUrl);
                 _serverPresets.Clear();
                 _serverPresets.AddRange(result.Presets);
                 _activeServerPreset = string.IsNullOrWhiteSpace(result.ActivePreset) ? NonePresetName : result.ActivePreset;
 
                 if (result.Mutated)
                 {
-                    _serverPresetStore.Save(_serverPresets, _activeServerPreset, NonePresetName);
+                    _configFile.SaveServerPresets(_serverPresets, _activeServerPreset, NonePresetName);
                 }
             }
             catch (Exception ex)
@@ -48,7 +48,7 @@ namespace LazyBootstrap
 
         private void SaveServerPresetsToConfig()
         {
-            _serverPresetStore.Save(_serverPresets, _activeServerPreset, NonePresetName);
+            _configFile.SaveServerPresets(_serverPresets, _activeServerPreset, NonePresetName);
         }
 
         private void RefreshServerPresetCombo()
