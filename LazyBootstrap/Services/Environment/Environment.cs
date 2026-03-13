@@ -15,6 +15,8 @@ namespace LazyBootstrap
 {
     public partial class MainWindow
     {
+        private EnvironmentScan.ScanSummary _lastEnvironmentScan = EnvironmentScan.ScanSummary.Empty;
+
         private async Task RunEnvironmentScanAsync()
         {
             try
@@ -29,7 +31,7 @@ namespace LazyBootstrap
                     StatusProgress.Maximum = 100;
                 }
 
-                await EnvironmentScan.RunAsync((progress, message) =>
+                _lastEnvironmentScan = await EnvironmentScan.RunAsync((progress, message) =>
                 {
                     int value = progress;
                     if (value < 0) value = 0;
@@ -46,7 +48,7 @@ namespace LazyBootstrap
 
                 RefreshEnvironmentScanResultCard();
 
-                if (EnvironmentScan.LastHadError)
+                if (_lastEnvironmentScan.HadError)
                 {
                     const string errorContent =
                         "(*´ - `*）啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
@@ -129,7 +131,7 @@ namespace LazyBootstrap
             var rootItems = new List<EnvironmentScan.ScanResultItem>();
             var groupedItems = new Dictionary<string, List<EnvironmentScan.ScanResultItem>>(StringComparer.Ordinal);
 
-            foreach (var item in EnvironmentScan.LastItems)
+            foreach (var item in _lastEnvironmentScan.Items)
             {
                 var slashIndex = item.Item.IndexOf('/');
                 if (slashIndex <= 0 || slashIndex >= item.Item.Length - 1)

@@ -26,15 +26,25 @@ namespace LazyBootstrap
             public ScanResultLevel Level { get; set; } = ScanResultLevel.Success;
         }
 
-        // 最近一次扫描的错误状态与摘要
-        private static bool _lastHadError;
-        private static string _lastErrorSummary;
-        private static IReadOnlyList<ScanResultItem> _lastItems = Array.Empty<ScanResultItem>();
-        public static bool LastHadError => _lastHadError;
-        public static string LastErrorSummary => _lastErrorSummary ?? string.Empty;
-        public static IReadOnlyList<ScanResultItem> LastItems => _lastItems;
+        public sealed class ScanSummary
+        {
+            public static ScanSummary Empty { get; } = new(false, string.Empty, Array.Empty<ScanResultItem>());
 
-        public static Task RunAsync(Action<int, string> progress)
+            public ScanSummary(bool hadError, string errorSummary, IReadOnlyList<ScanResultItem> items)
+            {
+                HadError = hadError;
+                ErrorSummary = errorSummary ?? string.Empty;
+                Items = items ?? Array.Empty<ScanResultItem>();
+            }
+
+            public bool HadError { get; }
+
+            public string ErrorSummary { get; }
+
+            public IReadOnlyList<ScanResultItem> Items { get; }
+        }
+
+        public static Task<ScanSummary> RunAsync(Action<int, string> progress)
         {
             return Task.Run(() =>
             {
@@ -292,12 +302,8 @@ namespace LazyBootstrap
                 Report(i + 1);
             }
 
-            // 保存结果供 UI 使用
-            _lastHadError = hadError;
-            _lastErrorSummary = errorSummary.ToString();
-            _lastItems = items;
-
             Report(StepCount);
+            return new ScanSummary(hadError, errorSummary.ToString(), items.ToArray());
             });
         }
     }
