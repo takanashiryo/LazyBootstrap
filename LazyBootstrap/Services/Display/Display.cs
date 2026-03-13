@@ -36,6 +36,16 @@ namespace LazyBootstrap
             TogglePortableModeCore();
         }
 
+        private async void OnSelectGameDirectoryOverrideClick(object sender, RoutedEventArgs e)
+        {
+            await PickDirectoryOverrideAsync(GameDirectoryOverrideTextBox, "选择游戏目录（contents）");
+        }
+
+        private async void OnSelectAsphyxiaDirectoryOverrideClick(object sender, RoutedEventArgs e)
+        {
+            await PickDirectoryOverrideAsync(AsphyxiaDirectoryOverrideTextBox, "选择氧无目录（asphyxia）");
+        }
+
         private void InitializeDisplayLayoutControls()
         {
             _displayInfos.Clear();

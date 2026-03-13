@@ -13,6 +13,7 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
+using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using SukiUI.Controls;
 using SukiUI.Dialogs;
@@ -31,6 +32,8 @@ namespace LazyBootstrap
         // 统一路径前缀
         private readonly string _baseDir;
         private readonly string _contentsDir;
+        private string _contentsDirOverride = string.Empty;
+        private string _asphyxiaDirOverride = string.Empty;
 
         private string _compatTypeTooltipCache;
 
@@ -392,6 +395,14 @@ namespace LazyBootstrap
             {
                 SavedataBackupImportButton.Click += OnSavedataBackupImportClick;
             }
+            if (SelectGameDirectoryOverrideButton != null)
+            {
+                SelectGameDirectoryOverrideButton.Click += OnSelectGameDirectoryOverrideClick;
+            }
+            if (SelectAsphyxiaDirectoryOverrideButton != null)
+            {
+                SelectAsphyxiaDirectoryOverrideButton.Click += OnSelectAsphyxiaDirectoryOverrideClick;
+            }
 
             if (ServerPresetComboBox != null)
             {
@@ -441,6 +452,26 @@ namespace LazyBootstrap
             if (PcbIdTextBox != null)
             {
                 PcbIdTextBox.Watermark = string.Empty;
+            }
+            if (GameDirectoryOverrideTextBox != null)
+            {
+                GameDirectoryOverrideTextBox.Watermark = "contents";
+                GameDirectoryOverrideTextBox.TextChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _contentsDirOverride = NormalizeDirectoryOverride(GameDirectoryOverrideTextBox.Text);
+                    SaveSettings();
+                };
+            }
+            if (AsphyxiaDirectoryOverrideTextBox != null)
+            {
+                AsphyxiaDirectoryOverrideTextBox.Watermark = "asphyxia";
+                AsphyxiaDirectoryOverrideTextBox.TextChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _asphyxiaDirOverride = NormalizeDirectoryOverride(AsphyxiaDirectoryOverrideTextBox.Text);
+                    SaveSettings();
+                };
             }
 
             // 选项实时更新（窗口页）
@@ -725,19 +756,19 @@ namespace LazyBootstrap
 
         private string GetAsphyxiaPath()
         {
-            return Path.Combine(_baseDir, "asphyxia", "asphyxia-core-x64.exe");
+            return Path.Combine(GetAsphyxiaDirectoryPath(), "asphyxia-core-x64.exe");
         }
 
         private string GetSpicePath()
         {
-            return Path.Combine(_contentsDir, "spice64.exe");
+            return Path.Combine(GetContentsDirectoryPath(), "spice64.exe");
         }
 
         private string GetSpiceXmlPath()
         {
             if (_portableMode)
             {
-                return Path.Combine(_contentsDir, "lazy", "spicetools.xml");
+                return Path.Combine(GetContentsDirectoryPath(), "lazy", "spicetools.xml");
             }
 
             string appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -747,6 +778,63 @@ namespace LazyBootstrap
         private string GetConfigTomlPath()
         {
             return Path.Combine(_baseDir, "config.toml");
+        }
+
+        private string GetContentsDirectoryPath()
+        {
+            return string.IsNullOrWhiteSpace(_contentsDirOverride) ? _contentsDir : _contentsDirOverride;
+        }
+
+        private string GetAsphyxiaDirectoryPath()
+        {
+            return string.IsNullOrWhiteSpace(_asphyxiaDirOverride)
+                ? Path.Combine(_baseDir, "asphyxia")
+                : _asphyxiaDirOverride;
+        }
+
+        private static string NormalizeDirectoryOverride(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                return Path.GetFullPath(path.Trim());
+            }
+            catch
+            {
+                return path.Trim();
+            }
+        }
+
+        private async Task PickDirectoryOverrideAsync(TextBox targetTextBox, string title)
+        {
+            if (targetTextBox == null || StorageProvider == null)
+            {
+                return;
+            }
+
+            var selectedFolders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            {
+                Title = title,
+                AllowMultiple = false
+            });
+
+            if (selectedFolders == null || selectedFolders.Count == 0)
+            {
+                return;
+            }
+
+            var selectedPath = selectedFolders[0].TryGetLocalPath();
+            if (string.IsNullOrWhiteSpace(selectedPath))
+            {
+                ShowErrorToast("选择文件夹失败", "当前选择的文件夹不可直接访问，请选择本地磁盘目录。");
+                return;
+            }
+
+            targetTextBox.Text = NormalizeDirectoryOverride(selectedPath);
         }
 
         private void SetSettingsBusy(bool isBusy)

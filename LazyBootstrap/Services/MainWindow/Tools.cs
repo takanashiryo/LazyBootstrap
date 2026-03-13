@@ -17,8 +17,6 @@ namespace LazyBootstrap
     {
         private static readonly string[] SavedataRelativePaths =
         {
-            @"asphyxia\savedata",
-            @"asphyxia\config.ini",
             @"contents\card0.txt",
             @"contents\card1.txt"
         };
@@ -135,7 +133,7 @@ namespace LazyBootstrap
 
         private void OnClearCacheClick(object sender, RoutedEventArgs e)
         {
-            string cachePath = Path.Combine(_contentsDir, "data_mods", "_cache");
+            string cachePath = Path.Combine(GetContentsDirectoryPath(), "data_mods", "_cache");
             try
             {
                 if (Directory.Exists(cachePath))
@@ -156,7 +154,7 @@ namespace LazyBootstrap
 
         private async Task EditConfigCoreAsync()
         {
-            string cfgToolPath = Path.Combine(_contentsDir, "spicecfg.exe");
+            string cfgToolPath = Path.Combine(GetContentsDirectoryPath(), "spicecfg.exe");
             string arguments = "";
             string xmlPath = GetSpiceXmlPath();
             if (_portableMode)
@@ -494,7 +492,9 @@ namespace LazyBootstrap
 
             CloseSavedataBackupImportWindow();
 
-            bool hasExistingSavedata = SavedataRelativePaths.Any(IsSavedataPathPresent);
+            bool hasExistingSavedata = SavedataRelativePaths.Any(IsSavedataPathPresent)
+                || Directory.Exists(Path.Combine(GetAsphyxiaDirectoryPath(), "savedata"))
+                || File.Exists(Path.Combine(GetAsphyxiaDirectoryPath(), "config.ini"));
             if (hasExistingSavedata)
             {
                 var warningDialogBuilder = _dialogManager
@@ -544,6 +544,18 @@ namespace LazyBootstrap
         private List<string> GetExistingSavedataEntries()
         {
             var existing = new List<string>();
+            string asphyxiaSavedataDir = Path.Combine(GetAsphyxiaDirectoryPath(), "savedata");
+            if (Directory.Exists(asphyxiaSavedataDir))
+            {
+                existing.Add(asphyxiaSavedataDir);
+            }
+
+            string asphyxiaConfigIni = Path.Combine(GetAsphyxiaDirectoryPath(), "config.ini");
+            if (File.Exists(asphyxiaConfigIni))
+            {
+                existing.Add(asphyxiaConfigIni);
+            }
+
             foreach (var relativePath in SavedataRelativePaths)
             {
                 if (IsSavedataPathPresent(relativePath))

@@ -68,7 +68,7 @@ namespace LazyBootstrap
                 if (!asphyxiaDevOnly)
                 {
                     AppendLaunchOutput("正在检查 Windows Defender 排除项...");
-                    var defenderResult = await _windowsDefenderExclusionService.EnsureDirectoryExcludedAsync(_contentsDir);
+                    var defenderResult = await _windowsDefenderExclusionService.EnsureDirectoryExcludedAsync(GetContentsDirectoryPath());
                     switch (defenderResult.Status)
                     {
                         case WindowsDefenderExclusionStatus.Added:

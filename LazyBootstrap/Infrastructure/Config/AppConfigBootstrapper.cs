@@ -63,6 +63,8 @@ namespace LazyBootstrap
             EnsureDefault(config, SettingSectionName, "noasphyxia", "false");
             EnsureDefault(config, SettingSectionName, "compatlayer", "false");
             EnsureDefault(config, SettingSectionName, "cl-rendermode", "dx9on12");
+            EnsureDefault(config, SettingSectionName, "contentsoverride", string.Empty);
+            EnsureDefault(config, SettingSectionName, "asphyxiaoverride", string.Empty);
 
             EnsureDefault(config, DisplaySectionName, "displayconfigure", "false");
             EnsureDefault(config, DisplaySectionName, "exitrestore", "true");
@@ -101,6 +103,8 @@ namespace LazyBootstrap
                 "noasphyxia = \"false\"",
                 "compatlayer = \"false\"",
                 "cl-rendermode = \"dx9on12\"",
+                "contentsoverride = \"\"",
+                "asphyxiaoverride = \"\"",
                 string.Empty,
                 "[Display]",
                 "displayconfigure = \"false\"",

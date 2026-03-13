@@ -30,7 +30,7 @@ namespace LazyBootstrap
 
         private int GetCompatLayerFileCount()
         {
-            string modulesDir = Path.Combine(_contentsDir, "modules");
+            string modulesDir = Path.Combine(GetContentsDirectoryPath(), "modules");
             string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
 
             int foundCount = 0;
@@ -188,8 +188,8 @@ namespace LazyBootstrap
         private bool ApplyCompatLayerFilesByMode(out string error)
         {
             error = string.Empty;
-            string stubsDir = Path.Combine(_contentsDir, "lazy", "stubs");
-            string modulesDir = Path.Combine(_contentsDir, "modules");
+            string stubsDir = Path.Combine(GetContentsDirectoryPath(), "lazy", "stubs");
+            string modulesDir = Path.Combine(GetContentsDirectoryPath(), "modules");
             if (!Directory.Exists(stubsDir))
             {
                 error = "未找到 contents/lazy/stubs";
@@ -255,7 +255,7 @@ namespace LazyBootstrap
         private bool RemoveCompatLayerFilesFromModules(out string error)
         {
             error = string.Empty;
-            string modulesDir = Path.Combine(_contentsDir, "modules");
+            string modulesDir = Path.Combine(GetContentsDirectoryPath(), "modules");
             try
             {
                 var files = new[] { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };

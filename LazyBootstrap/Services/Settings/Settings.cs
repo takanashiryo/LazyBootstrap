@@ -25,6 +25,10 @@ namespace LazyBootstrap
                 {
                     PortableModeToggleSwitch.IsChecked = _portableMode;
                 }
+                _contentsDirOverride = NormalizeDirectoryOverride(_configFile.ReadString(SettingSectionName, "contentsoverride", string.Empty));
+                _asphyxiaDirOverride = NormalizeDirectoryOverride(_configFile.ReadString(SettingSectionName, "asphyxiaoverride", string.Empty));
+                if (GameDirectoryOverrideTextBox != null) GameDirectoryOverrideTextBox.Text = _contentsDirOverride;
+                if (AsphyxiaDirectoryOverrideTextBox != null) AsphyxiaDirectoryOverrideTextBox.Text = _asphyxiaDirOverride;
                 UpdateRecommendedSpiceConfigButtonVisibility();
 
                 LoadServerPresetsFromConfig();
@@ -144,14 +148,14 @@ namespace LazyBootstrap
 
         private string ResolveMachineProperty()
         {
-            var identPath = Path.Combine(_contentsDir, "prop", "ea3-ident.xml");
+            var identPath = Path.Combine(GetContentsDirectoryPath(), "prop", "ea3-ident.xml");
             var result = TryReadMachinePropertyFromEa3(identPath);
             if (!string.IsNullOrWhiteSpace(result))
             {
                 return result;
             }
 
-            var configPath = Path.Combine(_contentsDir, "prop", "ea3-config.xml");
+            var configPath = Path.Combine(GetContentsDirectoryPath(), "prop", "ea3-config.xml");
             result = TryReadMachinePropertyFromEa3(configPath);
             if (!string.IsNullOrWhiteSpace(result))
             {
@@ -202,7 +206,7 @@ namespace LazyBootstrap
         {
             try
             {
-                var bootstrapPath = Path.Combine(_contentsDir, "prop", "bootstrap.xml");
+                var bootstrapPath = Path.Combine(GetContentsDirectoryPath(), "prop", "bootstrap.xml");
                 if (!File.Exists(bootstrapPath))
                 {
                     return "未知";
@@ -306,7 +310,7 @@ namespace LazyBootstrap
         {
             if (portableMode)
             {
-                return Path.Combine(_contentsDir, "lazy", "spicetools.xml");
+                return Path.Combine(GetContentsDirectoryPath(), "lazy", "spicetools.xml");
             }
 
             string appDataDir = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
@@ -412,6 +416,8 @@ namespace LazyBootstrap
             try
             {
                 _configFile.WriteString(SettingSectionName, "portablemode", _portableMode.ToString().ToLowerInvariant());
+                _configFile.WriteString(SettingSectionName, "contentsoverride", NormalizeDirectoryOverride(_contentsDirOverride));
+                _configFile.WriteString(SettingSectionName, "asphyxiaoverride", NormalizeDirectoryOverride(_asphyxiaDirOverride));
 
                 if (NoAsphyxiaToggleSwitch != null)
                     _configFile.WriteString(SettingSectionName, "noasphyxia", (NoAsphyxiaToggleSwitch.IsChecked == true).ToString().ToLowerInvariant());

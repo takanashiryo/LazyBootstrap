@@ -255,7 +255,7 @@ namespace LazyBootstrap
         {
             try
             {
-                string logPath = Path.Combine(_contentsDir, "log.txt");
+            string logPath = Path.Combine(GetContentsDirectoryPath(), "log.txt");
                 if (!File.Exists(logPath))
                 {
                     ShowErrorToast("查看日志失败", $"未找到日志文件: {logPath}");
