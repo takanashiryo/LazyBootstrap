@@ -323,7 +323,7 @@
                                 <suki:GlassCard>
                                     <suki:BusyArea x:Name="DisplayConfigDisabledMask" IsBusy="True" BusyText="显示器配置未启用">
                                         <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="300" Height="540">
-                                            <Image Source="avares://LazyBootstrap/Assets/Images/cabinet.png" Stretch="Uniform"/>
+                                            <Image Source="avares://LazyBootstrap/Assets/Images/cabinet.png" Stretch="Uniform" Width="240"/>
                                             <Canvas Width="300" Height="540" IsHitTestVisible="False">
                                                 <Ellipse x:Name="DotMainGlow" Canvas.Left="124" Canvas.Top="157" Width="52" Height="52" Fill="#35FFFFFF"/>
                                                 <Ellipse x:Name="DotMainCore" Canvas.Left="139" Canvas.Top="172" Width="22" Height="22" Fill="White"/>
