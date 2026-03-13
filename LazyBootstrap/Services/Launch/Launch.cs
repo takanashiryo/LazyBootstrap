@@ -65,6 +65,27 @@ namespace LazyBootstrap
                     return;
                 }
 
+                if (!asphyxiaDevOnly)
+                {
+                    AppendLaunchOutput("正在检查 Windows Defender 排除项...");
+                    var defenderResult = await _windowsDefenderExclusionService.EnsureDirectoryExcludedAsync(_contentsDir);
+                    switch (defenderResult.Status)
+                    {
+                        case WindowsDefenderExclusionStatus.Added:
+                            AppendLaunchOutput(defenderResult.Message, NotificationType.Information);
+                            break;
+                        case WindowsDefenderExclusionStatus.AlreadyExcluded:
+                            AppendLaunchOutput(defenderResult.Message, NotificationType.Information);
+                            break;
+                        case WindowsDefenderExclusionStatus.Skipped:
+                            AppendLaunchOutput(defenderResult.Message, NotificationType.Warning);
+                            break;
+                        default:
+                            AppendLaunchOutput(defenderResult.Message, NotificationType.Warning);
+                            break;
+                    }
+                }
+
                 if (!asphyxiaDevOnly && _displayConfigEnabled)
                 {
                     AppendLaunchOutput("正在应用显示器配置...");

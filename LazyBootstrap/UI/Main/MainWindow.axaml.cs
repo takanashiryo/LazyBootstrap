@@ -36,6 +36,7 @@ namespace LazyBootstrap
 
         private static Bitmap _warningDialogIconCache;
         private static Bitmap _errorDialogIconCache;
+        private readonly IWindowsDefenderExclusionService _windowsDefenderExclusionService = new WindowsDefenderExclusionService();
 
         private bool _disableSubDisplay = false;
         private int _windowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口

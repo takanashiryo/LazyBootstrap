@@ -14,15 +14,11 @@
     <InvariantGlobalization>false</InvariantGlobalization>
     <AssemblyVersion>26.0.1</AssemblyVersion>
     <FileVersion>26.0.1</FileVersion>
-<!--    <InformationalVersion>26.0</InformationalVersion>-->
     <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
     <Description>only compatible with sdvx</Description>
     <Company>LazyBootstrap - Lazy SDVX</Company>
     <Copyright>Copyright © 2025 Takanashi Ryo</Copyright>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-    <!-- Avoid duplicate assembly attributes generated during Avalonia builds. -->
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-    <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
