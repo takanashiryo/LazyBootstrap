@@ -65,8 +65,8 @@ namespace LazyBootstrap
             EnsureDefault(config, SettingSectionName, "cl-rendermode", "dx9on12");
 
             EnsureDefault(config, DisplaySectionName, "displayconfigure", "false");
-            EnsureDefault(config, DisplaySectionName, "exitrestore", "false");
-            EnsureDefault(config, DisplaySectionName, "mode", "dual");
+            EnsureDefault(config, DisplaySectionName, "exitrestore", "true");
+            EnsureDefault(config, DisplaySectionName, "mode", "single");
             EnsureDefault(config, DisplaySectionName, "mainscreen", "0");
             EnsureDefault(config, DisplaySectionName, "subscreen", "0");
             EnsureDefault(config, DisplaySectionName, "subrotation", "0");
@@ -104,8 +104,8 @@ namespace LazyBootstrap
                 string.Empty,
                 "[Display]",
                 "displayconfigure = \"false\"",
-                "exitrestore = \"false\"",
-                "mode = \"dual\"",
+                "exitrestore = \"true\"",
+                "mode = \"single\"",
                 "mainscreen = \"0\"",
                 "subscreen = \"0\"",
                 "subrotation = \"0\"",

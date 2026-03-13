@@ -30,12 +30,12 @@ namespace LazyBootstrap
                 LoadServerPresetsFromConfig();
 
                 NoAsphyxiaToggleSwitch.IsChecked = bool.TryParse(_configFile.ReadString(SettingSectionName, "noasphyxia", "false"), out var noAsphyxia) && noAsphyxia;
-                bool exitRestore = bool.TryParse(_configFile.ReadString(DisplaySectionName, "exitrestore", "false"), out var restoreOnExit) && restoreOnExit;
+                bool exitRestore = bool.TryParse(_configFile.ReadString(DisplaySectionName, "exitrestore", "true"), out var restoreOnExit) && restoreOnExit;
                 ExitRestoreToggleSwitch.IsChecked = exitRestore;
 
                 _displayConfigEnabled = bool.TryParse(_configFile.ReadString(DisplaySectionName, "displayconfigure", "false"), out var displayCfg) && displayCfg;
                 if (DisplayConfigEnabledToggleSwitch != null) DisplayConfigEnabledToggleSwitch.IsChecked = _displayConfigEnabled;
-                _isDualDisplay = !string.Equals(_configFile.ReadString(DisplaySectionName, "mode", "dual"), "single", StringComparison.OrdinalIgnoreCase);
+                _isDualDisplay = !string.Equals(_configFile.ReadString(DisplaySectionName, "mode", "single"), "single", StringComparison.OrdinalIgnoreCase);
                 if (DisplayModeComboBox != null) DisplayModeComboBox.SelectedIndex = _isDualDisplay ? 1 : 0;
 
                 try

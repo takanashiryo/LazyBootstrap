@@ -47,8 +47,9 @@ namespace LazyBootstrap
                 {
                     foreach (var display in _displayInfos)
                     {
-                        MainScreenComboBox.Items.Add(display.FriendlyName);
-                        if (SubScreenComboBox != null) SubScreenComboBox.Items.Add(display.FriendlyName);
+                        var displayLabel = BuildDisplayLabel(display);
+                        MainScreenComboBox.Items.Add(displayLabel);
+                        if (SubScreenComboBox != null) SubScreenComboBox.Items.Add(displayLabel);
                     }
                 }
                 else
@@ -179,6 +180,31 @@ namespace LazyBootstrap
             SelectDisplayTarget(DisplaySelectionTarget.None);
             UpdateDisplayLayoutControlsEnabled();
             StartDisplayPulseAnimation();
+        }
+
+        private static string BuildDisplayLabel(DisplayConfigure.DisplayInfo display)
+        {
+            if (display == null)
+            {
+                return "未知显示器";
+            }
+
+            var deviceName = display.DeviceName ?? string.Empty;
+            var displayId = deviceName.StartsWith(@"\\.\", StringComparison.OrdinalIgnoreCase)
+                ? deviceName.Substring(4)
+                : deviceName;
+
+            if (string.IsNullOrWhiteSpace(displayId))
+            {
+                return string.IsNullOrWhiteSpace(display.FriendlyName) ? "未知显示器" : display.FriendlyName;
+            }
+
+            if (string.IsNullOrWhiteSpace(display.FriendlyName))
+            {
+                return displayId;
+            }
+
+            return $"{displayId} - {display.FriendlyName}";
         }
 
         private static void InitializeRotationCombo(ComboBox combo)
