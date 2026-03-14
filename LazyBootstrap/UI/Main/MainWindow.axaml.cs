@@ -733,6 +733,7 @@ namespace LazyBootstrap
                     if (_isLoadingSettings) return;
                     _contentsDirOverride = NormalizeDirectoryOverride(GameDirectoryOverrideTextBox.Text);
                     SaveSettings();
+                    RefreshPathOverrideDependentUi();
                 };
             }
             if (AsphyxiaDirectoryOverrideTextBox != null)
@@ -743,6 +744,7 @@ namespace LazyBootstrap
                     if (_isLoadingSettings) return;
                     _asphyxiaDirOverride = NormalizeDirectoryOverride(AsphyxiaDirectoryOverrideTextBox.Text);
                     SaveSettings();
+                    RefreshPathOverrideDependentUi();
                 };
             }
 

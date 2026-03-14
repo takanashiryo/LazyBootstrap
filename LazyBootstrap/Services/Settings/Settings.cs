@@ -29,7 +29,6 @@ namespace LazyBootstrap
                 _asphyxiaDirOverride = NormalizeDirectoryOverride(_configFile.ReadString(SettingSectionName, "asphyxiaoverride", string.Empty));
                 if (GameDirectoryOverrideTextBox != null) GameDirectoryOverrideTextBox.Text = _contentsDirOverride;
                 if (AsphyxiaDirectoryOverrideTextBox != null) AsphyxiaDirectoryOverrideTextBox.Text = _asphyxiaDirOverride;
-                UpdateRecommendedSpiceConfigButtonVisibility();
 
                 LoadServerPresetsFromConfig();
 
@@ -63,23 +62,7 @@ namespace LazyBootstrap
                 {
                 }
 
-                string machineProperty = ResolveMachineProperty();
-                if (CurrentVersionTextBox != null)
-                {
-                    CurrentVersionTextBox.Text = machineProperty;
-                }
-
-                string currentGameVersion = ResolveCurrentGameVersion();
-                if (RevisionTextBox != null)
-                {
-                    RevisionTextBox.Text = currentGameVersion;
-                }
-
-                string launcherVersion = ResolveLauncherVersion();
-                if (LauncherVersionTextBox != null)
-                {
-                    LauncherVersionTextBox.Text = launcherVersion;
-                }
+                RefreshPathOverrideDependentUi();
 
                 if (MainScreenComboBox != null)
                 {
@@ -325,6 +308,32 @@ namespace LazyBootstrap
             UpdateCompatLayerStatus();
             SyncCompatModeButtonsFromCombo();
             UpdateRecommendedSpiceConfigButtonVisibility();
+        }
+
+        private void RefreshPathOverrideDependentUi()
+        {
+            RefreshSettingsVersionTexts();
+            LoadSpiceConfig();
+            UpdateCompatLayerStatus();
+            UpdateRecommendedSpiceConfigButtonVisibility();
+        }
+
+        private void RefreshSettingsVersionTexts()
+        {
+            if (CurrentVersionTextBox != null)
+            {
+                CurrentVersionTextBox.Text = ResolveMachineProperty();
+            }
+
+            if (RevisionTextBox != null)
+            {
+                RevisionTextBox.Text = ResolveCurrentGameVersion();
+            }
+
+            if (LauncherVersionTextBox != null)
+            {
+                LauncherVersionTextBox.Text = ResolveLauncherVersion();
+            }
         }
 
         private void ApplyPortableModeToggleState(bool enabled)
