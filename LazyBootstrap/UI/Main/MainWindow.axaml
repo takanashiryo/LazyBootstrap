@@ -183,10 +183,13 @@
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="220,Auto,Auto,*" ColumnSpacing="6">
-                                                            <ComboBox x:Name="ServerPresetComboBox" Grid.Column="0" Width="220" HorizontalAlignment="Left"/>
-                                                            <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic"/>
-                                                            <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic"/>
+                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
+                                                            <TextBlock Text="预设" VerticalAlignment="Center"/>
+                                                            <Grid Grid.Column="1" ColumnDefinitions="220,Auto,Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
+                                                                <ComboBox x:Name="ServerPresetComboBox" Grid.Column="0" Width="220" HorizontalAlignment="Left"/>
+                                                                <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic" VerticalAlignment="Center"/>
+                                                                <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic" VerticalAlignment="Center"/>
+                                                            </Grid>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
                                                             <TextBlock Text="服务器地址" VerticalAlignment="Center"/>
