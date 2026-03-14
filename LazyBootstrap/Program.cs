@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -21,6 +22,10 @@ namespace LazyBootstrap
             Failed
         }
 
+        /// <summary>
+        /// Application entry point.
+        /// </summary>
+        /// <param name="args">Command-line arguments.</param>
         [STAThread]
         public static void Main(string[] args)
         {
@@ -29,9 +34,15 @@ namespace LazyBootstrap
             {
                 if (!string.IsNullOrWhiteSpace(elevationResult.Message))
                 {
+                    var isCancelled = elevationResult.Outcome == ElevationOutcome.Cancelled;
                     ShowStartupMessage(
                         elevationResult.Message,
-                        elevationResult.Outcome == ElevationOutcome.Cancelled ? MbIconWarning : MbIconError);
+                        isCancelled ? MbIconWarning : MbIconError,
+                        isCancelled ? TraceEventType.Warning : TraceEventType.Error);
+                }
+                else if (elevationResult.Outcome == ElevationOutcome.RelaunchedElevated)
+                {
+                    Trace.TraceInformation("已将启动流程转交给管理员权限的新进程。");
                 }
 
                 return;
@@ -40,6 +51,10 @@ namespace LazyBootstrap
             BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
         }
 
+        /// <summary>
+        /// Builds the Avalonia application.
+        /// </summary>
+        /// <returns>The configured <see cref="AppBuilder"/> instance.</returns>
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
                 .With(new Win32PlatformOptions
@@ -87,13 +102,19 @@ namespace LazyBootstrap
                     Verb = "runas"
                 };
 
-                Process.Start(psi);
+                var elevatedProcess = Process.Start(psi);
+                if (elevatedProcess is null)
+                {
+                    Trace.TraceError("管理员权限提升失败：系统未能启动新的提权进程。");
+                    return (ElevationOutcome.Failed, "无法以管理员权限重新启动程序：系统未能启动新的提权进程。");
+                }
+
                 return (ElevationOutcome.RelaunchedElevated, string.Empty);
             }
-            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
             {
                 Trace.TraceWarning("管理员权限获取失败");
-                return (ElevationOutcome.Cancelled, "程序启动失败，缺少权限！");
+                return (ElevationOutcome.Cancelled, "程序启动已取消：未授予管理员权限。");
             }
             catch (Exception ex)
             {
@@ -102,14 +123,26 @@ namespace LazyBootstrap
             }
         }
 
-        private static void ShowStartupMessage(string message, uint iconFlags)
+        private static void ShowStartupMessage(string message, uint iconFlags, TraceEventType traceEventType)
         {
             if (string.IsNullOrWhiteSpace(message))
             {
                 return;
             }
 
-            Trace.TraceError(message);
+            switch (traceEventType)
+            {
+                case TraceEventType.Warning:
+                    Trace.TraceWarning(message);
+                    break;
+                case TraceEventType.Error:
+                case TraceEventType.Critical:
+                    Trace.TraceError(message);
+                    break;
+                default:
+                    Trace.TraceInformation(message);
+                    break;
+            }
 
             if (OperatingSystem.IsWindows())
             {

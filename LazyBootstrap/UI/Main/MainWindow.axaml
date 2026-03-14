@@ -201,6 +201,27 @@
                                             </suki:SettingsLayoutItem.Content>
                                         </suki:SettingsLayoutItem>
 
+                                        <suki:SettingsLayoutItem Header="联机">
+                                            <suki:SettingsLayoutItem.Content>
+                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                    <StackPanel Spacing="12">
+                                                        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
+                                                            <TextBlock Text="从网卡获取参数" VerticalAlignment="Center"/>
+                                                            <Button x:Name="OpenNetworkAdapterPickerButton" Grid.Column="1" Content="选择" Padding="10,4" Classes="Flat"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="110,*" ColumnSpacing="8" VerticalAlignment="Center">
+                                                            <TextBlock Text="适配器IP" VerticalAlignment="Center"/>
+                                                            <TextBox x:Name="NetworkAdapterIpTextBox" Grid.Column="1"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="110,*" ColumnSpacing="8" VerticalAlignment="Center">
+                                                            <TextBlock Text="适配器子网掩码" VerticalAlignment="Center"/>
+                                                            <TextBox x:Name="NetworkAdapterSubnetTextBox" Grid.Column="1"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </suki:GlassCard>
+                                            </suki:SettingsLayoutItem.Content>
+                                        </suki:SettingsLayoutItem>
+
                                         <suki:SettingsLayoutItem Header="游戏设定">
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">

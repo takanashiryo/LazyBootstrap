@@ -149,6 +149,8 @@ namespace LazyBootstrap
                 CacheLastKnownSpiceValue("cardio", GetValue("cardio"));
                 CacheLastKnownSpiceValue("scard", GetValue("scard"));
                 CacheLastKnownSpiceValue("netdump", GetValue("netdump"));
+                CacheLastKnownSpiceValue("network", NormalizeNetworkValue(GetValue("network")));
+                CacheLastKnownSpiceValue("subnet", NormalizeNetworkValue(GetValue("subnet")));
                 CacheLastKnownSpiceValue("url", GetValue("url"));
                 CacheLastKnownSpiceValue("p", GetValue("p"));
 
@@ -176,6 +178,9 @@ namespace LazyBootstrap
                 _cardIo = string.Equals(GetValue("cardio"), "/ENABLED", StringComparison.Ordinal);
                 _hidSmartCard = string.Equals(GetValue("scard"), "/ENABLED", StringComparison.Ordinal);
                 _dbgNetDump = string.Equals(GetValue("netdump"), "/ENABLED", StringComparison.Ordinal);
+                if (NetworkAdapterIpTextBox != null) NetworkAdapterIpTextBox.Text = NormalizeNetworkValue(GetValue("network"));
+                if (NetworkAdapterSubnetTextBox != null) NetworkAdapterSubnetTextBox.Text = NormalizeNetworkValue(GetValue("subnet"));
+                RefreshNetworkAdapterChoices(GetNetworkAdapterIpAddress(), GetNetworkAdapterSubnetMask());
                 if (ServerAddressTextBox != null) ServerAddressTextBox.Text = GetValue("url");
                 if (PcbIdTextBox != null) PcbIdTextBox.Text = GetValue("p");
 
@@ -268,6 +273,7 @@ namespace LazyBootstrap
                 if (CardIoToggleSwitch != null) CardIoToggleSwitch.IsChecked = _cardIo;
                 if (HidSmartCardToggleSwitch != null) HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
                 if (WindowModeComboBox != null) WindowModeComboBox.SelectedIndex = _windowModeIndex;
+                RestoreNetworkUiFromLastKnownValues();
 
                 if (ServerAddressTextBox != null) ServerAddressTextBox.Text = GetLastKnownSpiceValue("url");
                 if (PcbIdTextBox != null) PcbIdTextBox.Text = GetLastKnownSpiceValue("p");
@@ -299,6 +305,8 @@ namespace LazyBootstrap
             yield return new OptionUpdate("cardio", _cardIo ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("scard", _hidSmartCard ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("netdump", _dbgNetDump ? "/ENABLED" : string.Empty);
+            if (NetworkAdapterIpTextBox != null) yield return new OptionUpdate("network", GetNetworkAdapterIpAddress(), false);
+            if (NetworkAdapterSubnetTextBox != null) yield return new OptionUpdate("subnet", GetNetworkAdapterSubnetMask(), false);
             if (ServerAddressTextBox != null) yield return new OptionUpdate("url", ServerAddressTextBox.Text ?? string.Empty, false);
             if (PcbIdTextBox != null) yield return new OptionUpdate("p", PcbIdTextBox.Text ?? string.Empty, false);
         }

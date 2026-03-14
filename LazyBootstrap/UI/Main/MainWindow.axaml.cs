@@ -91,6 +91,7 @@ namespace LazyBootstrap
         private const int MaxLaunchLogLines = 1200;
         private readonly StringBuilder _launchLogBuffer = new StringBuilder(16 * 1024);
         private readonly Queue<string> _launchLogLineQueue = new Queue<string>(MaxLaunchLogLines + 64);
+        private bool _isUpdatingNetworkUi;
 
         private sealed class AsioDriverChoice
         {
@@ -103,6 +104,27 @@ namespace LazyBootstrap
             public string DisplayName { get; }
 
             public string Value { get; }
+
+            public override string ToString()
+            {
+                return DisplayName;
+            }
+        }
+
+        private sealed class NetworkAdapterChoice
+        {
+            public NetworkAdapterChoice(string displayName, string ipAddress, string subnetMask)
+            {
+                DisplayName = displayName ?? string.Empty;
+                IpAddress = ipAddress ?? string.Empty;
+                SubnetMask = subnetMask ?? string.Empty;
+            }
+
+            public string DisplayName { get; }
+
+            public string IpAddress { get; }
+
+            public string SubnetMask { get; }
 
             public override string ToString()
             {
@@ -289,6 +311,222 @@ namespace LazyBootstrap
             return false;
         }
 
+        private void RefreshNetworkAdapterChoices(string selectedIpAddress, string selectedSubnetMask)
+        {
+            var normalizedIpAddress = NormalizeNetworkValue(selectedIpAddress);
+            var normalizedSubnetMask = NormalizeNetworkValue(selectedSubnetMask);
+            var choices = new List<NetworkAdapterChoice>
+            {
+                new("未设置", string.Empty, string.Empty)
+            };
+
+            foreach (var adapter in NetworkAdapterDiscovery.GetAvailableAdapters())
+            {
+                choices.Add(new NetworkAdapterChoice(adapter.DisplayName, adapter.IpAddress, adapter.SubnetMask));
+            }
+
+            if ((!string.IsNullOrWhiteSpace(normalizedIpAddress) || !string.IsNullOrWhiteSpace(normalizedSubnetMask))
+                && !choices.Any(choice =>
+                    string.Equals(choice.IpAddress, normalizedIpAddress, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(choice.SubnetMask, normalizedSubnetMask, StringComparison.OrdinalIgnoreCase)))
+            {
+                choices.Add(new NetworkAdapterChoice(
+                    $"{normalizedIpAddress} / {normalizedSubnetMask}（当前配置）".Trim(),
+                    normalizedIpAddress,
+                    normalizedSubnetMask));
+            }
+
+            var targetChoice = choices.FirstOrDefault(choice =>
+                                   string.Equals(choice.IpAddress, normalizedIpAddress, StringComparison.OrdinalIgnoreCase)
+                                   && string.Equals(choice.SubnetMask, normalizedSubnetMask, StringComparison.OrdinalIgnoreCase))
+                               ?? choices[0];
+
+        }
+
+        private static string NormalizeNetworkValue(string value)
+        {
+            return value?.Trim() ?? string.Empty;
+        }
+
+        private static string BuildCurrentNetworkAdapterDisplayName(string ipAddress, string subnetMask)
+        {
+            var normalizedIpAddress = NormalizeNetworkValue(ipAddress);
+            var normalizedSubnetMask = NormalizeNetworkValue(subnetMask);
+            if (string.IsNullOrEmpty(normalizedIpAddress) && string.IsNullOrEmpty(normalizedSubnetMask))
+            {
+                return "未设置";
+            }
+
+            if (string.IsNullOrEmpty(normalizedIpAddress))
+            {
+                return $"{normalizedSubnetMask}（当前配置）";
+            }
+
+            if (string.IsNullOrEmpty(normalizedSubnetMask))
+            {
+                return $"{normalizedIpAddress}（当前配置）";
+            }
+
+            return $"{normalizedIpAddress} / {normalizedSubnetMask}（当前配置）";
+        }
+
+        private static List<NetworkAdapterChoice> BuildNetworkAdapterChoices(string selectedIpAddress, string selectedSubnetMask)
+        {
+            var normalizedIpAddress = NormalizeNetworkValue(selectedIpAddress);
+            var normalizedSubnetMask = NormalizeNetworkValue(selectedSubnetMask);
+            var choices = new List<NetworkAdapterChoice>
+            {
+                new("未设置", string.Empty, string.Empty)
+            };
+
+            foreach (var adapter in NetworkAdapterDiscovery.GetAvailableAdapters())
+            {
+                choices.Add(new NetworkAdapterChoice(adapter.DisplayName, adapter.IpAddress, adapter.SubnetMask));
+            }
+
+            if ((!string.IsNullOrWhiteSpace(normalizedIpAddress) || !string.IsNullOrWhiteSpace(normalizedSubnetMask))
+                && !choices.Any(choice =>
+                    string.Equals(choice.IpAddress, normalizedIpAddress, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(choice.SubnetMask, normalizedSubnetMask, StringComparison.OrdinalIgnoreCase)))
+            {
+                choices.Add(new NetworkAdapterChoice(
+                    BuildCurrentNetworkAdapterDisplayName(normalizedIpAddress, normalizedSubnetMask),
+                    normalizedIpAddress,
+                    normalizedSubnetMask));
+            }
+
+            return choices;
+        }
+
+        private string GetNetworkAdapterIpAddress()
+        {
+            return NormalizeNetworkValue(NetworkAdapterIpTextBox?.Text);
+        }
+
+        private string GetNetworkAdapterSubnetMask()
+        {
+            return NormalizeNetworkValue(NetworkAdapterSubnetTextBox?.Text);
+        }
+
+        private void ApplyNetworkSettings(string ipAddress, string subnetMask, bool persistChanges)
+        {
+            var normalizedIpAddress = NormalizeNetworkValue(ipAddress);
+            var normalizedSubnetMask = NormalizeNetworkValue(subnetMask);
+
+            _isUpdatingNetworkUi = true;
+            try
+            {
+                if (NetworkAdapterIpTextBox != null && !string.Equals(NetworkAdapterIpTextBox.Text, normalizedIpAddress, StringComparison.Ordinal))
+                {
+                    NetworkAdapterIpTextBox.Text = normalizedIpAddress;
+                }
+
+                if (NetworkAdapterSubnetTextBox != null && !string.Equals(NetworkAdapterSubnetTextBox.Text, normalizedSubnetMask, StringComparison.Ordinal))
+                {
+                    NetworkAdapterSubnetTextBox.Text = normalizedSubnetMask;
+                }
+            }
+            finally
+            {
+                _isUpdatingNetworkUi = false;
+            }
+
+            RefreshNetworkAdapterChoices(normalizedIpAddress, normalizedSubnetMask);
+
+            if (!persistChanges)
+            {
+                return;
+            }
+
+            UpdateSpiceConfig(
+                new OptionUpdate("network", normalizedIpAddress, false),
+                new OptionUpdate("subnet", normalizedSubnetMask, false));
+        }
+
+        private async Task OpenNetworkAdapterPickerAsync()
+        {
+            if (!EnsureSpiceXmlExistsForNetworkOrRevert())
+            {
+                return;
+            }
+
+            var currentIpAddress = GetNetworkAdapterIpAddress();
+            var currentSubnetMask = GetNetworkAdapterSubnetMask();
+            var choices = BuildNetworkAdapterChoices(currentIpAddress, currentSubnetMask);
+            var selectedChoice = choices.FirstOrDefault(choice =>
+                                     string.Equals(choice.IpAddress, currentIpAddress, StringComparison.OrdinalIgnoreCase)
+                                     && string.Equals(choice.SubnetMask, currentSubnetMask, StringComparison.OrdinalIgnoreCase))
+                                 ?? choices[0];
+
+            var adapterListBox = new ListBox
+            {
+                ItemsSource = choices,
+                SelectedItem = selectedChoice,
+                MinHeight = 240,
+                MaxHeight = 360
+            };
+
+            var content = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock { Text = "请选择要读取参数的网卡。" },
+                    adapterListBox
+                }
+            };
+
+            var confirmed = await _dialogManager
+                .CreateDialog()
+                .WithTitle("选择网卡")
+                .WithContent(content)
+                .WithYesNoResult("确定", "取消", "Flat")
+                .TryShowAsync();
+            if (!confirmed)
+            {
+                return;
+            }
+
+            if (adapterListBox.SelectedItem is not NetworkAdapterChoice choice)
+            {
+                ShowWarningToast("选择网卡", "请选择一个网卡。");
+                return;
+            }
+
+            ApplyNetworkSettings(choice.IpAddress, choice.SubnetMask, true);
+        }
+
+        private bool EnsureSpiceXmlExistsForNetworkOrRevert()
+        {
+            var xmlPath = GetSpiceXmlPath();
+            if (File.Exists(xmlPath))
+            {
+                return true;
+            }
+
+            ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
+            RestoreNetworkUiFromLastKnownValues();
+            return false;
+        }
+
+        private void RestoreNetworkUiFromLastKnownValues()
+        {
+            var networkValue = NormalizeNetworkValue(GetLastKnownSpiceValue("network"));
+            var subnetValue = NormalizeNetworkValue(GetLastKnownSpiceValue("subnet"));
+
+            _isUpdatingNetworkUi = true;
+            try
+            {
+                if (NetworkAdapterIpTextBox != null) NetworkAdapterIpTextBox.Text = networkValue;
+                if (NetworkAdapterSubnetTextBox != null) NetworkAdapterSubnetTextBox.Text = subnetValue;
+                RefreshNetworkAdapterChoices(networkValue, subnetValue);
+            }
+            finally
+            {
+                _isUpdatingNetworkUi = false;
+            }
+        }
+
         private void InitializeCustomComponents()
         {
             if (ToggleLaunchLogButton != null)
@@ -403,6 +641,10 @@ namespace LazyBootstrap
             {
                 SelectAsphyxiaDirectoryOverrideButton.Click += OnSelectAsphyxiaDirectoryOverrideClick;
             }
+            if (OpenNetworkAdapterPickerButton != null)
+            {
+                OpenNetworkAdapterPickerButton.Click += async (s, e) => await OpenNetworkAdapterPickerAsync();
+            }
 
             if (ServerPresetComboBox != null)
             {
@@ -453,6 +695,35 @@ namespace LazyBootstrap
             {
                 PcbIdTextBox.Watermark = string.Empty;
             }
+            if (NetworkAdapterIpTextBox != null)
+            {
+                NetworkAdapterIpTextBox.Watermark = string.Empty;
+                NetworkAdapterIpTextBox.TextChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings || _isUpdatingNetworkUi || _isUpdatingSpiceToggleUi) return;
+                    if (!EnsureSpiceXmlExistsForNetworkOrRevert())
+                    {
+                        return;
+                    }
+
+                    ApplyNetworkSettings(NetworkAdapterIpTextBox.Text, GetNetworkAdapterSubnetMask(), true);
+                };
+            }
+            if (NetworkAdapterSubnetTextBox != null)
+            {
+                NetworkAdapterSubnetTextBox.Watermark = string.Empty;
+                NetworkAdapterSubnetTextBox.TextChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings || _isUpdatingNetworkUi || _isUpdatingSpiceToggleUi) return;
+                    if (!EnsureSpiceXmlExistsForNetworkOrRevert())
+                    {
+                        return;
+                    }
+
+                    ApplyNetworkSettings(GetNetworkAdapterIpAddress(), NetworkAdapterSubnetTextBox.Text, true);
+                };
+            }
+            RefreshNetworkAdapterChoices(GetNetworkAdapterIpAddress(), GetNetworkAdapterSubnetMask());
             if (GameDirectoryOverrideTextBox != null)
             {
                 GameDirectoryOverrideTextBox.Watermark = "contents";
