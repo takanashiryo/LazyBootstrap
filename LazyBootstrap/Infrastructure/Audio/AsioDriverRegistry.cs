@@ -18,8 +18,7 @@ namespace LazyBootstrap
             }
 
             var driverNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            LoadDriverNames(driverNames, RegistryView.Registry64);
-            LoadDriverNames(driverNames, RegistryView.Registry32);
+            LoadDriverNames(driverNames);
 
             return driverNames
                 .OrderBy(name => name, StringComparer.OrdinalIgnoreCase)
@@ -27,11 +26,11 @@ namespace LazyBootstrap
         }
 
         [SupportedOSPlatform("windows")]
-        private static void LoadDriverNames(HashSet<string> driverNames, RegistryView registryView)
+        private static void LoadDriverNames(HashSet<string> driverNames)
         {
             try
             {
-                using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, registryView);
+                using var baseKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64);
                 using var asioKey = baseKey.OpenSubKey(AsioRegistryPath);
                 if (asioKey == null)
                 {
