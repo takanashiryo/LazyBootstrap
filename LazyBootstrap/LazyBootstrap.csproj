@@ -12,10 +12,9 @@
     <PublishAot>false</PublishAot>
     <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <AssemblyVersion>26.0.1</AssemblyVersion>
-    <FileVersion>26.0.1</FileVersion>
+    <Version>26.1</Version>
     <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
-    <Description>only compatible with sdvx</Description>
+    <Description>A tool made for SDVX with spice2x</Description>
     <Company>LazyBootstrap - Lazy SDVX</Company>
     <Copyright>Copyright © 2025 Takanashi Ryo</Copyright>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
