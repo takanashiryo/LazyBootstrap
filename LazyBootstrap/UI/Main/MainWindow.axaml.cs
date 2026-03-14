@@ -53,6 +53,7 @@ namespace LazyBootstrap
         private bool _subForceRender = false;
         private bool _nativeTouch = false;
         private string _asioDriver = string.Empty;
+        private bool _lowLatencySharedAudio = false;
         private bool _cardIo = false;
         private bool _hidSmartCard = false;
 
@@ -256,7 +257,7 @@ namespace LazyBootstrap
 
             var choices = new List<AsioDriverChoice>
             {
-                new("未设置", string.Empty)
+                new("无", string.Empty)
             };
 
             foreach (var driverName in AsioDriverRegistry.GetInstalledDriverNames())
@@ -317,7 +318,7 @@ namespace LazyBootstrap
             var normalizedSubnetMask = NormalizeNetworkValue(selectedSubnetMask);
             var choices = new List<NetworkAdapterChoice>
             {
-                new("未设置", string.Empty, string.Empty)
+                new("无", string.Empty, string.Empty)
             };
 
             foreach (var adapter in NetworkAdapterDiscovery.GetAvailableAdapters())
@@ -354,7 +355,7 @@ namespace LazyBootstrap
             var normalizedSubnetMask = NormalizeNetworkValue(subnetMask);
             if (string.IsNullOrEmpty(normalizedIpAddress) && string.IsNullOrEmpty(normalizedSubnetMask))
             {
-                return "未设置";
+                return "无";
             }
 
             if (string.IsNullOrEmpty(normalizedIpAddress))
@@ -376,7 +377,7 @@ namespace LazyBootstrap
             var normalizedSubnetMask = NormalizeNetworkValue(selectedSubnetMask);
             var choices = new List<NetworkAdapterChoice>
             {
-                new("未设置", string.Empty, string.Empty)
+                new("无", string.Empty, string.Empty)
             };
 
             foreach (var adapter in NetworkAdapterDiscovery.GetAvailableAdapters())
@@ -988,6 +989,20 @@ namespace LazyBootstrap
 
                     _asioDriver = GetSelectedAsioDriverValue();
                     UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxasio", _asioDriver));
+                };
+            }
+            if (LowLatencySharedAudioToggleSwitch != null)
+            {
+                LowLatencySharedAudioToggleSwitch.IsCheckedChanged += (s, e) =>
+                {
+                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
+                    if (!EnsureSpiceXmlExistsForToggleOrRevert(LowLatencySharedAudioToggleSwitch, () => _lowLatencySharedAudio = false))
+                    {
+                        return;
+                    }
+
+                    _lowLatencySharedAudio = LowLatencySharedAudioToggleSwitch.IsChecked == true;
+                    UpdateSpiceConfig(new OptionUpdate("sp2x-lowlatencysharedaudio", _lowLatencySharedAudio ? "/ENABLED" : string.Empty));
                 };
             }
 

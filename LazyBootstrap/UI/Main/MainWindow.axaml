@@ -233,7 +233,8 @@
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="网络抓包（NetDump）" VerticalAlignment="Center"/><ToggleSwitch x:Name="NetDumpToggleSwitch" Grid.Column="1"/></Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="大小核优化" VerticalAlignment="Center"/><ToggleSwitch x:Name="PCoreOptimizationToggleSwitch" Grid.Column="1"/></Grid>
                                                         <TextBlock Text="针对 Intel 第12代酷睿及之后的处理器" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="显示光标 &amp; 触控模拟" VerticalAlignment="Center"/><ToggleSwitch x:Name="ShowCursorTouchSimToggleSwitch" Grid.Column="1"/></Grid>
+                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="启用光标显示与触控模拟" VerticalAlignment="Center"/><ToggleSwitch x:Name="ShowCursorTouchSimToggleSwitch" Grid.Column="1"/></Grid>
+                                                        <TextBlock Text="当使用真实副屏时请勿开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                                     </StackPanel>
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>
@@ -248,8 +249,9 @@
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口模式" VerticalAlignment="Center"/><ComboBox x:Name="WindowModeComboBox" Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="默认"/><ComboBoxItem Content="无边框"/><ComboBoxItem Content="可变窗口"/></ComboBox></Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="WindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口大小" VerticalAlignment="Center"/><TextBox x:Name="WindowSizeTextBox" Grid.Column="1" Watermark="1080,1920"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="使用单一显示适配器" VerticalAlignment="Center"/><ToggleSwitch x:Name="SingleAdapterToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="针对笔记本等独显核显混合输出设备，开启后仅连接主屏所属显卡" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="只使用主屏" VerticalAlignment="Center"/><ToggleSwitch x:Name="SingleAdapterToggleSwitch" Grid.Column="1"/></Grid>
+                                                        <TextBlock Text="强制多显示器下仅通过主屏输出，释放其他显示器" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                                        <TextBlock Text="开启后可能会导致不同步或者掉帧，对笔记本等混合输出设备有奇效" Opacity="0.7" FontSize="12" Margin="0,-15,0,0"/>
                                                     </StackPanel>
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>
@@ -262,7 +264,7 @@
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="SubWindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="副屏无边框" VerticalAlignment="Center"/><ToggleSwitch x:Name="SubBorderlessToggleSwitch" Grid.Column="1"/></Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="强制进行渲染" VerticalAlignment="Center"/><ToggleSwitch x:Name="SubForceRenderToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="若副屏黑屏、闪烁、一帧一帧显示，可尝试开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                                        <TextBlock Text="若副屏黑屏/闪烁/一帧一帧显示，可尝试开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="原生触控输入" VerticalAlignment="Center"/><ToggleSwitch x:Name="NativeTouchToggleSwitch" Grid.Column="1"/></Grid>
                                                         <TextBlock Text="使用Windows原生触控API，若出现触摸双击可开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                                     </StackPanel>
@@ -275,7 +277,9 @@
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="ASIO驱动" VerticalAlignment="Center"/><ComboBox x:Name="AsioDriverComboBox" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-                                                        <TextBlock Text="若声卡的ASIO不支持8ch，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-10,0,0"/>
+                                                        <TextBlock Text="若声卡ASIO不支持8ch，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-5,0,0"/>
+                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="低延迟共享音频" VerticalAlignment="Center"/><ToggleSwitch x:Name="LowLatencySharedAudioToggleSwitch" Grid.Column="1"/></Grid>
+                                                        <TextBlock Text="开启共享音频时有效，独占音频与ASIO无效" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                                     </StackPanel>
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>
@@ -285,9 +289,9 @@
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="CardIO HID Reader支持" VerticalAlignment="Center"/><ToggleSwitch x:Name="CardIoToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="HID SmartCard支持" VerticalAlignment="Center"/><ToggleSwitch x:Name="HidSmartCardToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="备选，优先使用CardIO" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
+                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="CardIO HID Reader" VerticalAlignment="Center"/><ToggleSwitch x:Name="CardIoToggleSwitch" Grid.Column="1"/></Grid>
+                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="HID SmartCard" VerticalAlignment="Center"/><ToggleSwitch x:Name="HidSmartCardToggleSwitch" Grid.Column="1"/></Grid>
+                                                        <TextBlock Text="仅限ACR122U芯片组，请优先使用CardIO" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                                     </StackPanel>
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>

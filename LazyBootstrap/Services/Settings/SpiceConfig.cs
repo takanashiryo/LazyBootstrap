@@ -146,6 +146,7 @@ namespace LazyBootstrap
                 CacheLastKnownSpiceValue("sp2x-sdvxsubredraw", GetValue("sp2x-sdvxsubredraw"));
                 CacheLastKnownSpiceValue("sdvxnativetouch", GetValue("sdvxnativetouch"));
                 CacheLastKnownSpiceValue("sp2x-sdvxasio", GetValue("sp2x-sdvxasio"));
+                CacheLastKnownSpiceValue("sp2x-lowlatencysharedaudio", GetValue("sp2x-lowlatencysharedaudio"));
                 CacheLastKnownSpiceValue("cardio", GetValue("cardio"));
                 CacheLastKnownSpiceValue("scard", GetValue("scard"));
                 CacheLastKnownSpiceValue("netdump", GetValue("netdump"));
@@ -175,6 +176,7 @@ namespace LazyBootstrap
                 _subForceRender = string.Equals(GetValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.Ordinal);
                 _nativeTouch = string.Equals(GetValue("sdvxnativetouch"), "/ENABLED", StringComparison.Ordinal);
                 _asioDriver = GetValue("sp2x-sdvxasio") ?? string.Empty;
+                _lowLatencySharedAudio = string.Equals(GetValue("sp2x-lowlatencysharedaudio"), "/ENABLED", StringComparison.Ordinal);
                 _cardIo = string.Equals(GetValue("cardio"), "/ENABLED", StringComparison.Ordinal);
                 _hidSmartCard = string.Equals(GetValue("scard"), "/ENABLED", StringComparison.Ordinal);
                 _dbgNetDump = string.Equals(GetValue("netdump"), "/ENABLED", StringComparison.Ordinal);
@@ -197,6 +199,7 @@ namespace LazyBootstrap
                 if (SubForceRenderToggleSwitch != null) SubForceRenderToggleSwitch.IsChecked = _subForceRender;
                 if (NativeTouchToggleSwitch != null) NativeTouchToggleSwitch.IsChecked = _nativeTouch;
                 RefreshAsioDriverChoices(_asioDriver);
+                if (LowLatencySharedAudioToggleSwitch != null) LowLatencySharedAudioToggleSwitch.IsChecked = _lowLatencySharedAudio;
                 if (CardIoToggleSwitch != null) CardIoToggleSwitch.IsChecked = _cardIo;
                 if (HidSmartCardToggleSwitch != null) HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
 
@@ -249,6 +252,7 @@ namespace LazyBootstrap
                 _subForceRender = string.Equals(GetLastKnownSpiceValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 _nativeTouch = string.Equals(GetLastKnownSpiceValue("sdvxnativetouch"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 _asioDriver = GetLastKnownSpiceValue("sp2x-sdvxasio");
+                _lowLatencySharedAudio = string.Equals(GetLastKnownSpiceValue("sp2x-lowlatencysharedaudio"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 _cardIo = string.Equals(GetLastKnownSpiceValue("cardio"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 _hidSmartCard = string.Equals(GetLastKnownSpiceValue("scard"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
                 _dbgNetDump = string.Equals(GetLastKnownSpiceValue("netdump"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
@@ -270,6 +274,7 @@ namespace LazyBootstrap
                 if (SubForceRenderToggleSwitch != null) SubForceRenderToggleSwitch.IsChecked = _subForceRender;
                 if (NativeTouchToggleSwitch != null) NativeTouchToggleSwitch.IsChecked = _nativeTouch;
                 RefreshAsioDriverChoices(_asioDriver);
+                if (LowLatencySharedAudioToggleSwitch != null) LowLatencySharedAudioToggleSwitch.IsChecked = _lowLatencySharedAudio;
                 if (CardIoToggleSwitch != null) CardIoToggleSwitch.IsChecked = _cardIo;
                 if (HidSmartCardToggleSwitch != null) HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
                 if (WindowModeComboBox != null) WindowModeComboBox.SelectedIndex = _windowModeIndex;
@@ -302,6 +307,7 @@ namespace LazyBootstrap
             yield return new OptionUpdate("sp2x-sdvxsubredraw", _subForceRender ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("sdvxnativetouch", _nativeTouch ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("sp2x-sdvxasio", _asioDriver ?? string.Empty);
+            yield return new OptionUpdate("sp2x-lowlatencysharedaudio", _lowLatencySharedAudio ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("cardio", _cardIo ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("scard", _hidSmartCard ? "/ENABLED" : string.Empty);
             yield return new OptionUpdate("netdump", _dbgNetDump ? "/ENABLED" : string.Empty);
