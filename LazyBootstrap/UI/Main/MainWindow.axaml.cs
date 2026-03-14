@@ -1066,6 +1066,21 @@ namespace LazyBootstrap
             return Path.Combine(_baseDir, "config.toml");
         }
 
+        private string GetApplicationDirectoryPath()
+        {
+            return AppDomain.CurrentDomain.BaseDirectory;
+        }
+
+        private string GetBundledLibsDirectoryPath()
+        {
+            return Path.Combine(GetApplicationDirectoryPath(), "libs");
+        }
+
+        private string GetBundledSevenZipExecutablePath()
+        {
+            return Path.Combine(GetApplicationDirectoryPath(), "7za.exe");
+        }
+
         private string GetContentsDirectoryPath()
         {
             return string.IsNullOrWhiteSpace(_contentsDirOverride) ? _contentsDir : _contentsDirOverride;

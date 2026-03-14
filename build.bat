@@ -25,5 +25,9 @@ for %%f in ("%MAIN_PUBLISH%\*.*") do (
     if /i not "%%~xf"==".pdb" copy /y "%%f" "%BUILD_DIR%\launcher\" >nul
 )
 
+if exist "%MAIN_PUBLISH%\libs" (
+    xcopy "%MAIN_PUBLISH%\libs" "%BUILD_DIR%\launcher\libs\" /E /I /Y >nul || exit /b 1
+)
+
 echo Build completed: "%BUILD_DIR%"
 pause

@@ -277,7 +277,7 @@
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="ASIO驱动" VerticalAlignment="Center"/><ComboBox x:Name="AsioDriverComboBox" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
-                                                        <TextBlock Text="若声卡ASIO不支持8ch，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-5,0,0"/>
+                                                        <TextBlock Text="若声卡ASIO不支持多声道，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-5,0,0"/>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="低延迟共享音频" VerticalAlignment="Center"/><ToggleSwitch x:Name="LowLatencySharedAudioToggleSwitch" Grid.Column="1"/></Grid>
                                                         <TextBlock Text="开启共享音频时有效，独占音频与ASIO无效" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
                                                     </StackPanel>
@@ -473,7 +473,7 @@
                                     <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
                                         <TextBlock Classes="FaIcon" Text="&#xF0C7;" FontSize="18"/>
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="存档备份与导入" FontWeight="SemiBold"/>
+                                            <TextBlock Text="氧无存档备份与导入" FontWeight="SemiBold"/>
                                             <TextBlock Text="备份或导入氧无存档与卡号" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Button x:Name="SavedataBackupImportButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>

@@ -47,20 +47,25 @@
     <None Include="..\Resources\vii\vii_icon.ico">
       <Link>vii_icon.ico</Link>
     </None>
-    <None Include="SevenZip\7za.exe">
+    <None Include="Public\7z\7za.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>7za.exe</TargetPath>
     </None>
-    <None Include="SevenZip\7za.dll">
+    <None Include="Public\7z\7za.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>7za.dll</TargetPath>
     </None>
-    <None Include="SevenZip\7zxa.dll">
+    <None Include="Public\7z\7zxa.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>7zxa.dll</TargetPath>
+    </None>
+    <None Include="Public\libs\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
     </None>
   </ItemGroup>
 

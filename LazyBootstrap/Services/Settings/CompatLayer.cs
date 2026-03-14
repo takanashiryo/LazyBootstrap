@@ -30,7 +30,7 @@ namespace LazyBootstrap
 
         private int GetCompatLayerFileCount()
         {
-            string modulesDir = Path.Combine(GetContentsDirectoryPath(), "modules");
+            string modulesDir = GetCompatModulesDirectoryPath();
             string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
 
             int foundCount = 0;
@@ -60,22 +60,35 @@ namespace LazyBootstrap
         private void UpdateCompatLayerStatus()
         {
             int fileCount = GetCompatLayerFileCount();
+            bool modulesDirectoryExists = HasCompatModulesDirectory();
 
             bool effectiveEnabled = fileCount >= 1 || IsCompatLayerEnabledConfigured();
             UpdateCompatRenderModeBusyState(effectiveEnabled);
 
             if (CompatStatusTextBlock != null)
             {
-                CompatStatusTextBlock.Text = string.Empty;
-                CompatStatusTextBlock.IsVisible = false;
+                if (!modulesDirectoryExists && !effectiveEnabled)
+                {
+                    CompatStatusTextBlock.Text = "未找到modules目录，无法启用显卡兼容层。";
+                    CompatStatusTextBlock.IsVisible = true;
+                }
+                else
+                {
+                    CompatStatusTextBlock.Text = string.Empty;
+                    CompatStatusTextBlock.IsVisible = false;
+                }
             }
 
             if (CompatTypeComboBox != null)
             {
-                CompatTypeComboBox.IsEnabled = !effectiveEnabled;
+                CompatTypeComboBox.IsEnabled = !effectiveEnabled && modulesDirectoryExists;
                 if (effectiveEnabled)
                 {
                     ToolTip.SetTip(CompatTypeComboBox, null);
+                }
+                else if (!modulesDirectoryExists)
+                {
+                    ToolTip.SetTip(CompatTypeComboBox, "未找到 contents/modules，无法启用显卡兼容层。");
                 }
                 else if (!string.IsNullOrEmpty(_compatTypeTooltipCache))
                 {
@@ -85,7 +98,7 @@ namespace LazyBootstrap
 
             if (LoadCompatButton != null)
             {
-                LoadCompatButton.IsEnabled = !effectiveEnabled;
+                LoadCompatButton.IsEnabled = !effectiveEnabled && modulesDirectoryExists;
             }
 
             if (UnloadCompatButton != null)
@@ -99,9 +112,10 @@ namespace LazyBootstrap
                 if (CompatLayerToggleSwitch != null)
                 {
                     CompatLayerToggleSwitch.IsChecked = effectiveEnabled;
+                    CompatLayerToggleSwitch.IsEnabled = effectiveEnabled || modulesDirectoryExists;
                 }
 
-                bool chipsEnabled = !effectiveEnabled;
+                bool chipsEnabled = !effectiveEnabled && modulesDirectoryExists;
                 if (CompatDx9on12RadioButton != null) CompatDx9on12RadioButton.IsEnabled = chipsEnabled;
                 if (CompatDx9on12ExternalRadioButton != null) CompatDx9on12ExternalRadioButton.IsEnabled = chipsEnabled;
                 if (CompatDxvkRadioButton != null) CompatDxvkRadioButton.IsEnabled = chipsEnabled;
@@ -154,6 +168,13 @@ namespace LazyBootstrap
             error = string.Empty;
             if (enable)
             {
+                if (!HasCompatModulesDirectory())
+                {
+                    error = $"未找到兼容层目标目录: {GetCompatModulesDirectoryPath()}";
+                    UpdateCompatLayerStatus();
+                    return false;
+                }
+
                 if (!ApplyCompatLayerFilesByMode(out error))
                 {
                     UpdateCompatLayerStatus();
@@ -188,15 +209,19 @@ namespace LazyBootstrap
         private bool ApplyCompatLayerFilesByMode(out string error)
         {
             error = string.Empty;
-            string stubsDir = Path.Combine(GetContentsDirectoryPath(), "lazy", "stubs");
-            string modulesDir = Path.Combine(GetContentsDirectoryPath(), "modules");
+            string stubsDir = GetBundledLibsDirectoryPath();
+            string modulesDir = GetCompatModulesDirectoryPath();
             if (!Directory.Exists(stubsDir))
             {
-                error = "未找到 contents/lazy/stubs";
+                error = $"未找到兼容层资源目录: {stubsDir}";
                 return false;
             }
 
-            Directory.CreateDirectory(modulesDir);
+            if (!Directory.Exists(modulesDir))
+            {
+                error = $"未找到兼容层目标目录: {modulesDir}";
+                return false;
+            }
 
             string mode = "dx9on12";
             try
@@ -255,7 +280,12 @@ namespace LazyBootstrap
         private bool RemoveCompatLayerFilesFromModules(out string error)
         {
             error = string.Empty;
-            string modulesDir = Path.Combine(GetContentsDirectoryPath(), "modules");
+            string modulesDir = GetCompatModulesDirectoryPath();
+            if (!Directory.Exists(modulesDir))
+            {
+                return true;
+            }
+
             try
             {
                 var files = new[] { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
@@ -353,6 +383,16 @@ namespace LazyBootstrap
                 return fileCount >= 1 || IsCompatLayerEnabledConfigured();
             }
             catch { return IsCompatLayerEnabledConfigured(); }
+        }
+
+        private string GetCompatModulesDirectoryPath()
+        {
+            return Path.Combine(GetContentsDirectoryPath(), "modules");
+        }
+
+        private bool HasCompatModulesDirectory()
+        {
+            return Directory.Exists(GetCompatModulesDirectoryPath());
         }
     }
 }

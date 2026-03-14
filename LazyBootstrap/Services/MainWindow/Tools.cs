@@ -576,11 +576,10 @@ namespace LazyBootstrap
 
         private string ResolveSevenZipExecutablePath()
         {
-            string mainProgramDir = AppDomain.CurrentDomain.BaseDirectory;
-            string mainProgramDirPath = Path.Combine(mainProgramDir, "7za.exe");
-            if (File.Exists(mainProgramDirPath))
+            string bundledPath = GetBundledSevenZipExecutablePath();
+            if (File.Exists(bundledPath))
             {
-                return mainProgramDirPath;
+                return bundledPath;
             }
 
             string baseDirPath = Path.Combine(_baseDir, "7za.exe");
@@ -718,6 +717,7 @@ namespace LazyBootstrap
             if (SubForceRenderToggleSwitch != null) SubForceRenderToggleSwitch.IsEnabled = enabled;
             if (NativeTouchToggleSwitch != null) NativeTouchToggleSwitch.IsEnabled = enabled;
             if (AsioDriverComboBox != null) AsioDriverComboBox.IsEnabled = enabled;
+            if (LowLatencySharedAudioToggleSwitch != null) LowLatencySharedAudioToggleSwitch.IsEnabled = enabled;
             if (CardIoToggleSwitch != null) CardIoToggleSwitch.IsEnabled = enabled;
             if (HidSmartCardToggleSwitch != null) HidSmartCardToggleSwitch.IsEnabled = enabled;
             if (ServerAddressTextBox != null) ServerAddressTextBox.IsEnabled = enabled;
