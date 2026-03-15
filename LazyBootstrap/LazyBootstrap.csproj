@@ -31,6 +31,7 @@
     <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
     <PackageReference Include="Avalonia.Diagnostics" Version="11.3.12" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
+    <PackageReference Include="NAudio.Asio" Version="2.2.1" />
     <PackageReference Include="SukiUI" Version="6.0.4-nightly20260303" />
   </ItemGroup>
 

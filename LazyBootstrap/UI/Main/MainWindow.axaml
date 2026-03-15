@@ -276,7 +276,11 @@
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="ASIO驱动" VerticalAlignment="Center"/><ComboBox x:Name="AsioDriverComboBox" Grid.Column="1" HorizontalAlignment="Stretch"/></Grid>
+                                                        <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
+                                                            <TextBlock Text="ASIO驱动" VerticalAlignment="Center"/>
+                                                            <ComboBox x:Name="AsioDriverComboBox" Grid.Column="1" HorizontalAlignment="Stretch"/>
+                                                            <Button x:Name="OpenAsioControlPanelButton" Grid.Column="2" Classes="Basic" Content="控制面板" MinWidth="96"/>
+                                                        </Grid>
                                                         <TextBlock Text="若声卡ASIO不支持多声道，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-5,0,0"/>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="低延迟共享音频" VerticalAlignment="Center"/><ToggleSwitch x:Name="LowLatencySharedAudioToggleSwitch" Grid.Column="1"/></Grid>
                                                         <TextBlock Text="开启共享音频时有效，独占音频与ASIO无效" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>

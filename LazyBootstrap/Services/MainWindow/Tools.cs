@@ -753,6 +753,7 @@ namespace LazyBootstrap
         private void OnWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             SaveSettings();
+            AsioDriverRegistry.DisposeControlPanelDrivers();
             try
             {
                 if (_gameProcess != null && !_gameProcess.HasExited)

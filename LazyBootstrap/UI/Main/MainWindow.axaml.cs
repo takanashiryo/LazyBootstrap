@@ -290,6 +290,8 @@ namespace LazyBootstrap
             {
                 _isUpdatingAsioDriverUi = false;
             }
+
+            UpdateAsioControlPanelButtonState();
         }
 
         private string GetSelectedAsioDriverValue()
@@ -297,6 +299,32 @@ namespace LazyBootstrap
             return AsioDriverComboBox?.SelectedItem is AsioDriverChoice choice
                 ? choice.Value
                 : string.Empty;
+        }
+
+        private void UpdateAsioControlPanelButtonState()
+        {
+            if (OpenAsioControlPanelButton == null)
+            {
+                return;
+            }
+
+            OpenAsioControlPanelButton.IsEnabled = OperatingSystem.IsWindows()
+                && !string.IsNullOrWhiteSpace(GetSelectedAsioDriverValue());
+        }
+
+        private void OnOpenAsioControlPanelClick(object sender, RoutedEventArgs e)
+        {
+            var driverName = GetSelectedAsioDriverValue();
+            if (string.IsNullOrWhiteSpace(driverName))
+            {
+                return;
+            }
+
+            if (!AsioDriverRegistry.TryOpenControlPanel(driverName, out var errorMessage))
+            {
+                ShowWarningToast("ASIO 控制面板", string.IsNullOrWhiteSpace(errorMessage) ? "无法打开当前选择的 ASIO 驱动控制面板。" : errorMessage);
+                return;
+            }
         }
 
         private bool EnsureSpiceXmlExistsForAsioOrRevert()
@@ -646,6 +674,10 @@ namespace LazyBootstrap
             {
                 OpenNetworkAdapterPickerButton.Click += async (s, e) => await OpenNetworkAdapterPickerAsync();
             }
+            if (OpenAsioControlPanelButton != null)
+            {
+                OpenAsioControlPanelButton.Click += OnOpenAsioControlPanelClick;
+            }
 
             if (ServerPresetComboBox != null)
             {
@@ -990,6 +1022,7 @@ namespace LazyBootstrap
                     }
 
                     _asioDriver = GetSelectedAsioDriverValue();
+                    UpdateAsioControlPanelButtonState();
                     UpdateSpiceConfig(new OptionUpdate("sp2x-sdvxasio", _asioDriver));
                 };
             }
