@@ -478,9 +478,13 @@
                                         <TextBlock Classes="FaIcon" Text="&#xF0C7;" FontSize="18"/>
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="氧无存档备份与导入" FontWeight="SemiBold"/>
-                                            <TextBlock Text="备份或导入氧无存档与卡号" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="备份，导入，或从旧目录迁移卡号与存档" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="SavedataBackupImportButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行"/>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                                            <Button x:Name="SavedataBackupButton" Classes="Flat" MinWidth="88" Content="备份"/>
+                                            <Button x:Name="SavedataImportButton" Classes="Flat" MinWidth="88" Content="导入"/>
+                                            <Button x:Name="SavedataMigrateButton" Classes="Flat" MinWidth="88" Content="迁移"/>
+                                        </StackPanel>
                                     </Grid>
                                 </suki:GlassCard>
                             </StackPanel>

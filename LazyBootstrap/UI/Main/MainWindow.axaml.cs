@@ -658,9 +658,17 @@ namespace LazyBootstrap
             {
                 InstallRuntimeButton.Click += OnInstallRuntimeClick;
             }
-            if (SavedataBackupImportButton != null)
+            if (SavedataBackupButton != null)
             {
-                SavedataBackupImportButton.Click += OnSavedataBackupImportClick;
+                SavedataBackupButton.Click += OnSavedataBackupClick;
+            }
+            if (SavedataImportButton != null)
+            {
+                SavedataImportButton.Click += OnSavedataImportClick;
+            }
+            if (SavedataMigrateButton != null)
+            {
+                SavedataMigrateButton.Click += OnSavedataMigrateClick;
             }
             if (SelectGameDirectoryOverrideButton != null)
             {

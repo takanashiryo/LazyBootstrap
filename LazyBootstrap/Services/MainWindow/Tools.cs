@@ -3,24 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Interactivity;
 using Avalonia.Controls.Notifications;
 using Avalonia.Platform.Storage;
-using LazyBootstrap.UI.Dialogs;
 using SukiUI.Dialogs;
 
 namespace LazyBootstrap
 {
     public partial class MainWindow
     {
-        private static readonly string[] SavedataRelativePaths =
-        {
-            @"contents\card0.txt",
-            @"contents\card1.txt"
-        };
-
         private void OnGoToGameSettingsClick(object sender, RoutedEventArgs e)
         {
             GoToGameSettingsCore();
@@ -412,166 +404,19 @@ namespace LazyBootstrap
             OpenControlPanel("mmsys.cpl", "打开音频面板失败");
         }
 
-        private async void OnSavedataBackupImportClick(object sender, RoutedEventArgs e)
+        private async void OnSavedataBackupClick(object sender, RoutedEventArgs e)
         {
-            var window = new SavedataBackupImportWindow(BackupSavedataAsync, ImportSavedataAsync);
-            await window.ShowDialog(this);
+            await BackupSavedataWithCurrentPathsAsync();
         }
 
-        private async Task BackupSavedataAsync()
+        private async void OnSavedataImportClick(object sender, RoutedEventArgs e)
         {
-            string sevenZipPath = ResolveSevenZipExecutablePath();
-            if (!File.Exists(sevenZipPath))
-            {
-                ShowErrorToast("存档备份失败", $"未找到 7za.exe：{sevenZipPath}");
-                return;
-            }
-
-            var existingEntries = GetExistingSavedataEntries();
-            if (existingEntries.Count == 0)
-            {
-                ShowWarningToast("存档备份", "未找到可备份的存档内容。");
-                return;
-            }
-
-            string backupDir = Path.Combine(_baseDir, "savedata_backup");
-            Directory.CreateDirectory(backupDir);
-            string backupFilePath = Path.Combine(backupDir, $"savedata_{DateTime.Now:yyyyMMdd_HHmmss}.7z");
-
-            var argsBuilder = new StringBuilder("a -t7z ");
-            argsBuilder.Append('"').Append(backupFilePath).Append('"');
-            foreach (var entry in existingEntries)
-            {
-                argsBuilder.Append(' ').Append('"').Append(entry).Append('"');
-            }
-            argsBuilder.Append(" -mx=9");
-
-            var result = await RunProcessCaptureAsync(sevenZipPath, argsBuilder.ToString(), _baseDir);
-            if (result.ExitCode == 0)
-            {
-                ShowInfoToast("存档备份完成", $"已备份到：{backupFilePath}");
-                return;
-            }
-
-            ShowErrorToast("存档备份失败", GetProcessErrorDetail(result));
+            await ImportSavedataWithCurrentPathsAsync();
         }
 
-        private async Task ImportSavedataAsync()
+        private async void OnSavedataMigrateClick(object sender, RoutedEventArgs e)
         {
-            string sevenZipPath = ResolveSevenZipExecutablePath();
-            if (!File.Exists(sevenZipPath))
-            {
-                ShowErrorToast("存档导入失败", $"未找到 7za.exe：{sevenZipPath}");
-                return;
-            }
-
-            var selectedFiles = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
-            {
-                Title = "选择存档备份文件",
-                AllowMultiple = false,
-                FileTypeFilter = new List<FilePickerFileType>
-                {
-                    new("7z 备份文件")
-                    {
-                        Patterns = new[] { "*.7z" }
-                    }
-                }
-            });
-
-            if (selectedFiles == null || selectedFiles.Count == 0)
-            {
-                return;
-            }
-
-            string archivePath = selectedFiles[0].TryGetLocalPath();
-            if (string.IsNullOrWhiteSpace(archivePath))
-            {
-                ShowErrorToast("存档导入失败", "当前选择的文件不可直接访问，请选择本地磁盘文件。");
-                return;
-            }
-
-            CloseSavedataBackupImportWindow();
-
-            bool hasExistingSavedata = SavedataRelativePaths.Any(IsSavedataPathPresent)
-                || Directory.Exists(Path.Combine(GetAsphyxiaDirectoryPath(), "savedata"))
-                || File.Exists(Path.Combine(GetAsphyxiaDirectoryPath(), "config.ini"));
-            if (hasExistingSavedata)
-            {
-                var warningDialogBuilder = _dialogManager
-                    .CreateDialog()
-                    .OfType(NotificationType.Warning)
-                    .WithTitle("存档导入覆盖提示")
-                    .WithContent("检测到已有存档文件，是否直接覆盖？")
-                    .WithYesNoResult("覆盖", "取消", "Flat")
-                    .Dismiss().ByClickingBackground();
-                ApplyDialogNotificationIcon(warningDialogBuilder, NotificationType.Warning);
-
-                var confirmed = await warningDialogBuilder.TryShowAsync();
-                if (!confirmed)
-                {
-                    return;
-                }
-            }
-
-            string arguments = $"x \"{archivePath}\" -o\"{_baseDir}\" -y";
-            var result = await RunProcessCaptureAsync(sevenZipPath, arguments, _baseDir);
-            if (result.ExitCode == 0)
-            {
-                ShowInfoToast("存档导入完成", "已恢复。");
-                return;
-            }
-
-            ShowErrorToast("存档导入失败", GetProcessErrorDetail(result));
-        }
-
-        private void CloseSavedataBackupImportWindow()
-        {
-            if (OwnedWindows == null || OwnedWindows.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var window in OwnedWindows)
-            {
-                if (window is SavedataBackupImportWindow)
-                {
-                    window.Close();
-                    break;
-                }
-            }
-        }
-
-        private List<string> GetExistingSavedataEntries()
-        {
-            var existing = new List<string>();
-            string asphyxiaSavedataDir = Path.Combine(GetAsphyxiaDirectoryPath(), "savedata");
-            if (Directory.Exists(asphyxiaSavedataDir))
-            {
-                existing.Add(asphyxiaSavedataDir);
-            }
-
-            string asphyxiaConfigIni = Path.Combine(GetAsphyxiaDirectoryPath(), "config.ini");
-            if (File.Exists(asphyxiaConfigIni))
-            {
-                existing.Add(asphyxiaConfigIni);
-            }
-
-            foreach (var relativePath in SavedataRelativePaths)
-            {
-                if (IsSavedataPathPresent(relativePath))
-                {
-                    existing.Add(relativePath);
-                }
-            }
-
-            return existing;
-        }
-
-        private bool IsSavedataPathPresent(string relativePath)
-        {
-            string normalizedPath = relativePath.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar);
-            string absolutePath = Path.Combine(_baseDir, normalizedPath);
-            return Directory.Exists(absolutePath) || File.Exists(absolutePath);
+            await MigrateSavedataAsync();
         }
 
         private string ResolveSevenZipExecutablePath()
@@ -740,7 +585,9 @@ namespace LazyBootstrap
             if (InstallRuntimeButton != null) InstallRuntimeButton.IsEnabled = enabled;
             if (AddFirewallRuleButton != null) AddFirewallRuleButton.IsEnabled = enabled;
             if (AudioPanelButton != null) AudioPanelButton.IsEnabled = enabled;
-            if (SavedataBackupImportButton != null) SavedataBackupImportButton.IsEnabled = enabled;
+            if (SavedataBackupButton != null) SavedataBackupButton.IsEnabled = enabled;
+            if (SavedataImportButton != null) SavedataImportButton.IsEnabled = enabled;
+            if (SavedataMigrateButton != null) SavedataMigrateButton.IsEnabled = enabled;
             if (KillProcessesButton != null) KillProcessesButton.IsEnabled = true;
 
             if (enabled)
