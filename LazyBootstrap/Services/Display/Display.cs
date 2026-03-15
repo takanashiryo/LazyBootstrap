@@ -211,10 +211,11 @@ namespace LazyBootstrap
 
             if (string.IsNullOrWhiteSpace(display.FriendlyName))
             {
-                return displayId;
+                return display.IsPrimary ? $"{displayId} - Primary" : displayId;
             }
 
-            return $"{displayId} - {display.FriendlyName}";
+            var label = $"{displayId} - {display.FriendlyName}";
+            return display.IsPrimary ? $"{label} - Primary" : label;
         }
 
         private static void InitializeRotationCombo(ComboBox combo)

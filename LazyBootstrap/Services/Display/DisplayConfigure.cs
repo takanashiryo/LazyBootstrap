@@ -63,6 +63,7 @@ namespace LazyBootstrap
         {
             public string DeviceName { get; set; }
             public string FriendlyName { get; set; }
+            public bool IsPrimary { get; set; }
         }
 
         public sealed class DisplayMode
@@ -91,6 +92,7 @@ namespace LazyBootstrap
         private static extern bool EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DEVMODE lpDevMode);
 
         private const int DISPLAY_DEVICE_ACTIVE = 0x1;
+        private const int DISPLAY_DEVICE_PRIMARY_DEVICE = 0x4;
         private const int DISPLAY_DEVICE_MIRRORING_DRIVER = 0x8;
 
         public const int DMDO_DEFAULT = 0;
@@ -160,7 +162,8 @@ namespace LazyBootstrap
                         result.Add(new DisplayInfo
                         {
                             DeviceName = adapter.DeviceName,
-                            FriendlyName = friendly
+                            FriendlyName = friendly,
+                            IsPrimary = (adapter.StateFlags & DISPLAY_DEVICE_PRIMARY_DEVICE) != 0
                         });
                     }
 
