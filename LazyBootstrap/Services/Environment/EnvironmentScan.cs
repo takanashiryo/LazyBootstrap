@@ -1,17 +1,24 @@
 using Microsoft.Win32;
 using System;
+using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LazyBootstrap
+namespace LazyBootstrap.Services.Environment
 {
+    /// <summary>
+    /// Scans the local machine for game runtime prerequisites and compatibility signals.
+    /// </summary>
     public static class EnvironmentScan
     {
         private const int StepCount = 7; // CPU / GPU / NVIDIA API / DirectX9.0c / 系统媒体功能包 / VC2010 x86 / VC2010 x64
 
+        /// <summary>
+        /// Represents the severity of an environment scan result item.
+        /// </summary>
         public enum ScanResultLevel
         {
             Success,
@@ -19,17 +26,43 @@ namespace LazyBootstrap
             Error
         }
 
+        /// <summary>
+        /// Represents a single environment scan result row.
+        /// </summary>
         public sealed class ScanResultItem
         {
+            /// <summary>
+            /// Gets or sets the display label for the scanned item.
+            /// </summary>
             public string Item { get; set; } = string.Empty;
+
+            /// <summary>
+            /// Gets or sets the detail text associated with the scan result.
+            /// </summary>
             public string Detail { get; set; } = string.Empty;
+
+            /// <summary>
+            /// Gets or sets the severity of the result.
+            /// </summary>
             public ScanResultLevel Level { get; set; } = ScanResultLevel.Success;
         }
 
+        /// <summary>
+        /// Represents the aggregated environment scan result.
+        /// </summary>
         public sealed class ScanSummary
         {
+            /// <summary>
+            /// Gets an empty scan summary.
+            /// </summary>
             public static ScanSummary Empty { get; } = new(false, string.Empty, Array.Empty<ScanResultItem>());
 
+            /// <summary>
+            /// Initializes a new instance of the <see cref="ScanSummary"/> class.
+            /// </summary>
+            /// <param name="hadError">A value that indicates whether any error-level result was found.</param>
+            /// <param name="errorSummary">A summary string describing error-level findings.</param>
+            /// <param name="items">A collection of detailed scan result items.</param>
             public ScanSummary(bool hadError, string errorSummary, IReadOnlyList<ScanResultItem> items)
             {
                 HadError = hadError;
@@ -37,13 +70,27 @@ namespace LazyBootstrap
                 Items = items ?? Array.Empty<ScanResultItem>();
             }
 
+            /// <summary>
+            /// Gets a value that indicates whether any error-level result was found.
+            /// </summary>
             public bool HadError { get; }
 
+            /// <summary>
+            /// Gets the aggregated error summary.
+            /// </summary>
             public string ErrorSummary { get; }
 
+            /// <summary>
+            /// Gets the detailed scan results.
+            /// </summary>
             public IReadOnlyList<ScanResultItem> Items { get; }
         }
 
+        /// <summary>
+        /// Runs the environment scan asynchronously.
+        /// </summary>
+        /// <param name="progress">A callback that receives scan progress as a percentage and an optional message payload.</param>
+        /// <returns>A task that produces the aggregated scan summary.</returns>
         public static Task<ScanSummary> RunAsync(Action<int, string> progress)
         {
             return Task.Run(() =>
@@ -216,7 +263,7 @@ namespace LazyBootstrap
                 }
                 try
                 {
-                    var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
+                    var sys32 = Path.Combine(SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows), "System32");
                     foreach (var f in new[] { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" })
                     {
                         bool ok = File.Exists(Path.Combine(sys32, f));
@@ -233,7 +280,7 @@ namespace LazyBootstrap
             {
                 try
                 {
-                    var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
+                    var sys32 = Path.Combine(SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows), "System32");
                     bool hasCore = File.Exists(Path.Combine(sys32, "d3d9.dll"));
                     bool hasJun = File.Exists(Path.Combine(sys32, "d3dx9_43.dll"));
                     AddResult("DirectX9/d3d9.dll", string.Empty, hasCore ? ScanResultLevel.Success : ScanResultLevel.Error);
@@ -250,7 +297,7 @@ namespace LazyBootstrap
             {
                 try
                 {
-                    var sys32 = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Windows), "System32");
+                    var sys32 = Path.Combine(SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows), "System32");
                     foreach (var f in new[] { "MF.dll", "MFPLAT.dll", "WMVCore.dll" })
                     {
                         bool ok = File.Exists(Path.Combine(sys32, f));
@@ -268,8 +315,8 @@ namespace LazyBootstrap
                 string arch = x64 ? "x64" : "x86";
                 try
                 {
-                    var winDir = Environment.GetFolderPath(Environment.SpecialFolder.Windows);
-                    string dllDir = x64 ? Path.Combine(winDir, "System32") : (Environment.Is64BitOperatingSystem ? Path.Combine(winDir, "SysWOW64") : Path.Combine(winDir, "System32"));
+                    var winDir = SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows);
+                    string dllDir = x64 ? Path.Combine(winDir, "System32") : (SystemEnvironment.Is64BitOperatingSystem ? Path.Combine(winDir, "SysWOW64") : Path.Combine(winDir, "System32"));
                     var dlls = new[] { "msvcr100.dll", "msvcp100.dll" };
                     foreach (var d in dlls)
                     {

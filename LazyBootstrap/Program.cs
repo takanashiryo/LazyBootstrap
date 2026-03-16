@@ -1,18 +1,20 @@
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Security.Principal;
 using Avalonia;
+using Serilog;
 
 namespace LazyBootstrap
 {
     internal class Program
     {
-        private const uint MbOk = 0x00000000;
-        private const uint MbIconWarning = 0x00000030;
-        private const uint MbIconError = 0x00000010;
+        private const string RelaunchedElevatedMessage = "已将启动流程转交给管理员权限的新进程。";
+        private const string MissingExecutablePathMessage = "无法获取当前程序路径，不能重新以管理员权限启动。";
+        private const string RelaunchFailedTraceMessage = "管理员权限提升失败：系统未能启动新的提权进程。";
+        private const string RelaunchFailedMessage = "无法以管理员权限重新启动程序：系统未能启动新的提权进程。";
+        private const string ElevationCancelledTraceMessage = "管理员权限获取已取消。";
+        private const string ElevationCancelledMessage = "程序启动已取消：未授予管理员权限。";
 
         private enum ElevationOutcome
         {
@@ -34,21 +36,32 @@ namespace LazyBootstrap
             {
                 if (!string.IsNullOrWhiteSpace(elevationResult.Message))
                 {
-                    var isCancelled = elevationResult.Outcome == ElevationOutcome.Cancelled;
-                    ShowStartupMessage(
+                    LogStartupMessage(
                         elevationResult.Message,
-                        isCancelled ? MbIconWarning : MbIconError,
-                        isCancelled ? TraceEventType.Warning : TraceEventType.Error);
+                        elevationResult.Outcome == ElevationOutcome.Cancelled ? TraceEventType.Warning : TraceEventType.Error);
                 }
                 else if (elevationResult.Outcome == ElevationOutcome.RelaunchedElevated)
                 {
-                    Trace.TraceInformation("已将启动流程转交给管理员权限的新进程。");
+                    Trace.TraceInformation(RelaunchedElevatedMessage);
                 }
 
                 return;
             }
 
-            BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            try
+            {
+                LazyBootstrapHost.Initialize(args);
+                BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+            }
+            catch (Exception ex)
+            {
+                Log.Logger.Error(ex, "LazyBootstrap startup failed.");
+                throw;
+            }
+            finally
+            {
+                LazyBootstrapHost.Dispose();
+            }
         }
 
         /// <summary>
@@ -78,43 +91,44 @@ namespace LazyBootstrap
 
             try
             {
-                using (var identity = WindowsIdentity.GetCurrent())
+                using var identity = WindowsIdentity.GetCurrent();
+                var principal = new WindowsPrincipal(identity);
+                if (principal.IsInRole(WindowsBuiltInRole.Administrator))
                 {
-                    var principal = new WindowsPrincipal(identity);
-                    if (principal.IsInRole(WindowsBuiltInRole.Administrator))
-                    {
-                        return (ElevationOutcome.ContinueCurrentProcess, string.Empty);
-                    }
+                    return (ElevationOutcome.ContinueCurrentProcess, string.Empty);
                 }
 
                 var exePath = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(exePath))
                 {
-                    return (ElevationOutcome.Failed, "无法获取当前程序路径，不能重新以管理员权限启动。");
+                    return (ElevationOutcome.Failed, MissingExecutablePathMessage);
                 }
 
-                var argString = string.Join(" ", args.Select(QuoteArg));
-                var psi = new ProcessStartInfo
+                var startInfo = new ProcessStartInfo
                 {
                     FileName = exePath,
-                    Arguments = argString,
                     UseShellExecute = true,
                     Verb = "runas"
                 };
 
-                var elevatedProcess = Process.Start(psi);
+                foreach (var arg in args)
+                {
+                    startInfo.ArgumentList.Add(arg);
+                }
+
+                var elevatedProcess = Process.Start(startInfo);
                 if (elevatedProcess is null)
                 {
-                    Trace.TraceError("管理员权限提升失败：系统未能启动新的提权进程。");
-                    return (ElevationOutcome.Failed, "无法以管理员权限重新启动程序：系统未能启动新的提权进程。");
+                    Trace.TraceError(RelaunchFailedTraceMessage);
+                    return (ElevationOutcome.Failed, RelaunchFailedMessage);
                 }
 
                 return (ElevationOutcome.RelaunchedElevated, string.Empty);
             }
             catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
             {
-                Trace.TraceWarning("管理员权限获取失败");
-                return (ElevationOutcome.Cancelled, "程序启动已取消：未授予管理员权限。");
+                Trace.TraceWarning(ElevationCancelledTraceMessage);
+                return (ElevationOutcome.Cancelled, ElevationCancelledMessage);
             }
             catch (Exception ex)
             {
@@ -123,7 +137,7 @@ namespace LazyBootstrap
             }
         }
 
-        private static void ShowStartupMessage(string message, uint iconFlags, TraceEventType traceEventType)
+        private static void LogStartupMessage(string message, TraceEventType traceEventType)
         {
             if (string.IsNullOrWhiteSpace(message))
             {
@@ -144,28 +158,7 @@ namespace LazyBootstrap
                     break;
             }
 
-            if (OperatingSystem.IsWindows())
-            {
-                MessageBox(IntPtr.Zero, message, "LazyBootstrap", MbOk | iconFlags);
-                return;
-            }
-
             Console.Error.WriteLine(message);
-        }
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        private static extern int MessageBox(IntPtr hWnd, string text, string caption, uint type);
-
-        private static string QuoteArg(string arg)
-        {
-            if (string.IsNullOrEmpty(arg))
-            {
-                return "\"\"";
-            }
-
-            return arg.IndexOfAny([' ', '\t', '"']) >= 0
-                ? "\"" + arg.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""
-                : arg;
         }
     }
 }
