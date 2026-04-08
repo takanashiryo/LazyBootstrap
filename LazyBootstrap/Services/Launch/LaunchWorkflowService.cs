@@ -4,11 +4,13 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Notifications;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
 using SukiUI.MessageBox;
@@ -35,7 +37,6 @@ namespace LazyBootstrap.Services.Launch
     internal sealed class LaunchWorkflowService : ILaunchWorkflowService
     {
         private const int MaxLogLines = 1200;
-        private static readonly TimeSpan StartupVerificationWindow = TimeSpan.FromSeconds(3);
         private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan RestartDetectionGracePeriod = TimeSpan.FromSeconds(5);
 
@@ -49,6 +50,8 @@ namespace LazyBootstrap.Services.Launch
 
         private readonly Queue<string> _logLines = new Queue<string>(MaxLogLines + 64);
         private Process _gameProcess;
+        private CancellationTokenSource _gameProcessMonitorCts;
+        private bool _suppressGameProcessExitHandling;
         private LaunchPageViewModel _launchViewModel;
         private DisplayConfigurationPageViewModel _displayViewModel;
         private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
@@ -161,6 +164,8 @@ namespace LazyBootstrap.Services.Launch
             _launchViewModel = launchViewModel;
             _displayViewModel = displayViewModel;
             _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+            _suppressGameProcessExitHandling = false;
 
             launchViewModel.IsLaunchFailureOverlayVisible = false;
             _gameProcessTracker.ResetManagedAsphyxiaTracking();
@@ -306,33 +311,16 @@ namespace LazyBootstrap.Services.Launch
                     return;
                 }
 
-                AppendLaunchOutput(launchViewModel, "spice64 已启动，正在验证运行状态...");
-                var startupVerification = await VerifyGameStartupAsync(_gameProcess, launchViewModel);
+                _gameProcessTracker.RegisterTrackedSpiceProcess(_gameProcess);
+                handoffToGameSession = true;
 
-                switch (startupVerification.Status)
-                {
-                    case StartupVerificationStatus.Failed:
-                        FailLaunch(launchViewModel, startupVerification.Message);
-                        return;
-                    case StartupVerificationStatus.EarlyExit:
-                        AppendLaunchOutput(launchViewModel, startupVerification.Message);
-                        SetLaunchReadyState(launchViewModel);
-                        return;
-                    default:
-                        _gameProcess = startupVerification.Process;
-                        _gameProcess.EnableRaisingEvents = true;
-                        _gameProcessTracker.RegisterTrackedSpiceProcess(_gameProcess);
-                        _gameProcess.Exited += GameProcessExited;
-                        handoffToGameSession = true;
-
-                        launchViewModel.IsLaunching = false;
-                        launchViewModel.IsGameRunning = true;
-                        launchViewModel.IsLaunchFailureOverlayVisible = false;
-                        _shellStateService.StatusText = "游戏运行中";
-                        launchViewModel.StateText = _shellStateService.StatusText;
-                        AppendLaunchOutput(launchViewModel, "游戏已启动并进入运行状态。");
-                        break;
-                }
+                launchViewModel.IsLaunching = false;
+                launchViewModel.IsGameRunning = true;
+                launchViewModel.IsLaunchFailureOverlayVisible = false;
+                _shellStateService.StatusText = "游戏运行中";
+                launchViewModel.StateText = _shellStateService.StatusText;
+                AppendLaunchOutput(launchViewModel, "游戏已启动并进入运行状态。");
+                StartGameProcessMonitoring();
             }
             catch (Exception ex)
             {
@@ -382,6 +370,8 @@ namespace LazyBootstrap.Services.Launch
 
         public Task HandleClosingAsync(DisplayConfigurationPageViewModel displayViewModel)
         {
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+
             try
             {
                 if (_gameProcess != null && !_gameProcess.HasExited)
@@ -391,6 +381,14 @@ namespace LazyBootstrap.Services.Launch
             }
             catch
             {
+            }
+            finally
+            {
+                if (_gameProcess != null)
+                {
+                    _gameProcess.Dispose();
+                    _gameProcess = null;
+                }
             }
 
             if (_gameProcessTracker.HasManagedAsphyxiaProcess())
@@ -403,57 +401,170 @@ namespace LazyBootstrap.Services.Launch
                 _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, new List<string>());
             }
 
+            _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
             return Task.CompletedTask;
         }
 
-        private async void GameProcessExited(object sender, EventArgs e)
+        private void StartGameProcessMonitoring()
         {
-            var exitedProcess = sender as Process;
-            int exitCode = 0;
-            bool abnormalExit = false;
-            DateTime exitedAtUtc = DateTime.MinValue;
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+            _suppressGameProcessExitHandling = false;
+
+            var monitorCts = new CancellationTokenSource();
+            _gameProcessMonitorCts = monitorCts;
+            _ = MonitorGameProcessLifecycleAsync(monitorCts);
+        }
+
+        private void CancelGameProcessMonitoring(bool suppressExitHandling)
+        {
+            if (suppressExitHandling)
+            {
+                _suppressGameProcessExitHandling = true;
+            }
+
+            if (_gameProcessMonitorCts == null)
+            {
+                return;
+            }
 
             try
             {
-                if (exitedProcess != null)
+                if (!_gameProcessMonitorCts.IsCancellationRequested)
                 {
-                    exitCode = exitedProcess.ExitCode;
-                    abnormalExit = exitCode != 0;
-                    exitedAtUtc = exitedProcess.ExitTime.ToUniversalTime();
+                    _gameProcessMonitorCts.Cancel();
                 }
             }
             catch
             {
             }
+            finally
+            {
+                _gameProcessMonitorCts.Dispose();
+                _gameProcessMonitorCts = null;
+            }
+        }
 
-            await Task.Delay(1000);
+        private async Task MonitorGameProcessLifecycleAsync(CancellationTokenSource monitorCts)
+        {
+            var cancellationToken = monitorCts.Token;
 
             try
             {
-                var restartedProcess = _gameProcessTracker.TryFindRestartedSpiceProcess(exitedAtUtc, RestartDetectionGracePeriod);
-                if (restartedProcess != null)
+                while (!cancellationToken.IsCancellationRequested)
                 {
-                    restartedProcess.EnableRaisingEvents = true;
-                    restartedProcess.Exited += GameProcessExited;
-                    _gameProcess = restartedProcess;
-                    _gameProcessTracker.RegisterTrackedSpiceProcess(restartedProcess);
-                    AppendLaunchOutput(_launchViewModel, "检测到 spice64 重新启动，继续监控中...");
-                    exitedProcess?.Dispose();
+                    var currentProcess = _gameProcess;
+                    if (currentProcess == null)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        await currentProcess.WaitForExitAsync(cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+
+                    if (cancellationToken.IsCancellationRequested || _suppressGameProcessExitHandling)
+                    {
+                        return;
+                    }
+
+                    int exitCode = 0;
+                    bool abnormalExit = false;
+                    DateTime exitedAtUtc = DateTime.UtcNow;
+
+                    try
+                    {
+                        exitCode = currentProcess.ExitCode;
+                        abnormalExit = exitCode != 0;
+                    }
+                    catch
+                    {
+                    }
+
+                    try
+                    {
+                        exitedAtUtc = currentProcess.ExitTime.ToUniversalTime();
+                    }
+                    catch
+                    {
+                    }
+
+                    try
+                    {
+                        await Task.Delay(StartupRestartProbeDelay, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+
+                    if (cancellationToken.IsCancellationRequested || _suppressGameProcessExitHandling)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        var restartedProcess = _gameProcessTracker.TryFindRestartedSpiceProcess(exitedAtUtc, RestartDetectionGracePeriod);
+                        if (restartedProcess != null)
+                        {
+                            restartedProcess.EnableRaisingEvents = true;
+                            _gameProcess = restartedProcess;
+                            _gameProcessTracker.RegisterTrackedSpiceProcess(restartedProcess);
+                            AppendLaunchOutput(_launchViewModel, "检测到 spice64 重新启动，继续监控中...");
+                            currentProcess.Dispose();
+                            continue;
+                        }
+                    }
+                    catch
+                    {
+                    }
+
+                    await CompleteGameProcessLifecycleAsync(currentProcess, exitCode, abnormalExit, cancellationToken);
                     return;
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Game process lifecycle monitor failed.");
             }
+            finally
+            {
+                if (ReferenceEquals(_gameProcessMonitorCts, monitorCts))
+                {
+                    _gameProcessMonitorCts.Dispose();
+                    _gameProcessMonitorCts = null;
+                }
+                else
+                {
+                    monitorCts.Dispose();
+                }
+            }
+        }
 
+        private async Task CompleteGameProcessLifecycleAsync(Process exitedProcess, int exitCode, bool abnormalExit, CancellationToken cancellationToken)
+        {
             try
             {
-                if (abnormalExit)
+                AppendLaunchOutput(_launchViewModel, abnormalExit ? $"游戏进程异常退出（ExitCode: {exitCode}）。" : "游戏进程已正常退出。", abnormalExit ? NotificationType.Warning : NotificationType.Information);
+
+                if (abnormalExit && !cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
                 {
-                    _uiInteractionService.ShowErrorToast("游戏异常退出", $"spice64.exe 异常退出（ExitCode: {exitCode}）。");
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        _uiInteractionService.ShowErrorToast("游戏异常退出", $"spice64.exe 异常退出（ExitCode: {exitCode}），已自动打开日志窗口。");
+                        _ = OpenLogAsync();
+                    });
                 }
 
-                AppendLaunchOutput(_launchViewModel, abnormalExit ? $"游戏进程异常退出（ExitCode: {exitCode}）。" : "游戏进程已正常退出。", abnormalExit ? NotificationType.Warning : NotificationType.Information);
+                if (cancellationToken.IsCancellationRequested || _suppressGameProcessExitHandling)
+                {
+                    return;
+                }
 
                 if (_gameProcessTracker.HasManagedAsphyxiaProcess())
                 {
@@ -487,24 +598,31 @@ namespace LazyBootstrap.Services.Launch
             }
             finally
             {
-                _shellStateService.IsInteractionEnabled = true;
-                _shellStateService.StatusText = "就绪";
-
-                if (_launchViewModel != null)
+                if (!cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
                 {
-                    _launchViewModel.IsLaunching = false;
-                    _launchViewModel.IsGameRunning = false;
-                    _launchViewModel.IsLaunchFailureOverlayVisible = false;
-                    _launchViewModel.StateText = _shellStateService.StatusText;
+                    _shellStateService.IsInteractionEnabled = true;
+                    _shellStateService.StatusText = "就绪";
+
+                    if (_launchViewModel != null)
+                    {
+                        _launchViewModel.IsLaunching = false;
+                        _launchViewModel.IsGameRunning = false;
+                        _launchViewModel.IsLaunchFailureOverlayVisible = false;
+                        _launchViewModel.StateText = _shellStateService.StatusText;
+                    }
                 }
 
-                if (_gameProcess != null)
+                _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+
+                if (ReferenceEquals(_gameProcess, exitedProcess))
                 {
                     _gameProcess.Dispose();
                     _gameProcess = null;
                 }
-
-                exitedProcess?.Dispose();
+                else
+                {
+                    exitedProcess?.Dispose();
+                }
             }
         }
 
@@ -518,84 +636,6 @@ namespace LazyBootstrap.Services.Launch
             _shellStateService.IsInteractionEnabled = true;
             _shellStateService.StatusText = "启动失败";
             launchViewModel.StateText = _shellStateService.StatusText;
-        }
-
-        private void SetLaunchReadyState(LaunchPageViewModel launchViewModel)
-        {
-            _shellStateService.IsInteractionEnabled = true;
-            _shellStateService.StatusText = "就绪";
-            launchViewModel.IsLaunching = false;
-            launchViewModel.IsGameRunning = false;
-            launchViewModel.IsLaunchFailureOverlayVisible = false;
-            launchViewModel.StateText = _shellStateService.StatusText;
-        }
-
-        private async Task<StartupVerificationResult> VerifyGameStartupAsync(Process process, LaunchPageViewModel launchViewModel)
-        {
-            while (process != null)
-            {
-                var delayTask = Task.Delay(StartupVerificationWindow);
-                var exitTask = process.WaitForExitAsync();
-                var completedTask = await Task.WhenAny(exitTask, delayTask);
-
-                bool hasExited;
-                try
-                {
-                    hasExited = process.HasExited;
-                }
-                catch
-                {
-                    hasExited = true;
-                }
-
-                if (completedTask == delayTask && !hasExited)
-                {
-                    return StartupVerificationResult.Success(process);
-                }
-
-                int exitCode = 0;
-                DateTime exitedAtUtc = DateTime.UtcNow;
-
-                try
-                {
-                    exitCode = process.ExitCode;
-                }
-                catch
-                {
-                }
-
-                try
-                {
-                    exitedAtUtc = process.ExitTime.ToUniversalTime();
-                }
-                catch
-                {
-                }
-
-                await Task.Delay(StartupRestartProbeDelay);
-
-                try
-                {
-                    var restartedProcess = _gameProcessTracker.TryFindRestartedSpiceProcess(exitedAtUtc, RestartDetectionGracePeriod);
-                    if (restartedProcess != null)
-                    {
-                        AppendLaunchOutput(launchViewModel, "检测到 spice64 在启动阶段重新启动，正在重新验证...");
-                        process.Dispose();
-                        _gameProcess = restartedProcess;
-                        process = restartedProcess;
-                        continue;
-                    }
-                }
-                catch
-                {
-                }
-
-                return exitCode == 0
-                    ? StartupVerificationResult.EarlyExit(process, "spice64.exe 在启动阶段已正常退出（ExitCode: 0）。")
-                    : StartupVerificationResult.Failed(process, $"spice64.exe 在启动阶段异常退出（ExitCode: {exitCode}）。");
-            }
-
-            return StartupVerificationResult.Failed(null, "spice64.exe 在启动阶段未能保持运行。");
         }
 
         private void ClearLaunchLog(LaunchPageViewModel viewModel)
@@ -700,36 +740,5 @@ namespace LazyBootstrap.Services.Launch
             return count;
         }
 
-        private enum StartupVerificationStatus
-        {
-            Success,
-            Failed,
-            EarlyExit
-        }
-
-        private sealed class StartupVerificationResult
-        {
-            private StartupVerificationResult(StartupVerificationStatus status, Process process, string message)
-            {
-                Status = status;
-                Process = process;
-                Message = message ?? string.Empty;
-            }
-
-            public StartupVerificationStatus Status { get; }
-
-            public Process Process { get; }
-
-            public string Message { get; }
-
-            public static StartupVerificationResult Success(Process process)
-                => new StartupVerificationResult(StartupVerificationStatus.Success, process, string.Empty);
-
-            public static StartupVerificationResult Failed(Process process, string message)
-                => new StartupVerificationResult(StartupVerificationStatus.Failed, process, message);
-
-            public static StartupVerificationResult EarlyExit(Process process, string message)
-                => new StartupVerificationResult(StartupVerificationStatus.EarlyExit, process, message);
-        }
     }
 }
