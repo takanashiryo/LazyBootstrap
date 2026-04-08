@@ -638,24 +638,6 @@ namespace LazyBootstrap.Views
             _isSyncingModel = true;
             try
             {
-                if (ServerPresetComboBox != null)
-                {
-                    ServerPresetComboBox.Items.Clear();
-                    foreach (var preset in _viewModel.Settings.ServerPresets)
-                    {
-                        ServerPresetComboBox.Items.Add(preset);
-                    }
-
-                    if (_viewModel.Settings.SelectedServerPreset != null)
-                    {
-                        ServerPresetComboBox.SelectedItem = _viewModel.Settings.SelectedServerPreset;
-                    }
-                    else
-                    {
-                        ServerPresetComboBox.SelectedIndex = ServerPresetComboBox.Items.Count > 0 ? 0 : -1;
-                    }
-                }
-
                 if (ServerAddressTextBox != null)
                 {
                     ServerAddressTextBox.Text = _viewModel.Settings.ServerAddress ?? string.Empty;

@@ -98,7 +98,11 @@
                                             <TextBlock Text="结束所有进程" VerticalAlignment="Center"/>
                                         </StackPanel>
                                     </Button>
-                                    <SplitButton x:Name="StartButton" Classes="Flat" MinWidth="170" Command="{Binding Launch.StartCommand}">
+                                    <SplitButton x:Name="StartButton"
+                                                 Classes="Flat"
+                                                 MinWidth="170"
+                                                 IsEnabled="{Binding Launch.CanStartLaunch}"
+                                                 Command="{Binding Launch.StartCommand}">
                                         <SplitButton.Content>
                                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                                 <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14"/>
@@ -107,7 +111,10 @@
                                         </SplitButton.Content>
                                         <SplitButton.Flyout>
                                             <MenuFlyout>
-                                                <MenuItem x:Name="StartAsphyxiaDevMenuItem" Header="以调试模式启动氧无" Command="{Binding Launch.StartAsphyxiaDevCommand}"/>
+                                                <MenuItem x:Name="StartAsphyxiaDevMenuItem"
+                                                          Header="以调试模式启动氧无"
+                                                          IsEnabled="{Binding Launch.CanStartLaunch}"
+                                                          Command="{Binding Launch.StartAsphyxiaDevCommand}"/>
                                             </MenuFlyout>
                                         </SplitButton.Flyout>
                                     </SplitButton>
@@ -275,7 +282,13 @@
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
                                                             <TextBlock Text="预设" VerticalAlignment="Center"/>
                                                             <Grid Grid.Column="1" ColumnDefinitions="220,Auto,Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
-                                                                <ComboBox x:Name="ServerPresetComboBox" Grid.Column="0" Width="220" HorizontalAlignment="Left"/>
+                                                                <ComboBox x:Name="ServerPresetComboBox"
+                                                                          Grid.Column="0"
+                                                                          Width="220"
+                                                                          HorizontalAlignment="Left"
+                                                                          ItemsSource="{Binding Settings.ServerPresets}"
+                                                                          SelectedItem="{Binding Settings.SelectedServerPreset}"
+                                                                          SelectionChanged="OnServerPresetSelectionChanged"/>
                                                                 <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.AddServerPresetCommand}"/>
                                                                 <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.DeleteServerPresetCommand}"/>
                                                             </Grid>

@@ -54,6 +54,8 @@ namespace LazyBootstrap.ViewModels
         [ObservableProperty]
         private string messageBodyText = string.Empty;
 
+        public bool CanStartLaunch => !IsLaunching && !IsGameRunning;
+
         public void AttachContext(SettingsPageViewModel settingsViewModel, DisplayConfigurationPageViewModel displayViewModel)
         {
             _settingsViewModel = settingsViewModel;
@@ -70,6 +72,16 @@ namespace LazyBootstrap.ViewModels
             return _workflowService?.HandleClosingAsync(_displayViewModel) ?? Task.CompletedTask;
         }
 
+        partial void OnIsLaunchingChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanStartLaunch));
+        }
+
+        partial void OnIsGameRunningChanged(bool value)
+        {
+            OnPropertyChanged(nameof(CanStartLaunch));
+        }
+
         [RelayCommand]
         private Task ToggleLaunchLogAsync() => _workflowService?.ToggleLaunchLogAsync(this) ?? Task.CompletedTask;
 
@@ -83,9 +95,25 @@ namespace LazyBootstrap.ViewModels
         private Task KillProcessesAsync() => _workflowService?.KillProcessesAsync() ?? Task.CompletedTask;
 
         [RelayCommand]
-        private Task StartAsync() => _workflowService?.StartAsync(this, _settingsViewModel, _displayViewModel, false) ?? Task.CompletedTask;
+        private Task StartAsync()
+        {
+            if (!CanStartLaunch)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _workflowService?.StartAsync(this, _settingsViewModel, _displayViewModel, false) ?? Task.CompletedTask;
+        }
 
         [RelayCommand]
-        private Task StartAsphyxiaDevAsync() => _workflowService?.StartAsync(this, _settingsViewModel, _displayViewModel, true) ?? Task.CompletedTask;
+        private Task StartAsphyxiaDevAsync()
+        {
+            if (!CanStartLaunch)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _workflowService?.StartAsync(this, _settingsViewModel, _displayViewModel, true) ?? Task.CompletedTask;
+        }
     }
 }
