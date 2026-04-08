@@ -98,6 +98,7 @@ namespace LazyBootstrap.Views
         private bool _isDisplayLayoutInitialized;
         private bool _isWindowCloseAnimationRunning;
         private bool _allowImmediateWindowClose;
+        private bool _pendingEnvironmentScanErrorDialog;
         private const int WindowFadeDurationMs = 480;
         private const int WindowFadeFrameDelayMs = 8;
         private const int ExStyleIndex = -20;
@@ -179,6 +180,7 @@ namespace LazyBootstrap.Views
             }
 
             _uiInteractionService.AttachWindow(this);
+            Opened += OnWindowOpened;
             Closed += OnWindowClosed;
 
             _isLoadingSettings = true;
@@ -220,11 +222,25 @@ namespace LazyBootstrap.Views
 
         private void OnWindowClosed(object sender, EventArgs e)
         {
+            Opened -= OnWindowOpened;
             UnhookLaunchViewModelState();
             UnhookSettingsViewModelState();
             UnhookDisplayViewModelState();
             UnhookToolsViewModelState();
             _uiInteractionService.DetachWindow(this);
+        }
+
+        private async void OnWindowOpened(object sender, EventArgs e)
+        {
+            Opened -= OnWindowOpened;
+
+            if (!_pendingEnvironmentScanErrorDialog)
+            {
+                return;
+            }
+
+            _pendingEnvironmentScanErrorDialog = false;
+            await ShowEnvironmentScanErrorDialogAsync();
         }
 
         internal async Task PrepareForDisplayAsync()
@@ -248,6 +264,7 @@ namespace LazyBootstrap.Views
                 ApplyInfoViewModelStateToUi();
                 InitializeDisplayLayoutControls();
                 RefreshEnvironmentScanResultCard();
+                _pendingEnvironmentScanErrorDialog = _viewModel.Info.HasEnvironmentScanErrors;
             }
             catch (Exception ex)
             {

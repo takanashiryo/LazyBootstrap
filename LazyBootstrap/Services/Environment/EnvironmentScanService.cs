@@ -49,6 +49,8 @@ namespace LazyBootstrap.Services.Environment
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
+            viewModel.HasEnvironmentScanErrors = false;
+
             try
             {
                 _shellStateService.StatusText = "正在进行环境检查...";
@@ -61,12 +63,8 @@ namespace LazyBootstrap.Services.Environment
                 });
 
                 viewModel.EnvironmentSummary = summary.ErrorSummary ?? string.Empty;
+                viewModel.HasEnvironmentScanErrors = summary.HadError;
                 PopulateGroups(viewModel, summary);
-
-                if (summary.HadError)
-                {
-                    _uiInteractionService.ShowWarningToast("环境检查提示", "检测到运行环境可能存在缺失，请前往信息页查看详细结果。");
-                }
             }
             catch (Exception ex)
             {

@@ -32,6 +32,9 @@ namespace LazyBootstrap.ViewModels
         [ObservableProperty]
         private string environmentSummary = string.Empty;
 
+        [ObservableProperty]
+        private bool hasEnvironmentScanErrors;
+
         public Task InitializeInfoAsync()
         {
             return _workflowService?.InitializeInfoAsync(this) ?? Task.CompletedTask;

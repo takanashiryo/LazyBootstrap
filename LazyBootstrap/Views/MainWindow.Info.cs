@@ -9,7 +9,6 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
-using SukiUI.Dialogs;
 using SukiUI.Controls;
 
 namespace LazyBootstrap.Views
@@ -24,37 +23,42 @@ namespace LazyBootstrap.Views
                 RefreshEnvironmentScanResultCard();
                 ApplyInfoViewModelStateToUi();
 
-                if (HasEnvironmentScanIssues())
+                if (_viewModel.Info.HasEnvironmentScanErrors)
                 {
-                    const string errorContent =
-                        "(*´ - `*）啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
-                        "c(*´∇｀)っNoah 建议的操作步骤：\n" +
-                        "- 在工具页点击「安装运行库」按钮安装必要运行环境\n" +
-                        "- 确保已安装最新的显卡驱动程序\n" +
-                        "- 如为 AMD/Intel 显卡请启用“显卡兼容层”功能\n\n" +
-                        "如“系统媒体功能包”异常：\n" +
-                        "- 检查“Windows 设置”中是否已启用“媒体功能包”\n\n" +
-                        "请注意！由于硬件不同，检查结果可能会误报！\n" +
-                        "如果所有游戏运行正常没有问题，请忽略以上提示。";
-
-                    var dialogBuilder = _dialogManager.CreateDialog()
-                        .OfType(NotificationType.Error)
-                        .WithTitle("环境检查提示")
-                        .WithContent(errorContent)
-                        .WithActionButton("查看异常项", _ =>
-                        {
-                            GoToInfoPageCore();
-                        }, true, "Flat")
-                        .WithActionButton("关闭", _ => { }, true, "Basic")
-                        .Dismiss().ByClickingBackground();
-                    ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Error);
-                    dialogBuilder.TryShow();
+                    await ShowEnvironmentScanErrorDialogAsync();
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Environment scan failed.");
                 ShowErrorToast("环境检查失败", ex.Message);
+            }
+        }
+
+        private async Task ShowEnvironmentScanErrorDialogAsync()
+        {
+            const string errorContent =
+                "(*´ - `*）啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
+                "c(*´∇｀)っNoah 建议的操作步骤：\n" +
+                "- 在工具页点击「安装运行库」按钮安装必要运行环境\n" +
+                "- 确保已安装最新的显卡驱动程序\n" +
+                "- 如为 AMD/Intel 显卡请启用“显卡兼容层”功能\n\n" +
+                "如“系统媒体功能包”异常：\n" +
+                "- 检查“Windows 设置”中是否已启用“媒体功能包”\n\n" +
+                "请注意！由于硬件不同，检查结果可能会误报！\n" +
+                "如果所有游戏运行正常没有问题，请忽略以上提示。";
+
+            bool openInfoPage = await _uiInteractionService.ShowDialogAsync(
+                "环境检查提示",
+                errorContent,
+                "查看异常项",
+                "关闭",
+                NotificationType.Error,
+                "Flat");
+
+            if (openInfoPage)
+            {
+                GoToInfoPageCore();
             }
         }
 
@@ -137,13 +141,6 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private bool HasEnvironmentScanIssues()
-        {
-            return _viewModel.Info.Groups.Any(group =>
-                group.Level != EnvironmentScan.ScanResultLevel.Success
-                || group.Items.Any(item => item.Level != EnvironmentScan.ScanResultLevel.Success || item.IsVirtualMachine));
-        }
-
         private static string ResolveStatusText(EnvironmentScan.ScanResultLevel level, bool isVirtualMachine)
         {
             if (isVirtualMachine)
@@ -175,4 +172,3 @@ namespace LazyBootstrap.Views
         }
     }
 }
-
