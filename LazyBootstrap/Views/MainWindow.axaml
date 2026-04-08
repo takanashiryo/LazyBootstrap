@@ -81,24 +81,17 @@
                                 </ScrollViewer>
                             </Grid>
 
-                            <Grid Grid.Row="2" ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Bottom">
-                                <Button x:Name="GotoGameSettingsButton" Grid.Column="0" Classes="Basic" Command="{Binding Launch.GoToSettingsCommand}">
-                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <TextBlock Classes="FaIcon" Text="&#xF085;" FontSize="14"/>
-                                        <TextBlock Text="设定游戏" VerticalAlignment="Center"/>
-                                    </StackPanel>
-                                </Button>
-
-                                <Button x:Name="OpenLogButton" Grid.Column="1" Classes="Basic" HorizontalContentAlignment="Left" Command="{Binding Launch.OpenLogCommand}">
+                            <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Bottom">
+                                <Button x:Name="OpenLogButton" Grid.Column="0" Classes="Basic" HorizontalContentAlignment="Left" Command="{Binding Launch.OpenLogCommand}">
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                         <TextBlock Classes="FaIcon" Text="&#xF15C;" FontSize="14"/>
                                         <TextBlock Text="查看log" VerticalAlignment="Center"/>
                                     </StackPanel>
                                 </Button>
 
-                                <Grid Grid.Column="2"/>
+                                <Grid Grid.Column="1"/>
 
-                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="10">
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
                                     <Button x:Name="KillProcessesButton" Classes="Danger" Command="{Binding Launch.KillProcessesCommand}">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <TextBlock Classes="FaIcon" Text="&#xF00D;" FontSize="14"/>

@@ -83,7 +83,6 @@ namespace LazyBootstrap.Views
             if (CompatDxvkRadioButton != null) CompatDxvkRadioButton.IsEnabled = enabled;
             if (OpenLogButton != null) OpenLogButton.IsEnabled = enabled;
             if (TouchPanelButton != null) TouchPanelButton.IsEnabled = enabled;
-            if (GotoGameSettingsButton != null) GotoGameSettingsButton.IsEnabled = enabled;
             if (NetDumpToggleSwitch != null) NetDumpToggleSwitch.IsEnabled = enabled;
             if (DisableSubDisplayToggleSwitch != null) DisableSubDisplayToggleSwitch.IsEnabled = enabled;
             if (WindowModeComboBox != null) WindowModeComboBox.IsEnabled = enabled;
