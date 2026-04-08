@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LazyBootstrap.Services.Settings;
 
 namespace LazyBootstrap.ViewModels
 {
@@ -136,6 +137,51 @@ namespace LazyBootstrap.ViewModels
             set => AsioDriverValue = value ?? string.Empty;
         }
 
+        public bool IsCompatibilityDx9on12Selected
+        {
+            get => string.Equals(
+                CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                "dx9on12",
+                StringComparison.OrdinalIgnoreCase);
+            set
+            {
+                if (value)
+                {
+                    CompatibilityRenderMode = "dx9on12";
+                }
+            }
+        }
+
+        public bool IsCompatibilityDx9on12ExternalSelected
+        {
+            get => string.Equals(
+                CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                "dx9on12_external",
+                StringComparison.OrdinalIgnoreCase);
+            set
+            {
+                if (value)
+                {
+                    CompatibilityRenderMode = "dx9on12_external";
+                }
+            }
+        }
+
+        public bool IsCompatibilityDxvkSelected
+        {
+            get => string.Equals(
+                CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                "dxvk",
+                StringComparison.OrdinalIgnoreCase);
+            set
+            {
+                if (value)
+                {
+                    CompatibilityRenderMode = "dxvk";
+                }
+            }
+        }
+
         public Task InitializeStartupAsync()
         {
             return _workflowService?.InitializeStartupAsync(this) ?? Task.CompletedTask;
@@ -204,6 +250,13 @@ namespace LazyBootstrap.ViewModels
             return _workflowService?.PersistCompatibilityRenderModeAsync(this) ?? Task.CompletedTask;
         }
 
+        partial void OnCompatibilityRenderModeChanged(string value)
+        {
+            OnPropertyChanged(nameof(IsCompatibilityDx9on12Selected));
+            OnPropertyChanged(nameof(IsCompatibilityDx9on12ExternalSelected));
+            OnPropertyChanged(nameof(IsCompatibilityDxvkSelected));
+        }
+
         [RelayCommand]
         private Task EditConfigAsync() => _workflowService?.EditConfigAsync(this) ?? Task.CompletedTask;
 
@@ -230,6 +283,26 @@ namespace LazyBootstrap.ViewModels
             if (_workflowService != null)
             {
                 await PersistCompatibilityToggleAsync();
+            }
+        }
+
+        [RelayCommand]
+        private async Task SelectCompatibilityRenderModeAsync(string renderMode)
+        {
+            var normalizedRenderMode = CompatibilitySettingsService.NormalizeRenderMode(renderMode);
+            if (string.Equals(
+                    CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                    normalizedRenderMode,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                CompatibilityRenderMode = normalizedRenderMode;
+                return;
+            }
+
+            CompatibilityRenderMode = normalizedRenderMode;
+            if (_workflowService != null)
+            {
+                await PersistCompatibilityRenderModeAsync();
             }
         }
 

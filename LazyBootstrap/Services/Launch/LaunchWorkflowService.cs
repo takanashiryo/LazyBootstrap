@@ -6,8 +6,12 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Notifications;
+using Avalonia.Media;
 using Microsoft.Extensions.Logging;
+using SukiUI.Controls;
+using SukiUI.MessageBox;
 
 namespace LazyBootstrap.Services.Launch
 {
@@ -31,6 +35,8 @@ namespace LazyBootstrap.Services.Launch
     internal sealed class LaunchWorkflowService : ILaunchWorkflowService
     {
         private const int MaxLogLines = 1200;
+        private static readonly TimeSpan StartupVerificationWindow = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(1);
         private static readonly TimeSpan RestartDetectionGracePeriod = TimeSpan.FromSeconds(5);
 
         private readonly ILauncherPaths _paths;
@@ -108,23 +114,30 @@ namespace LazyBootstrap.Services.Launch
                 {
                     IsReadOnly = true,
                     AcceptsReturn = true,
-                    TextWrapping = Avalonia.Media.TextWrapping.NoWrap,
+                    TextWrapping = TextWrapping.NoWrap,
                     Text = content,
                     MinWidth = 960,
                     MinHeight = 520,
                     MaxWidth = 1200,
                     MaxHeight = 680,
-                    [ScrollViewer.HorizontalScrollBarVisibilityProperty] = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto,
-                    [ScrollViewer.VerticalScrollBarVisibilityProperty] = Avalonia.Controls.Primitives.ScrollBarVisibility.Auto
+                    [ScrollViewer.HorizontalScrollBarVisibilityProperty] = ScrollBarVisibility.Auto,
+                    [ScrollViewer.VerticalScrollBarVisibilityProperty] = ScrollBarVisibility.Auto
                 };
+                logViewer.CaretIndex = logViewer.Text?.Length ?? 0;
 
-                bool openFolder = await _uiInteractionService.ShowDialogAsync(
-                    "log.txt",
-                    logViewer,
-                    "打开日志文件夹",
-                    "关闭");
+                var openFolderButton = SukiMessageBoxButtonsFactory.CreateButton("打开日志文件夹", SukiMessageBoxResult.Yes, "Flat");
 
-                if (openFolder)
+                var result = await SukiMessageBox.ShowDialog(new SukiMessageBoxHost
+                {
+                    UseAlternativeHeaderStyle = true,
+                    IconPreset = SukiMessageBoxIcons.Information,
+                    Header = "log.txt",
+                    Content = logViewer,
+                    FooterLeftItemsSource = [new SelectableTextBlock { Text = $"路径: {logPath}" }],
+                    ActionButtonsSource = [openFolderButton]
+                });
+
+                if (result is SukiMessageBoxResult.Yes)
                 {
                     ProcessExecutionHelper.OpenLogFolderAndSelectFile(logPath);
                 }
@@ -147,6 +160,7 @@ namespace LazyBootstrap.Services.Launch
         {
             _launchViewModel = launchViewModel;
             _displayViewModel = displayViewModel;
+            _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
             launchViewModel.IsLaunchFailureOverlayVisible = false;
             _gameProcessTracker.ResetManagedAsphyxiaTracking();
@@ -292,16 +306,33 @@ namespace LazyBootstrap.Services.Launch
                     return;
                 }
 
-                _gameProcessTracker.RegisterTrackedSpiceProcess(_gameProcess);
-                _gameProcess.Exited += GameProcessExited;
-                handoffToGameSession = true;
+                AppendLaunchOutput(launchViewModel, "spice64 已启动，正在验证运行状态...");
+                var startupVerification = await VerifyGameStartupAsync(_gameProcess, launchViewModel);
 
-                launchViewModel.IsLaunching = false;
-                launchViewModel.IsGameRunning = true;
-                launchViewModel.IsLaunchFailureOverlayVisible = false;
-                _shellStateService.StatusText = "游戏运行中";
-                launchViewModel.StateText = _shellStateService.StatusText;
-                AppendLaunchOutput(launchViewModel, "游戏已启动并进入运行状态。");
+                switch (startupVerification.Status)
+                {
+                    case StartupVerificationStatus.Failed:
+                        FailLaunch(launchViewModel, startupVerification.Message);
+                        return;
+                    case StartupVerificationStatus.EarlyExit:
+                        AppendLaunchOutput(launchViewModel, startupVerification.Message);
+                        SetLaunchReadyState(launchViewModel);
+                        return;
+                    default:
+                        _gameProcess = startupVerification.Process;
+                        _gameProcess.EnableRaisingEvents = true;
+                        _gameProcessTracker.RegisterTrackedSpiceProcess(_gameProcess);
+                        _gameProcess.Exited += GameProcessExited;
+                        handoffToGameSession = true;
+
+                        launchViewModel.IsLaunching = false;
+                        launchViewModel.IsGameRunning = true;
+                        launchViewModel.IsLaunchFailureOverlayVisible = false;
+                        _shellStateService.StatusText = "游戏运行中";
+                        launchViewModel.StateText = _shellStateService.StatusText;
+                        AppendLaunchOutput(launchViewModel, "游戏已启动并进入运行状态。");
+                        break;
+                }
             }
             catch (Exception ex)
             {
@@ -319,6 +350,31 @@ namespace LazyBootstrap.Services.Launch
                     else
                     {
                         _uiInteractionService.ShowWarningToast("Asphyxia 关闭提示", stopErrorMessage);
+                    }
+                }
+
+                if (!handoffToGameSession
+                    && _displayViewModel?.IsDisplayConfigurationEnabled == true
+                    && _displayViewModel.ExitRestore
+                    && _displayRestoreStates.Count > 0)
+                {
+                    AppendLaunchOutput(launchViewModel, "启动未完成，正在恢复显示器设置...");
+                    var restoreMessages = new List<string>();
+                    int restored = _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+                    AppendLaunchOutput(launchViewModel, restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。", restored > 0 ? NotificationType.Information : NotificationType.Warning);
+                    foreach (var restoreMessage in restoreMessages)
+                    {
+                        AppendLaunchOutput(launchViewModel, restoreMessage, NotificationType.Warning);
+                    }
+                }
+
+                if (!handoffToGameSession)
+                {
+                    _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+                    if (_gameProcess != null)
+                    {
+                        _gameProcess.Dispose();
+                        _gameProcess = null;
                     }
                 }
             }
@@ -464,6 +520,84 @@ namespace LazyBootstrap.Services.Launch
             launchViewModel.StateText = _shellStateService.StatusText;
         }
 
+        private void SetLaunchReadyState(LaunchPageViewModel launchViewModel)
+        {
+            _shellStateService.IsInteractionEnabled = true;
+            _shellStateService.StatusText = "就绪";
+            launchViewModel.IsLaunching = false;
+            launchViewModel.IsGameRunning = false;
+            launchViewModel.IsLaunchFailureOverlayVisible = false;
+            launchViewModel.StateText = _shellStateService.StatusText;
+        }
+
+        private async Task<StartupVerificationResult> VerifyGameStartupAsync(Process process, LaunchPageViewModel launchViewModel)
+        {
+            while (process != null)
+            {
+                var delayTask = Task.Delay(StartupVerificationWindow);
+                var exitTask = process.WaitForExitAsync();
+                var completedTask = await Task.WhenAny(exitTask, delayTask);
+
+                bool hasExited;
+                try
+                {
+                    hasExited = process.HasExited;
+                }
+                catch
+                {
+                    hasExited = true;
+                }
+
+                if (completedTask == delayTask && !hasExited)
+                {
+                    return StartupVerificationResult.Success(process);
+                }
+
+                int exitCode = 0;
+                DateTime exitedAtUtc = DateTime.UtcNow;
+
+                try
+                {
+                    exitCode = process.ExitCode;
+                }
+                catch
+                {
+                }
+
+                try
+                {
+                    exitedAtUtc = process.ExitTime.ToUniversalTime();
+                }
+                catch
+                {
+                }
+
+                await Task.Delay(StartupRestartProbeDelay);
+
+                try
+                {
+                    var restartedProcess = _gameProcessTracker.TryFindRestartedSpiceProcess(exitedAtUtc, RestartDetectionGracePeriod);
+                    if (restartedProcess != null)
+                    {
+                        AppendLaunchOutput(launchViewModel, "检测到 spice64 在启动阶段重新启动，正在重新验证...");
+                        process.Dispose();
+                        _gameProcess = restartedProcess;
+                        process = restartedProcess;
+                        continue;
+                    }
+                }
+                catch
+                {
+                }
+
+                return exitCode == 0
+                    ? StartupVerificationResult.EarlyExit(process, "spice64.exe 在启动阶段已正常退出（ExitCode: 0）。")
+                    : StartupVerificationResult.Failed(process, $"spice64.exe 在启动阶段异常退出（ExitCode: {exitCode}）。");
+            }
+
+            return StartupVerificationResult.Failed(null, "spice64.exe 在启动阶段未能保持运行。");
+        }
+
         private void ClearLaunchLog(LaunchPageViewModel viewModel)
         {
             _logLines.Clear();
@@ -564,6 +698,38 @@ namespace LazyBootstrap.Services.Launch
             }
 
             return count;
+        }
+
+        private enum StartupVerificationStatus
+        {
+            Success,
+            Failed,
+            EarlyExit
+        }
+
+        private sealed class StartupVerificationResult
+        {
+            private StartupVerificationResult(StartupVerificationStatus status, Process process, string message)
+            {
+                Status = status;
+                Process = process;
+                Message = message ?? string.Empty;
+            }
+
+            public StartupVerificationStatus Status { get; }
+
+            public Process Process { get; }
+
+            public string Message { get; }
+
+            public static StartupVerificationResult Success(Process process)
+                => new StartupVerificationResult(StartupVerificationStatus.Success, process, string.Empty);
+
+            public static StartupVerificationResult Failed(Process process, string message)
+                => new StartupVerificationResult(StartupVerificationStatus.Failed, process, message);
+
+            public static StartupVerificationResult EarlyExit(Process process, string message)
+                => new StartupVerificationResult(StartupVerificationStatus.EarlyExit, process, message);
         }
     }
 }

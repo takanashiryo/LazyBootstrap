@@ -99,8 +99,6 @@ namespace LazyBootstrap.Services.Bootstrap
                 sp.GetRequiredService<MainWindowViewModel>(),
                 sp.GetRequiredService<IConfigHandler>(),
                 sp.GetRequiredService<ILauncherPaths>(),
-                sp.GetRequiredService<ISpiceConfigFileService>(),
-                sp.GetRequiredService<IDisplayConfigurationService>(),
                 sp.GetRequiredService<IDisplaySettingsTransactionCoordinator>(),
                 sp.GetRequiredService<ISettingsWorkflowService>(),
                 sp.GetRequiredService<ISukiDialogManager>(),

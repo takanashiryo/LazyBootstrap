@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 <games>
     <game name="Bishi Bashi Channel">
         <buttons>
@@ -30,10 +30,10 @@
             <button name="P4 Disk -/+ Slowdown" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="P1 Disk" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="P2 Disk" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="P3 Disk" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="P4 Disk" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="P1 Disk" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="P2 Disk" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="P3 Disk" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="P4 Disk" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="P1 R" index="0" devid=""/>
@@ -71,7 +71,7 @@
         </lights>
         <options/>
     </game>
-    <game name="HELLO! Pop'n Music">
+    <game name="HELLO! Pop&apos;n Music">
         <buttons>
             <button name="Service" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Test" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
@@ -313,6 +313,7 @@
             <button name="Service" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Test" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Coin" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
+            <button name="Headphone" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Guitar P1 Start" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Guitar P1 Up" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Guitar P1 Down" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
@@ -367,28 +368,27 @@
             <button name="Drum Help" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Drum Button Extra 1" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Drum Button Extra 2" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
+            <button name="Drum Left Cymbal" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Drum Hi-Hat" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
-            <button name="Drum Hi-Hat Closed" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
-            <button name="Drum Hi-Hat Half-Open" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
+            <button name="Drum Left Pedal" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Drum Snare" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Drum Hi-Tom" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
-            <button name="Drum Low-Tom" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
-            <button name="Drum Right Cymbal" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Drum Bass Pedal" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
-            <button name="Drum Left Cymbal" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
-            <button name="Drum Left Pedal" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
+            <button name="Drum Low-Tom" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Drum Floor Tom" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
-            <button name="Headphone" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
+            <button name="Drum Right Cymbal" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
+            <button name="Drum Hi-Hat Closed" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
+            <button name="Drum Hi-Hat Half-Open" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Guitar P1 Wail X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Guitar P1 Wail Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Guitar P1 Wail Z" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Guitar P1 Knob" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Guitar P2 Wail X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Guitar P2 Wail Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Guitar P2 Wail Z" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Guitar P2 Knob" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P1 Wail X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P1 Wail Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P1 Wail Z" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P1 Knob" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P2 Wail X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P2 Wail Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P2 Wail Z" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Guitar P2 Knob" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Guitar P1 Motor" index="0" devid=""/>
@@ -462,6 +462,15 @@
             <light name="Guitar Right Speaker Lower R (DX)" index="0" devid=""/>
             <light name="Guitar Right Speaker Lower G (DX)" index="0" devid=""/>
             <light name="Guitar Right Speaker Lower B (DX)" index="0" devid=""/>
+            <light name="Title Average R (Arena)" index="0" devid=""/>
+            <light name="Title Average G (Arena)" index="0" devid=""/>
+            <light name="Title Average B (Arena)" index="0" devid=""/>
+            <light name="Woofer R (Arena)" index="0" devid=""/>
+            <light name="Woofer G (Arena)" index="0" devid=""/>
+            <light name="Woofer B (Arena)" index="0" devid=""/>
+            <light name="Card Reader R (Arena)" index="0" devid=""/>
+            <light name="Card Reader G (Arena)" index="0" devid=""/>
+            <light name="Card Reader B (Arena)" index="0" devid=""/>
         </lights>
         <options/>
     </game>
@@ -500,13 +509,13 @@
             <button name="P2 Headphone" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Turntable P1" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Turntable P2" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="VEFX" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Low-EQ" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Hi-EQ" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Filter" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Play Volume" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Turntable P1" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Turntable P2" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="VEFX" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Low-EQ" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Hi-EQ" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Filter" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Play Volume" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="P1 1" index="0" devid=""/>
@@ -672,8 +681,8 @@
             <button name="Joy Right" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Joy X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Joy Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Joy X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Joy Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Start" index="0" devid=""/>
@@ -714,11 +723,11 @@
             <button name="Analog Slowdown" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Disk1" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Disk2" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Disk3" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Disk4" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Disk5" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Disk1" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Disk2" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Disk3" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Disk4" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Disk5" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Start" index="0" devid=""/>
@@ -889,34 +898,34 @@
             <button name="Touch Difficulty 4" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Key 1" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 2" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 3" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 4" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 5" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 6" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 7" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 8" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 9" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 10" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 11" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 12" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 13" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 14" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 15" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 16" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 17" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 18" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 19" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 20" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 21" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 22" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 23" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 24" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 25" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 26" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 27" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Key 28" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 1" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 2" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 3" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 4" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 5" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 6" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 7" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 8" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 9" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 10" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 11" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 12" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 13" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 14" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 15" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 16" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 17" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 18" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 19" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 20" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 21" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 22" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 23" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 24" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 25" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 26" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 27" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Key 28" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Title R" index="0" devid=""/>
@@ -1012,7 +1021,7 @@
         </lights>
         <options/>
     </game>
-    <game name="Pop'n Music">
+    <game name="Pop&apos;n Music">
         <buttons>
             <button name="Service" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Test" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
@@ -1208,9 +1217,9 @@
             <button name="Auto Lever Up" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Wheel" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Accelerate" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Brake" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Wheel" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Accelerate" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Brake" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights/>
         <options/>
@@ -1230,10 +1239,10 @@
             <button name="Jog Switch Right" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Left Stick X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Left Stick Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Right Stick X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Right Stick Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Left Stick X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Left Stick Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Right Stick X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Right Stick Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Center Red" index="0" devid=""/>
@@ -1266,8 +1275,8 @@
             <button name="Headphone" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="VOL-L" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="VOL-R" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="VOL-L" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="VOL-R" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="BT-A" index="0" devid=""/>
@@ -1341,12 +1350,11 @@
         </lights>
         <options>
             <option name="k" value="ifs_hook.dll"/>
+            <option name="url" value="http://localhost:8083"/>
+            <option name="sp2x-dx9on12" value="0"/>
             <option name="sp2x-nvprofile" value="/ENABLED"/>
             <option name="sp2x-lowlatencysharedaudio" value="/ENABLED"/>
-            <option name="sdvx" value="/ENABLED"/>
-            <option name="io" value="/ENABLED"/>
-            <option name="sp2x-dx9on12" value="0"/>
-            <option name="url" value="http://localhost:8083"/>
+            <option name="sp2x-sdvxsubredraw" value="/ENABLED"/>
         </options>
     </game>
     <game name="Mahjong Fight Club">
@@ -1373,10 +1381,10 @@
             <button name="Pad 4" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Pad 1" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Pad 2" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Pad 3" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Pad 4" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad 1" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad 2" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad 3" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad 4" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Pad 1 Red" index="0" devid=""/>
@@ -1496,7 +1504,7 @@
         </lights>
         <options/>
     </game>
-    <game name="Otoca D'or">
+    <game name="Otoca D&apos;or">
         <buttons>
             <button name="Service" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
             <button name="Test" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
@@ -1546,10 +1554,10 @@
             <button name="Pad R3" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Pad Stick Left X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Pad Stick Left Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Pad Stick Right X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Pad Stick Right Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad Stick Left X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad Stick Left Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad Stick Right X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Pad Stick Right Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Left Red" index="0" devid=""/>
@@ -1576,8 +1584,8 @@
             <button name="Scope Left" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Gun X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Gun Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Gun X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Gun Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights/>
         <options/>
@@ -1623,8 +1631,8 @@
             <button name="Button 4" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Stick X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Stick Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Stick X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Stick Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights/>
         <options/>
@@ -1650,10 +1658,10 @@
             <button name="Trackball Right" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Joystick X" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Joystick Y" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Trackball DX" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Trackball DY" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Joystick X" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Joystick Y" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Trackball DX" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Trackball DY" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="Title Panel R" index="0" devid=""/>
@@ -1719,8 +1727,8 @@
             <button name="Headphone" vkey="255" analogtype="0" debounce_up="0" debounce_down="0" velocity_threshold="0" invert="false" devid=""/>
         </buttons>
         <analogs>
-            <analog name="Fader-L" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
-            <analog name="Fader-R" index="255" sensivity="1" deadzone="0" devid="" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Fader-L" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
+            <analog name="Fader-R" devid="" sensivity="1" deadzone="0" deadzone_mirror="false" invert="false" smoothing="false" multiplier="1" relative="false" delay="0"/>
         </analogs>
         <lights>
             <light name="IC Reader R" index="0" devid=""/>

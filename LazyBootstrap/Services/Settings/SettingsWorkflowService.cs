@@ -127,10 +127,10 @@ namespace LazyBootstrap.Services.Settings
                 viewModel.AsphyxiaDirectoryOverride = _paths.AsphyxiaDirectoryOverride;
                 viewModel.NoAsphyxia = ReadBool(SettingSectionName, "noasphyxia", false);
                 viewModel.CompatibilityRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
-                viewModel.CompatibilityLayerEnabled = IsCompatLayerEffectivelyEnabled();
                 viewModel.IsSpiceConfigAvailable = isSpiceConfigAvailable;
                 viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
+            RefreshCompatibilityState(viewModel);
 
             LoadServerPresets(viewModel);
             return Task.CompletedTask;
@@ -182,24 +182,44 @@ namespace LazyBootstrap.Services.Settings
 
         public Task PersistLauncherSettingsAsync(SettingsPageViewModel viewModel)
         {
-            _configHandler.WriteString(SettingSectionName, "noasphyxia", viewModel.NoAsphyxia.ToString().ToLowerInvariant());
+            try
+            {
+                _configHandler.WriteString(SettingSectionName, "noasphyxia", viewModel.NoAsphyxia.ToString().ToLowerInvariant());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist launcher settings.");
+                _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
+                viewModel.RunSilently(() => viewModel.NoAsphyxia = ReadBool(SettingSectionName, "noasphyxia", false));
+            }
+
             return Task.CompletedTask;
         }
 
         public Task PersistPathOverridesAsync(SettingsPageViewModel viewModel)
         {
-            _paths.SetContentsDirectoryOverride(viewModel.GameDirectoryOverride);
-            _paths.SetAsphyxiaDirectoryOverride(viewModel.AsphyxiaDirectoryOverride);
-            _configHandler.WriteString(SettingSectionName, "contentsoverride", _paths.ContentsDirectoryOverride);
-            _configHandler.WriteString(SettingSectionName, "asphyxiaoverride", _paths.AsphyxiaDirectoryOverride);
-            if (!RefreshSpiceConfigAvailability(viewModel))
+            try
             {
-                return Task.CompletedTask;
+                _paths.SetContentsDirectoryOverride(viewModel.GameDirectoryOverride);
+                _paths.SetAsphyxiaDirectoryOverride(viewModel.AsphyxiaDirectoryOverride);
+                _configHandler.WriteString(SettingSectionName, "contentsoverride", _paths.ContentsDirectoryOverride);
+                _configHandler.WriteString(SettingSectionName, "asphyxiaoverride", _paths.AsphyxiaDirectoryOverride);
+                RefreshCompatibilityState(viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist path overrides.");
+                _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
+                _paths.SetContentsDirectoryOverride(_configHandler.ReadString(SettingSectionName, "contentsoverride", string.Empty));
+                _paths.SetAsphyxiaDirectoryOverride(_configHandler.ReadString(SettingSectionName, "asphyxiaoverride", string.Empty));
+                viewModel.RunSilently(() =>
+                {
+                    viewModel.GameDirectoryOverride = _paths.ContentsDirectoryOverride;
+                    viewModel.AsphyxiaDirectoryOverride = _paths.AsphyxiaDirectoryOverride;
+                });
+                RefreshCompatibilityState(viewModel);
             }
 
-            LoadSpiceSettings(viewModel);
-            RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
-            RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
             return Task.CompletedTask;
         }
 
@@ -218,22 +238,11 @@ namespace LazyBootstrap.Services.Settings
                     new SpiceOptionUpdate("url", viewModel.ServerAddress, false),
                     new SpiceOptionUpdate("p", viewModel.PcbId, false)))
             {
+                ReloadRuntimeState(viewModel);
                 return Task.CompletedTask;
             }
 
-            var matchedPreset = viewModel.ServerPresets.FirstOrDefault(preset =>
-                !string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(preset.ServerUrl ?? string.Empty, viewModel.ServerAddress, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(preset.PcbId ?? string.Empty, viewModel.PcbId, StringComparison.OrdinalIgnoreCase));
-
-            viewModel.RunSilently(() =>
-            {
-                viewModel.SelectedServerPreset = matchedPreset
-                    ?? viewModel.ServerPresets.FirstOrDefault(preset => string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
-                    ?? viewModel.ServerPresets.FirstOrDefault();
-            });
-
-            viewModel.ActiveServerPreset = viewModel.SelectedServerPreset?.Name ?? NonePresetName;
+            SyncSelectedServerPresetFromCurrentFields(viewModel);
             SaveServerPresets(viewModel);
             return Task.CompletedTask;
         }
@@ -314,13 +323,19 @@ namespace LazyBootstrap.Services.Settings
             viewModel.NetworkAdapterIp = NormalizeNetworkValue(viewModel.NetworkAdapterIp);
             viewModel.NetworkAdapterSubnet = NormalizeNetworkValue(viewModel.NetworkAdapterSubnet);
 
-            TryApplySpiceUpdates(
-                _paths.GetSpiceXmlPath(),
-                LoadOptions.PreserveWhitespace,
-                false,
-                viewModel,
-                new SpiceOptionUpdate("network", viewModel.NetworkAdapterIp, false),
-                new SpiceOptionUpdate("subnet", viewModel.NetworkAdapterSubnet, false));
+            if (!TryApplySpiceUpdates(
+                    _paths.GetSpiceXmlPath(),
+                    LoadOptions.PreserveWhitespace,
+                    false,
+                    viewModel,
+                    new SpiceOptionUpdate("network", viewModel.NetworkAdapterIp, false),
+                    new SpiceOptionUpdate("subnet", viewModel.NetworkAdapterSubnet, false)))
+            {
+                ReloadRuntimeState(viewModel);
+                return Task.CompletedTask;
+            }
+
+            RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
             return Task.CompletedTask;
         }
 
@@ -335,6 +350,7 @@ namespace LazyBootstrap.Services.Settings
                     viewModel,
                     BuildSpiceOptionUpdates(viewModel).ToArray()))
             {
+                ReloadRuntimeState(viewModel);
                 return Task.CompletedTask;
             }
 
@@ -356,20 +372,16 @@ namespace LazyBootstrap.Services.Settings
             if (_compatibilitySettingsService.TryToggleCompatLayer(
                     viewModel.CompatibilityLayerEnabled,
                     renderMode,
-                    dxModeValue => TryApplySpiceUpdates(
-                        _paths.GetSpiceXmlPath(),
-                        LoadOptions.PreserveWhitespace,
-                        false,
-                        viewModel,
-                        new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, false)),
+                    dxModeValue => TryApplyCompatibilityDxMode(viewModel, dxModeValue),
                     out var error))
             {
-                viewModel.CompatibilityRenderMode = renderMode;
+                viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
+                RefreshCompatibilityState(viewModel);
                 return Task.CompletedTask;
             }
 
             _uiInteractionService.ShowErrorToast("兼容层切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            viewModel.RunSilently(() => viewModel.CompatibilityLayerEnabled = IsCompatLayerEffectivelyEnabled());
+            RefreshCompatibilityState(viewModel);
             return Task.CompletedTask;
         }
 
@@ -377,27 +389,21 @@ namespace LazyBootstrap.Services.Settings
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            var previousRenderMode = CompatibilitySettingsService.NormalizeRenderMode(
-                _configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
             var renderMode = CompatibilitySettingsService.NormalizeRenderMode(viewModel.CompatibilityRenderMode);
 
             if (_compatibilitySettingsService.TryPersistRenderMode(
                     renderMode,
                     viewModel.CompatibilityLayerEnabled,
-                    dxModeValue => TryApplySpiceUpdates(
-                        _paths.GetSpiceXmlPath(),
-                        LoadOptions.PreserveWhitespace,
-                        false,
-                        viewModel,
-                        new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, false)),
+                    dxModeValue => TryApplyCompatibilityDxMode(viewModel, dxModeValue),
                     out var error))
             {
-                viewModel.CompatibilityRenderMode = renderMode;
+                viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
+                RefreshCompatibilityState(viewModel);
                 return Task.CompletedTask;
             }
 
             _uiInteractionService.ShowErrorToast("兼容模式切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = previousRenderMode);
+            RefreshCompatibilityState(viewModel);
             return Task.CompletedTask;
         }
 
@@ -580,20 +586,16 @@ namespace LazyBootstrap.Services.Settings
             if (_compatibilitySettingsService.TryToggleCompatLayer(
                     true,
                     renderMode,
-                    dxModeValue => TryApplySpiceUpdates(
-                        _paths.GetSpiceXmlPath(),
-                        LoadOptions.PreserveWhitespace,
-                        false,
-                        viewModel,
-                        new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, false)),
+                    dxModeValue => TryApplyCompatibilityDxMode(viewModel, dxModeValue),
                     out var error))
             {
-                viewModel.CompatibilityRenderMode = renderMode;
+                viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
+                RefreshCompatibilityState(viewModel);
                 return;
             }
 
             _uiInteractionService.ShowErrorToast("兼容层切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            viewModel.RunSilently(() => viewModel.CompatibilityLayerEnabled = IsCompatLayerEffectivelyEnabled());
+            RefreshCompatibilityState(viewModel);
         }
 
         public async Task SelectGameDirectoryOverrideAsync(SettingsPageViewModel viewModel)
@@ -807,6 +809,61 @@ namespace LazyBootstrap.Services.Settings
 
             var snapshot = ReadSpiceSettingsSnapshot();
             viewModel.RunSilently(() => ApplySpiceSettingsSnapshot(viewModel, snapshot));
+            SyncSelectedServerPresetFromCurrentFields(viewModel);
+        }
+
+        private void ReloadRuntimeState(SettingsPageViewModel viewModel)
+        {
+            if (!RefreshSpiceConfigAvailability(viewModel))
+            {
+                ApplyUnavailableSpiceState(viewModel);
+                return;
+            }
+
+            RefreshCompatibilityState(viewModel);
+            LoadSpiceSettings(viewModel);
+            RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
+            RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
+        }
+
+        private void RefreshCompatibilityState(SettingsPageViewModel viewModel)
+        {
+            viewModel.RunSilently(() =>
+            {
+                viewModel.CompatibilityRenderMode = ReadConfiguredCompatibilityRenderMode();
+                viewModel.CompatibilityLayerEnabled = IsCompatLayerEffectivelyEnabled();
+            });
+        }
+
+        private void ApplyUnavailableSpiceState(SettingsPageViewModel viewModel)
+        {
+            viewModel.AsioDrivers.Clear();
+            viewModel.NetworkAdapters.Clear();
+            viewModel.RunSilently(() =>
+            {
+                ApplySpiceSettingsSnapshot(viewModel, new SpiceSettingsSnapshot());
+                viewModel.SelectedAsioDriver = null;
+                viewModel.SelectedNetworkAdapter = null;
+            });
+            SyncSelectedServerPresetFromCurrentFields(viewModel);
+        }
+
+        private void SyncSelectedServerPresetFromCurrentFields(SettingsPageViewModel viewModel)
+        {
+            var serverUrl = (viewModel.ServerAddress ?? string.Empty).Trim();
+            var pcbId = (viewModel.PcbId ?? string.Empty).Trim();
+
+            var matchedPreset = viewModel.ServerPresets.FirstOrDefault(preset =>
+                !string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase)
+                && string.Equals((preset.ServerUrl ?? string.Empty).Trim(), serverUrl, StringComparison.OrdinalIgnoreCase)
+                && string.Equals((preset.PcbId ?? string.Empty).Trim(), pcbId, StringComparison.OrdinalIgnoreCase));
+
+            var fallbackPreset = viewModel.ServerPresets.FirstOrDefault(preset => string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
+                ?? viewModel.ServerPresets.FirstOrDefault();
+            var selectedPreset = matchedPreset ?? fallbackPreset;
+
+            viewModel.RunSilently(() => viewModel.SelectedServerPreset = selectedPreset);
+            viewModel.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
         }
 
         private bool TryGetSpiceOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context)
@@ -958,6 +1015,8 @@ namespace LazyBootstrap.Services.Settings
                     viewModel.NetworkAdapterSubnet = currentNetworkSubnet;
                 }
             });
+
+            SyncSelectedServerPresetFromCurrentFields(viewModel);
         }
 
         private static List<AsioDriverOption> BuildAsioDriverOptions(string selectedValue)
@@ -1054,6 +1113,12 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
+        private string ReadConfiguredCompatibilityRenderMode()
+        {
+            return CompatibilitySettingsService.NormalizeRenderMode(
+                _configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
+        }
+
         private static int ResolveWindowModeIndex(string windowBorderValue)
         {
             return windowBorderValue switch
@@ -1098,6 +1163,45 @@ namespace LazyBootstrap.Services.Settings
             }
 
             return true;
+        }
+
+        private bool TryApplyCompatibilityDxMode(SettingsPageViewModel viewModel, string dxModeValue)
+        {
+            string spiceXmlPath = _paths.GetSpiceXmlPath();
+            var spiceSnapshot = FileStateSnapshot.Capture(spiceXmlPath);
+
+            try
+            {
+                if (TryApplySpiceUpdates(
+                        spiceXmlPath,
+                        LoadOptions.PreserveWhitespace,
+                        false,
+                        viewModel,
+                        new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, false)))
+                {
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to update spice compatibility dx mode.");
+            }
+
+            try
+            {
+                spiceSnapshot.Restore();
+                if (string.Equals(spiceXmlPath, _paths.GetSpiceXmlPath(), StringComparison.OrdinalIgnoreCase)
+                    && File.Exists(spiceXmlPath))
+                {
+                    LoadSpiceSettings(viewModel);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to restore spice compatibility dx mode snapshot.");
+            }
+
+            return false;
         }
 
         private IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsPageViewModel viewModel)

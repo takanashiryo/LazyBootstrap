@@ -148,7 +148,10 @@
                     <suki:SukiSideMenuItem.PageContent>
                         <suki:BusyArea x:Name="SettingsBusyArea" Margin="20,14" BusyText="spicecfg 运行中..." HorizontalAlignment="Center" MaxWidth="1240">
                             <Grid>
-                                <suki:SettingsLayout x:Name="GameSettingsLayout" Margin="0,6,0,0">
+                                <suki:SettingsLayout x:Name="GameSettingsLayout"
+                                                     Margin="0,6,0,0"
+                                                     StackSummaryWidth="320"
+                                                     MinWidthWhetherStackSummaryShow="1020">
                                     <suki:SettingsLayout.Items>
                                         <generic:List x:TypeArguments="suki:SettingsLayoutItem">
                                         <suki:SettingsLayoutItem Header="基础">
@@ -168,36 +171,73 @@
 
                                         <suki:SettingsLayoutItem Header="AMD/Intel显卡兼容层">
                                             <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
+                                                <suki:GlassCard Margin="0,18,0,0" Padding="14">
+                                                    <StackPanel Spacing="8">
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                             <TextBlock Text="启用显卡兼容层" VerticalAlignment="Center"/>
                                                             <ToggleSwitch x:Name="CompatLayerToggleSwitch" Grid.Column="1"/>
                                                         </Grid>
-                                                        <TextBlock Text="AMD与Intel显卡必须要开启，NVIDIA显卡一定不能开启" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-20,0,0"/>
+                                                        <TextBlock Text="AMD与Intel显卡必须要开启，NVIDIA显卡一定不能开启" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-18,0,0"/>
                                                         <suki:BusyArea x:Name="CompatRenderModeBusyArea" BusyText="兼容层启用中...">
-                                                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                                                <RadioButton x:Name="CompatDx9on12RadioButton" GroupName="CompatType" Classes="GigaChips" IsChecked="True">
-                                                                    <StackPanel Spacing="1">
-                                                                        <TextBlock Text="dx9on12" FontSize="16" FontWeight="SemiBold"/>
-                                                                        <TextBlock Text="spice2x内置，最常用的模式" Opacity="0.7"/>
+                                                            <Grid HorizontalAlignment="Center"
+                                                                  MaxWidth="684"
+                                                                  Margin="0,2,0,0"
+                                                                  ColumnDefinitions="*,*,*"
+                                                                  ColumnSpacing="12">
+                                                                <RadioButton x:Name="CompatDx9on12RadioButton"
+                                                                             Grid.Column="0"
+                                                                             HorizontalAlignment="Stretch"
+                                                                             MinWidth="0"
+                                                                             MinHeight="82"
+                                                                             Padding="0"
+                                                                             GroupName="CompatType"
+                                                                             Classes="GigaChips"
+                                                                             IsChecked="{Binding Settings.IsCompatibilityDx9on12Selected}"
+                                                                             Command="{Binding Settings.SelectCompatibilityRenderModeCommand}"
+                                                                             CommandParameter="dx9on12">
+                                                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
+                                                                        <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
+                                                                        <TextBlock Text="dx9on12" FontSize="16" FontWeight="DemiBold" TextWrapping="Wrap"/>
+                                                                        <TextBlock Text="最常用的模式" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
                                                                     </StackPanel>
                                                                 </RadioButton>
-                                                                <RadioButton x:Name="CompatDx9on12ExternalRadioButton" GroupName="CompatType" Classes="GigaChips">
-                                                                    <StackPanel Spacing="1">
-                                                                        <TextBlock Text="dx9on12 (External)" FontSize="16" FontWeight="SemiBold"/>
-                                                                        <TextBlock Text="外置版，有人说比内置的好" Opacity="0.7"/>
+                                                                <RadioButton x:Name="CompatDx9on12ExternalRadioButton"
+                                                                             Grid.Column="1"
+                                                                             HorizontalAlignment="Stretch"
+                                                                             MinWidth="0"
+                                                                             MinHeight="82"
+                                                                             Padding="0"
+                                                                             GroupName="CompatType"
+                                                                             Classes="GigaChips"
+                                                                             IsChecked="{Binding Settings.IsCompatibilityDx9on12ExternalSelected}"
+                                                                             Command="{Binding Settings.SelectCompatibilityRenderModeCommand}"
+                                                                             CommandParameter="dx9on12_external">
+                                                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
+                                                                        <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
+                                                                        <TextBlock Text="dx9on12（外置）" FontSize="16" FontWeight="DemiBold"/>
+                                                                        <TextBlock Text="外置版，可能比内置的好" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
                                                                     </StackPanel>
                                                                 </RadioButton>
-                                                                <RadioButton x:Name="CompatDxvkRadioButton" GroupName="CompatType" Classes="GigaChips">
-                                                                    <StackPanel Spacing="1">
-                                                                        <TextBlock Text="dxvk" FontSize="16" FontWeight="SemiBold"/>
-                                                                        <TextBlock Text="Vulkan 转译模式" Opacity="0.7"/>
+                                                                <RadioButton x:Name="CompatDxvkRadioButton"
+                                                                             Grid.Column="2"
+                                                                             HorizontalAlignment="Stretch"
+                                                                             MinWidth="0"
+                                                                             MinHeight="82"
+                                                                             Padding="0"
+                                                                             GroupName="CompatType"
+                                                                             Classes="GigaChips"
+                                                                             IsChecked="{Binding Settings.IsCompatibilityDxvkSelected}"
+                                                                             Command="{Binding Settings.SelectCompatibilityRenderModeCommand}"
+                                                                             CommandParameter="dxvk">
+                                                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
+                                                                        <TextBlock Text="VULKAN" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
+                                                                        <TextBlock Text="dxvk" FontSize="16" FontWeight="DemiBold"/>
+                                                                        <TextBlock Text="Vulkan 转译模式" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
                                                                     </StackPanel>
                                                                 </RadioButton>
-                                                            </StackPanel>
+                                                            </Grid>
                                                         </suki:BusyArea>
-                                                        <TextBlock x:Name="CompatStatusTextBlock" Text="" Opacity="0.75"/>
+                                                        <TextBlock x:Name="CompatStatusTextBlock" Text="" Opacity="0.75" Margin="0,2,0,0" IsVisible="False"/>
                                                     </StackPanel>
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>
@@ -337,11 +377,6 @@
                                                             <TextBox x:Name="AsphyxiaDirectoryOverrideTextBox" Grid.Row="1" Grid.Column="1"/>
                                                             <Button x:Name="SelectAsphyxiaDirectoryOverrideButton" Grid.Row="1" Grid.Column="2" Content="选择" MinWidth="72" Classes="Basic" Command="{Binding Settings.SelectAsphyxiaDirectoryOverrideCommand}"/>
                                                         </Grid>
-                                                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="False">
-                                                            <Button x:Name="LoadCompatButton" Content="加载兼容层" Command="{Binding Settings.EnableCompatibilityLayerCommand}"/>
-                                                            <Button x:Name="UnloadCompatButton" Content="卸载兼容层" Command="{Binding Settings.DisableCompatibilityLayerCommand}"/>
-                                                            <ComboBox x:Name="CompatTypeComboBox" Width="150"/>
-                                                        </StackPanel>
                                                         <TextBlock Text="更多功能请前往spicecfg调整" Opacity="0.7" FontSize="12" Margin="0,2,0,4" HorizontalAlignment="Center" TextAlignment="Center"/>
                                                     </StackPanel>
                                                 </suki:GlassCard>

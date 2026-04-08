@@ -248,7 +248,6 @@ namespace LazyBootstrap.Views
         private void RefreshPathOverrideDependentUi()
         {
             RefreshSettingsVersionTexts();
-            LoadSpiceConfig();
             UpdateCompatLayerStatus();
             UpdateRecommendedSpiceConfigButtonVisibility();
         }
@@ -292,7 +291,6 @@ namespace LazyBootstrap.Views
                     NoAsphyxiaToggleSwitch.IsChecked = _viewModel.Settings.NoAsphyxia;
                 }
 
-                _lastKnownCompatRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_viewModel.Settings.CompatibilityRenderMode);
                 ApplyCompatibilityStateFromViewModel();
                 ApplyServerPresetViewModelStateToUi();
                 ApplySettingsAvailabilityStateToUi();
@@ -371,23 +369,6 @@ namespace LazyBootstrap.Views
 
         private void ApplySpiceSettingsFromViewModel()
         {
-            _disableSubDisplay = _viewModel.Settings.DisableSubDisplay;
-            _windowModeIndex = _viewModel.Settings.WindowModeIndex;
-            _subBorderless = _viewModel.Settings.SubBorderless;
-            _showCursorTouchSim = _viewModel.Settings.ShowCursorTouchSim;
-            _pCoreOptimization = _viewModel.Settings.PCoreOptimization;
-            _windowTopMost = _viewModel.Settings.WindowTopMost;
-            _windowSize = _viewModel.Settings.WindowSize ?? string.Empty;
-            _singleAdapter = _viewModel.Settings.SingleAdapter;
-            _subWindowTopMost = _viewModel.Settings.SubWindowTopMost;
-            _subForceRender = _viewModel.Settings.SubForceRender;
-            _nativeTouch = _viewModel.Settings.NativeTouch;
-            _asioDriver = _viewModel.Settings.SelectedAsioDriver?.Value ?? _viewModel.Settings.AsioDriverValue ?? string.Empty;
-            _lowLatencySharedAudio = _viewModel.Settings.LowLatencySharedAudio;
-            _cardIo = _viewModel.Settings.CardIo;
-            _hidSmartCard = _viewModel.Settings.HidSmartCard;
-            _dbgNetDump = _viewModel.Settings.NetDump;
-
             if (WindowedToggleSwitch != null)
             {
                 WindowedToggleSwitch.IsChecked = _viewModel.Settings.Windowed;
@@ -395,77 +376,77 @@ namespace LazyBootstrap.Views
 
             if (NetDumpToggleSwitch != null)
             {
-                NetDumpToggleSwitch.IsChecked = _dbgNetDump;
+                NetDumpToggleSwitch.IsChecked = _viewModel.Settings.NetDump;
             }
 
             if (DisableSubDisplayToggleSwitch != null)
             {
-                DisableSubDisplayToggleSwitch.IsChecked = _disableSubDisplay;
+                DisableSubDisplayToggleSwitch.IsChecked = _viewModel.Settings.DisableSubDisplay;
             }
 
             if (WindowModeComboBox != null)
             {
-                WindowModeComboBox.SelectedIndex = Math.Clamp(_windowModeIndex, 0, Math.Max(0, WindowModeComboBox.ItemCount - 1));
+                WindowModeComboBox.SelectedIndex = Math.Clamp(_viewModel.Settings.WindowModeIndex, 0, Math.Max(0, WindowModeComboBox.ItemCount - 1));
             }
 
             if (PCoreOptimizationToggleSwitch != null)
             {
-                PCoreOptimizationToggleSwitch.IsChecked = _pCoreOptimization;
+                PCoreOptimizationToggleSwitch.IsChecked = _viewModel.Settings.PCoreOptimization;
             }
 
             if (SubBorderlessToggleSwitch != null)
             {
-                SubBorderlessToggleSwitch.IsChecked = _subBorderless;
+                SubBorderlessToggleSwitch.IsChecked = _viewModel.Settings.SubBorderless;
             }
 
             if (ShowCursorTouchSimToggleSwitch != null)
             {
-                ShowCursorTouchSimToggleSwitch.IsChecked = _showCursorTouchSim;
+                ShowCursorTouchSimToggleSwitch.IsChecked = _viewModel.Settings.ShowCursorTouchSim;
             }
 
             if (WindowTopMostToggleSwitch != null)
             {
-                WindowTopMostToggleSwitch.IsChecked = _windowTopMost;
+                WindowTopMostToggleSwitch.IsChecked = _viewModel.Settings.WindowTopMost;
             }
 
             if (WindowSizeTextBox != null)
             {
-                WindowSizeTextBox.Text = _windowSize;
+                WindowSizeTextBox.Text = _viewModel.Settings.WindowSize ?? string.Empty;
             }
 
             if (SingleAdapterToggleSwitch != null)
             {
-                SingleAdapterToggleSwitch.IsChecked = _singleAdapter;
+                SingleAdapterToggleSwitch.IsChecked = _viewModel.Settings.SingleAdapter;
             }
 
             if (SubWindowTopMostToggleSwitch != null)
             {
-                SubWindowTopMostToggleSwitch.IsChecked = _subWindowTopMost;
+                SubWindowTopMostToggleSwitch.IsChecked = _viewModel.Settings.SubWindowTopMost;
             }
 
             if (SubForceRenderToggleSwitch != null)
             {
-                SubForceRenderToggleSwitch.IsChecked = _subForceRender;
+                SubForceRenderToggleSwitch.IsChecked = _viewModel.Settings.SubForceRender;
             }
 
             if (NativeTouchToggleSwitch != null)
             {
-                NativeTouchToggleSwitch.IsChecked = _nativeTouch;
+                NativeTouchToggleSwitch.IsChecked = _viewModel.Settings.NativeTouch;
             }
 
             if (LowLatencySharedAudioToggleSwitch != null)
             {
-                LowLatencySharedAudioToggleSwitch.IsChecked = _lowLatencySharedAudio;
+                LowLatencySharedAudioToggleSwitch.IsChecked = _viewModel.Settings.LowLatencySharedAudio;
             }
 
             if (CardIoToggleSwitch != null)
             {
-                CardIoToggleSwitch.IsChecked = _cardIo;
+                CardIoToggleSwitch.IsChecked = _viewModel.Settings.CardIo;
             }
 
             if (HidSmartCardToggleSwitch != null)
             {
-                HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
+                HidSmartCardToggleSwitch.IsChecked = _viewModel.Settings.HidSmartCard;
             }
         }
 
@@ -544,89 +525,6 @@ namespace LazyBootstrap.Views
                         ? $"当前配置：{selectedAdapter?.DisplayName ?? BuildCurrentNetworkAdapterDisplayName(networkIp, subnetMask)}"
                         : "未检测到可用网卡");
             }
-
-            if (ServerAddressTextBox != null)
-            {
-                ServerAddressTextBox.Text = _viewModel.Settings.ServerAddress ?? string.Empty;
-            }
-
-            if (PcbIdTextBox != null)
-            {
-                PcbIdTextBox.Text = _viewModel.Settings.PcbId ?? string.Empty;
-            }
-        }
-
-        private bool EnsureSpiceXmlExistsForToggleOrRevert(ToggleSwitch toggle, Action onReverted)
-        {
-            var xmlPath = GetSpiceXmlPath();
-            if (File.Exists(xmlPath))
-            {
-                return true;
-            }
-
-            ShowErrorToast("配置设置失败", "未找到 spicetools.xml，已自动关闭该选项。");
-
-            _isUpdatingSpiceToggleUi = true;
-            try
-            {
-                if (onReverted != null)
-                {
-                    onReverted();
-                }
-
-                if (toggle != null)
-                {
-                    toggle.IsChecked = false;
-                }
-            }
-            finally
-            {
-                _isUpdatingSpiceToggleUi = false;
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                _isUpdatingSpiceToggleUi = true;
-                try
-                {
-                    if (toggle != null)
-                    {
-                        toggle.IsChecked = false;
-                    }
-                }
-                finally
-                {
-                    _isUpdatingSpiceToggleUi = false;
-                }
-            }, DispatcherPriority.Render);
-
-            return false;
-        }
-
-        private void SaveSettings()
-        {
-            if (_isLoadingSettings)
-            {
-                return;
-            }
-
-            try
-            {
-                _configFile.WriteString(SettingSectionName, "contentsoverride", _paths.ContentsDirectoryOverride);
-                _configFile.WriteString(SettingSectionName, "asphyxiaoverride", _paths.AsphyxiaDirectoryOverride);
-
-                if (NoAsphyxiaToggleSwitch != null)
-                    _configFile.WriteString(SettingSectionName, "noasphyxia", (NoAsphyxiaToggleSwitch.IsChecked == true).ToString().ToLowerInvariant());
-                if (CompatTypeComboBox != null && CompatTypeComboBox.SelectedItem != null)
-                {
-                    string renderMode = CompatTypeComboBox.SelectedItem.ToString();
-                    _configFile.WriteString(SettingSectionName, "cl-rendermode", renderMode);
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowErrorToast("保存设置失败", ex.Message);
-            }
         }
     }
 }
@@ -644,66 +542,19 @@ namespace LazyBootstrap.Views
             }
 
             _viewModel.Settings.CompatibilityLayerEnabled = CompatLayerToggleSwitch?.IsChecked == true;
-            _viewModel.Settings.CompatibilityRenderMode = GetSelectedCompatRenderMode();
             await _settingsWorkflowService.PersistCompatibilityToggleAsync(_viewModel.Settings);
             ApplyCompatibilityStateFromViewModel();
         }
 
-        private async void OnCompatModeChecked(object sender, RoutedEventArgs e)
-        {
-            if (sender is not RadioButton { IsChecked: true })
-            {
-                return;
-            }
-
-            await ChangeCompatModeCoreAsync(GetRequestedCompatRenderMode());
-        }
-
-        private async void OnCompatTypeSelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-            await ChangeCompatModeCoreAsync(GetSelectedCompatRenderMode());
-        }
-
-        private int GetCompatLayerFileCount()
-        {
-            string modulesDir = GetCompatModulesDirectoryPath();
-            string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
-
-            int foundCount = 0;
-            foreach (var fileName in compatFiles)
-            {
-                string filePath = Path.Combine(modulesDir, fileName);
-                if (File.Exists(filePath))
-                {
-                    foundCount++;
-                }
-            }
-
-            return foundCount;
-        }
-
-        private bool IsCompatLayerEnabledConfigured()
-        {
-            try
-            {
-                var s = _configFile.ReadString(SettingSectionName, "compatlayer", "false");
-                bool enabled;
-                return bool.TryParse(s, out enabled) && enabled;
-            }
-            catch { return false; }
-        }
-
         private void UpdateCompatLayerStatus()
         {
-            int fileCount = GetCompatLayerFileCount();
             bool modulesDirectoryExists = HasCompatModulesDirectory();
-
-            bool effectiveEnabled = fileCount >= 1 || IsCompatLayerEnabledConfigured();
-            UpdateCompatRenderModeBusyState(effectiveEnabled);
+            bool compatibilityEnabled = _viewModel.Settings.CompatibilityLayerEnabled;
+            UpdateCompatRenderModeBusyState(compatibilityEnabled);
 
             if (CompatStatusTextBlock != null)
             {
-                if (!modulesDirectoryExists && !effectiveEnabled)
+                if (!modulesDirectoryExists && !compatibilityEnabled)
                 {
                     CompatStatusTextBlock.Text = "未找到modules目录，无法启用显卡兼容层。";
                     CompatStatusTextBlock.IsVisible = true;
@@ -715,48 +566,19 @@ namespace LazyBootstrap.Views
                 }
             }
 
-            if (CompatTypeComboBox != null)
-            {
-                CompatTypeComboBox.IsEnabled = !effectiveEnabled && modulesDirectoryExists;
-                if (effectiveEnabled)
-                {
-                    ToolTip.SetTip(CompatTypeComboBox, null);
-                }
-                else if (!modulesDirectoryExists)
-                {
-                    ToolTip.SetTip(CompatTypeComboBox, "未找到 contents/modules，无法启用显卡兼容层。");
-                }
-                else if (!string.IsNullOrEmpty(_compatTypeTooltipCache))
-                {
-                    ToolTip.SetTip(CompatTypeComboBox, _compatTypeTooltipCache);
-                }
-            }
-
-            if (LoadCompatButton != null)
-            {
-                LoadCompatButton.IsEnabled = !effectiveEnabled && modulesDirectoryExists;
-            }
-
-            if (UnloadCompatButton != null)
-            {
-                UnloadCompatButton.IsEnabled = effectiveEnabled;
-            }
-
             _isUpdatingCompatUi = true;
             try
             {
-                _viewModel.Settings.CompatibilityLayerEnabled = effectiveEnabled;
                 if (CompatLayerToggleSwitch != null)
                 {
-                    CompatLayerToggleSwitch.IsChecked = effectiveEnabled;
-                    CompatLayerToggleSwitch.IsEnabled = effectiveEnabled || modulesDirectoryExists;
+                    CompatLayerToggleSwitch.IsChecked = compatibilityEnabled;
+                    CompatLayerToggleSwitch.IsEnabled = compatibilityEnabled || modulesDirectoryExists;
                 }
 
-                bool chipsEnabled = !effectiveEnabled && modulesDirectoryExists;
+                bool chipsEnabled = !compatibilityEnabled && modulesDirectoryExists;
                 if (CompatDx9on12RadioButton != null) CompatDx9on12RadioButton.IsEnabled = chipsEnabled;
                 if (CompatDx9on12ExternalRadioButton != null) CompatDx9on12ExternalRadioButton.IsEnabled = chipsEnabled;
                 if (CompatDxvkRadioButton != null) CompatDxvkRadioButton.IsEnabled = chipsEnabled;
-                SyncCompatModeButtonsFromCombo();
             }
             finally
             {
@@ -772,56 +594,9 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void SyncCompatModeButtonsFromCombo()
-        {
-            ApplyCompatRenderModeButtons(GetSelectedCompatRenderMode());
-        }
-
-        private async Task ChangeCompatModeCoreAsync(string selected)
-        {
-            if (_isLoadingSettings || _isUpdatingCompatUi || _isSyncingModel)
-            {
-                return;
-            }
-
-            if (CompatTypeComboBox == null)
-            {
-                return;
-            }
-
-            selected = CompatibilitySettingsService.NormalizeRenderMode(selected);
-            if (string.Equals(selected, _lastKnownCompatRenderMode, StringComparison.OrdinalIgnoreCase))
-            {
-                ApplyCompatRenderModeSelection(selected);
-                return;
-            }
-
-            _viewModel.Settings.CompatibilityLayerEnabled = IsCompatLayerEffectivelyEnabled();
-            _viewModel.Settings.CompatibilityRenderMode = selected;
-            await _settingsWorkflowService.PersistCompatibilityRenderModeAsync(_viewModel.Settings);
-            ApplyCompatibilityStateFromViewModel();
-        }
-
-        private string ResolveDxModeValue()
-        {
-            return CompatibilitySettingsService.ResolveDxModeValue(IsCompatLayerEffectivelyEnabled(), GetSelectedCompatRenderMode());
-        }
-
         private void ApplyCompatibilityStateFromViewModel()
         {
-            _lastKnownCompatRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_viewModel.Settings.CompatibilityRenderMode);
-            ApplyCompatRenderModeSelection(_lastKnownCompatRenderMode);
             UpdateCompatLayerStatus();
-        }
-
-        private bool IsCompatLayerEffectivelyEnabled()
-        {
-            try
-            {
-                int fileCount = GetCompatLayerFileCount();
-                return fileCount >= 1 || IsCompatLayerEnabledConfigured();
-            }
-            catch { return IsCompatLayerEnabledConfigured(); }
         }
 
         private string GetCompatModulesDirectoryPath()
@@ -833,79 +608,6 @@ namespace LazyBootstrap.Views
         {
             return Directory.Exists(GetCompatModulesDirectoryPath());
         }
-
-        private void EnsureCompatRenderModesInitialized()
-        {
-            if (CompatTypeComboBox == null || CompatTypeComboBox.Items.Count > 0)
-            {
-                return;
-            }
-
-            CompatTypeComboBox.Items.Add("dx9on12");
-            CompatTypeComboBox.Items.Add("dx9on12_external");
-            CompatTypeComboBox.Items.Add("dxvk");
-        }
-
-        private string GetSelectedCompatRenderMode()
-        {
-            return CompatibilitySettingsService.NormalizeRenderMode(CompatTypeComboBox?.SelectedItem?.ToString());
-        }
-
-        private string GetRequestedCompatRenderMode()
-        {
-            if (CompatDxvkRadioButton?.IsChecked == true)
-            {
-                return "dxvk";
-            }
-
-            if (CompatDx9on12ExternalRadioButton?.IsChecked == true)
-            {
-                return "dx9on12_external";
-            }
-
-            return GetSelectedCompatRenderMode();
-        }
-
-        private void ApplyCompatRenderModeSelection(string renderMode)
-        {
-            renderMode = CompatibilitySettingsService.NormalizeRenderMode(renderMode);
-            EnsureCompatRenderModesInitialized();
-
-            _isSyncingModel = true;
-            try
-            {
-                if (CompatTypeComboBox != null)
-                {
-                    CompatTypeComboBox.SelectedItem = renderMode;
-                }
-
-                ApplyCompatRenderModeButtons(renderMode);
-            }
-            finally
-            {
-                _isSyncingModel = false;
-            }
-        }
-
-        private void ApplyCompatRenderModeButtons(string renderMode)
-        {
-            renderMode = CompatibilitySettingsService.NormalizeRenderMode(renderMode);
-            if (CompatDxvkRadioButton != null)
-            {
-                CompatDxvkRadioButton.IsChecked = string.Equals(renderMode, "dxvk", StringComparison.OrdinalIgnoreCase);
-            }
-
-            if (CompatDx9on12ExternalRadioButton != null)
-            {
-                CompatDx9on12ExternalRadioButton.IsChecked = string.Equals(renderMode, "dx9on12_external", StringComparison.OrdinalIgnoreCase);
-            }
-
-            if (CompatDx9on12RadioButton != null)
-            {
-                CompatDx9on12RadioButton.IsChecked = string.Equals(renderMode, "dx9on12", StringComparison.OrdinalIgnoreCase);
-            }
-        }
-
     }
 }
 
@@ -914,106 +616,6 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private void LoadServerPresetsFromConfig()
-        {
-            try
-            {
-                var result = _configFile.LoadServerPresets(NonePresetName, AsphyxiaPresetName, AsphyxiaDefaultUrl);
-                _serverPresets.Clear();
-                _serverPresets.AddRange(result.Presets);
-                _activeServerPreset = string.IsNullOrWhiteSpace(result.ActivePreset) ? NonePresetName : result.ActivePreset;
-
-                if (result.Mutated)
-                {
-                    _configFile.SaveServerPresets(_serverPresets, _activeServerPreset, NonePresetName);
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowWarningToast("服务器预设读取异常", ex.Message);
-                _serverPresets.Clear();
-                _serverPresets.Add(new ServerPresetItem { Name = NonePresetName });
-                _serverPresets.Add(new ServerPresetItem { Name = AsphyxiaPresetName, ServerUrl = AsphyxiaDefaultUrl, PcbId = string.Empty });
-                _activeServerPreset = NonePresetName;
-            }
-
-            _viewModel.Settings.ServerPresets.Clear();
-            foreach (var preset in _serverPresets)
-            {
-                _viewModel.Settings.ServerPresets.Add(preset);
-            }
-
-            var activePreset = _serverPresets.FirstOrDefault(p => string.Equals(p.Name, _activeServerPreset, StringComparison.OrdinalIgnoreCase))
-                ?? _serverPresets.FirstOrDefault();
-            _viewModel.Settings.RunSilently(() => _viewModel.Settings.SelectedServerPreset = activePreset);
-            _viewModel.Settings.ActiveServerPreset = _activeServerPreset;
-            _viewModel.Settings.ServerAddress = activePreset?.ServerUrl ?? string.Empty;
-            _viewModel.Settings.PcbId = activePreset?.PcbId ?? string.Empty;
-            RefreshServerPresetCombo();
-        }
-
-        private void SaveServerPresetsToConfig()
-        {
-            _configFile.SaveServerPresets(_serverPresets, _activeServerPreset, NonePresetName);
-        }
-
-        private void RefreshServerPresetCombo()
-        {
-            if (ServerPresetComboBox == null)
-            {
-                return;
-            }
-
-            ServerPresetComboBox.Items.Clear();
-            foreach (var preset in _serverPresets)
-            {
-                ServerPresetComboBox.Items.Add(preset);
-            }
-
-            if (ServerPresetComboBox.Items.Count > 0)
-            {
-                var active = _serverPresets.FirstOrDefault(p => string.Equals(p.Name, _activeServerPreset, StringComparison.OrdinalIgnoreCase));
-                ServerPresetComboBox.SelectedItem = active ?? _serverPresets[0];
-            }
-        }
-
-        private void SelectPresetByCurrentFields()
-        {
-            if (ServerPresetComboBox == null)
-            {
-                return;
-            }
-
-            var serverUrl = ServerAddressTextBox?.Text ?? string.Empty;
-            var pcbId = PcbIdTextBox?.Text ?? string.Empty;
-
-            var matched = _serverPresets.FirstOrDefault(p =>
-                !string.Equals(p.Name, NonePresetName, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(p.ServerUrl ?? string.Empty, serverUrl, StringComparison.OrdinalIgnoreCase)
-                && string.Equals(p.PcbId ?? string.Empty, pcbId, StringComparison.OrdinalIgnoreCase));
-
-            _isSyncingModel = true;
-            try
-            {
-                if (matched != null)
-                {
-                    ServerPresetComboBox.SelectedItem = matched;
-                    _activeServerPreset = matched.Name;
-                }
-                else
-                {
-                    ServerPresetComboBox.SelectedIndex = 0;
-                    _activeServerPreset = NonePresetName;
-                }
-            }
-            finally
-            {
-                _isSyncingModel = false;
-            }
-
-            _viewModel.Settings.ActiveServerPreset = _activeServerPreset;
-        }
-
         private async void OnServerPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (_isLoadingSettings || _isSyncingModel)
@@ -1033,14 +635,26 @@ namespace LazyBootstrap.Views
 
         private void ApplyServerPresetViewModelStateToUi()
         {
-            _serverPresets.Clear();
-            _serverPresets.AddRange(_viewModel.Settings.ServerPresets);
-            _activeServerPreset = _viewModel.Settings.ActiveServerPreset;
-
             _isSyncingModel = true;
             try
             {
-                RefreshServerPresetCombo();
+                if (ServerPresetComboBox != null)
+                {
+                    ServerPresetComboBox.Items.Clear();
+                    foreach (var preset in _viewModel.Settings.ServerPresets)
+                    {
+                        ServerPresetComboBox.Items.Add(preset);
+                    }
+
+                    if (_viewModel.Settings.SelectedServerPreset != null)
+                    {
+                        ServerPresetComboBox.SelectedItem = _viewModel.Settings.SelectedServerPreset;
+                    }
+                    else
+                    {
+                        ServerPresetComboBox.SelectedIndex = ServerPresetComboBox.Items.Count > 0 ? 0 : -1;
+                    }
+                }
 
                 if (ServerAddressTextBox != null)
                 {
@@ -1066,540 +680,6 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private bool UpdateSpiceConfig(params SpiceOptionUpdate[] updates)
-        {
-            try
-            {
-                if (updates == null || updates.Length == 0)
-                {
-                    updates = BuildDefaultOptionUpdates().ToArray();
-                }
-
-                var appliedUpdates = updates
-                    .Where(update => update != null && !string.IsNullOrEmpty(update.Name))
-                    .ToArray();
-
-                if (appliedUpdates.Length == 0)
-                {
-                    return true;
-                }
-
-                string spiceXmlPath = GetSpiceXmlPath();
-                if (!File.Exists(spiceXmlPath))
-                {
-                    ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
-                    RestoreUiFromLastKnownSpiceValues();
-                    return false;
-                }
-
-                if (!TryGetSpiceOptionsContext(spiceXmlPath, LoadOptions.PreserveWhitespace, true, out var context))
-                {
-                    ShowErrorToast("保存设定失败", "配置写入失败。");
-                    RestoreUiFromLastKnownSpiceValues();
-                    return false;
-                }
-
-                string normalizationWarning = _spiceConfigFileService.ApplyUpdates(context, appliedUpdates);
-                if (!string.IsNullOrWhiteSpace(normalizationWarning))
-                {
-                    ShowWarningToast("配置格式修复失败", normalizationWarning);
-                }
-
-                CacheLastKnownSpiceUpdates(appliedUpdates);
-                return true;
-            }
-            catch (Exception ex)
-            {
-                ShowErrorToast("保存设定失败", ex.Message);
-                RestoreUiFromLastKnownSpiceValues();
-                return false;
-            }
-        }
-
-        private void LoadSpiceConfig()
-        {
-            bool previousLoadingState = _isLoadingSettings;
-            _isLoadingSettings = true;
-            try
-            {
-                ApplySettingsAvailabilityStateToUi();
-                if (!_viewModel.Settings.IsSpiceConfigAvailable)
-                {
-                    return;
-                }
-
-                if (!TryGetSpiceOptionsContext(LoadOptions.PreserveWhitespace, false, out var context))
-                {
-                    return;
-                }
-
-                string GetValue(string name) => context.GetOptionValue(name);
-
-                CacheLastKnownSpiceValue("w", GetValue("w"));
-                CacheLastKnownSpiceValue("sp2x-processefficiency", GetValue("sp2x-processefficiency"));
-                CacheLastKnownSpiceValue("sp2x-dx9on12", GetValue("sp2x-dx9on12"));
-                CacheLastKnownSpiceValue("sp2x-sdvxnosub", GetValue("sp2x-sdvxnosub"));
-                CacheLastKnownSpiceValue("sp2x-windowborder", GetValue("sp2x-windowborder"));
-                CacheLastKnownSpiceValue("sdvxwsubborderless", GetValue("sdvxwsubborderless"));
-                CacheLastKnownSpiceValue("s", GetValue("s"));
-                CacheLastKnownSpiceValue("sp2x-windowalwaysontop", GetValue("sp2x-windowalwaysontop"));
-                CacheLastKnownSpiceValue("sp2x-windowsize", GetValue("sp2x-windowsize"));
-                CacheLastKnownSpiceValue("graphics-force-single-adapter", GetValue("graphics-force-single-adapter"));
-                CacheLastKnownSpiceValue("sdvxwsubtop", GetValue("sdvxwsubtop"));
-                CacheLastKnownSpiceValue("sp2x-sdvxsubredraw", GetValue("sp2x-sdvxsubredraw"));
-                CacheLastKnownSpiceValue("sdvxnativetouch", GetValue("sdvxnativetouch"));
-                CacheLastKnownSpiceValue("sp2x-sdvxasio", GetValue("sp2x-sdvxasio"));
-                CacheLastKnownSpiceValue("sp2x-lowlatencysharedaudio", GetValue("sp2x-lowlatencysharedaudio"));
-                CacheLastKnownSpiceValue("cardio", GetValue("cardio"));
-                CacheLastKnownSpiceValue("scard", GetValue("scard"));
-                CacheLastKnownSpiceValue("netdump", GetValue("netdump"));
-                CacheLastKnownSpiceValue("network", NormalizeNetworkValue(GetValue("network")));
-                CacheLastKnownSpiceValue("subnet", NormalizeNetworkValue(GetValue("subnet")));
-                CacheLastKnownSpiceValue("url", GetValue("url"));
-                CacheLastKnownSpiceValue("p", GetValue("p"));
-
-                var wVal = GetValue("w");
-                bool windowed = string.Equals(wVal, "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                if (WindowedToggleSwitch != null)
-                {
-                    WindowedToggleSwitch.IsChecked = windowed;
-                }
-
-                var peVal = GetValue("sp2x-processefficiency");
-                _pCoreOptimization = string.Equals(peVal, "pcores", StringComparison.OrdinalIgnoreCase);
-
-                _disableSubDisplay = string.Equals(GetValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.Ordinal);
-                var wborder = GetValue("sp2x-windowborder");
-                if (string.Equals(wborder, "1", StringComparison.Ordinal))
-                {
-                    _windowModeIndex = 1;
-                }
-                else if (string.Equals(wborder, "2", StringComparison.Ordinal))
-                {
-                    _windowModeIndex = 2;
-                }
-                else
-                {
-                    _windowModeIndex = 0;
-                }
-
-                _subBorderless = string.Equals(GetValue("sdvxwsubborderless"), "/ENABLED", StringComparison.Ordinal);
-                _showCursorTouchSim = string.Equals(GetValue("s"), "/ENABLED", StringComparison.Ordinal);
-                _windowTopMost = string.Equals(GetValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.Ordinal);
-                _windowSize = GetValue("sp2x-windowsize") ?? string.Empty;
-                _singleAdapter = string.Equals(GetValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.Ordinal);
-                _subWindowTopMost = string.Equals(GetValue("sdvxwsubtop"), "/ENABLED", StringComparison.Ordinal);
-                _subForceRender = string.Equals(GetValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.Ordinal);
-                _nativeTouch = string.Equals(GetValue("sdvxnativetouch"), "/ENABLED", StringComparison.Ordinal);
-                _asioDriver = GetValue("sp2x-sdvxasio") ?? string.Empty;
-                _lowLatencySharedAudio = string.Equals(GetValue("sp2x-lowlatencysharedaudio"), "/ENABLED", StringComparison.Ordinal);
-                _cardIo = string.Equals(GetValue("cardio"), "/ENABLED", StringComparison.Ordinal);
-                _hidSmartCard = string.Equals(GetValue("scard"), "/ENABLED", StringComparison.Ordinal);
-                _dbgNetDump = string.Equals(GetValue("netdump"), "/ENABLED", StringComparison.Ordinal);
-                if (NetworkAdapterIpTextBox != null)
-                {
-                    NetworkAdapterIpTextBox.Text = NormalizeNetworkValue(GetValue("network"));
-                }
-
-                if (NetworkAdapterSubnetTextBox != null)
-                {
-                    NetworkAdapterSubnetTextBox.Text = NormalizeNetworkValue(GetValue("subnet"));
-                }
-
-                RefreshNetworkAdapterChoices(GetNetworkAdapterIpAddress(), GetNetworkAdapterSubnetMask());
-                if (ServerAddressTextBox != null)
-                {
-                    ServerAddressTextBox.Text = GetValue("url");
-                }
-
-                if (PcbIdTextBox != null)
-                {
-                    PcbIdTextBox.Text = GetValue("p");
-                }
-
-                if (NetDumpToggleSwitch != null)
-                {
-                    NetDumpToggleSwitch.IsChecked = _dbgNetDump;
-                }
-
-                if (DisableSubDisplayToggleSwitch != null)
-                {
-                    DisableSubDisplayToggleSwitch.IsChecked = _disableSubDisplay;
-                }
-
-                if (WindowModeComboBox != null)
-                {
-                    WindowModeComboBox.SelectedIndex = _windowModeIndex;
-                }
-
-                if (PCoreOptimizationToggleSwitch != null)
-                {
-                    PCoreOptimizationToggleSwitch.IsChecked = _pCoreOptimization;
-                }
-
-                if (SubBorderlessToggleSwitch != null)
-                {
-                    SubBorderlessToggleSwitch.IsChecked = _subBorderless;
-                }
-
-                if (ShowCursorTouchSimToggleSwitch != null)
-                {
-                    ShowCursorTouchSimToggleSwitch.IsChecked = _showCursorTouchSim;
-                }
-
-                if (WindowTopMostToggleSwitch != null)
-                {
-                    WindowTopMostToggleSwitch.IsChecked = _windowTopMost;
-                }
-
-                if (WindowSizeTextBox != null)
-                {
-                    WindowSizeTextBox.Text = _windowSize;
-                }
-
-                if (SingleAdapterToggleSwitch != null)
-                {
-                    SingleAdapterToggleSwitch.IsChecked = _singleAdapter;
-                }
-
-                if (SubWindowTopMostToggleSwitch != null)
-                {
-                    SubWindowTopMostToggleSwitch.IsChecked = _subWindowTopMost;
-                }
-
-                if (SubForceRenderToggleSwitch != null)
-                {
-                    SubForceRenderToggleSwitch.IsChecked = _subForceRender;
-                }
-
-                if (NativeTouchToggleSwitch != null)
-                {
-                    NativeTouchToggleSwitch.IsChecked = _nativeTouch;
-                }
-
-                RefreshAsioDriverChoices(_asioDriver);
-                if (LowLatencySharedAudioToggleSwitch != null)
-                {
-                    LowLatencySharedAudioToggleSwitch.IsChecked = _lowLatencySharedAudio;
-                }
-
-                if (CardIoToggleSwitch != null)
-                {
-                    CardIoToggleSwitch.IsChecked = _cardIo;
-                }
-
-                if (HidSmartCardToggleSwitch != null)
-                {
-                    HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
-                }
-
-                SelectPresetByCurrentFields();
-            }
-            catch (Exception ex)
-            {
-                ShowErrorToast("读取配置失败", ex.Message);
-            }
-            finally
-            {
-                _isLoadingSettings = previousLoadingState;
-            }
-        }
-
-        private void CacheLastKnownSpiceValue(string key, string value)
-        {
-            _lastKnownSpiceValues[key] = value ?? string.Empty;
-        }
-
-        private void CacheLastKnownSpiceUpdates(IEnumerable<SpiceOptionUpdate> updates)
-        {
-            foreach (var update in updates)
-            {
-                if (update == null || string.IsNullOrEmpty(update.Name))
-                {
-                    continue;
-                }
-
-                var value = update.ShouldRemove
-                    ? string.Empty
-                    : NormalizeCachedSpiceValue(update.Name, update.Value);
-                CacheLastKnownSpiceValue(update.Name, value);
-            }
-        }
-
-        private static string NormalizeCachedSpiceValue(string optionName, string value)
-        {
-            if (string.Equals(optionName, "network", StringComparison.Ordinal)
-                || string.Equals(optionName, "subnet", StringComparison.Ordinal))
-            {
-                return NormalizeNetworkValue(value);
-            }
-
-            return value ?? string.Empty;
-        }
-
-        private string GetLastKnownSpiceValue(string key)
-        {
-            return _lastKnownSpiceValues.TryGetValue(key, out var value) ? value : string.Empty;
-        }
-
-        private void RestoreUiFromLastKnownSpiceValues()
-        {
-            if (_lastKnownSpiceValues.Count == 0)
-            {
-                return;
-            }
-
-            bool previousLoadingState = _isLoadingSettings;
-            _isLoadingSettings = true;
-            try
-            {
-                if (WindowedToggleSwitch != null)
-                {
-                    WindowedToggleSwitch.IsChecked = string.Equals(GetLastKnownSpiceValue("w"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                }
-
-                _pCoreOptimization = string.Equals(GetLastKnownSpiceValue("sp2x-processefficiency"), "pcores", StringComparison.OrdinalIgnoreCase);
-                _disableSubDisplay = string.Equals(GetLastKnownSpiceValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _subBorderless = string.Equals(GetLastKnownSpiceValue("sdvxwsubborderless"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _showCursorTouchSim = string.Equals(GetLastKnownSpiceValue("s"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _windowTopMost = string.Equals(GetLastKnownSpiceValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _windowSize = GetLastKnownSpiceValue("sp2x-windowsize");
-                _singleAdapter = string.Equals(GetLastKnownSpiceValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _subWindowTopMost = string.Equals(GetLastKnownSpiceValue("sdvxwsubtop"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _subForceRender = string.Equals(GetLastKnownSpiceValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _nativeTouch = string.Equals(GetLastKnownSpiceValue("sdvxnativetouch"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _asioDriver = GetLastKnownSpiceValue("sp2x-sdvxasio");
-                _lowLatencySharedAudio = string.Equals(GetLastKnownSpiceValue("sp2x-lowlatencysharedaudio"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _cardIo = string.Equals(GetLastKnownSpiceValue("cardio"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _hidSmartCard = string.Equals(GetLastKnownSpiceValue("scard"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-                _dbgNetDump = string.Equals(GetLastKnownSpiceValue("netdump"), "/ENABLED", StringComparison.OrdinalIgnoreCase);
-
-                var wborder = GetLastKnownSpiceValue("sp2x-windowborder");
-                if (string.Equals(wborder, "1", StringComparison.Ordinal))
-                {
-                    _windowModeIndex = 1;
-                }
-                else if (string.Equals(wborder, "2", StringComparison.Ordinal))
-                {
-                    _windowModeIndex = 2;
-                }
-                else
-                {
-                    _windowModeIndex = 0;
-                }
-
-                if (DisableSubDisplayToggleSwitch != null)
-                {
-                    DisableSubDisplayToggleSwitch.IsChecked = _disableSubDisplay;
-                }
-
-                if (NetDumpToggleSwitch != null)
-                {
-                    NetDumpToggleSwitch.IsChecked = _dbgNetDump;
-                }
-
-                if (PCoreOptimizationToggleSwitch != null)
-                {
-                    PCoreOptimizationToggleSwitch.IsChecked = _pCoreOptimization;
-                }
-
-                if (SubBorderlessToggleSwitch != null)
-                {
-                    SubBorderlessToggleSwitch.IsChecked = _subBorderless;
-                }
-
-                if (ShowCursorTouchSimToggleSwitch != null)
-                {
-                    ShowCursorTouchSimToggleSwitch.IsChecked = _showCursorTouchSim;
-                }
-
-                if (WindowTopMostToggleSwitch != null)
-                {
-                    WindowTopMostToggleSwitch.IsChecked = _windowTopMost;
-                }
-
-                if (WindowSizeTextBox != null)
-                {
-                    WindowSizeTextBox.Text = _windowSize;
-                }
-
-                if (SingleAdapterToggleSwitch != null)
-                {
-                    SingleAdapterToggleSwitch.IsChecked = _singleAdapter;
-                }
-
-                if (SubWindowTopMostToggleSwitch != null)
-                {
-                    SubWindowTopMostToggleSwitch.IsChecked = _subWindowTopMost;
-                }
-
-                if (SubForceRenderToggleSwitch != null)
-                {
-                    SubForceRenderToggleSwitch.IsChecked = _subForceRender;
-                }
-
-                if (NativeTouchToggleSwitch != null)
-                {
-                    NativeTouchToggleSwitch.IsChecked = _nativeTouch;
-                }
-
-                RefreshAsioDriverChoices(_asioDriver);
-                if (LowLatencySharedAudioToggleSwitch != null)
-                {
-                    LowLatencySharedAudioToggleSwitch.IsChecked = _lowLatencySharedAudio;
-                }
-
-                if (CardIoToggleSwitch != null)
-                {
-                    CardIoToggleSwitch.IsChecked = _cardIo;
-                }
-
-                if (HidSmartCardToggleSwitch != null)
-                {
-                    HidSmartCardToggleSwitch.IsChecked = _hidSmartCard;
-                }
-
-                if (WindowModeComboBox != null)
-                {
-                    WindowModeComboBox.SelectedIndex = _windowModeIndex;
-                }
-
-                RestoreNetworkUiFromLastKnownValues();
-
-                if (ServerAddressTextBox != null)
-                {
-                    ServerAddressTextBox.Text = GetLastKnownSpiceValue("url");
-                }
-
-                if (PcbIdTextBox != null)
-                {
-                    PcbIdTextBox.Text = GetLastKnownSpiceValue("p");
-                }
-
-                SelectPresetByCurrentFields();
-            }
-            finally
-            {
-                _isLoadingSettings = previousLoadingState;
-            }
-        }
-
-        private IEnumerable<SpiceOptionUpdate> BuildDefaultOptionUpdates()
-        {
-            yield return new SpiceOptionUpdate("w", WindowedToggleSwitch != null && WindowedToggleSwitch.IsChecked == true ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-processefficiency", _pCoreOptimization ? "pcores" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-dx9on12", ResolveDxModeValue(), false);
-            yield return new SpiceOptionUpdate("sp2x-sdvxnosub", _disableSubDisplay ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-windowborder", ResolveWindowBorderValue());
-            yield return new SpiceOptionUpdate("sdvxwsubborderless", _subBorderless ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("s", _showCursorTouchSim ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-windowalwaysontop", _windowTopMost ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-windowsize", _windowSize ?? string.Empty);
-            yield return new SpiceOptionUpdate("graphics-force-single-adapter", _singleAdapter ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sdvxwsubtop", _subWindowTopMost ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-sdvxsubredraw", _subForceRender ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sdvxnativetouch", _nativeTouch ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-sdvxasio", _asioDriver ?? string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-lowlatencysharedaudio", _lowLatencySharedAudio ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("cardio", _cardIo ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("scard", _hidSmartCard ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("netdump", _dbgNetDump ? "/ENABLED" : string.Empty);
-
-            if (NetworkAdapterIpTextBox != null)
-            {
-                yield return new SpiceOptionUpdate("network", GetNetworkAdapterIpAddress(), false);
-            }
-
-            if (NetworkAdapterSubnetTextBox != null)
-            {
-                yield return new SpiceOptionUpdate("subnet", GetNetworkAdapterSubnetMask(), false);
-            }
-
-            if (ServerAddressTextBox != null)
-            {
-                yield return new SpiceOptionUpdate("url", ServerAddressTextBox.Text ?? string.Empty, false);
-            }
-
-            if (PcbIdTextBox != null)
-            {
-                yield return new SpiceOptionUpdate("p", PcbIdTextBox.Text ?? string.Empty, false);
-            }
-        }
-
-        private bool EnsureSpiceXmlExistsForTextOrRevert(TextBox textBox, string optionName)
-        {
-            var xmlPath = GetSpiceXmlPath();
-            if (File.Exists(xmlPath))
-            {
-                return true;
-            }
-
-            ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
-
-            _isUpdatingSpiceToggleUi = true;
-            try
-            {
-                if (textBox != null)
-                {
-                    textBox.Text = GetLastKnownSpiceValue(optionName);
-                }
-            }
-            finally
-            {
-                _isUpdatingSpiceToggleUi = false;
-            }
-
-            return false;
-        }
-
-        private string ResolveWindowBorderValue()
-        {
-            switch (_windowModeIndex)
-            {
-                case 1:
-                    return "1";
-                case 2:
-                    return "2";
-                default:
-                    return string.Empty;
-            }
-        }
-
-        private bool TryGetSpiceOptionsContext(LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context)
-        {
-            string spiceXmlPath = GetSpiceXmlPath();
-            return TryGetSpiceOptionsContext(spiceXmlPath, loadOptions, createOptionsWhenMissing, out context);
-        }
-
-        private bool TryGetSpiceOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context)
-        {
-            if (!_spiceConfigFileService.TryLoadOptionsContext(
-                    spiceXmlPath,
-                    loadOptions,
-                    createOptionsWhenMissing,
-                    out context,
-                    out var message,
-                    out var warning))
-            {
-                if (string.IsNullOrWhiteSpace(message))
-                {
-                    return false;
-                }
-
-                if (warning)
-                {
-                    ShowWarningToast("读取配置异常", message);
-                }
-                else
-                {
-                    ShowErrorToast("读取配置失败", message);
-                }
-
-                return false;
-            }
-
-            return true;
-        }
     }
 }
 
@@ -1608,16 +688,6 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private static readonly SpiceOptionUpdate[] RecommendedSpiceOptionUpdates =
-        {
-            new SpiceOptionUpdate("k", "ifs_hook.dll", false),
-            new SpiceOptionUpdate("sp2x-nvprofile", "/ENABLED", false),
-            new SpiceOptionUpdate("sp2x-lowlatencysharedaudio", "/ENABLED", false),
-            new SpiceOptionUpdate("sp2x-dx9on12", "0", false),
-            new SpiceOptionUpdate("url", "http://localhost:8083", false),
-            new SpiceOptionUpdate("sp2x-sdvxsubredraw", "/ENABLED", false)
-        };
-
         private void UpdateRecommendedSpiceConfigButtonVisibility()
         {
             if (ImportRecommendedSpiceConfigButton != null)

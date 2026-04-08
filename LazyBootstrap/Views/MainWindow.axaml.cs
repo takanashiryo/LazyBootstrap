@@ -32,37 +32,11 @@ namespace LazyBootstrap.Views
 
         // 统一路径前缀
         private readonly ILauncherPaths _paths = null!;
-        private readonly ISpiceConfigFileService _spiceConfigFileService = null!;
-        private readonly IDisplayConfigurationService _displayConfigurationService = null!;
         private readonly IDisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator = null!;
         private readonly ISettingsWorkflowService _settingsWorkflowService = null!;
 
-        private string _compatTypeTooltipCache;
         private static Bitmap _warningDialogIconCache;
         private static Bitmap _errorDialogIconCache;
-
-        private bool _disableSubDisplay = false;
-        private int _windowModeIndex = 0; // 0: 默认, 1: 无边框, 2: 可变窗口
-        private bool _subBorderless = false;
-        private bool _showCursorTouchSim = false;
-        private bool _pCoreOptimization = false;
-        private bool _windowTopMost = false;
-        private string _windowSize = string.Empty;
-        private bool _singleAdapter = false;
-        private bool _subWindowTopMost = false;
-        private bool _subForceRender = false;
-        private bool _nativeTouch = false;
-        private string _asioDriver = string.Empty;
-        private bool _lowLatencySharedAudio = false;
-        private bool _cardIo = false;
-        private bool _hidSmartCard = false;
-
-        private bool _dbgNetDump = false;
-        private bool _displayConfigEnabled = false;
-        private bool _isDualDisplay = false;
-        private readonly List<DisplayInfo> _displayInfos = new List<DisplayInfo>();
-        private readonly Dictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
-        private DisplaySelectionTarget _selectedDisplayTarget = DisplaySelectionTarget.None;
         private DispatcherTimer _displayPulseTimer;
         private double _displayPulsePhase = 0d;
         private readonly ISukiDialogManager _dialogManager = null!;
@@ -75,14 +49,9 @@ namespace LazyBootstrap.Views
         private const string AsphyxiaDefaultUrl = "http://localhost:8083";
         private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
         private const string DisplaySectionName = AppConfigBootstrapper.DisplaySectionName;
-        private string _activeServerPreset = NonePresetName;
-        private readonly List<ServerPresetItem> _serverPresets = new List<ServerPresetItem>();
-        private readonly Dictionary<string, string> _lastKnownSpiceValues = new Dictionary<string, string>(StringComparer.Ordinal);
-        private string _lastKnownCompatRenderMode = "dx9on12";
         private bool _isSettingsBusy;
         private bool _isSyncingModel;
         private bool _isUpdatingCompatUi;
-        private bool _isUpdatingSpiceToggleUi;
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
@@ -143,8 +112,6 @@ namespace LazyBootstrap.Views
             MainWindowViewModel viewModel,
             IConfigHandler configFile,
             ILauncherPaths paths,
-            ISpiceConfigFileService spiceConfigFileService,
-            IDisplayConfigurationService displayConfigurationService,
             IDisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
             ISettingsWorkflowService settingsWorkflowService,
             ISukiDialogManager dialogManager,
@@ -157,8 +124,6 @@ namespace LazyBootstrap.Views
             _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
             _configFile = configFile ?? throw new ArgumentNullException(nameof(configFile));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
-            _displayConfigurationService = displayConfigurationService ?? throw new ArgumentNullException(nameof(displayConfigurationService));
             _displaySettingsTransactionCoordinator = displaySettingsTransactionCoordinator ?? throw new ArgumentNullException(nameof(displaySettingsTransactionCoordinator));
             _settingsWorkflowService = settingsWorkflowService ?? throw new ArgumentNullException(nameof(settingsWorkflowService));
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
@@ -479,60 +444,6 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void RefreshAsioDriverChoices(string selectedValue)
-        {
-            if (AsioDriverComboBox == null)
-            {
-                return;
-            }
-
-            var choices = new List<AsioDriverOption>
-            {
-                new("无", string.Empty)
-            };
-
-            foreach (var driverName in AsioDriverRegistry.GetInstalledDriverNames())
-            {
-                choices.Add(new AsioDriverOption(driverName, driverName));
-            }
-
-            if (!string.IsNullOrWhiteSpace(selectedValue)
-                && !choices.Any(choice => string.Equals(choice.Value, selectedValue, StringComparison.OrdinalIgnoreCase)))
-            {
-                choices.Add(new AsioDriverOption($"{selectedValue}（当前配置）", selectedValue));
-            }
-
-            var targetChoice = choices.FirstOrDefault(choice =>
-                string.Equals(choice.Value, selectedValue ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                ?? choices[0];
-            _viewModel.Settings.AsioDriver = targetChoice.Value;
-
-            _isUpdatingAsioDriverUi = true;
-            try
-            {
-                AsioDriverComboBox.Items.Clear();
-                foreach (var choice in choices)
-                {
-                    AsioDriverComboBox.Items.Add(choice);
-                }
-
-                AsioDriverComboBox.SelectedItem = targetChoice;
-            }
-            finally
-            {
-                _isUpdatingAsioDriverUi = false;
-            }
-
-            UpdateAsioControlPanelButtonState();
-        }
-
-        private string GetSelectedAsioDriverValue()
-        {
-            return AsioDriverComboBox?.SelectedItem is AsioDriverOption choice
-                ? choice.Value
-                : string.Empty;
-        }
-
         private void UpdateAsioControlPanelButtonState()
         {
             if (OpenAsioControlPanelButton == null)
@@ -540,65 +451,12 @@ namespace LazyBootstrap.Views
                 return;
             }
 
+            var selectedDriverValue = _viewModel.Settings.SelectedAsioDriver?.Value
+                ?? _viewModel.Settings.AsioDriverValue
+                ?? string.Empty;
+
             OpenAsioControlPanelButton.IsEnabled = OperatingSystem.IsWindows()
-                && !string.IsNullOrWhiteSpace(GetSelectedAsioDriverValue());
-        }
-
-        private bool EnsureSpiceXmlExistsForAsioOrRevert()
-        {
-            var xmlPath = GetSpiceXmlPath();
-            if (File.Exists(xmlPath))
-            {
-                return true;
-            }
-
-            ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
-            RefreshAsioDriverChoices(GetLastKnownSpiceValue("sp2x-sdvxasio"));
-            return false;
-        }
-
-        private void RefreshNetworkAdapterChoices(string selectedIpAddress, string selectedSubnetMask)
-        {
-            var normalizedIpAddress = NormalizeNetworkValue(selectedIpAddress);
-            var normalizedSubnetMask = NormalizeNetworkValue(selectedSubnetMask);
-            var choices = new List<NetworkAdapterOption>
-            {
-                new("无", string.Empty, string.Empty)
-            };
-
-            foreach (var adapter in NetworkAdapterDiscovery.GetAvailableAdapters())
-            {
-                choices.Add(new NetworkAdapterOption(adapter.DisplayName, adapter.IpAddress, adapter.SubnetMask));
-            }
-
-            if ((!string.IsNullOrWhiteSpace(normalizedIpAddress) || !string.IsNullOrWhiteSpace(normalizedSubnetMask))
-                && !choices.Any(choice =>
-                    string.Equals(choice.IpAddress, normalizedIpAddress, StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(choice.SubnetMask, normalizedSubnetMask, StringComparison.OrdinalIgnoreCase)))
-            {
-                choices.Add(new NetworkAdapterOption(
-                    $"{normalizedIpAddress} / {normalizedSubnetMask}（当前配置）".Trim(),
-                    normalizedIpAddress,
-                    normalizedSubnetMask));
-            }
-
-            var targetChoice = choices.FirstOrDefault(choice =>
-                                   string.Equals(choice.IpAddress, normalizedIpAddress, StringComparison.OrdinalIgnoreCase)
-                                   && string.Equals(choice.SubnetMask, normalizedSubnetMask, StringComparison.OrdinalIgnoreCase))
-                               ?? choices[0];
-
-            if (OpenNetworkAdapterPickerButton == null)
-            {
-                return;
-            }
-
-            var hasSelectableChoice = choices.Count > 1;
-            OpenNetworkAdapterPickerButton.Content = hasSelectableChoice ? "选择" : "无可用网卡";
-            ToolTip.SetTip(
-                OpenNetworkAdapterPickerButton,
-                hasSelectableChoice
-                    ? $"当前配置：{targetChoice.DisplayName}"
-                    : "未检测到可用网卡");
+                && !string.IsNullOrWhiteSpace(selectedDriverValue);
         }
 
         private static string NormalizeNetworkValue(string value)
@@ -628,82 +486,6 @@ namespace LazyBootstrap.Views
             return $"{normalizedIpAddress} / {normalizedSubnetMask}（当前配置）";
         }
 
-        private string GetNetworkAdapterIpAddress()
-        {
-            return NormalizeNetworkValue(NetworkAdapterIpTextBox?.Text);
-        }
-
-        private string GetNetworkAdapterSubnetMask()
-        {
-            return NormalizeNetworkValue(NetworkAdapterSubnetTextBox?.Text);
-        }
-
-        private void ApplyNetworkSettings(string ipAddress, string subnetMask, bool persistChanges)
-        {
-            var normalizedIpAddress = NormalizeNetworkValue(ipAddress);
-            var normalizedSubnetMask = NormalizeNetworkValue(subnetMask);
-
-            _isUpdatingNetworkUi = true;
-            try
-            {
-                if (NetworkAdapterIpTextBox != null && !string.Equals(NetworkAdapterIpTextBox.Text, normalizedIpAddress, StringComparison.Ordinal))
-                {
-                    NetworkAdapterIpTextBox.Text = normalizedIpAddress;
-                }
-
-                if (NetworkAdapterSubnetTextBox != null && !string.Equals(NetworkAdapterSubnetTextBox.Text, normalizedSubnetMask, StringComparison.Ordinal))
-                {
-                    NetworkAdapterSubnetTextBox.Text = normalizedSubnetMask;
-                }
-            }
-            finally
-            {
-                _isUpdatingNetworkUi = false;
-            }
-
-            RefreshNetworkAdapterChoices(normalizedIpAddress, normalizedSubnetMask);
-
-            if (!persistChanges)
-            {
-                return;
-            }
-
-            UpdateSpiceConfig(
-                new SpiceOptionUpdate("network", normalizedIpAddress, false),
-                new SpiceOptionUpdate("subnet", normalizedSubnetMask, false));
-        }
-
-        private bool EnsureSpiceXmlExistsForNetworkOrRevert()
-        {
-            var xmlPath = GetSpiceXmlPath();
-            if (File.Exists(xmlPath))
-            {
-                return true;
-            }
-
-            ShowErrorToast("保存设定失败", "未找到 spicetools.xml。");
-            RestoreNetworkUiFromLastKnownValues();
-            return false;
-        }
-
-        private void RestoreNetworkUiFromLastKnownValues()
-        {
-            var networkValue = NormalizeNetworkValue(GetLastKnownSpiceValue("network"));
-            var subnetValue = NormalizeNetworkValue(GetLastKnownSpiceValue("subnet"));
-
-            _isUpdatingNetworkUi = true;
-            try
-            {
-                if (NetworkAdapterIpTextBox != null) NetworkAdapterIpTextBox.Text = networkValue;
-                if (NetworkAdapterSubnetTextBox != null) NetworkAdapterSubnetTextBox.Text = subnetValue;
-                RefreshNetworkAdapterChoices(networkValue, subnetValue);
-            }
-            finally
-            {
-                _isUpdatingNetworkUi = false;
-            }
-        }
-
         private void InitializeCustomComponents()
         {
             InitializeCompatibilityControls();
@@ -717,27 +499,11 @@ namespace LazyBootstrap.Views
 
         private void InitializeCompatibilityControls()
         {
-            if (CompatTypeComboBox == null)
-            {
-                return;
-            }
-
-            EnsureCompatRenderModesInitialized();
-            ApplyCompatRenderModeSelection(_lastKnownCompatRenderMode);
-
             if (CompatLayerToggleSwitch != null)
             {
                 CompatLayerToggleSwitch.IsCheckedChanged -= OnCompatLayerToggleChanged;
                 CompatLayerToggleSwitch.IsCheckedChanged += OnCompatLayerToggleChanged;
             }
-
-            var tipObj = ToolTip.GetTip(CompatTypeComboBox);
-            if (tipObj != null)
-            {
-                _compatTypeTooltipCache = tipObj.ToString();
-            }
-
-            CompatTypeComboBox.SelectionChanged += OnCompatTypeSelectionChanged;
         }
 
         private void InitializeNetworkAndOverrideBindings()
@@ -753,29 +519,23 @@ namespace LazyBootstrap.Views
             if (NetworkAdapterIpTextBox != null)
             {
                 NetworkAdapterIpTextBox.Watermark = string.Empty;
-                NetworkAdapterIpTextBox.TextChanged += (s, e) =>
+                NetworkAdapterIpTextBox.TextChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingNetworkUi || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForNetworkOrRevert())
-                    {
-                        return;
-                    }
-
-                    ApplyNetworkSettings(NetworkAdapterIpTextBox.Text, GetNetworkAdapterSubnetMask(), true);
+                    if (_isLoadingSettings || _isUpdatingNetworkUi) return;
+                    _viewModel.Settings.NetworkAdapterIp = NetworkAdapterIpTextBox.Text ?? string.Empty;
+                    _viewModel.Settings.NetworkAdapterSubnet = NetworkAdapterSubnetTextBox?.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistNetworkSettingsAsync(_viewModel.Settings);
                 };
             }
             if (NetworkAdapterSubnetTextBox != null)
             {
                 NetworkAdapterSubnetTextBox.Watermark = string.Empty;
-                NetworkAdapterSubnetTextBox.TextChanged += (s, e) =>
+                NetworkAdapterSubnetTextBox.TextChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingNetworkUi || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForNetworkOrRevert())
-                    {
-                        return;
-                    }
-
-                    ApplyNetworkSettings(GetNetworkAdapterIpAddress(), NetworkAdapterSubnetTextBox.Text, true);
+                    if (_isLoadingSettings || _isUpdatingNetworkUi) return;
+                    _viewModel.Settings.NetworkAdapterIp = NetworkAdapterIpTextBox?.Text ?? string.Empty;
+                    _viewModel.Settings.NetworkAdapterSubnet = NetworkAdapterSubnetTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistNetworkSettingsAsync(_viewModel.Settings);
                 };
             }
 
@@ -789,24 +549,22 @@ namespace LazyBootstrap.Views
             if (GameDirectoryOverrideTextBox != null)
             {
                 GameDirectoryOverrideTextBox.Watermark = "contents";
-                GameDirectoryOverrideTextBox.TextChanged += (s, e) =>
+                GameDirectoryOverrideTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isSyncingModel) return;
-                    _paths.SetContentsDirectoryOverride(GameDirectoryOverrideTextBox.Text);
-                    _viewModel.Settings.GameDirectoryOverride = _paths.ContentsDirectoryOverride;
-                    SaveSettings();
+                    _viewModel.Settings.GameDirectoryOverride = GameDirectoryOverrideTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistPathOverridesAsync(_viewModel.Settings);
                     RefreshPathOverrideDependentUi();
                 };
             }
             if (AsphyxiaDirectoryOverrideTextBox != null)
             {
                 AsphyxiaDirectoryOverrideTextBox.Watermark = "asphyxia";
-                AsphyxiaDirectoryOverrideTextBox.TextChanged += (s, e) =>
+                AsphyxiaDirectoryOverrideTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isSyncingModel) return;
-                    _paths.SetAsphyxiaDirectoryOverride(AsphyxiaDirectoryOverrideTextBox.Text);
-                    _viewModel.Settings.AsphyxiaDirectoryOverride = _paths.AsphyxiaDirectoryOverride;
-                    SaveSettings();
+                    _viewModel.Settings.AsphyxiaDirectoryOverride = AsphyxiaDirectoryOverrideTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistPathOverridesAsync(_viewModel.Settings);
                     RefreshPathOverrideDependentUi();
                 };
             }
@@ -816,23 +574,19 @@ namespace LazyBootstrap.Views
         {
             if (WindowedToggleSwitch != null)
             {
-                WindowedToggleSwitch.IsCheckedChanged += (s, e) =>
+                WindowedToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(WindowedToggleSwitch, null))
-                    {
-                        return;
-                    }
-
-                    UpdateSpiceConfig(new SpiceOptionUpdate("w", WindowedToggleSwitch.IsChecked == true ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.Windowed = WindowedToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (NoAsphyxiaToggleSwitch != null)
             {
-                NoAsphyxiaToggleSwitch.IsCheckedChanged += (s, e) =>
+                NoAsphyxiaToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
                     _viewModel.Settings.NoAsphyxia = NoAsphyxiaToggleSwitch.IsChecked == true;
-                    SaveSettings();
+                    await _settingsWorkflowService.PersistLauncherSettingsAsync(_viewModel.Settings);
                 };
             }
             if (ExitRestoreToggleSwitch != null)
@@ -856,229 +610,163 @@ namespace LazyBootstrap.Views
         {
             if (NetDumpToggleSwitch != null)
             {
-                NetDumpToggleSwitch.IsCheckedChanged += (s, e) =>
+                NetDumpToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(NetDumpToggleSwitch, () => _dbgNetDump = false))
-                    {
-                        return;
-                    }
-
-                    _dbgNetDump = NetDumpToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("netdump", _dbgNetDump ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.NetDump = NetDumpToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (DisableSubDisplayToggleSwitch != null)
             {
-                DisableSubDisplayToggleSwitch.IsCheckedChanged += (s, e) =>
+                DisableSubDisplayToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(DisableSubDisplayToggleSwitch, () => _disableSubDisplay = false))
-                    {
-                        return;
-                    }
-
-                    _disableSubDisplay = DisableSubDisplayToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-sdvxnosub", _disableSubDisplay ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.DisableSubDisplay = DisableSubDisplayToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (WindowModeComboBox != null)
             {
-                WindowModeComboBox.SelectionChanged += (s, e) =>
+                WindowModeComboBox.SelectionChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings) return;
-                    _windowModeIndex = WindowModeComboBox.SelectedIndex < 0 ? 0 : WindowModeComboBox.SelectedIndex;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-windowborder", ResolveWindowBorderValue()));
+                    _viewModel.Settings.WindowModeIndex = WindowModeComboBox.SelectedIndex < 0 ? 0 : WindowModeComboBox.SelectedIndex;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (PCoreOptimizationToggleSwitch != null)
             {
-                PCoreOptimizationToggleSwitch.IsCheckedChanged += (s, e) =>
+                PCoreOptimizationToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(PCoreOptimizationToggleSwitch, () => _pCoreOptimization = false))
-                    {
-                        return;
-                    }
-
-                    _pCoreOptimization = PCoreOptimizationToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-processefficiency", _pCoreOptimization ? "pcores" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.PCoreOptimization = PCoreOptimizationToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (SubBorderlessToggleSwitch != null)
             {
-                SubBorderlessToggleSwitch.IsCheckedChanged += (s, e) =>
+                SubBorderlessToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SubBorderlessToggleSwitch, () => _subBorderless = false))
-                    {
-                        return;
-                    }
-
-                    _subBorderless = SubBorderlessToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sdvxwsubborderless", _subBorderless ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.SubBorderless = SubBorderlessToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (ShowCursorTouchSimToggleSwitch != null)
             {
-                ShowCursorTouchSimToggleSwitch.IsCheckedChanged += (s, e) =>
+                ShowCursorTouchSimToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(ShowCursorTouchSimToggleSwitch, () => _showCursorTouchSim = false))
-                    {
-                        return;
-                    }
-
-                    _showCursorTouchSim = ShowCursorTouchSimToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("s", _showCursorTouchSim ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.ShowCursorTouchSim = ShowCursorTouchSimToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (WindowTopMostToggleSwitch != null)
             {
-                WindowTopMostToggleSwitch.IsCheckedChanged += (s, e) =>
+                WindowTopMostToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(WindowTopMostToggleSwitch, () => _windowTopMost = false))
-                    {
-                        return;
-                    }
-
-                    _windowTopMost = WindowTopMostToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-windowalwaysontop", _windowTopMost ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.WindowTopMost = WindowTopMostToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (SingleAdapterToggleSwitch != null)
             {
-                SingleAdapterToggleSwitch.IsCheckedChanged += (s, e) =>
+                SingleAdapterToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SingleAdapterToggleSwitch, () => _singleAdapter = false))
-                    {
-                        return;
-                    }
-
-                    _singleAdapter = SingleAdapterToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("graphics-force-single-adapter", _singleAdapter ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.SingleAdapter = SingleAdapterToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (SubWindowTopMostToggleSwitch != null)
             {
-                SubWindowTopMostToggleSwitch.IsCheckedChanged += (s, e) =>
+                SubWindowTopMostToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SubWindowTopMostToggleSwitch, () => _subWindowTopMost = false))
-                    {
-                        return;
-                    }
-
-                    _subWindowTopMost = SubWindowTopMostToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sdvxwsubtop", _subWindowTopMost ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.SubWindowTopMost = SubWindowTopMostToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (SubForceRenderToggleSwitch != null)
             {
-                SubForceRenderToggleSwitch.IsCheckedChanged += (s, e) =>
+                SubForceRenderToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(SubForceRenderToggleSwitch, () => _subForceRender = false))
-                    {
-                        return;
-                    }
-
-                    _subForceRender = SubForceRenderToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-sdvxsubredraw", _subForceRender ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.SubForceRender = SubForceRenderToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (NativeTouchToggleSwitch != null)
             {
-                NativeTouchToggleSwitch.IsCheckedChanged += (s, e) =>
+                NativeTouchToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(NativeTouchToggleSwitch, () => _nativeTouch = false))
-                    {
-                        return;
-                    }
-
-                    _nativeTouch = NativeTouchToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sdvxnativetouch", _nativeTouch ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.NativeTouch = NativeTouchToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (CardIoToggleSwitch != null)
             {
-                CardIoToggleSwitch.IsCheckedChanged += (s, e) =>
+                CardIoToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(CardIoToggleSwitch, () => _cardIo = false))
-                    {
-                        return;
-                    }
-
-                    _cardIo = CardIoToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("cardio", _cardIo ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.CardIo = CardIoToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (HidSmartCardToggleSwitch != null)
             {
-                HidSmartCardToggleSwitch.IsCheckedChanged += (s, e) =>
+                HidSmartCardToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(HidSmartCardToggleSwitch, () => _hidSmartCard = false))
-                    {
-                        return;
-                    }
-
-                    _hidSmartCard = HidSmartCardToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("scard", _hidSmartCard ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.HidSmartCard = HidSmartCardToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (WindowSizeTextBox != null)
             {
-                WindowSizeTextBox.TextChanged += (s, e) =>
+                WindowSizeTextBox.TextChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForTextOrRevert(WindowSizeTextBox, "sp2x-windowsize"))
-                    {
-                        return;
-                    }
-
-                    _windowSize = WindowSizeTextBox.Text ?? string.Empty;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-windowsize", _windowSize));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.WindowSize = WindowSizeTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (AsioDriverComboBox != null)
             {
-                RefreshAsioDriverChoices(_asioDriver);
+                ApplyAsioDriverChoicesFromViewModel();
 
                 AsioDriverComboBox.DropDownOpened += (s, e) =>
                 {
-                    RefreshAsioDriverChoices(GetSelectedAsioDriverValue());
+                    ApplyAsioDriverChoicesFromViewModel();
                 };
 
-                AsioDriverComboBox.SelectionChanged += (s, e) =>
+                AsioDriverComboBox.SelectionChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi || _isUpdatingAsioDriverUi) return;
-                    if (!EnsureSpiceXmlExistsForAsioOrRevert())
+                    if (_isLoadingSettings || _isUpdatingAsioDriverUi) return;
+                    if (AsioDriverComboBox.SelectedItem is AsioDriverOption choice)
                     {
-                        return;
+                        _viewModel.Settings.SelectedAsioDriver = choice;
+                        _viewModel.Settings.AsioDriverValue = choice.Value;
+                    }
+                    else
+                    {
+                        _viewModel.Settings.SelectedAsioDriver = null;
+                        _viewModel.Settings.AsioDriverValue = string.Empty;
                     }
 
-                    _asioDriver = GetSelectedAsioDriverValue();
-                    UpdateAsioControlPanelButtonState();
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-sdvxasio", _asioDriver));
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
             if (LowLatencySharedAudioToggleSwitch != null)
             {
-                LowLatencySharedAudioToggleSwitch.IsCheckedChanged += (s, e) =>
+                LowLatencySharedAudioToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    if (_isLoadingSettings || _isUpdatingSpiceToggleUi) return;
-                    if (!EnsureSpiceXmlExistsForToggleOrRevert(LowLatencySharedAudioToggleSwitch, () => _lowLatencySharedAudio = false))
-                    {
-                        return;
-                    }
-
-                    _lowLatencySharedAudio = LowLatencySharedAudioToggleSwitch.IsChecked == true;
-                    UpdateSpiceConfig(new SpiceOptionUpdate("sp2x-lowlatencysharedaudio", _lowLatencySharedAudio ? "/ENABLED" : string.Empty));
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.LowLatencySharedAudio = LowLatencySharedAudioToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
         }

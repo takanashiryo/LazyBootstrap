@@ -351,17 +351,14 @@ namespace LazyBootstrap.Views
                 ReplaceComboBoxItems(MainRefreshRateComboBox, _viewModel.Display.MainRefreshRates);
                 ReplaceComboBoxItems(SubRefreshRateComboBox, _viewModel.Display.SubRefreshRates);
 
-                _displayConfigEnabled = _viewModel.Display.IsDisplayConfigurationEnabled;
-                _isDualDisplay = _viewModel.Display.IsDualDisplay;
-
                 if (DisplayConfigEnabledToggleSwitch != null)
                 {
-                    DisplayConfigEnabledToggleSwitch.IsChecked = _displayConfigEnabled;
+                    DisplayConfigEnabledToggleSwitch.IsChecked = _viewModel.Display.IsDisplayConfigurationEnabled;
                 }
 
                 if (DisplayModeComboBox != null)
                 {
-                    DisplayModeComboBox.SelectedIndex = _isDualDisplay ? 1 : 0;
+                    DisplayModeComboBox.SelectedIndex = _viewModel.Display.IsDualDisplay ? 1 : 0;
                 }
 
                 if (ExitRestoreToggleSwitch != null)
@@ -484,8 +481,10 @@ namespace LazyBootstrap.Views
 
         private void UpdateDisplayLayoutControlsEnabled()
         {
-            bool enabled = _displayConfigEnabled;
-            bool subEnabled = enabled && _isDualDisplay;
+            bool enabled = _viewModel?.Display?.IsDisplayConfigurationEnabled == true;
+            bool isDualDisplay = _viewModel?.Display?.IsDualDisplay == true;
+            bool subEnabled = enabled && isDualDisplay;
+            var selectedTarget = MapDisplaySelectionTarget(_viewModel?.Display?.SelectedTarget ?? global::LazyBootstrap.Models.DisplaySelectionTarget.None);
 
             if (DisplayConfigDisabledMask != null)
             {
@@ -506,20 +505,20 @@ namespace LazyBootstrap.Views
 
             if (SelectSubScreenAreaButton != null)
             {
-                SelectSubScreenAreaButton.IsVisible = enabled && _isDualDisplay;
+                SelectSubScreenAreaButton.IsVisible = enabled && isDualDisplay;
                 SelectSubScreenAreaButton.IsEnabled = subEnabled;
             }
 
-            if (DotSubCore != null) DotSubCore.IsVisible = _isDualDisplay;
-            if (DotSubGlow != null) DotSubGlow.IsVisible = _isDualDisplay;
-            if (DotSubSelectedRing != null) DotSubSelectedRing.IsVisible = _isDualDisplay && _selectedDisplayTarget == DisplaySelectionTarget.Sub;
+            if (DotSubCore != null) DotSubCore.IsVisible = isDualDisplay;
+            if (DotSubGlow != null) DotSubGlow.IsVisible = isDualDisplay;
+            if (DotSubSelectedRing != null) DotSubSelectedRing.IsVisible = isDualDisplay && selectedTarget == DisplaySelectionTarget.Sub;
 
             if (SubScreenComboBox != null) SubScreenComboBox.IsEnabled = subEnabled;
             if (SubRotationComboBox != null) SubRotationComboBox.IsEnabled = subEnabled;
             if (SubResolutionComboBox != null) SubResolutionComboBox.IsEnabled = subEnabled;
             if (SubRefreshRateComboBox != null) SubRefreshRateComboBox.IsEnabled = subEnabled;
 
-            if (!_isDualDisplay && _selectedDisplayTarget == DisplaySelectionTarget.Sub)
+            if (!isDualDisplay && selectedTarget == DisplaySelectionTarget.Sub)
             {
                 SelectDisplayTarget(DisplaySelectionTarget.None);
             }
@@ -566,19 +565,18 @@ namespace LazyBootstrap.Views
 
         private void SelectDisplayTarget(DisplaySelectionTarget target)
         {
-            if (target == DisplaySelectionTarget.Sub && !_isDualDisplay)
+            bool isDualDisplay = _viewModel?.Display?.IsDualDisplay == true;
+            if (target == DisplaySelectionTarget.Sub && !isDualDisplay)
             {
                 target = DisplaySelectionTarget.None;
             }
 
-            _selectedDisplayTarget = target;
-
             if (PanelNoScreenSelected != null) PanelNoScreenSelected.IsVisible = target == DisplaySelectionTarget.None;
             if (PanelMainScreenConfig != null) PanelMainScreenConfig.IsVisible = target == DisplaySelectionTarget.Main;
-            if (PanelSubScreenConfig != null) PanelSubScreenConfig.IsVisible = _isDualDisplay && target == DisplaySelectionTarget.Sub;
+            if (PanelSubScreenConfig != null) PanelSubScreenConfig.IsVisible = isDualDisplay && target == DisplaySelectionTarget.Sub;
 
             if (DotMainSelectedRing != null) DotMainSelectedRing.IsVisible = target == DisplaySelectionTarget.Main;
-            if (DotSubSelectedRing != null) DotSubSelectedRing.IsVisible = _isDualDisplay && target == DisplaySelectionTarget.Sub;
+            if (DotSubSelectedRing != null) DotSubSelectedRing.IsVisible = isDualDisplay && target == DisplaySelectionTarget.Sub;
         }
     }
 }

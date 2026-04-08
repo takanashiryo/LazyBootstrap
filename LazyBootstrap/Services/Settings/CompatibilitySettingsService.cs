@@ -56,6 +56,7 @@ namespace LazyBootstrap.Services.Settings
                 }
 
                 _configFile.WriteString(SettingSectionName, "compatlayer", enable ? "true" : "false");
+                _configFile.WriteString(SettingSectionName, "cl-rendermode", renderMode);
 
                 if (!tryApplyDxModeValue(ResolveDxModeValue(enable, renderMode)))
                 {
@@ -79,6 +80,7 @@ namespace LazyBootstrap.Services.Settings
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
             var configSnapshot = FileStateSnapshot.Capture(_paths.ConfigFilePath);
+            var moduleSnapshots = CaptureCompatModuleSnapshots();
 
             try
             {
@@ -89,9 +91,15 @@ namespace LazyBootstrap.Services.Settings
                     return true;
                 }
 
+                if (!ApplyCompatLayerFiles(renderMode, out error))
+                {
+                    error = CombineErrors(error, RestoreSnapshots(configSnapshot, moduleSnapshots));
+                    return false;
+                }
+
                 if (!tryApplyDxModeValue(ResolveDxModeValue(true, renderMode)))
                 {
-                    error = CombineErrors("写入 spicetools.xml 失败，已恢复兼容模式。", RestoreSnapshot(configSnapshot));
+                    error = CombineErrors("写入 spicetools.xml 失败，已恢复兼容模式。", RestoreSnapshots(configSnapshot, moduleSnapshots));
                     return false;
                 }
 
@@ -99,7 +107,7 @@ namespace LazyBootstrap.Services.Settings
             }
             catch (Exception ex)
             {
-                error = CombineErrors(ex.Message, RestoreSnapshot(configSnapshot));
+                error = CombineErrors(ex.Message, RestoreSnapshots(configSnapshot, moduleSnapshots));
                 return false;
             }
         }

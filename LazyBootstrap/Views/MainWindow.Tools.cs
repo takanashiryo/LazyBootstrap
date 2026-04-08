@@ -63,9 +63,6 @@ namespace LazyBootstrap.Views
         private void SetControlsEnabled(bool enabled)
         {
             if (StartButton != null) StartButton.IsEnabled = enabled;
-            if (LoadCompatButton != null) LoadCompatButton.IsEnabled = enabled;
-            if (UnloadCompatButton != null) UnloadCompatButton.IsEnabled = enabled;
-            if (CompatTypeComboBox != null) CompatTypeComboBox.IsEnabled = enabled;
 
             if (WindowedToggleSwitch != null) WindowedToggleSwitch.IsEnabled = enabled;
             if (NoAsphyxiaToggleSwitch != null) NoAsphyxiaToggleSwitch.IsEnabled = enabled;
@@ -112,7 +109,7 @@ namespace LazyBootstrap.Views
             if (RotationComboBox != null) RotationComboBox.IsEnabled = enabled;
             if (PreviewDisplaySettingsButton != null) PreviewDisplaySettingsButton.IsEnabled = enabled;
             if (SelectMainScreenAreaButton != null) SelectMainScreenAreaButton.IsEnabled = enabled;
-            if (SelectSubScreenAreaButton != null) SelectSubScreenAreaButton.IsEnabled = enabled && _isDualDisplay;
+            if (SelectSubScreenAreaButton != null) SelectSubScreenAreaButton.IsEnabled = enabled && _viewModel.Display.IsDualDisplay;
 
             if (ClearCacheButton != null) ClearCacheButton.IsEnabled = enabled;
             if (InstallRuntimeButton != null) InstallRuntimeButton.IsEnabled = enabled;
@@ -150,7 +147,6 @@ namespace LazyBootstrap.Views
 
         private void PerformFinalWindowCloseCleanup()
         {
-            SaveSettings();
             AsioDriverRegistry.DisposeControlPanelDrivers();
             try
             {

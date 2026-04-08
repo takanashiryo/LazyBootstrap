@@ -15,26 +15,6 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private async Task RunEnvironmentScanAsync()
-        {
-            try
-            {
-                await _viewModel.Info.RunEnvironmentScanAsync();
-                RefreshEnvironmentScanResultCard();
-                ApplyInfoViewModelStateToUi();
-
-                if (_viewModel.Info.HasEnvironmentScanErrors)
-                {
-                    await ShowEnvironmentScanErrorDialogAsync();
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Environment scan failed.");
-                ShowErrorToast("环境检查失败", ex.Message);
-            }
-        }
-
         private async Task ShowEnvironmentScanErrorDialogAsync()
         {
             const string errorContent =
