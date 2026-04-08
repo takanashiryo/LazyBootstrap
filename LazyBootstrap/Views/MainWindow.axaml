@@ -114,27 +114,52 @@
                                 </StackPanel>
                             </Grid>
 
-                            <Grid x:Name="LaunchFailureOverlay"
+                            <Grid x:Name="LaunchMessageOverlay"
                                   Grid.RowSpan="3"
                                   IsVisible="False"
                                   IsHitTestVisible="False"
                                   ZIndex="100">
-                                <Border x:Name="LaunchFailureBorder"
+                                <Border x:Name="LaunchMessageBorder"
                                         HorizontalAlignment="Center"
                                         VerticalAlignment="Center"
-                                        MinWidth="480"
-                                        Padding="48,22"
+                                        MinWidth="520"
+                                        MaxWidth="620"
+                                        Padding="26,22,24,20"
                                         Background="#FF000000"
                                         BorderBrush="#FFFF0000"
                                         BorderThickness="4"
                                         CornerRadius="0">
-                                    <TextBlock Text="启动失败"
-                                               HorizontalAlignment="Center"
-                                               VerticalAlignment="Center"
-                                               TextAlignment="Center"
-                                               Foreground="White"
-                                               FontSize="46"
-                                               FontWeight="SemiBold"/>
+                                    <StackPanel Spacing="14"
+                                                MinWidth="420"
+                                                MaxWidth="520"
+                                                HorizontalAlignment="Stretch">
+                                        <Grid ColumnDefinitions="Auto,*"
+                                              ColumnSpacing="8"
+                                              HorizontalAlignment="Left">
+                                            <TextBlock x:Name="LaunchMessageTitleTextBlock"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="White"
+                                                       FontSize="19"
+                                                       FontWeight="SemiBold"/>
+                                            <TextBlock x:Name="LaunchMessageAccentTextBlock"
+                                                       Grid.Column="1"
+                                                       VerticalAlignment="Center"
+                                                       Foreground="#FFFF3B30"
+                                                       FontSize="10"
+                                                       FontWeight="Bold"
+                                                       IsVisible="False"/>
+                                        </Grid>
+                                        <Border x:Name="LaunchMessageDivider"
+                                                Height="1"
+                                                Background="#F2FFFFFF"
+                                                HorizontalAlignment="Stretch"/>
+                                        <TextBlock x:Name="LaunchMessageBodyTextBlock"
+                                                   Foreground="White"
+                                                   FontSize="15"
+                                                   FontWeight="SemiBold"
+                                                   TextWrapping="Wrap"
+                                                   LineHeight="27"/>
+                                    </StackPanel>
                                 </Border>
                             </Grid>
                         </Grid>

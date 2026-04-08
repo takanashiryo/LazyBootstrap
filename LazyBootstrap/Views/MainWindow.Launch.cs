@@ -13,13 +13,15 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private static readonly Color LaunchFailureOverlayStartColor = Color.Parse("#FF0000");
-        private static readonly Color LaunchFailureOverlayEndColor = Color.Parse("#FFFFFF");
-        private static readonly TimeSpan LaunchFailureOverlayAnimationDuration = TimeSpan.FromSeconds(1.4);
+        private static readonly Color LaunchMessageErrorStartColor = Color.Parse("#FFFF0000");
+        private static readonly Color LaunchMessageWarningStartColor = Color.Parse("#FFFFD200");
+        private static readonly Color LaunchMessageBorderEndColor = Color.Parse("#FFFFFFFF");
+        private static readonly TimeSpan LaunchMessageOverlayAnimationDuration = TimeSpan.FromSeconds(1.4);
 
-        private readonly SolidColorBrush _launchFailureOverlayBorderBrush = new SolidColorBrush(LaunchFailureOverlayStartColor);
-        private DispatcherTimer _launchFailureOverlayAnimationTimer;
-        private Stopwatch _launchFailureOverlayAnimationStopwatch;
+        private readonly SolidColorBrush _launchMessageOverlayBorderBrush = new SolidColorBrush(LaunchMessageErrorStartColor);
+        private DispatcherTimer _launchMessageOverlayAnimationTimer;
+        private Stopwatch _launchMessageOverlayAnimationStopwatch;
+        private Color _launchMessageOverlayStartColor = LaunchMessageErrorStartColor;
 
         private void HookLaunchViewModelState()
         {
@@ -28,13 +30,13 @@ namespace LazyBootstrap.Views
                 return;
             }
 
-            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchFailureOverlayPointerPressed);
-            AddHandler(InputElement.PointerPressedEvent, OnLaunchFailureOverlayPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
+            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed);
+            AddHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
             _viewModel.Launch.PropertyChanged -= OnLaunchViewModelPropertyChanged;
             _viewModel.Launch.PropertyChanged += OnLaunchViewModelPropertyChanged;
             _ = ApplyLaunchLogVisibilityAsync();
             _ = ApplyLaunchLogTextAsync();
-            _ = ApplyLaunchFailureOverlayVisibilityAsync();
+            _ = ApplyLaunchMessageOverlayAsync();
         }
 
         private void UnhookLaunchViewModelState()
@@ -44,9 +46,9 @@ namespace LazyBootstrap.Views
                 return;
             }
 
-            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchFailureOverlayPointerPressed);
+            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed);
             _viewModel.Launch.PropertyChanged -= OnLaunchViewModelPropertyChanged;
-            StopLaunchFailureOverlayAnimation();
+            StopLaunchMessageOverlayAnimation();
         }
 
         private void OnLaunchViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -64,9 +66,13 @@ namespace LazyBootstrap.Views
             }
 
             if (string.IsNullOrWhiteSpace(e?.PropertyName)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.IsLaunchFailureOverlayVisible), StringComparison.Ordinal))
+                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.IsMessageVisible), StringComparison.Ordinal)
+                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageType), StringComparison.Ordinal)
+                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageTitle), StringComparison.Ordinal)
+                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageAccentText), StringComparison.Ordinal)
+                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageBodyText), StringComparison.Ordinal))
             {
-                _ = ApplyLaunchFailureOverlayVisibilityAsync();
+                _ = ApplyLaunchMessageOverlayAsync();
             }
         }
 
@@ -254,138 +260,184 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private async Task ApplyLaunchFailureOverlayVisibilityAsync()
+        private async Task ApplyLaunchMessageOverlayAsync()
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                await Dispatcher.UIThread.InvokeAsync(async () => await ApplyLaunchFailureOverlayVisibilityAsync());
+                await Dispatcher.UIThread.InvokeAsync(async () => await ApplyLaunchMessageOverlayAsync());
                 return;
             }
 
-            if (_viewModel.Launch.IsLaunchFailureOverlayVisible)
+            UpdateLaunchMessageContent();
+
+            if (_viewModel?.Launch == null)
             {
-                ShowLaunchFailureOverlay();
+                HideLaunchMessageOverlay();
                 return;
             }
 
-            HideLaunchFailureOverlay();
+            if (_viewModel.Launch.IsMessageVisible)
+            {
+                ShowLaunchMessageOverlay();
+                return;
+            }
+
+            HideLaunchMessageOverlay();
         }
 
-        private void ShowLaunchFailureOverlay()
+        private void UpdateLaunchMessageContent()
         {
-            if (LaunchFailureOverlay == null)
+            if (_viewModel?.Launch == null)
             {
                 return;
             }
 
-            if (LaunchFailureBorder != null && !ReferenceEquals(LaunchFailureBorder.BorderBrush, _launchFailureOverlayBorderBrush))
+            if (LaunchMessageTitleTextBlock != null)
             {
-                LaunchFailureBorder.BorderBrush = _launchFailureOverlayBorderBrush;
+                LaunchMessageTitleTextBlock.Text = _viewModel.Launch.MessageTitle ?? string.Empty;
             }
 
-            LaunchFailureOverlay.IsVisible = true;
-            StartLaunchFailureOverlayAnimation();
+            if (LaunchMessageAccentTextBlock != null)
+            {
+                string accentText = _viewModel.Launch.MessageAccentText ?? string.Empty;
+                LaunchMessageAccentTextBlock.Text = accentText;
+                LaunchMessageAccentTextBlock.IsVisible = !string.IsNullOrWhiteSpace(accentText);
+            }
+
+            if (LaunchMessageBodyTextBlock != null)
+            {
+                LaunchMessageBodyTextBlock.Text = _viewModel.Launch.MessageBodyText ?? string.Empty;
+            }
         }
 
-        private void DismissLaunchFailureOverlay()
+        private void ShowLaunchMessageOverlay()
         {
-            if (_viewModel?.Launch == null || !_viewModel.Launch.IsLaunchFailureOverlayVisible)
+            if (LaunchMessageOverlay == null)
             {
                 return;
             }
 
-            _viewModel.Launch.IsLaunchFailureOverlayVisible = false;
-            HideLaunchFailureOverlay();
+            _launchMessageOverlayStartColor = ResolveLaunchMessageStartColor(_viewModel?.Launch?.MessageType ?? NotificationType.Error);
+
+            if (LaunchMessageBorder != null && !ReferenceEquals(LaunchMessageBorder.BorderBrush, _launchMessageOverlayBorderBrush))
+            {
+                LaunchMessageBorder.BorderBrush = _launchMessageOverlayBorderBrush;
+            }
+
+            _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
+            UpdateLaunchMessageContent();
+            LaunchMessageOverlay.IsVisible = true;
+            StartLaunchMessageOverlayAnimation();
         }
 
-        private void HideLaunchFailureOverlay()
+        private void DismissLaunchMessageOverlay()
         {
-            StopLaunchFailureOverlayAnimation();
-
-            if (LaunchFailureOverlay == null)
+            if (_viewModel?.Launch == null || !_viewModel.Launch.IsMessageVisible)
             {
                 return;
             }
 
-            LaunchFailureOverlay.IsVisible = false;
+            _viewModel.Launch.IsMessageVisible = false;
+            HideLaunchMessageOverlay();
         }
 
-        private void StartLaunchFailureOverlayAnimation()
+        private void HideLaunchMessageOverlay()
         {
-            if (_launchFailureOverlayAnimationTimer == null)
+            StopLaunchMessageOverlayAnimation();
+
+            if (LaunchMessageOverlay == null)
             {
-                _launchFailureOverlayAnimationTimer = new DispatcherTimer
+                return;
+            }
+
+            LaunchMessageOverlay.IsVisible = false;
+        }
+
+        private void StartLaunchMessageOverlayAnimation()
+        {
+            if (_launchMessageOverlayAnimationTimer == null)
+            {
+                _launchMessageOverlayAnimationTimer = new DispatcherTimer
                 {
                     Interval = TimeSpan.FromMilliseconds(16)
                 };
-                _launchFailureOverlayAnimationTimer.Tick += OnLaunchFailureOverlayAnimationTick;
+                _launchMessageOverlayAnimationTimer.Tick += OnLaunchMessageOverlayAnimationTick;
             }
 
-            if (_launchFailureOverlayAnimationStopwatch == null)
+            if (_launchMessageOverlayAnimationStopwatch == null)
             {
-                _launchFailureOverlayAnimationStopwatch = new Stopwatch();
+                _launchMessageOverlayAnimationStopwatch = new Stopwatch();
             }
 
-            _launchFailureOverlayBorderBrush.Color = LaunchFailureOverlayStartColor;
-            _launchFailureOverlayAnimationStopwatch.Restart();
+            _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
+            _launchMessageOverlayAnimationStopwatch.Restart();
 
-            if (!_launchFailureOverlayAnimationTimer.IsEnabled)
+            if (!_launchMessageOverlayAnimationTimer.IsEnabled)
             {
-                _launchFailureOverlayAnimationTimer.Start();
+                _launchMessageOverlayAnimationTimer.Start();
             }
         }
 
-        private void StopLaunchFailureOverlayAnimation()
+        private void StopLaunchMessageOverlayAnimation()
         {
-            if (_launchFailureOverlayAnimationTimer != null)
+            if (_launchMessageOverlayAnimationTimer != null)
             {
-                _launchFailureOverlayAnimationTimer.Stop();
+                _launchMessageOverlayAnimationTimer.Stop();
             }
 
-            if (_launchFailureOverlayAnimationStopwatch != null && _launchFailureOverlayAnimationStopwatch.IsRunning)
+            if (_launchMessageOverlayAnimationStopwatch != null && _launchMessageOverlayAnimationStopwatch.IsRunning)
             {
-                _launchFailureOverlayAnimationStopwatch.Stop();
+                _launchMessageOverlayAnimationStopwatch.Stop();
             }
 
-            _launchFailureOverlayBorderBrush.Color = LaunchFailureOverlayStartColor;
+            _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
 
-            if (LaunchFailureBorder != null && !ReferenceEquals(LaunchFailureBorder.BorderBrush, _launchFailureOverlayBorderBrush))
+            if (LaunchMessageBorder != null && !ReferenceEquals(LaunchMessageBorder.BorderBrush, _launchMessageOverlayBorderBrush))
             {
-                LaunchFailureBorder.BorderBrush = _launchFailureOverlayBorderBrush;
+                LaunchMessageBorder.BorderBrush = _launchMessageOverlayBorderBrush;
             }
         }
 
-        private void OnLaunchFailureOverlayPointerPressed(object sender, PointerPressedEventArgs e)
+        private void OnLaunchMessageOverlayPointerPressed(object sender, PointerPressedEventArgs e)
         {
-            if (_viewModel?.Launch == null || !_viewModel.Launch.IsLaunchFailureOverlayVisible)
+            if (_viewModel?.Launch == null || !_viewModel.Launch.IsMessageVisible)
             {
                 return;
             }
 
-            DismissLaunchFailureOverlay();
+            DismissLaunchMessageOverlay();
             e.Handled = true;
         }
 
-        private void OnLaunchFailureOverlayAnimationTick(object sender, EventArgs e)
+        private void OnLaunchMessageOverlayAnimationTick(object sender, EventArgs e)
         {
-            if (LaunchFailureOverlay == null
-                || !LaunchFailureOverlay.IsVisible
-                || _launchFailureOverlayAnimationStopwatch == null)
+            if (LaunchMessageOverlay == null
+                || !LaunchMessageOverlay.IsVisible
+                || _launchMessageOverlayAnimationStopwatch == null)
             {
                 return;
             }
 
-            double durationMilliseconds = LaunchFailureOverlayAnimationDuration.TotalMilliseconds;
+            double durationMilliseconds = LaunchMessageOverlayAnimationDuration.TotalMilliseconds;
             if (durationMilliseconds <= 0)
             {
-                _launchFailureOverlayBorderBrush.Color = LaunchFailureOverlayStartColor;
+                _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
                 return;
             }
 
-            double cycleProgress = (_launchFailureOverlayAnimationStopwatch.Elapsed.TotalMilliseconds / durationMilliseconds) % 2d;
+            double cycleProgress = (_launchMessageOverlayAnimationStopwatch.Elapsed.TotalMilliseconds / durationMilliseconds) % 2d;
             double pingPongProgress = cycleProgress <= 1d ? cycleProgress : 2d - cycleProgress;
             double easedProgress = EaseInOutCubic(Math.Clamp(pingPongProgress, 0d, 1d));
-            _launchFailureOverlayBorderBrush.Color = InterpolateColor(LaunchFailureOverlayStartColor, LaunchFailureOverlayEndColor, easedProgress);
+            _launchMessageOverlayBorderBrush.Color = InterpolateColor(_launchMessageOverlayStartColor, LaunchMessageBorderEndColor, easedProgress);
+        }
+
+        private static Color ResolveLaunchMessageStartColor(NotificationType messageType)
+        {
+            return messageType switch
+            {
+                NotificationType.Warning => LaunchMessageWarningStartColor,
+                _ => LaunchMessageErrorStartColor
+            };
         }
 
         private static Color InterpolateColor(Color from, Color to, double progress)

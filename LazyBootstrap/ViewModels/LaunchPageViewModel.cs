@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Avalonia.Controls.Notifications;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -39,7 +40,19 @@ namespace LazyBootstrap.ViewModels
         private bool isGameRunning;
 
         [ObservableProperty]
-        private bool isLaunchFailureOverlayVisible;
+        private bool isMessageVisible;
+
+        [ObservableProperty]
+        private NotificationType messageType = NotificationType.Error;
+
+        [ObservableProperty]
+        private string messageTitle = string.Empty;
+
+        [ObservableProperty]
+        private string messageAccentText = string.Empty;
+
+        [ObservableProperty]
+        private string messageBodyText = string.Empty;
 
         public void AttachContext(SettingsPageViewModel settingsViewModel, DisplayConfigurationPageViewModel displayViewModel)
         {

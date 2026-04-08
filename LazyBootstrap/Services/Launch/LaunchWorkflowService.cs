@@ -167,7 +167,7 @@ namespace LazyBootstrap.Services.Launch
             CancelGameProcessMonitoring(suppressExitHandling: true);
             _suppressGameProcessExitHandling = false;
 
-            launchViewModel.IsLaunchFailureOverlayVisible = false;
+            ClearLaunchMessage(launchViewModel);
             _gameProcessTracker.ResetManagedAsphyxiaTracking();
             _shellStateService.IsInteractionEnabled = false;
             _shellStateService.StatusText = "启动中...";
@@ -275,7 +275,7 @@ namespace LazyBootstrap.Services.Launch
                 {
                     launchViewModel.IsLaunching = false;
                     launchViewModel.IsGameRunning = false;
-                    launchViewModel.IsLaunchFailureOverlayVisible = false;
+                    ClearLaunchMessage(launchViewModel);
                     _shellStateService.IsInteractionEnabled = true;
                     _shellStateService.StatusText = "调试模式就绪";
                     launchViewModel.StateText = _shellStateService.StatusText;
@@ -316,7 +316,7 @@ namespace LazyBootstrap.Services.Launch
 
                 launchViewModel.IsLaunching = false;
                 launchViewModel.IsGameRunning = true;
-                launchViewModel.IsLaunchFailureOverlayVisible = false;
+                ClearLaunchMessage(launchViewModel);
                 _shellStateService.StatusText = "游戏运行中";
                 launchViewModel.StateText = _shellStateService.StatusText;
                 AppendLaunchOutput(launchViewModel, "游戏已启动并进入运行状态。");
@@ -371,6 +371,7 @@ namespace LazyBootstrap.Services.Launch
         public Task HandleClosingAsync(DisplayConfigurationPageViewModel displayViewModel)
         {
             CancelGameProcessMonitoring(suppressExitHandling: true);
+            ClearLaunchMessage(_launchViewModel);
 
             try
             {
@@ -556,7 +557,20 @@ namespace LazyBootstrap.Services.Launch
                 {
                     Dispatcher.UIThread.Post(() =>
                     {
-                        _uiInteractionService.ShowErrorToast("游戏异常退出", $"spice64.exe 异常退出（ExitCode: {exitCode}），已自动打开日志窗口。");
+                        if (_shellStateService.SelectedPage == ShellPage.Launch && _launchViewModel != null)
+                        {
+                            ShowLaunchMessage(
+                                _launchViewModel,
+                                NotificationType.Error,
+                                "进程异常退出",
+                                $"（ExitCode: {exitCode}）",
+                                $"检测到游戏进程异常退出{SystemEnvironment.NewLine}请阅读 log.txt");
+                        }
+                        else
+                        {
+                            _uiInteractionService.ShowErrorToast("游戏异常退出", $"spice64.exe 异常退出（ExitCode: {exitCode}），已自动打开日志窗口。");
+                        }
+
                         _ = OpenLogAsync();
                     });
                 }
@@ -607,8 +621,12 @@ namespace LazyBootstrap.Services.Launch
                     {
                         _launchViewModel.IsLaunching = false;
                         _launchViewModel.IsGameRunning = false;
-                        _launchViewModel.IsLaunchFailureOverlayVisible = false;
                         _launchViewModel.StateText = _shellStateService.StatusText;
+
+                        if (!abnormalExit || _shellStateService.SelectedPage != ShellPage.Launch)
+                        {
+                            ClearLaunchMessage(_launchViewModel);
+                        }
                     }
                 }
 
@@ -628,14 +646,41 @@ namespace LazyBootstrap.Services.Launch
 
         private void FailLaunch(LaunchPageViewModel launchViewModel, string message)
         {
-            _uiInteractionService.ShowErrorToast("启动失败", message);
             AppendLaunchOutput(launchViewModel, message, NotificationType.Error);
             launchViewModel.IsLaunching = false;
             launchViewModel.IsGameRunning = false;
-            launchViewModel.IsLaunchFailureOverlayVisible = true;
             _shellStateService.IsInteractionEnabled = true;
             _shellStateService.StatusText = "启动失败";
             launchViewModel.StateText = _shellStateService.StatusText;
+            ShowLaunchMessage(launchViewModel, NotificationType.Error, "启动失败", string.Empty, message);
+        }
+
+        private static void ShowLaunchMessage(LaunchPageViewModel launchViewModel, NotificationType messageType, string title, string accentText, string bodyText)
+        {
+            if (launchViewModel == null)
+            {
+                return;
+            }
+
+            launchViewModel.MessageType = messageType;
+            launchViewModel.MessageTitle = title ?? string.Empty;
+            launchViewModel.MessageAccentText = accentText ?? string.Empty;
+            launchViewModel.MessageBodyText = bodyText ?? string.Empty;
+            launchViewModel.IsMessageVisible = true;
+        }
+
+        private static void ClearLaunchMessage(LaunchPageViewModel launchViewModel)
+        {
+            if (launchViewModel == null)
+            {
+                return;
+            }
+
+            launchViewModel.IsMessageVisible = false;
+            launchViewModel.MessageType = NotificationType.Error;
+            launchViewModel.MessageTitle = string.Empty;
+            launchViewModel.MessageAccentText = string.Empty;
+            launchViewModel.MessageBodyText = string.Empty;
         }
 
         private void ClearLaunchLog(LaunchPageViewModel viewModel)
