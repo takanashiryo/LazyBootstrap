@@ -240,7 +240,7 @@
                                                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
                                                                         <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
                                                                         <TextBlock Text="dx9on12（外置）" FontSize="16" FontWeight="DemiBold"/>
-                                                                        <TextBlock Text="外置版，可能比内置的好" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
+                                                                        <TextBlock Text="可能比内置的好" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
                                                                     </StackPanel>
                                                                 </RadioButton>
                                                                 <RadioButton x:Name="CompatDxvkRadioButton"
