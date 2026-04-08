@@ -184,17 +184,27 @@ namespace LazyBootstrap.Services.Launch
             {
                 string spicePath = _paths.GetSpicePath();
                 string asphyxiaPath = _paths.GetAsphyxiaPath();
+                string serverAddress = (settingsViewModel?.ServerAddress ?? string.Empty).Trim();
+
+                if (!asphyxiaDevOnly && string.IsNullOrWhiteSpace(serverAddress))
+                {
+                    WarnLaunchAndAbort(
+                        launchViewModel,
+                        "服务器地址异常",
+                        "未检测到任何 e-amusement 服务器地址存在，请前往设置页设置");
+                    return;
+                }
 
                 if (!asphyxiaDevOnly && !File.Exists(spicePath))
                 {
-                    FailLaunch(launchViewModel, $"未找到 spice64.exe: {spicePath}");
+                    FailLaunch(launchViewModel, $"未找到 spice64.exe: {spicePath}", "未找到spice64.exe");
                     return;
                 }
 
                 bool startAsphyxia = asphyxiaDevOnly || !settingsViewModel.NoAsphyxia;
                 if (startAsphyxia && !File.Exists(asphyxiaPath))
                 {
-                    FailLaunch(launchViewModel, $"未找到 asphyxia-core-x64.exe: {asphyxiaPath}");
+                    FailLaunch(launchViewModel, $"未找到 asphyxia-core-x64.exe: {asphyxiaPath}", "未找到asphyxia-core-x64.exe");
                     return;
                 }
 
@@ -644,15 +654,44 @@ namespace LazyBootstrap.Services.Launch
             }
         }
 
-        private void FailLaunch(LaunchPageViewModel launchViewModel, string message)
+        private void FailLaunch(LaunchPageViewModel launchViewModel, string logMessage, string displayMessage = null)
         {
-            AppendLaunchOutput(launchViewModel, message, NotificationType.Error);
+            StopLaunchWithMessage(
+                launchViewModel,
+                NotificationType.Error,
+                "启动失败",
+                "启动失败",
+                logMessage,
+                displayMessage ?? logMessage);
+        }
+
+        private void WarnLaunchAndAbort(LaunchPageViewModel launchViewModel, string title, string bodyMessage)
+        {
+            StopLaunchWithMessage(
+                launchViewModel,
+                NotificationType.Warning,
+                title,
+                title,
+                bodyMessage,
+                bodyMessage);
+        }
+
+        private void StopLaunchWithMessage(
+            LaunchPageViewModel launchViewModel,
+            NotificationType messageType,
+            string statusText,
+            string title,
+            string logMessage,
+            string bodyMessage,
+            string accentText = "")
+        {
+            AppendLaunchOutput(launchViewModel, logMessage, messageType);
             launchViewModel.IsLaunching = false;
             launchViewModel.IsGameRunning = false;
             _shellStateService.IsInteractionEnabled = true;
-            _shellStateService.StatusText = "启动失败";
+            _shellStateService.StatusText = statusText;
             launchViewModel.StateText = _shellStateService.StatusText;
-            ShowLaunchMessage(launchViewModel, NotificationType.Error, "启动失败", string.Empty, message);
+            ShowLaunchMessage(launchViewModel, messageType, title, accentText, bodyMessage);
         }
 
         private static void ShowLaunchMessage(LaunchPageViewModel launchViewModel, NotificationType messageType, string title, string accentText, string bodyText)
