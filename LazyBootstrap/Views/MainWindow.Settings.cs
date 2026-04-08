@@ -731,26 +731,11 @@ namespace LazyBootstrap.Views
 
                 if (NoAsphyxiaToggleSwitch != null)
                     _configFile.WriteString(SettingSectionName, "noasphyxia", (NoAsphyxiaToggleSwitch.IsChecked == true).ToString().ToLowerInvariant());
-                if (ExitRestoreToggleSwitch != null)
-                    _configFile.WriteString(DisplaySectionName, "exitrestore", (ExitRestoreToggleSwitch.IsChecked == true).ToString().ToLowerInvariant());
-
                 if (CompatTypeComboBox != null && CompatTypeComboBox.SelectedItem != null)
                 {
                     string renderMode = CompatTypeComboBox.SelectedItem.ToString();
                     _configFile.WriteString(SettingSectionName, "cl-rendermode", renderMode);
                 }
-
-                _configFile.WriteString(DisplaySectionName, "displayconfigure", _displayConfigEnabled.ToString().ToLowerInvariant());
-                _configFile.WriteString(DisplaySectionName, "mode", _isDualDisplay ? "dual" : "single");
-
-                if (MainScreenComboBox != null) _configFile.WriteString(DisplaySectionName, "mainscreen", MainScreenComboBox.SelectedIndex.ToString());
-                if (SubScreenComboBox != null) _configFile.WriteString(DisplaySectionName, "subscreen", SubScreenComboBox.SelectedIndex.ToString());
-                if (SubRotationComboBox != null) _configFile.WriteString(DisplaySectionName, "subrotation", SubRotationComboBox.SelectedIndex.ToString());
-                if (RotationComboBox != null) _configFile.WriteString(DisplaySectionName, "mainrotation", RotationComboBox.SelectedIndex.ToString());
-                if (MainResolutionComboBox != null && MainResolutionComboBox.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "mainresolution", MainResolutionComboBox.SelectedItem.ToString());
-                if (SubResolutionComboBox != null && SubResolutionComboBox.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "subresolution", SubResolutionComboBox.SelectedItem.ToString());
-                if (MainRefreshRateComboBox != null && MainRefreshRateComboBox.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "mainrefresh", MainRefreshRateComboBox.SelectedItem.ToString());
-                if (SubRefreshRateComboBox != null && SubRefreshRateComboBox.SelectedItem != null) _configFile.WriteString(DisplaySectionName, "subrefresh", SubRefreshRateComboBox.SelectedItem.ToString());
             }
             catch (Exception ex)
             {

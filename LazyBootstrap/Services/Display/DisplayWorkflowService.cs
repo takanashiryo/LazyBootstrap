@@ -3,6 +3,7 @@ using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Controls.Notifications;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Display
@@ -74,8 +75,8 @@ namespace LazyBootstrap.Services.Display
 
                 int mainIndex = ReadInt(DisplaySectionName, "mainscreen", 0);
                 int subIndex = ReadInt(DisplaySectionName, "subscreen", Math.Min(1, Math.Max(0, viewModel.Displays.Count - 1)));
-                int mainRotation = ReadInt(DisplaySectionName, "mainrotation", 0);
-                int subRotation = ReadInt(DisplaySectionName, "subrotation", 0);
+                int mainRotation = NormalizeRotationValue(ReadInt(DisplaySectionName, "mainrotation", 0));
+                int subRotation = NormalizeRotationValue(ReadInt(DisplaySectionName, "subrotation", 0));
 
                 viewModel.SelectedMainDisplay = GetDisplayByIndex(viewModel, mainIndex);
                 viewModel.SelectedSubDisplay = GetDisplayByIndex(viewModel, subIndex);
@@ -110,42 +111,48 @@ namespace LazyBootstrap.Services.Display
 
             try
             {
-                if (refreshMainOptions)
+                viewModel.RunSilently(() =>
                 {
-                    var mainOptions = RefreshDisplayOptions(
-                        viewModel.SelectedMainDisplay,
-                        viewModel.SelectedMainRotation?.Angle ?? 0,
-                        viewModel.SelectedMainResolution,
-                        viewModel.SelectedMainRefreshRate);
-                    ReplaceCollection(viewModel.MainResolutions, mainOptions.Resolutions);
-                    ReplaceCollection(viewModel.MainRefreshRates, mainOptions.RefreshRates);
-                    viewModel.RunSilently(() =>
+                    if (refreshMainOptions)
                     {
+                        var mainOptions = RefreshDisplayOptions(
+                            viewModel.SelectedMainDisplay,
+                            viewModel.SelectedMainRotation?.Angle ?? 0,
+                            viewModel.SelectedMainResolution,
+                            viewModel.SelectedMainRefreshRate);
+                        ReplaceCollection(viewModel.MainResolutions, mainOptions.Resolutions);
+                        ReplaceCollection(viewModel.MainRefreshRates, mainOptions.RefreshRates);
                         viewModel.SelectedMainResolution = mainOptions.SelectedResolution;
                         viewModel.SelectedMainRefreshRate = mainOptions.SelectedRefreshRate;
-                    });
-                    viewModel.MainDiagnosticsTooltip = mainOptions.Tooltip;
-                }
+                        viewModel.MainDiagnosticsTooltip = mainOptions.Tooltip;
+                    }
 
-                if (refreshSubOptions)
-                {
-                    var subOptions = RefreshDisplayOptions(
-                        viewModel.SelectedSubDisplay,
-                        viewModel.SelectedSubRotation?.Angle ?? 0,
-                        viewModel.SelectedSubResolution,
-                        viewModel.SelectedSubRefreshRate);
-                    ReplaceCollection(viewModel.SubResolutions, subOptions.Resolutions);
-                    ReplaceCollection(viewModel.SubRefreshRates, subOptions.RefreshRates);
-                    viewModel.RunSilently(() =>
+                    if (refreshSubOptions)
                     {
+                        var subOptions = RefreshDisplayOptions(
+                            viewModel.SelectedSubDisplay,
+                            viewModel.SelectedSubRotation?.Angle ?? 0,
+                            viewModel.SelectedSubResolution,
+                            viewModel.SelectedSubRefreshRate);
+                        ReplaceCollection(viewModel.SubResolutions, subOptions.Resolutions);
+                        ReplaceCollection(viewModel.SubRefreshRates, subOptions.RefreshRates);
                         viewModel.SelectedSubResolution = subOptions.SelectedResolution;
                         viewModel.SelectedSubRefreshRate = subOptions.SelectedRefreshRate;
-                    });
-                    viewModel.SubDiagnosticsTooltip = subOptions.Tooltip;
-                }
+                        viewModel.SubDiagnosticsTooltip = subOptions.Tooltip;
+                    }
 
-                UpdateDisplayInfo(viewModel, true);
-                UpdateDisplayInfo(viewModel, false);
+                    if (!viewModel.IsDualDisplay && viewModel.SelectedTarget == DisplaySelectionTarget.Sub)
+                    {
+                        viewModel.SelectedTarget = DisplaySelectionTarget.None;
+                        viewModel.ShowNoScreenSelected = true;
+                        viewModel.ShowMainScreenConfig = false;
+                        viewModel.ShowSubScreenConfig = false;
+                    }
+
+                    UpdateDisplayInfo(viewModel, true);
+                    UpdateDisplayInfo(viewModel, false);
+                });
+
                 PersistSelectionState(viewModel);
             }
             catch (Exception ex)
@@ -182,7 +189,10 @@ namespace LazyBootstrap.Services.Display
                 "显示器预览",
                 "已应用当前预览设置。\n\n点击“保持现状”将保留当前结果，点击“还原”将恢复预览前状态。",
                 "保持现状",
-                "还原");
+                "还原",
+                NotificationType.Information,
+                "Basic",
+                "Danger");
 
             if (!keepCurrentState)
             {
@@ -335,9 +345,9 @@ namespace LazyBootstrap.Services.Display
 
             var stateResult = _displayConfigurationService.GetCurrentState(selectedDisplay.Info.DeviceName);
             var outputInfo = stateResult.Succeeded
-                ? $"设备: {selectedDisplay.Info.FriendlyName} ({selectedDisplay.Info.DeviceName})\n当前: {stateResult.State.Width}x{stateResult.State.Height} @ {stateResult.State.RefreshRate}Hz, 旋转 {_displayConfigurationService.OrientationToAngle(stateResult.State.Orientation)}°"
+                ? $"设备: {selectedDisplay.Info.FriendlyName} ({selectedDisplay.Info.DeviceName})\n当前: {stateResult.State.Width}x{stateResult.State.Height} @ {stateResult.State.RefreshRate}Hz, {FormatRotationDisplay(_displayConfigurationService.OrientationToAngle(stateResult.State.Orientation))}"
                 : $"设备: {selectedDisplay.Info.FriendlyName} ({selectedDisplay.Info.DeviceName})\n当前: 读取失败\n原因: {stateResult.ErrorMessage}";
-            var startupInfo = $"旋转: {rotation}°\n分辨率: {resolution}\n刷新率: {refreshRate}Hz";
+            var startupInfo = $"旋转: {FormatRotationDisplay(rotation)}\n分辨率: {FormatTextOrFallback(resolution)}\n刷新率: {FormatRefreshRateDisplay(refreshRate)}";
 
             if (isMainTarget)
             {
@@ -539,6 +549,21 @@ namespace LazyBootstrap.Services.Display
             return string.Join(SystemEnvironment.NewLine, visibleMessages);
         }
 
+        private static string FormatRotationDisplay(int angle)
+        {
+            return RotationOption.GetDisplayName(angle);
+        }
+
+        private static string FormatTextOrFallback(string value)
+        {
+            return string.IsNullOrWhiteSpace(value) ? "未设置" : value;
+        }
+
+        private static string FormatRefreshRateDisplay(string refreshRate)
+        {
+            return string.IsNullOrWhiteSpace(refreshRate) ? "未设置" : $"{refreshRate}Hz";
+        }
+
         private readonly record struct DisplayOptionState(
             IReadOnlyList<string> Resolutions,
             IReadOnlyList<string> RefreshRates,
@@ -556,6 +581,21 @@ namespace LazyBootstrap.Services.Display
             return int.TryParse(_configHandler.ReadString(section, key, defaultValue.ToString()), out var value)
                 ? value
                 : defaultValue;
+        }
+
+        private static int NormalizeRotationValue(int value)
+        {
+            return value switch
+            {
+                0 => 0,
+                1 => 90,
+                2 => 180,
+                3 => 270,
+                90 => 90,
+                180 => 180,
+                270 => 270,
+                _ => 0
+            };
         }
     }
 }

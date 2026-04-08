@@ -60,7 +60,7 @@ namespace LazyBootstrap.Views
 
         private bool _dbgNetDump = false;
         private bool _displayConfigEnabled = false;
-        private bool _isDualDisplay = true;
+        private bool _isDualDisplay = false;
         private readonly List<DisplayInfo> _displayInfos = new List<DisplayInfo>();
         private readonly Dictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
         private DisplaySelectionTarget _selectedDisplayTarget = DisplaySelectionTarget.None;
@@ -845,10 +845,17 @@ namespace LazyBootstrap.Views
             }
             if (ExitRestoreToggleSwitch != null)
             {
-                ExitRestoreToggleSwitch.IsCheckedChanged += (s, e) =>
+                ExitRestoreToggleSwitch.IsCheckedChanged += async (s, e) =>
                 {
-                    _viewModel.Settings.ExitRestore = ExitRestoreToggleSwitch.IsChecked == true;
-                    SaveSettings();
+                    if (_isLoadingSettings)
+                    {
+                        return;
+                    }
+
+                    bool enabled = ExitRestoreToggleSwitch.IsChecked == true;
+                    _viewModel.Display.ExitRestore = enabled;
+                    _viewModel.Settings.ExitRestore = enabled;
+                    await _viewModel.Display.PersistGeneralSettingsAsync();
                 };
             }
         }

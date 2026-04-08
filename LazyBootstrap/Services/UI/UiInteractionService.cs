@@ -31,6 +31,7 @@ namespace LazyBootstrap.Services.UI
             string cancelText,
             NotificationType type = NotificationType.Information,
             string confirmButtonClasses = "Flat",
+            string cancelButtonClasses = null,
             string customIconAssetName = null);
 
         Task<string> PickFolderAsync(string title);
@@ -90,15 +91,27 @@ namespace LazyBootstrap.Services.UI
             string cancelText,
             NotificationType type = NotificationType.Information,
             string confirmButtonClasses = "Flat",
+            string cancelButtonClasses = null,
             string customIconAssetName = null)
         {
             var builder = _dialogManager
                 .CreateDialog()
                 .OfType(type)
                 .WithTitle(title ?? string.Empty)
-                .WithContent(content)
-                .WithYesNoResult(confirmText ?? "确定", cancelText ?? "取消", confirmButtonClasses ?? "Flat")
-                .Dismiss().ByClickingBackground();
+                .WithContent(content);
+
+            if (string.IsNullOrWhiteSpace(cancelButtonClasses))
+            {
+                builder.WithYesNoResult(confirmText ?? "确定", cancelText ?? "取消", confirmButtonClasses ?? "Flat");
+            }
+            else
+            {
+                builder.Completion = new TaskCompletionSource<bool>();
+                builder.WithActionButton(confirmText ?? "确定", _ => builder.Completion.SetResult(true), true, SplitClasses(confirmButtonClasses ?? "Flat"));
+                builder.WithActionButton(cancelText ?? "取消", _ => builder.Completion.SetResult(false), true, SplitClasses(cancelButtonClasses));
+            }
+
+            builder.Dismiss().ByClickingBackground();
 
             ApplyDialogNotificationIcon(builder, type, customIconAssetName);
             return builder.TryShowAsync();
@@ -251,6 +264,13 @@ namespace LazyBootstrap.Services.UI
             {
                 return path.Trim();
             }
+        }
+
+        private static string[] SplitClasses(string classes)
+        {
+            return string.IsNullOrWhiteSpace(classes)
+                ? Array.Empty<string>()
+                : classes.Split([' '], StringSplitOptions.RemoveEmptyEntries);
         }
     }
 }

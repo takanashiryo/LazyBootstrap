@@ -36,7 +36,7 @@ namespace LazyBootstrap.ViewModels
         private bool isDisplayConfigurationEnabled;
 
         [ObservableProperty]
-        private bool isDualDisplay = true;
+        private bool isDualDisplay;
 
         [ObservableProperty]
         private bool exitRestore = true;
@@ -135,6 +135,8 @@ namespace LazyBootstrap.ViewModels
             {
                 _suspendUpdates = false;
             }
+
+            OnPropertyChanged(string.Empty);
         }
 
         [RelayCommand]
@@ -153,10 +155,19 @@ namespace LazyBootstrap.ViewModels
         [RelayCommand]
         private Task SelectSubDisplayAsync()
         {
+            if (!IsDualDisplay)
+            {
+                SelectedTarget = DisplaySelectionTarget.None;
+                ShowNoScreenSelected = true;
+                ShowMainScreenConfig = false;
+                ShowSubScreenConfig = false;
+                return Task.CompletedTask;
+            }
+
             SelectedTarget = DisplaySelectionTarget.Sub;
             ShowNoScreenSelected = false;
             ShowMainScreenConfig = false;
-            ShowSubScreenConfig = IsDualDisplay;
+            ShowSubScreenConfig = true;
             return Task.CompletedTask;
         }
 

@@ -392,7 +392,7 @@
                                 </StackPanel>
                                 <Grid Grid.Column="1"/>
                                 <ToggleSwitch x:Name="DisplayConfigEnabledToggleSwitch" Grid.Column="2" VerticalAlignment="Center" IsChecked="False"/>
-                                <ComboBox x:Name="DisplayModeComboBox" Grid.Column="3" Width="120" SelectedIndex="1">
+                                <ComboBox x:Name="DisplayModeComboBox" Grid.Column="3" Width="120">
                                     <ComboBoxItem Content="单屏"/>
                                     <ComboBoxItem Content="双屏"/>
                                 </ComboBox>
