@@ -12,8 +12,6 @@ namespace LazyBootstrap.Services.Paths
 
         string ConfigFilePath { get; }
 
-        bool PortableMode { get; set; }
-
         string ContentsDirectoryOverride { get; }
 
         string AsphyxiaDirectoryOverride { get; }
@@ -31,8 +29,6 @@ namespace LazyBootstrap.Services.Paths
         string GetAsphyxiaPath();
 
         string GetSpiceXmlPath();
-
-        string GetSpiceXmlPath(bool portableMode);
 
         string GetBundledLibsDirectoryPath();
 
@@ -86,11 +82,6 @@ namespace LazyBootstrap.Services.Paths
         /// Gets the configuration file path.
         /// </summary>
         public string ConfigFilePath { get; }
-
-        /// <summary>
-        /// Gets or sets a value that indicates whether portable mode is enabled.
-        /// </summary>
-        public bool PortableMode { get; set; }
 
         /// <summary>
         /// Gets the normalized contents directory override.
@@ -161,26 +152,11 @@ namespace LazyBootstrap.Services.Paths
         }
 
         /// <summary>
-        /// Gets the resolved SpiceTools XML path for the current portable-mode state.
+        /// Gets the resolved SpiceTools XML path.
         /// </summary>
         /// <returns>The effective SpiceTools XML path.</returns>
         public string GetSpiceXmlPath()
         {
-            return GetSpiceXmlPath(PortableMode);
-        }
-
-        /// <summary>
-        /// Gets the resolved SpiceTools XML path for a specific portable-mode state.
-        /// </summary>
-        /// <param name="portableMode">A value that indicates whether portable mode should be assumed.</param>
-        /// <returns>The effective SpiceTools XML path.</returns>
-        public string GetSpiceXmlPath(bool portableMode)
-        {
-            if (portableMode)
-            {
-                return Path.Combine(GetContentsDirectoryPath(), "lazy", "spicetools.xml");
-            }
-
             string appDataDir = SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.ApplicationData);
             return Path.Combine(appDataDir, "spicetools.xml");
         }

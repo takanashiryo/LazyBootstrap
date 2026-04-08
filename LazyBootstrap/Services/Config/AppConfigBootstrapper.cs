@@ -48,19 +48,14 @@ namespace LazyBootstrap.Services.Config
                 config.WriteString(DisplaySectionName, "exitrestore", (!noRestore).ToString().ToLowerInvariant());
             }
 
-            // Migrate old usepreconfig key to portablemode
-            var oldValue = config.ReadString(SettingSectionName, "usepreconfig", string.Empty);
-            if (!string.IsNullOrWhiteSpace(oldValue))
-            {
-                config.WriteString(SettingSectionName, "portablemode", oldValue);
-            }
+            config.DeleteKey(SettingSectionName, "portablemode");
+            config.DeleteKey(SettingSectionName, "usepreconfig");
 
             EnsureDefaults(config);
         }
 
         private static void EnsureDefaults(IConfigHandler config)
         {
-            EnsureDefault(config, SettingSectionName, "portablemode", "false");
             EnsureDefault(config, SettingSectionName, "noasphyxia", "false");
             EnsureDefault(config, SettingSectionName, "compatlayer", "false");
             EnsureDefault(config, SettingSectionName, "cl-rendermode", "dx9on12");
@@ -100,7 +95,6 @@ namespace LazyBootstrap.Services.Config
             var lines = new List<string>
             {
                 "[Setting]",
-                "portablemode = \"false\"",
                 "noasphyxia = \"false\"",
                 "compatlayer = \"false\"",
                 "cl-rendermode = \"dx9on12\"",

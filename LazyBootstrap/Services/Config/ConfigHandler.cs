@@ -16,6 +16,8 @@ public interface IConfigHandler
 
     void MoveKey(string sourceSection, string targetSection, string key);
 
+    void DeleteKey(string section, string key);
+
     string ReadString(string section, string key, string defaultValue = "");
 
     (List<ServerPresetItem> Presets, string ActivePreset, bool Mutated) LoadServerPresets(string nonePresetName, string asphyxiaPresetName, string asphyxiaDefaultUrl);
@@ -195,6 +197,55 @@ public class ConfigHandler : IConfigHandler
 
             NormalizeBlankLines(lines);
             WriteLinesUnsafe(lines);
+        }
+    }
+
+    /// <summary>
+    /// Deletes a key from the specified section.
+    /// </summary>
+    /// <param name="section">A section name.</param>
+    /// <param name="key">A key name.</param>
+    public void DeleteKey(string section, string key)
+    {
+        lock (_sync)
+        {
+            if (string.IsNullOrWhiteSpace(section)
+                || string.IsNullOrWhiteSpace(key)
+                || !File.Exists(_path))
+            {
+                return;
+            }
+
+            var lines = LoadLinesUnsafe();
+            if (!TryGetSectionBounds(lines, section, out var headerIndex, out var contentStart, out var contentEndExclusive))
+            {
+                return;
+            }
+
+            for (int i = contentStart; i < contentEndExclusive; i++)
+            {
+                var trimmed = lines[i].Trim();
+                if (!TryParseTomlKeyValue(trimmed, out var parsedKey, out _))
+                {
+                    continue;
+                }
+
+                if (!string.Equals(parsedKey, key, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                lines.RemoveAt(i);
+                if (TryGetSectionBounds(lines, section, out headerIndex, out contentStart, out contentEndExclusive)
+                    && contentEndExclusive <= contentStart)
+                {
+                    lines.RemoveAt(headerIndex);
+                }
+
+                NormalizeBlankLines(lines);
+                WriteLinesUnsafe(lines);
+                return;
+            }
         }
     }
 

@@ -67,7 +67,6 @@ namespace LazyBootstrap.Views
             if (UnloadCompatButton != null) UnloadCompatButton.IsEnabled = enabled;
             if (CompatTypeComboBox != null) CompatTypeComboBox.IsEnabled = enabled;
 
-            if (PortableModeToggleSwitch != null) PortableModeToggleSwitch.IsEnabled = enabled;
             if (WindowedToggleSwitch != null) WindowedToggleSwitch.IsEnabled = enabled;
             if (NoAsphyxiaToggleSwitch != null) NoAsphyxiaToggleSwitch.IsEnabled = enabled;
             if (ExitRestoreToggleSwitch != null) ExitRestoreToggleSwitch.IsEnabled = enabled;

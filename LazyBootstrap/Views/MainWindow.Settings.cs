@@ -68,11 +68,9 @@ namespace LazyBootstrap.Views
                         ApplySettingsAvailabilityStateToUi();
                         break;
 
-                    case nameof(SettingsPageViewModel.PortableMode):
                     case nameof(SettingsPageViewModel.GameDirectoryOverride):
                     case nameof(SettingsPageViewModel.AsphyxiaDirectoryOverride):
                     case nameof(SettingsPageViewModel.NoAsphyxia):
-                    case nameof(SettingsPageViewModel.CanImportRecommendedConfig):
                     case nameof(SettingsPageViewModel.CompatibilityLayerEnabled):
                     case nameof(SettingsPageViewModel.CompatibilityRenderMode):
                         ApplyStartupSettingsViewModelStateToUi();
@@ -247,81 +245,6 @@ namespace LazyBootstrap.Views
             return "未知";
         }
 
-        private async void OnPortableModeToggleChanged(object sender, RoutedEventArgs e)
-        {
-            await TogglePortableModeCoreAsync();
-        }
-
-        private async Task TogglePortableModeCoreAsync()
-        {
-            if (_isLoadingSettings || _isUpdatingPortableModeUi)
-            {
-                return;
-            }
-
-            bool newPortableMode = PortableModeToggleSwitch.IsChecked == true;
-
-            if (newPortableMode)
-            {
-                // Revert toggle immediately — only enable after user confirms
-                ApplyPortableModeToggleState(false);
-
-                var dialogBuilder = _dialogManager.CreateDialog()
-                    .OfType(NotificationType.Warning)
-                    .WithTitle("切换至便携模式")
-                    .WithContent("切换至便携模式后，spice2x将不再调用系统内的配置，转而使用游戏文件夹里的配置文件，可以对游戏进行随意的拷贝\n（按键绑定根据你所选的模式不同，可能无法迁移）\n你确定要切换吗？")
-                    .WithActionButton("确定", dialog =>
-                    {
-                        _ = ApplyPortableModeAsync(true);
-                    }, true, "Flat")
-                    .WithActionButton("取消", _ => { }, true, "Basic")
-                    .Dismiss().ByClickingBackground();
-                ApplyDialogNotificationIcon(dialogBuilder, NotificationType.Warning);
-                dialogBuilder.TryShow();
-                return;
-            }
-
-            await ApplyPortableModeAsync(false);
-        }
-
-        private async Task ApplyPortableModeAsync(bool enabled)
-        {
-            bool previousMode = _portableMode;
-            _viewModel.Settings.PortableMode = enabled;
-            await _settingsWorkflowService.PersistPortableModeAsync(_viewModel.Settings);
-
-            _portableMode = _viewModel.Settings.PortableMode;
-            _paths.PortableMode = _portableMode;
-            ApplyPortableModeToggleState(_portableMode);
-
-            if (_portableMode == previousMode)
-            {
-                return;
-            }
-
-            var targetXmlPath = GetSpiceXmlPathForMode(_portableMode);
-            ShowInfoToast("便携模式切换", _portableMode
-                ? $"已切换至便携模式，XML: {targetXmlPath}"
-                : $"已切换至系统模式，XML: {targetXmlPath}");
-
-            RefreshSettingsPanelAfterPortableModeSwitch();
-        }
-
-        private string GetSpiceXmlPathForMode(bool portableMode)
-        {
-            return _paths.GetSpiceXmlPath(portableMode);
-        }
-
-        private void RefreshSettingsPanelAfterPortableModeSwitch()
-        {
-            LoadSpiceConfig();
-            LoadServerPresetsFromConfig();
-            SelectPresetByCurrentFields();
-            UpdateCompatLayerStatus();
-            SyncCompatModeButtonsFromCombo();
-            UpdateRecommendedSpiceConfigButtonVisibility();
-        }
-
         private void RefreshPathOverrideDependentUi()
         {
             RefreshSettingsVersionTexts();
@@ -362,9 +285,6 @@ namespace LazyBootstrap.Views
 
             try
             {
-                _portableMode = _viewModel.Settings.PortableMode;
-                _paths.PortableMode = _portableMode;
-                ApplyPortableModeToggleState(_portableMode);
                 ApplyPathOverrideTextBoxesFromViewModel();
 
                 if (NoAsphyxiaToggleSwitch != null)
@@ -636,39 +556,6 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void ApplyPortableModeToggleState(bool enabled)
-        {
-            _viewModel.Settings.PortableMode = enabled;
-            _isUpdatingPortableModeUi = true;
-            try
-            {
-                if (PortableModeToggleSwitch != null)
-                {
-                    PortableModeToggleSwitch.IsChecked = enabled;
-                }
-            }
-            finally
-            {
-                _isUpdatingPortableModeUi = false;
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                _isUpdatingPortableModeUi = true;
-                try
-                {
-                    if (PortableModeToggleSwitch != null)
-                    {
-                        PortableModeToggleSwitch.IsChecked = enabled;
-                    }
-                }
-                finally
-                {
-                    _isUpdatingPortableModeUi = false;
-                }
-            }, DispatcherPriority.Render);
-        }
-
         private bool EnsureSpiceXmlExistsForToggleOrRevert(ToggleSwitch toggle, Action onReverted)
         {
             var xmlPath = GetSpiceXmlPath();
@@ -725,7 +612,6 @@ namespace LazyBootstrap.Views
 
             try
             {
-                _configFile.WriteString(SettingSectionName, "portablemode", _portableMode.ToString().ToLowerInvariant());
                 _configFile.WriteString(SettingSectionName, "contentsoverride", _paths.ContentsDirectoryOverride);
                 _configFile.WriteString(SettingSectionName, "asphyxiaoverride", _paths.AsphyxiaDirectoryOverride);
 
@@ -1736,7 +1622,7 @@ namespace LazyBootstrap.Views
         {
             if (ImportRecommendedSpiceConfigButton != null)
             {
-                ImportRecommendedSpiceConfigButton.IsVisible = !_portableMode && _viewModel.Settings.IsSpiceConfigAvailable;
+                ImportRecommendedSpiceConfigButton.IsVisible = _viewModel.Settings.IsSpiceConfigAvailable;
             }
         }
     }

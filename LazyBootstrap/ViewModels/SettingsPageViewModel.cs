@@ -27,9 +27,6 @@ namespace LazyBootstrap.ViewModels
         public ObservableCollection<AsioDriverOption> AsioDrivers { get; } = new ObservableCollection<AsioDriverOption>();
 
         [ObservableProperty]
-        private bool portableMode;
-
-        [ObservableProperty]
         private bool noAsphyxia;
 
         [ObservableProperty]
@@ -37,9 +34,6 @@ namespace LazyBootstrap.ViewModels
 
         [ObservableProperty]
         private bool exitRestore = true;
-
-        [ObservableProperty]
-        private bool canImportRecommendedConfig = true;
 
         [ObservableProperty]
         private bool isSpiceConfigAvailable = true;
@@ -163,11 +157,6 @@ namespace LazyBootstrap.ViewModels
             {
                 _suspendPersistence = false;
             }
-        }
-
-        public Task PersistPortableModeAsync()
-        {
-            return _workflowService?.PersistPortableModeAsync(this) ?? Task.CompletedTask;
         }
 
         public Task PersistLauncherSettingsAsync()

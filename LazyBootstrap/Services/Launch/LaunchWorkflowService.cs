@@ -265,12 +265,6 @@ namespace LazyBootstrap.Services.Launch
                 }
 
                 var argumentsBuilder = new StringBuilder();
-                if (settingsViewModel.PortableMode)
-                {
-                    argumentsBuilder.Append("-cfgpath lazy/spicetools.xml ");
-                    argumentsBuilder.Append("-patchcfgpath lazy/spicetools_patch_manager.json ");
-                    argumentsBuilder.Append("-modules modules ");
-                }
 
                 AppendLaunchOutput(launchViewModel, "正在启动游戏...");
                 AppendLaunchOutput(launchViewModel, $"启动参数: {argumentsBuilder}");

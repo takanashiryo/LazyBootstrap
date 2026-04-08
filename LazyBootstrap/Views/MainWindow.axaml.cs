@@ -28,7 +28,6 @@ namespace LazyBootstrap.Views
     {
         private readonly MainWindowViewModel _viewModel = null!;
         private readonly IConfigHandler _configFile = null!;
-        private bool _portableMode = false; // 是否使用便携模式
         private bool _isLoadingSettings = false; // 标记是否正在加载设置
 
         // 统一路径前缀
@@ -83,7 +82,6 @@ namespace LazyBootstrap.Views
         private bool _isSettingsBusy;
         private bool _isSyncingModel;
         private bool _isUpdatingCompatUi;
-        private bool _isUpdatingPortableModeUi;
         private bool _isUpdatingSpiceToggleUi;
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
@@ -816,12 +814,6 @@ namespace LazyBootstrap.Views
 
         private void InitializeStartupSettingsBindings()
         {
-            if (PortableModeToggleSwitch != null)
-            {
-                PortableModeToggleSwitch.IsCheckedChanged -= OnPortableModeToggleChanged;
-                PortableModeToggleSwitch.IsCheckedChanged += OnPortableModeToggleChanged;
-            }
-
             if (WindowedToggleSwitch != null)
             {
                 WindowedToggleSwitch.IsCheckedChanged += (s, e) =>
