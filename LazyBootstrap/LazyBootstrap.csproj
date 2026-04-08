@@ -73,6 +73,11 @@
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
     </None>
+    <None Include="Public\cfg\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>cfg\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </None>
   </ItemGroup>
 
 </Project>

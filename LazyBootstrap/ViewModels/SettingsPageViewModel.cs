@@ -42,6 +42,12 @@ namespace LazyBootstrap.ViewModels
         private bool canImportRecommendedConfig = true;
 
         [ObservableProperty]
+        private bool isSpiceConfigAvailable = true;
+
+        [ObservableProperty]
+        private string spiceConfigEmptyStateMessage = "未找到任何spice2x配置文件";
+
+        [ObservableProperty]
         private bool isSettingsBusy;
 
         [ObservableProperty]
@@ -214,6 +220,9 @@ namespace LazyBootstrap.ViewModels
 
         [RelayCommand]
         private Task ImportRecommendedConfigAsync() => _workflowService?.ImportRecommendedConfigAsync(this) ?? Task.CompletedTask;
+
+        [RelayCommand]
+        private Task ImportPresetConfigAsync() => _workflowService?.ImportPresetConfigAsync(this) ?? Task.CompletedTask;
 
         [RelayCommand]
         private async Task EnableCompatibilityLayerAsync()

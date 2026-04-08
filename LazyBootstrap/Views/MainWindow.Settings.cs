@@ -63,6 +63,11 @@ namespace LazyBootstrap.Views
 
                 switch (propertyName)
                 {
+                    case nameof(SettingsPageViewModel.IsSpiceConfigAvailable):
+                    case nameof(SettingsPageViewModel.SpiceConfigEmptyStateMessage):
+                        ApplySettingsAvailabilityStateToUi();
+                        break;
+
                     case nameof(SettingsPageViewModel.PortableMode):
                     case nameof(SettingsPageViewModel.GameDirectoryOverride):
                     case nameof(SettingsPageViewModel.AsphyxiaDirectoryOverride):
@@ -370,7 +375,7 @@ namespace LazyBootstrap.Views
                 _lastKnownCompatRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_viewModel.Settings.CompatibilityRenderMode);
                 ApplyCompatibilityStateFromViewModel();
                 ApplyServerPresetViewModelStateToUi();
-                UpdateRecommendedSpiceConfigButtonVisibility();
+                ApplySettingsAvailabilityStateToUi();
             }
             finally
             {
@@ -385,18 +390,45 @@ namespace LazyBootstrap.Views
 
             try
             {
+                ApplySettingsAvailabilityStateToUi();
+                ApplyInfoViewModelStateToUi();
+                if (!_viewModel.Settings.IsSpiceConfigAvailable)
+                {
+                    return;
+                }
+
                 ApplySpiceSettingsFromViewModel();
                 ApplyAsioDriverChoicesFromViewModel();
                 ApplyNetworkAdapterStateFromViewModel();
                 ApplyServerPresetViewModelStateToUi();
-                ApplyInfoViewModelStateToUi();
                 ApplyCompatibilityStateFromViewModel();
-                UpdateRecommendedSpiceConfigButtonVisibility();
             }
             finally
             {
                 _isLoadingSettings = previousLoadingState;
             }
+        }
+
+        private void ApplySettingsAvailabilityStateToUi()
+        {
+            bool isSpiceConfigAvailable = _viewModel.Settings.IsSpiceConfigAvailable;
+
+            if (GameSettingsLayout != null)
+            {
+                GameSettingsLayout.IsVisible = isSpiceConfigAvailable;
+            }
+
+            if (SettingsEmptyStatePanel != null)
+            {
+                SettingsEmptyStatePanel.IsVisible = !isSpiceConfigAvailable;
+            }
+
+            if (SettingsEmptyStateTextBlock != null)
+            {
+                SettingsEmptyStateTextBlock.Text = _viewModel.Settings.SpiceConfigEmptyStateMessage ?? string.Empty;
+            }
+
+            UpdateRecommendedSpiceConfigButtonVisibility();
         }
 
         private void ApplyInfoViewModelStateToUi()
@@ -1219,6 +1251,12 @@ namespace LazyBootstrap.Views
             _isLoadingSettings = true;
             try
             {
+                ApplySettingsAvailabilityStateToUi();
+                if (!_viewModel.Settings.IsSpiceConfigAvailable)
+                {
+                    return;
+                }
+
                 if (!TryGetSpiceOptionsContext(LoadOptions.PreserveWhitespace, false, out var context))
                 {
                     return;
@@ -1713,9 +1751,8 @@ namespace LazyBootstrap.Views
         {
             if (ImportRecommendedSpiceConfigButton != null)
             {
-                ImportRecommendedSpiceConfigButton.IsVisible = !_portableMode;
+                ImportRecommendedSpiceConfigButton.IsVisible = !_portableMode && _viewModel.Settings.IsSpiceConfigAvailable;
             }
         }
     }
 }
-

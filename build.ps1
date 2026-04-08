@@ -50,9 +50,8 @@ function Copy-MainPayload {
         Copy-Item -LiteralPath $_.FullName -Destination $DestinationDirectory -Force
     }
 
-    $publishedLibs = Join-Path $SourceDirectory 'libs'
-    if (Test-Path -LiteralPath $publishedLibs -PathType Container) {
-        Copy-Item -LiteralPath $publishedLibs -Destination $DestinationDirectory -Recurse -Force
+    Get-ChildItem -LiteralPath $SourceDirectory -Directory | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $DestinationDirectory -Recurse -Force
     }
 }
 

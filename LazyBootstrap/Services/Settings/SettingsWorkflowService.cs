@@ -29,6 +29,7 @@ namespace LazyBootstrap.Services.Settings
         Task PersistCompatibilityRenderModeAsync(SettingsPageViewModel viewModel);
         Task EditConfigAsync(SettingsPageViewModel viewModel);
         Task ImportRecommendedConfigAsync(SettingsPageViewModel viewModel);
+        Task ImportPresetConfigAsync(SettingsPageViewModel viewModel);
         Task SelectGameDirectoryOverrideAsync(SettingsPageViewModel viewModel);
         Task SelectAsphyxiaDirectoryOverrideAsync(SettingsPageViewModel viewModel);
         Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel);
@@ -42,6 +43,7 @@ namespace LazyBootstrap.Services.Settings
         private const string AsphyxiaPresetName = "Asphyxia";
         private const string AsphyxiaDefaultUrl = "http://localhost:8083";
         private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
+        private const string MissingSpiceConfigMessage = "未找到任何spice2x配置文件";
 
         private static readonly SpiceOptionUpdate[] RecommendedSpiceOptionUpdates =
         {
@@ -119,6 +121,7 @@ namespace LazyBootstrap.Services.Settings
             _paths.PortableMode = ReadBool(SettingSectionName, "portablemode", false);
             _paths.SetContentsDirectoryOverride(_configHandler.ReadString(SettingSectionName, "contentsoverride", string.Empty));
             _paths.SetAsphyxiaDirectoryOverride(_configHandler.ReadString(SettingSectionName, "asphyxiaoverride", string.Empty));
+            bool isSpiceConfigAvailable = IsAppDataSpiceConfigAvailable();
 
             viewModel.RunSilently(() =>
             {
@@ -129,6 +132,8 @@ namespace LazyBootstrap.Services.Settings
                 viewModel.CompatibilityRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
                 viewModel.CompatibilityLayerEnabled = IsCompatLayerEffectivelyEnabled();
                 viewModel.CanImportRecommendedConfig = !viewModel.PortableMode;
+                viewModel.IsSpiceConfigAvailable = isSpiceConfigAvailable;
+                viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
 
             LoadServerPresets(viewModel);
@@ -138,6 +143,13 @@ namespace LazyBootstrap.Services.Settings
         public async Task WarmDeferredAsync(SettingsPageViewModel viewModel)
         {
             ArgumentNullException.ThrowIfNull(viewModel);
+
+            if (!RefreshSpiceConfigAvailability(viewModel))
+            {
+                viewModel.AsioDrivers.Clear();
+                viewModel.NetworkAdapters.Clear();
+                return;
+            }
 
             var currentAsioDriverValue = viewModel.AsioDriverValue;
             var currentNetworkIp = viewModel.NetworkAdapterIp;
@@ -186,6 +198,11 @@ namespace LazyBootstrap.Services.Settings
             _paths.PortableMode = viewModel.PortableMode;
             _configHandler.WriteString(SettingSectionName, "portablemode", viewModel.PortableMode.ToString().ToLowerInvariant());
             viewModel.CanImportRecommendedConfig = !viewModel.PortableMode;
+            if (!RefreshSpiceConfigAvailability(viewModel))
+            {
+                return Task.CompletedTask;
+            }
+
             LoadSpiceSettings(viewModel);
             RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
             RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
@@ -204,6 +221,11 @@ namespace LazyBootstrap.Services.Settings
             _paths.SetAsphyxiaDirectoryOverride(viewModel.AsphyxiaDirectoryOverride);
             _configHandler.WriteString(SettingSectionName, "contentsoverride", _paths.ContentsDirectoryOverride);
             _configHandler.WriteString(SettingSectionName, "asphyxiaoverride", _paths.AsphyxiaDirectoryOverride);
+            if (!RefreshSpiceConfigAvailability(viewModel))
+            {
+                return Task.CompletedTask;
+            }
+
             LoadSpiceSettings(viewModel);
             RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
             RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
@@ -480,6 +502,12 @@ namespace LazyBootstrap.Services.Settings
             return ImportRecommendedConfigCoreAsync(viewModel);
         }
 
+        public Task ImportPresetConfigAsync(SettingsPageViewModel viewModel)
+        {
+            ArgumentNullException.ThrowIfNull(viewModel);
+            return ImportPresetConfigCoreAsync(viewModel);
+        }
+
         private async Task ImportRecommendedConfigCoreAsync(SettingsPageViewModel viewModel)
         {
             var confirmed = await _uiInteractionService.ShowDialogAsync(
@@ -526,6 +554,55 @@ namespace LazyBootstrap.Services.Settings
             catch (Exception ex)
             {
                 _uiInteractionService.ShowErrorToast("导入失败", ex.Message);
+            }
+        }
+
+        private async Task ImportPresetConfigCoreAsync(SettingsPageViewModel viewModel)
+        {
+            viewModel.IsSettingsBusy = true;
+
+            try
+            {
+                string sourcePath = Path.Combine(_paths.ApplicationDirectoryPath, "cfg", "spicetools.xml");
+                if (!File.Exists(sourcePath))
+                {
+                    _uiInteractionService.ShowErrorToast("导入失败", $"未找到预设配置文件: {sourcePath}");
+                    return;
+                }
+
+                string targetPath = _paths.GetSpiceXmlPath(false);
+                string targetDirectory = Path.GetDirectoryName(targetPath) ?? string.Empty;
+                if (!string.IsNullOrWhiteSpace(targetDirectory))
+                {
+                    Directory.CreateDirectory(targetDirectory);
+                }
+
+                if (File.Exists(targetPath))
+                {
+                    File.Copy(targetPath, targetPath + ".bak", overwrite: true);
+                }
+
+                File.Copy(sourcePath, targetPath, overwrite: true);
+
+                await InitializeStartupAsync(viewModel);
+                await WarmDeferredAsync(viewModel);
+
+                if (!viewModel.IsSpiceConfigAvailable)
+                {
+                    _uiInteractionService.ShowErrorToast("导入失败", "预设配置导入后仍未检测到 Sound Voltex 配置。");
+                    return;
+                }
+
+                _uiInteractionService.ShowInfoToast("导入完成", "预设 spice2x 配置已导入。");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to import preset spice2x config.");
+                _uiInteractionService.ShowErrorToast("导入失败", ex.Message);
+            }
+            finally
+            {
+                viewModel.IsSettingsBusy = false;
             }
         }
 
@@ -768,6 +845,11 @@ namespace LazyBootstrap.Services.Settings
 
         private void LoadSpiceSettings(SettingsPageViewModel viewModel)
         {
+            if (!viewModel.IsSpiceConfigAvailable)
+            {
+                return;
+            }
+
             var snapshot = ReadSpiceSettingsSnapshot();
             viewModel.RunSilently(() => ApplySpiceSettingsSnapshot(viewModel, snapshot));
         }
@@ -978,6 +1060,43 @@ namespace LazyBootstrap.Services.Settings
         private bool ReadBool(string section, string key, bool defaultValue)
         {
             return bool.TryParse(_configHandler.ReadString(section, key, defaultValue ? "true" : "false"), out var value) && value;
+        }
+
+        private bool RefreshSpiceConfigAvailability(SettingsPageViewModel viewModel)
+        {
+            bool isSpiceConfigAvailable = IsAppDataSpiceConfigAvailable();
+            viewModel.RunSilently(() =>
+            {
+                viewModel.IsSpiceConfigAvailable = isSpiceConfigAvailable;
+                viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
+            });
+
+            return isSpiceConfigAvailable;
+        }
+
+        private bool IsAppDataSpiceConfigAvailable()
+        {
+            string spiceXmlPath = _paths.GetSpiceXmlPath(false);
+            if (!File.Exists(spiceXmlPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                return _spiceConfigFileService.TryLoadOptionsContext(
+                    spiceXmlPath,
+                    LoadOptions.None,
+                    false,
+                    out _,
+                    out _,
+                    out _);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "AppData spice config validation failed for {SpiceXmlPath}.", spiceXmlPath);
+                return false;
+            }
         }
 
         private static int ResolveWindowModeIndex(string windowBorderValue)

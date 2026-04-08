@@ -154,9 +154,10 @@
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
                         <suki:BusyArea x:Name="SettingsBusyArea" Margin="20,14" BusyText="spicecfg 运行中..." HorizontalAlignment="Center" MaxWidth="1240">
-                            <suki:SettingsLayout x:Name="GameSettingsLayout" Margin="0,6,0,0">
-                                <suki:SettingsLayout.Items>
-                                    <generic:List x:TypeArguments="suki:SettingsLayoutItem">
+                            <Grid>
+                                <suki:SettingsLayout x:Name="GameSettingsLayout" Margin="0,6,0,0">
+                                    <suki:SettingsLayout.Items>
+                                        <generic:List x:TypeArguments="suki:SettingsLayoutItem">
                                         <suki:SettingsLayoutItem Header="基础">
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
@@ -355,9 +356,32 @@
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>
                                         </suki:SettingsLayoutItem>
-                                    </generic:List>
-                                </suki:SettingsLayout.Items>
-                            </suki:SettingsLayout>
+                                        </generic:List>
+                                    </suki:SettingsLayout.Items>
+                                </suki:SettingsLayout>
+
+                                <StackPanel x:Name="SettingsEmptyStatePanel"
+                                            IsVisible="False"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Spacing="18"
+                                            MaxWidth="420"
+                                            Margin="24">
+                                    <TextBlock x:Name="SettingsEmptyStateTextBlock"
+                                               Text="{Binding Settings.SpiceConfigEmptyStateMessage}"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"
+                                               FontSize="24"
+                                               FontWeight="SemiBold"/>
+                                    <Button x:Name="ImportPresetConfigButton"
+                                            Classes="Flat"
+                                            HorizontalAlignment="Center"
+                                            MinWidth="180"
+                                            Content="导入预设配置"
+                                            Command="{Binding Settings.ImportPresetConfigCommand}"/>
+                                </StackPanel>
+                            </Grid>
                         </suki:BusyArea>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
