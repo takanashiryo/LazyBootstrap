@@ -120,6 +120,30 @@
                                     </SplitButton>
                                 </StackPanel>
                             </Grid>
+
+                            <Grid x:Name="LaunchFailureOverlay"
+                                  Grid.RowSpan="3"
+                                  IsVisible="False"
+                                  IsHitTestVisible="False"
+                                  ZIndex="100">
+                                <Border x:Name="LaunchFailureBorder"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        MinWidth="480"
+                                        Padding="48,22"
+                                        Background="#FF000000"
+                                        BorderBrush="#FFFF0000"
+                                        BorderThickness="4"
+                                        CornerRadius="0">
+                                    <TextBlock Text="启动失败"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               TextAlignment="Center"
+                                               Foreground="White"
+                                               FontSize="46"
+                                               FontWeight="SemiBold"/>
+                                </Border>
+                            </Grid>
                         </Grid>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>

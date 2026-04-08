@@ -1,8 +1,11 @@
 using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.Notifications;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 
@@ -10,6 +13,14 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
+        private static readonly Color LaunchFailureOverlayStartColor = Color.Parse("#FF0000");
+        private static readonly Color LaunchFailureOverlayEndColor = Color.Parse("#FFFFFF");
+        private static readonly TimeSpan LaunchFailureOverlayAnimationDuration = TimeSpan.FromSeconds(1.4);
+
+        private readonly SolidColorBrush _launchFailureOverlayBorderBrush = new SolidColorBrush(LaunchFailureOverlayStartColor);
+        private DispatcherTimer _launchFailureOverlayAnimationTimer;
+        private Stopwatch _launchFailureOverlayAnimationStopwatch;
+
         private void HookLaunchViewModelState()
         {
             if (_viewModel?.Launch == null)
@@ -17,10 +28,13 @@ namespace LazyBootstrap.Views
                 return;
             }
 
+            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchFailureOverlayPointerPressed);
+            AddHandler(InputElement.PointerPressedEvent, OnLaunchFailureOverlayPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
             _viewModel.Launch.PropertyChanged -= OnLaunchViewModelPropertyChanged;
             _viewModel.Launch.PropertyChanged += OnLaunchViewModelPropertyChanged;
             _ = ApplyLaunchLogVisibilityAsync();
             _ = ApplyLaunchLogTextAsync();
+            _ = ApplyLaunchFailureOverlayVisibilityAsync();
         }
 
         private void UnhookLaunchViewModelState()
@@ -30,7 +44,9 @@ namespace LazyBootstrap.Views
                 return;
             }
 
+            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchFailureOverlayPointerPressed);
             _viewModel.Launch.PropertyChanged -= OnLaunchViewModelPropertyChanged;
+            StopLaunchFailureOverlayAnimation();
         }
 
         private void OnLaunchViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
@@ -45,6 +61,12 @@ namespace LazyBootstrap.Views
                 || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.LaunchLogText), StringComparison.Ordinal))
             {
                 _ = ApplyLaunchLogTextAsync();
+            }
+
+            if (string.IsNullOrWhiteSpace(e?.PropertyName)
+                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.IsLaunchFailureOverlayVisible), StringComparison.Ordinal))
+            {
+                _ = ApplyLaunchFailureOverlayVisibilityAsync();
             }
         }
 
@@ -230,6 +252,151 @@ namespace LazyBootstrap.Views
             {
                 LogOutputTextBlock.Text = _viewModel.Launch.LaunchLogText ?? string.Empty;
             }
+        }
+
+        private async Task ApplyLaunchFailureOverlayVisibilityAsync()
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                await Dispatcher.UIThread.InvokeAsync(async () => await ApplyLaunchFailureOverlayVisibilityAsync());
+                return;
+            }
+
+            if (_viewModel.Launch.IsLaunchFailureOverlayVisible)
+            {
+                ShowLaunchFailureOverlay();
+                return;
+            }
+
+            HideLaunchFailureOverlay();
+        }
+
+        private void ShowLaunchFailureOverlay()
+        {
+            if (LaunchFailureOverlay == null)
+            {
+                return;
+            }
+
+            if (LaunchFailureBorder != null && !ReferenceEquals(LaunchFailureBorder.BorderBrush, _launchFailureOverlayBorderBrush))
+            {
+                LaunchFailureBorder.BorderBrush = _launchFailureOverlayBorderBrush;
+            }
+
+            LaunchFailureOverlay.IsVisible = true;
+            StartLaunchFailureOverlayAnimation();
+        }
+
+        private void DismissLaunchFailureOverlay()
+        {
+            if (_viewModel?.Launch == null || !_viewModel.Launch.IsLaunchFailureOverlayVisible)
+            {
+                return;
+            }
+
+            _viewModel.Launch.IsLaunchFailureOverlayVisible = false;
+            HideLaunchFailureOverlay();
+        }
+
+        private void HideLaunchFailureOverlay()
+        {
+            StopLaunchFailureOverlayAnimation();
+
+            if (LaunchFailureOverlay == null)
+            {
+                return;
+            }
+
+            LaunchFailureOverlay.IsVisible = false;
+        }
+
+        private void StartLaunchFailureOverlayAnimation()
+        {
+            if (_launchFailureOverlayAnimationTimer == null)
+            {
+                _launchFailureOverlayAnimationTimer = new DispatcherTimer
+                {
+                    Interval = TimeSpan.FromMilliseconds(16)
+                };
+                _launchFailureOverlayAnimationTimer.Tick += OnLaunchFailureOverlayAnimationTick;
+            }
+
+            if (_launchFailureOverlayAnimationStopwatch == null)
+            {
+                _launchFailureOverlayAnimationStopwatch = new Stopwatch();
+            }
+
+            _launchFailureOverlayBorderBrush.Color = LaunchFailureOverlayStartColor;
+            _launchFailureOverlayAnimationStopwatch.Restart();
+
+            if (!_launchFailureOverlayAnimationTimer.IsEnabled)
+            {
+                _launchFailureOverlayAnimationTimer.Start();
+            }
+        }
+
+        private void StopLaunchFailureOverlayAnimation()
+        {
+            if (_launchFailureOverlayAnimationTimer != null)
+            {
+                _launchFailureOverlayAnimationTimer.Stop();
+            }
+
+            if (_launchFailureOverlayAnimationStopwatch != null && _launchFailureOverlayAnimationStopwatch.IsRunning)
+            {
+                _launchFailureOverlayAnimationStopwatch.Stop();
+            }
+
+            _launchFailureOverlayBorderBrush.Color = LaunchFailureOverlayStartColor;
+
+            if (LaunchFailureBorder != null && !ReferenceEquals(LaunchFailureBorder.BorderBrush, _launchFailureOverlayBorderBrush))
+            {
+                LaunchFailureBorder.BorderBrush = _launchFailureOverlayBorderBrush;
+            }
+        }
+
+        private void OnLaunchFailureOverlayPointerPressed(object sender, PointerPressedEventArgs e)
+        {
+            if (_viewModel?.Launch == null || !_viewModel.Launch.IsLaunchFailureOverlayVisible)
+            {
+                return;
+            }
+
+            DismissLaunchFailureOverlay();
+            e.Handled = true;
+        }
+
+        private void OnLaunchFailureOverlayAnimationTick(object sender, EventArgs e)
+        {
+            if (LaunchFailureOverlay == null
+                || !LaunchFailureOverlay.IsVisible
+                || _launchFailureOverlayAnimationStopwatch == null)
+            {
+                return;
+            }
+
+            double durationMilliseconds = LaunchFailureOverlayAnimationDuration.TotalMilliseconds;
+            if (durationMilliseconds <= 0)
+            {
+                _launchFailureOverlayBorderBrush.Color = LaunchFailureOverlayStartColor;
+                return;
+            }
+
+            double cycleProgress = (_launchFailureOverlayAnimationStopwatch.Elapsed.TotalMilliseconds / durationMilliseconds) % 2d;
+            double pingPongProgress = cycleProgress <= 1d ? cycleProgress : 2d - cycleProgress;
+            double easedProgress = EaseInOutCubic(Math.Clamp(pingPongProgress, 0d, 1d));
+            _launchFailureOverlayBorderBrush.Color = InterpolateColor(LaunchFailureOverlayStartColor, LaunchFailureOverlayEndColor, easedProgress);
+        }
+
+        private static Color InterpolateColor(Color from, Color to, double progress)
+        {
+            progress = Math.Clamp(progress, 0d, 1d);
+
+            return Color.FromArgb(
+                (byte)Math.Round(from.A + ((to.A - from.A) * progress)),
+                (byte)Math.Round(from.R + ((to.R - from.R) * progress)),
+                (byte)Math.Round(from.G + ((to.G - from.G) * progress)),
+                (byte)Math.Round(from.B + ((to.B - from.B) * progress)));
         }
     }
 }

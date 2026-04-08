@@ -38,6 +38,9 @@ namespace LazyBootstrap.ViewModels
         [ObservableProperty]
         private bool isGameRunning;
 
+        [ObservableProperty]
+        private bool isLaunchFailureOverlayVisible;
+
         public void AttachContext(SettingsPageViewModel settingsViewModel, DisplayConfigurationPageViewModel displayViewModel)
         {
             _settingsViewModel = settingsViewModel;

@@ -148,6 +148,7 @@ namespace LazyBootstrap.Services.Launch
             _launchViewModel = launchViewModel;
             _displayViewModel = displayViewModel;
 
+            launchViewModel.IsLaunchFailureOverlayVisible = false;
             _gameProcessTracker.ResetManagedAsphyxiaTracking();
             _shellStateService.IsInteractionEnabled = false;
             _shellStateService.StatusText = "启动中...";
@@ -255,6 +256,7 @@ namespace LazyBootstrap.Services.Launch
                 {
                     launchViewModel.IsLaunching = false;
                     launchViewModel.IsGameRunning = false;
+                    launchViewModel.IsLaunchFailureOverlayVisible = false;
                     _shellStateService.IsInteractionEnabled = true;
                     _shellStateService.StatusText = "调试模式就绪";
                     launchViewModel.StateText = _shellStateService.StatusText;
@@ -302,6 +304,7 @@ namespace LazyBootstrap.Services.Launch
 
                 launchViewModel.IsLaunching = false;
                 launchViewModel.IsGameRunning = true;
+                launchViewModel.IsLaunchFailureOverlayVisible = false;
                 _shellStateService.StatusText = "游戏运行中";
                 launchViewModel.StateText = _shellStateService.StatusText;
                 AppendLaunchOutput(launchViewModel, "游戏已启动并进入运行状态。");
@@ -441,6 +444,7 @@ namespace LazyBootstrap.Services.Launch
                 {
                     _launchViewModel.IsLaunching = false;
                     _launchViewModel.IsGameRunning = false;
+                    _launchViewModel.IsLaunchFailureOverlayVisible = false;
                     _launchViewModel.StateText = _shellStateService.StatusText;
                 }
 
@@ -460,6 +464,7 @@ namespace LazyBootstrap.Services.Launch
             AppendLaunchOutput(launchViewModel, message, NotificationType.Error);
             launchViewModel.IsLaunching = false;
             launchViewModel.IsGameRunning = false;
+            launchViewModel.IsLaunchFailureOverlayVisible = true;
             _shellStateService.IsInteractionEnabled = true;
             _shellStateService.StatusText = "启动失败";
             launchViewModel.StateText = _shellStateService.StatusText;
