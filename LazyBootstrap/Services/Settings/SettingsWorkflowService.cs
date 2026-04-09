@@ -768,10 +768,15 @@ namespace LazyBootstrap.Services.Settings
 
         private void RefreshCompatibilityState(SettingsPageViewModel viewModel)
         {
+            var configuredRenderMode = ReadConfiguredCompatibilityRenderMode();
+            var runtimeState = GetCompatibilityLayerRuntimeState();
+
             viewModel.RunSilently(() =>
             {
-                viewModel.CompatibilityRenderMode = ReadConfiguredCompatibilityRenderMode();
-                viewModel.CompatibilityLayerEnabled = IsCompatLayerEffectivelyEnabled();
+                viewModel.CompatibilityRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
+                    ? configuredRenderMode
+                    : runtimeState.DetectedRenderMode;
+                viewModel.CompatibilityLayerEnabled = runtimeState.IsFullyApplied;
             });
         }
 
@@ -1017,17 +1022,21 @@ namespace LazyBootstrap.Services.Settings
 
         private bool IsCompatLayerEffectivelyEnabled()
         {
+            return GetCompatibilityLayerRuntimeState().IsFullyApplied;
+        }
+
+        private CompatibilityLayerRuntimeState GetCompatibilityLayerRuntimeState()
+        {
             try
             {
-                string modulesDir = Path.Combine(_paths.GetContentsDirectoryPath(), "modules");
-                string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
-                bool hasCompatFiles = compatFiles.Any(fileName => File.Exists(Path.Combine(modulesDir, fileName)));
-                bool configured = ReadBool(SettingSectionName, "compatlayer", false);
-                return configured || hasCompatFiles;
+                return CompatibilitySettingsService.DetectRuntimeState(
+                    _paths.GetContentsDirectoryPath(),
+                    _paths.GetBundledLibsDirectoryPath());
             }
-            catch
+            catch (Exception ex)
             {
-                return ReadBool(SettingSectionName, "compatlayer", false);
+                _logger.LogDebug(ex, "Failed to detect compatibility layer runtime state.");
+                return new CompatibilityLayerRuntimeState(false, string.Empty, false);
             }
         }
 
@@ -1172,7 +1181,6 @@ namespace LazyBootstrap.Services.Settings
             yield return new SpiceOptionUpdate("w", viewModel.Windowed ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("k", viewModel.DllInjection ?? string.Empty, false);
             yield return new SpiceOptionUpdate("sp2x-processefficiency", viewModel.PCoreOptimization ? "pcores" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-dx9on12", CompatibilitySettingsService.ResolveDxModeValue(viewModel.CompatibilityLayerEnabled, viewModel.CompatibilityRenderMode), false);
             yield return new SpiceOptionUpdate("sp2x-sdvxnosub", viewModel.DisableSubDisplay ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("sp2x-windowborder", ResolveWindowBorderValue(viewModel.WindowModeIndex));
             yield return new SpiceOptionUpdate("sdvxwsubborderless", viewModel.SubBorderless ? "/ENABLED" : string.Empty);

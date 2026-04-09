@@ -57,10 +57,13 @@ namespace LazyBootstrap.Services.Environment
                 _shellStateService.IsStatusProgressVisible = true;
                 _shellStateService.StatusProgressValue = 0d;
 
-                var summary = await EnvironmentScan.RunAsync((progress, _) =>
-                {
-                    _shellStateService.StatusProgressValue = Math.Clamp(progress, 0, 100);
-                });
+                var summary = await EnvironmentScan.RunAsync(
+                    (progress, _) =>
+                    {
+                        _shellStateService.StatusProgressValue = Math.Clamp(progress, 0, 100);
+                    },
+                    _paths.GetContentsDirectoryPath(),
+                    _paths.GetBundledLibsDirectoryPath());
 
                 viewModel.EnvironmentSummary = summary.ErrorSummary ?? string.Empty;
                 viewModel.HasEnvironmentScanErrors = summary.HadError;

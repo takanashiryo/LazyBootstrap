@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace LazyBootstrap.Services.Settings
 {
@@ -10,6 +11,11 @@ namespace LazyBootstrap.Services.Settings
 
         bool TryPersistRenderMode(string renderMode, bool compatLayerEnabled, Func<string, bool> tryApplyDxModeValue, out string error);
     }
+
+    internal readonly record struct CompatibilityLayerRuntimeState(
+        bool IsFullyApplied,
+        string DetectedRenderMode,
+        bool HasInconsistentFiles);
 
     internal sealed class CompatibilitySettingsService : ICompatibilitySettingsService
     {
@@ -139,6 +145,64 @@ namespace LazyBootstrap.Services.Settings
                 : "0";
         }
 
+        internal static CompatibilityLayerRuntimeState DetectRuntimeState(string contentsDirectoryPath, string bundledLibsDirectoryPath)
+        {
+            if (string.IsNullOrWhiteSpace(contentsDirectoryPath))
+            {
+                return new CompatibilityLayerRuntimeState(false, string.Empty, false);
+            }
+
+            string modulesDirectoryPath = Path.Combine(contentsDirectoryPath, "modules");
+            if (!Directory.Exists(modulesDirectoryPath))
+            {
+                return new CompatibilityLayerRuntimeState(false, string.Empty, false);
+            }
+
+            int presentBaseFileCount = BaseCompatFiles.Count(fileName =>
+                File.Exists(Path.Combine(modulesDirectoryPath, fileName)));
+            bool hasAllBaseFiles = presentBaseFileCount == BaseCompatFiles.Length;
+            bool hasPartialBaseFiles = presentBaseFileCount > 0 && !hasAllBaseFiles;
+
+            string detectedRenderMode = string.Empty;
+            bool hasUnknownD3d9State = false;
+            string d3d9Path = Path.Combine(modulesDirectoryPath, "d3d9.dll");
+
+            if (File.Exists(d3d9Path))
+            {
+                string dxvkStubPath = Path.Combine(bundledLibsDirectoryPath ?? string.Empty, "d3d9.dll.dxvk");
+                string externalStubPath = Path.Combine(bundledLibsDirectoryPath ?? string.Empty, "d3d9.dll.dx9on12");
+
+                if (FilesMatch(d3d9Path, dxvkStubPath))
+                {
+                    detectedRenderMode = "dxvk";
+                }
+                else if (FilesMatch(d3d9Path, externalStubPath))
+                {
+                    detectedRenderMode = "dx9on12_external";
+                }
+                else
+                {
+                    hasUnknownD3d9State = true;
+                }
+            }
+            else if (hasAllBaseFiles)
+            {
+                detectedRenderMode = "dx9on12";
+            }
+
+            bool isFullyApplied = hasAllBaseFiles
+                && (!File.Exists(d3d9Path) || !string.IsNullOrWhiteSpace(detectedRenderMode));
+            bool hasInconsistentFiles = hasPartialBaseFiles
+                || (File.Exists(d3d9Path) && string.IsNullOrWhiteSpace(detectedRenderMode))
+                || (File.Exists(d3d9Path) && !hasAllBaseFiles)
+                || hasUnknownD3d9State;
+
+            return new CompatibilityLayerRuntimeState(
+                isFullyApplied,
+                detectedRenderMode,
+                hasInconsistentFiles);
+        }
+
         private List<FileStateSnapshot> CaptureCompatModuleSnapshots()
         {
             var modulesDirectoryPath = GetCompatModulesDirectoryPath();
@@ -253,6 +317,38 @@ namespace LazyBootstrap.Services.Settings
                 "dx9on12_external" => "d3d9.dll.dx9on12",
                 _ => string.Empty
             };
+        }
+
+        private static bool FilesMatch(string leftPath, string rightPath)
+        {
+            if (string.IsNullOrWhiteSpace(leftPath)
+                || string.IsNullOrWhiteSpace(rightPath)
+                || !File.Exists(leftPath)
+                || !File.Exists(rightPath))
+            {
+                return false;
+            }
+
+            var leftInfo = new FileInfo(leftPath);
+            var rightInfo = new FileInfo(rightPath);
+            if (leftInfo.Length != rightInfo.Length)
+            {
+                return false;
+            }
+
+            using var leftStream = File.OpenRead(leftPath);
+            using var rightStream = File.OpenRead(rightPath);
+
+            int leftByte;
+            while ((leftByte = leftStream.ReadByte()) != -1)
+            {
+                if (leftByte != rightStream.ReadByte())
+                {
+                    return false;
+                }
+            }
+
+            return rightStream.ReadByte() == -1;
         }
 
         private static string RestoreSnapshots(FileStateSnapshot configSnapshot, IEnumerable<FileStateSnapshot> moduleSnapshots)

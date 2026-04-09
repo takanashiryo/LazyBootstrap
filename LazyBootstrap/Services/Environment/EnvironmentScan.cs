@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using LazyBootstrap.Services.Settings;
 
 namespace LazyBootstrap.Services.Environment
 {
@@ -91,7 +92,10 @@ namespace LazyBootstrap.Services.Environment
         /// </summary>
         /// <param name="progress">A callback that receives scan progress as a percentage and an optional message payload.</param>
         /// <returns>A task that produces the aggregated scan summary.</returns>
-        public static Task<ScanSummary> RunAsync(Action<int, string> progress)
+        public static Task<ScanSummary> RunAsync(
+            Action<int, string> progress,
+            string contentsDirectoryPath,
+            string bundledLibsDirectoryPath)
         {
             return Task.Run(() =>
             {
@@ -176,37 +180,18 @@ namespace LazyBootstrap.Services.Environment
                 return set.ToList();
             }
 
-            bool IsCompatLayerEnabled()
+            CompatibilityLayerRuntimeState GetCompatLayerState()
             {
                 try
                 {
-                    var baseDir = AppPathResolver.ResolveBaseDir();
-                    var cfgPath = Path.Combine(baseDir, "config.toml");
-
-                    bool enabledByConfig = false;
-                    if (File.Exists(cfgPath))
-                    {
-                        var cfg = new ConfigHandler(cfgPath);
-                        var s = cfg.ReadString("Setting", "compatlayer", "false");
-                        bool enabled;
-                        enabledByConfig = bool.TryParse(s, out enabled) && enabled;
-                    }
-
-                    string modulesDir = Path.Combine(baseDir, "contents", "modules");
-                    string[] compatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
-                    int stubCount = 0;
-                    foreach (var file in compatFiles)
-                    {
-                        if (File.Exists(Path.Combine(modulesDir, file)))
-                        {
-                            stubCount++;
-                        }
-                    }
-
-                    bool enabledByFiles = stubCount >= 1;
-                    return enabledByConfig || enabledByFiles;
+                    return CompatibilitySettingsService.DetectRuntimeState(
+                        contentsDirectoryPath,
+                        bundledLibsDirectoryPath);
                 }
-                catch { return false; }
+                catch
+                {
+                    return new CompatibilityLayerRuntimeState(false, string.Empty, false);
+                }
             }
 
             void LogCpu()
@@ -256,7 +241,7 @@ namespace LazyBootstrap.Services.Environment
 
             void LogNvidia()
             {
-                if (IsCompatLayerEnabled())
+                if (GetCompatLayerState().IsFullyApplied)
                 {
                     AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", ScanResultLevel.Success);
                     return;
