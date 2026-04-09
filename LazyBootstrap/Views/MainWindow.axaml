@@ -287,7 +287,6 @@
                                                                           Width="220"
                                                                           HorizontalAlignment="Left"
                                                                           ItemsSource="{Binding Settings.ServerPresets}"
-                                                                          SelectedItem="{Binding Settings.SelectedServerPreset}"
                                                                           SelectionChanged="OnServerPresetSelectionChanged"/>
                                                                 <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.AddServerPresetCommand}"/>
                                                                 <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.DeleteServerPresetCommand}"/>

@@ -152,8 +152,7 @@ namespace LazyBootstrap.Services.Config
                 existing.SetAttributeValue("value", update.Value ?? string.Empty);
             }
 
-            SaveDocument(context.Document, context.FilePath, newline);
-            return NormalizeSelfClosingTags(context.FilePath);
+            return SaveDocument(context.Document, context.FilePath, newline);
         }
 
         public string ReplaceOptions(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates)
@@ -186,8 +185,7 @@ namespace LazyBootstrap.Services.Config
                 context.OptionLookup[update.Name] = optionElement;
             }
 
-            SaveDocument(context.Document, context.FilePath, newline);
-            return NormalizeSelfClosingTags(context.FilePath);
+            return SaveDocument(context.Document, context.FilePath, newline);
         }
 
         private static XElement CreateOptionElement(SpiceOptionUpdate update)
@@ -198,7 +196,7 @@ namespace LazyBootstrap.Services.Config
                 new XAttribute("value", update.Value ?? string.Empty));
         }
 
-        private static void SaveDocument(XDocument document, string filePath, string newline)
+        private static string SaveDocument(XDocument document, string filePath, string newline)
         {
             var settings = new XmlWriterSettings
             {
@@ -210,8 +208,16 @@ namespace LazyBootstrap.Services.Config
                 NewLineOnAttributes = false
             };
 
-            using var writer = XmlWriter.Create(filePath, settings);
-            document.Save(writer);
+            using var stream = new MemoryStream();
+            using (var writer = XmlWriter.Create(stream, settings))
+            {
+                document.Save(writer);
+            }
+
+            string content = settings.Encoding.GetString(stream.ToArray());
+            string normalizationWarning = TryNormalizeSelfClosingTags(ref content);
+            File.WriteAllText(filePath, content, TomlTextShared.Utf8NoBom);
+            return normalizationWarning;
         }
 
         private static string ExtractIndentation(XText textNode, ref string newlineChars)
@@ -298,16 +304,11 @@ namespace LazyBootstrap.Services.Config
             return newTextNode;
         }
 
-        private static string NormalizeSelfClosingTags(string filePath)
+        private static string TryNormalizeSelfClosingTags(ref string content)
         {
             try
             {
-                var original = File.ReadAllText(filePath, Encoding.UTF8);
-                var normalized = Regex.Replace(original, "(?<=\\S)[ \\\t]+/>", "/>");
-                if (!string.Equals(original, normalized, StringComparison.Ordinal))
-                {
-                    File.WriteAllText(filePath, normalized, TomlTextShared.Utf8NoBom);
-                }
+                content = Regex.Replace(content ?? string.Empty, "(?<=\\S)[ \\\t]+/>", "/>");
 
                 return string.Empty;
             }

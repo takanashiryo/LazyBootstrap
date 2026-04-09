@@ -477,7 +477,7 @@ namespace LazyBootstrap.Views
     {
         private async void OnServerPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_isLoadingSettings || _isSyncingModel)
+            if (_isLoadingSettings || _isSyncingModel || _isUpdatingServerPresetUi)
             {
                 return;
             }
@@ -494,15 +494,23 @@ namespace LazyBootstrap.Views
 
         private void ApplyServerPresetViewModelStateToUi()
         {
+            _isUpdatingServerPresetUi = true;
             _isSyncingModel = true;
             try
             {
+                if (ServerPresetComboBox != null
+                    && !ReferenceEquals(ServerPresetComboBox.SelectedItem, _viewModel.Settings.SelectedServerPreset))
+                {
+                    ServerPresetComboBox.SelectedItem = _viewModel.Settings.SelectedServerPreset;
+                }
+
                 SetTextBoxTextIfNeeded(ServerAddressTextBox, _viewModel.Settings.ServerAddress);
                 SetTextBoxTextIfNeeded(PcbIdTextBox, _viewModel.Settings.PcbId);
             }
             finally
             {
                 _isSyncingModel = false;
+                _isUpdatingServerPresetUi = false;
             }
         }
 

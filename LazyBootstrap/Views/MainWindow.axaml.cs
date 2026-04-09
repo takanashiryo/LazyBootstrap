@@ -52,6 +52,7 @@ namespace LazyBootstrap.Views
         private bool _isSettingsBusy;
         private bool _isSyncingModel;
         private bool _isUpdatingCompatUi;
+        private bool _isUpdatingServerPresetUi;
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
@@ -768,7 +769,6 @@ namespace LazyBootstrap.Views
                     _viewModel.Settings.ServerAddress = ServerAddressTextBox.Text ?? string.Empty;
                     _viewModel.Settings.PcbId = PcbIdTextBox?.Text ?? string.Empty;
                     await _settingsWorkflowService.PersistServerEndpointAsync(_viewModel.Settings);
-                    ApplyServerPresetViewModelStateToUi();
                 };
             }
             if (PcbIdTextBox != null)
@@ -779,7 +779,6 @@ namespace LazyBootstrap.Views
                     _viewModel.Settings.ServerAddress = ServerAddressTextBox?.Text ?? string.Empty;
                     _viewModel.Settings.PcbId = PcbIdTextBox.Text ?? string.Empty;
                     await _settingsWorkflowService.PersistServerEndpointAsync(_viewModel.Settings);
-                    ApplyServerPresetViewModelStateToUi();
                 };
             }
         }

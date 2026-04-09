@@ -202,7 +202,7 @@ namespace LazyBootstrap.Services.Settings
                     LoadOptions.PreserveWhitespace,
                     false,
                     viewModel,
-                    reloadViewModelOnSuccess: true,
+                    reloadViewModelOnSuccess: false,
                     new SpiceOptionUpdate("url", viewModel.ServerAddress, false),
                     new SpiceOptionUpdate("p", viewModel.PcbId, false)))
             {
@@ -1148,7 +1148,7 @@ namespace LazyBootstrap.Services.Settings
                         LoadOptions.PreserveWhitespace,
                         false,
                         viewModel,
-                        reloadViewModelOnSuccess: true,
+                        reloadViewModelOnSuccess: false,
                         new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, false)))
                 {
                     return true;
@@ -1196,10 +1196,6 @@ namespace LazyBootstrap.Services.Settings
             yield return new SpiceOptionUpdate("cardio", viewModel.CardIo ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("scard", viewModel.HidSmartCard ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("netdump", viewModel.NetDump ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("network", NormalizeNetworkValue(viewModel.NetworkAdapterIp), false);
-            yield return new SpiceOptionUpdate("subnet", NormalizeNetworkValue(viewModel.NetworkAdapterSubnet), false);
-            yield return new SpiceOptionUpdate("url", (viewModel.ServerAddress ?? string.Empty).Trim(), false);
-            yield return new SpiceOptionUpdate("p", (viewModel.PcbId ?? string.Empty).Trim(), false);
         }
 
         private static string ResolveWindowBorderValue(int windowModeIndex)
