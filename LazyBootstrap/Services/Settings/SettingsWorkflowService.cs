@@ -17,7 +17,6 @@ namespace LazyBootstrap.Services.Settings
         Task InitializeStartupAsync(SettingsPageViewModel viewModel);
         Task WarmDeferredAsync(SettingsPageViewModel viewModel);
         Task PersistLauncherSettingsAsync(SettingsPageViewModel viewModel);
-        Task PersistPathOverridesAsync(SettingsPageViewModel viewModel);
         Task PersistSelectedServerPresetAsync(SettingsPageViewModel viewModel);
         Task PersistServerEndpointAsync(SettingsPageViewModel viewModel);
         Task ApplySelectedNetworkAdapterAsync(SettingsPageViewModel viewModel);
@@ -29,8 +28,6 @@ namespace LazyBootstrap.Services.Settings
         Task EditConfigAsync(SettingsPageViewModel viewModel);
         Task ImportRecommendedConfigAsync(SettingsPageViewModel viewModel);
         Task ImportPresetConfigAsync(SettingsPageViewModel viewModel);
-        Task SelectGameDirectoryOverrideAsync(SettingsPageViewModel viewModel);
-        Task SelectAsphyxiaDirectoryOverrideAsync(SettingsPageViewModel viewModel);
         Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel);
         Task AddServerPresetAsync(SettingsPageViewModel viewModel);
         Task DeleteServerPresetAsync(SettingsPageViewModel viewModel);
@@ -118,14 +115,10 @@ namespace LazyBootstrap.Services.Settings
 
         public Task InitializeStartupAsync(SettingsPageViewModel viewModel)
         {
-            _paths.SetContentsDirectoryOverride(_configHandler.ReadString(SettingSectionName, "contentsoverride", string.Empty));
-            _paths.SetAsphyxiaDirectoryOverride(_configHandler.ReadString(SettingSectionName, "asphyxiaoverride", string.Empty));
             bool isSpiceConfigAvailable = IsSpiceConfigAvailable();
 
             viewModel.RunSilently(() =>
             {
-                viewModel.GameDirectoryOverride = _paths.ContentsDirectoryOverride;
-                viewModel.AsphyxiaDirectoryOverride = _paths.AsphyxiaDirectoryOverride;
                 viewModel.NoAsphyxia = ReadBool(SettingSectionName, "noasphyxia", false);
                 viewModel.CompatibilityRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
                 viewModel.IsSpiceConfigAvailable = isSpiceConfigAvailable;
@@ -192,33 +185,6 @@ namespace LazyBootstrap.Services.Settings
                 _logger.LogError(ex, "Failed to persist launcher settings.");
                 _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
                 viewModel.RunSilently(() => viewModel.NoAsphyxia = ReadBool(SettingSectionName, "noasphyxia", false));
-            }
-
-            return Task.CompletedTask;
-        }
-
-        public Task PersistPathOverridesAsync(SettingsPageViewModel viewModel)
-        {
-            try
-            {
-                _paths.SetContentsDirectoryOverride(viewModel.GameDirectoryOverride);
-                _paths.SetAsphyxiaDirectoryOverride(viewModel.AsphyxiaDirectoryOverride);
-                _configHandler.WriteString(SettingSectionName, "contentsoverride", _paths.ContentsDirectoryOverride);
-                _configHandler.WriteString(SettingSectionName, "asphyxiaoverride", _paths.AsphyxiaDirectoryOverride);
-                RefreshCompatibilityState(viewModel);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to persist path overrides.");
-                _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
-                _paths.SetContentsDirectoryOverride(_configHandler.ReadString(SettingSectionName, "contentsoverride", string.Empty));
-                _paths.SetAsphyxiaDirectoryOverride(_configHandler.ReadString(SettingSectionName, "asphyxiaoverride", string.Empty));
-                viewModel.RunSilently(() =>
-                {
-                    viewModel.GameDirectoryOverride = _paths.ContentsDirectoryOverride;
-                    viewModel.AsphyxiaDirectoryOverride = _paths.AsphyxiaDirectoryOverride;
-                });
-                RefreshCompatibilityState(viewModel);
             }
 
             return Task.CompletedTask;
@@ -598,34 +564,6 @@ namespace LazyBootstrap.Services.Settings
 
             _uiInteractionService.ShowErrorToast("兼容层切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
             RefreshCompatibilityState(viewModel);
-        }
-
-        public async Task SelectGameDirectoryOverrideAsync(SettingsPageViewModel viewModel)
-        {
-            ArgumentNullException.ThrowIfNull(viewModel);
-
-            var path = await _uiInteractionService.PickFolderAsync("选择游戏目录（contents）");
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return;
-            }
-
-            viewModel.RunSilently(() => viewModel.GameDirectoryOverride = path);
-            await PersistPathOverridesAsync(viewModel);
-        }
-
-        public async Task SelectAsphyxiaDirectoryOverrideAsync(SettingsPageViewModel viewModel)
-        {
-            ArgumentNullException.ThrowIfNull(viewModel);
-
-            var path = await _uiInteractionService.PickFolderAsync("选择氧无目录（asphyxia）");
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return;
-            }
-
-            viewModel.RunSilently(() => viewModel.AsphyxiaDirectoryOverride = path);
-            await PersistPathOverridesAsync(viewModel);
         }
 
         public Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel)

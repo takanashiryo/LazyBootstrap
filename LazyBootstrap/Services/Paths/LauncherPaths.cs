@@ -12,14 +12,6 @@ namespace LazyBootstrap.Services.Paths
 
         string ConfigFilePath { get; }
 
-        string ContentsDirectoryOverride { get; }
-
-        string AsphyxiaDirectoryOverride { get; }
-
-        void SetContentsDirectoryOverride(string path);
-
-        void SetAsphyxiaDirectoryOverride(string path);
-
         string GetContentsDirectoryPath();
 
         string GetAsphyxiaDirectoryPath();
@@ -49,6 +41,7 @@ namespace LazyBootstrap.Services.Paths
     internal sealed class LauncherPaths : ILauncherPaths
     {
         private readonly string _defaultContentsDirectoryPath;
+        private readonly string _defaultAsphyxiaDirectoryPath;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="LauncherPaths"/> class.
@@ -66,6 +59,7 @@ namespace LazyBootstrap.Services.Paths
             ApplicationDirectoryPath = Path.GetFullPath(applicationDirectoryPath);
             ConfigFilePath = Path.GetFullPath(configFilePath);
             _defaultContentsDirectoryPath = Path.Combine(BaseDir, "contents");
+            _defaultAsphyxiaDirectoryPath = Path.Combine(BaseDir, "asphyxia");
         }
 
         /// <summary>
@@ -84,42 +78,12 @@ namespace LazyBootstrap.Services.Paths
         public string ConfigFilePath { get; }
 
         /// <summary>
-        /// Gets the normalized contents directory override.
-        /// </summary>
-        public string ContentsDirectoryOverride { get; private set; } = string.Empty;
-
-        /// <summary>
-        /// Gets the normalized Asphyxia directory override.
-        /// </summary>
-        public string AsphyxiaDirectoryOverride { get; private set; } = string.Empty;
-
-        /// <summary>
-        /// Updates the contents directory override.
-        /// </summary>
-        /// <param name="path">A candidate override path.</param>
-        public void SetContentsDirectoryOverride(string path)
-        {
-            ContentsDirectoryOverride = NormalizeDirectoryOverride(path);
-        }
-
-        /// <summary>
-        /// Updates the Asphyxia directory override.
-        /// </summary>
-        /// <param name="path">A candidate override path.</param>
-        public void SetAsphyxiaDirectoryOverride(string path)
-        {
-            AsphyxiaDirectoryOverride = NormalizeDirectoryOverride(path);
-        }
-
-        /// <summary>
         /// Gets the resolved contents directory path.
         /// </summary>
         /// <returns>The effective contents directory path.</returns>
         public string GetContentsDirectoryPath()
         {
-            return string.IsNullOrWhiteSpace(ContentsDirectoryOverride)
-                ? _defaultContentsDirectoryPath
-                : ContentsDirectoryOverride;
+            return _defaultContentsDirectoryPath;
         }
 
         /// <summary>
@@ -128,9 +92,7 @@ namespace LazyBootstrap.Services.Paths
         /// <returns>The effective Asphyxia directory path.</returns>
         public string GetAsphyxiaDirectoryPath()
         {
-            return string.IsNullOrWhiteSpace(AsphyxiaDirectoryOverride)
-                ? Path.Combine(BaseDir, "asphyxia")
-                : AsphyxiaDirectoryOverride;
+            return _defaultAsphyxiaDirectoryPath;
         }
 
         /// <summary>
@@ -227,26 +189,5 @@ namespace LazyBootstrap.Services.Paths
             return Path.Combine(BaseDir, "launcher", "7za.exe");
         }
 
-        /// <summary>
-        /// Normalizes a directory override entered by the user.
-        /// </summary>
-        /// <param name="path">A candidate directory path.</param>
-        /// <returns>A normalized full path, or an empty string when the input is blank.</returns>
-        public static string NormalizeDirectoryOverride(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return string.Empty;
-            }
-
-            try
-            {
-                return Path.GetFullPath(path.Trim());
-            }
-            catch
-            {
-                return path.Trim();
-            }
-        }
     }
 }

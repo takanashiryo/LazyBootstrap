@@ -2,11 +2,9 @@ using System;
 using System.Collections.Specialized;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Interactivity;
@@ -68,8 +66,6 @@ namespace LazyBootstrap.Views
                         ApplySettingsAvailabilityStateToUi();
                         break;
 
-                    case nameof(SettingsPageViewModel.GameDirectoryOverride):
-                    case nameof(SettingsPageViewModel.AsphyxiaDirectoryOverride):
                     case nameof(SettingsPageViewModel.NoAsphyxia):
                     case nameof(SettingsPageViewModel.CompatibilityLayerEnabled):
                     case nameof(SettingsPageViewModel.CompatibilityRenderMode):
@@ -147,140 +143,6 @@ namespace LazyBootstrap.Views
             });
         }
 
-        private string ResolveMachineProperty()
-        {
-            var identPath = Path.Combine(GetContentsDirectoryPath(), "prop", "ea3-ident.xml");
-            var result = TryReadMachinePropertyFromEa3(identPath);
-            if (!string.IsNullOrWhiteSpace(result))
-            {
-                return result;
-            }
-
-            var configPath = Path.Combine(GetContentsDirectoryPath(), "prop", "ea3-config.xml");
-            result = TryReadMachinePropertyFromEa3(configPath);
-            if (!string.IsNullOrWhiteSpace(result))
-            {
-                return result;
-            }
-
-            return "未知";
-        }
-
-        private static string TryReadMachinePropertyFromEa3(string filePath)
-        {
-            try
-            {
-                if (!File.Exists(filePath))
-                {
-                    return null;
-                }
-
-                var doc = XDocument.Load(filePath);
-                var softNode = doc.Root?.Element("soft");
-                if (softNode == null)
-                {
-                    return null;
-                }
-
-                var model = softNode.Element("model")?.Value?.Trim();
-                var dest = softNode.Element("dest")?.Value?.Trim();
-                var spec = softNode.Element("spec")?.Value?.Trim();
-                var rev = softNode.Element("rev")?.Value?.Trim();
-
-                if (string.IsNullOrWhiteSpace(model) ||
-                    string.IsNullOrWhiteSpace(dest) ||
-                    string.IsNullOrWhiteSpace(spec) ||
-                    string.IsNullOrWhiteSpace(rev))
-                {
-                    return null;
-                }
-
-                return $"{model}:{dest}:{spec}:{rev}";
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private string ResolveCurrentGameVersion()
-        {
-            try
-            {
-                var bootstrapPath = Path.Combine(GetContentsDirectoryPath(), "prop", "bootstrap.xml");
-                if (!File.Exists(bootstrapPath))
-                {
-                    return "未知";
-                }
-
-                var doc = XDocument.Load(bootstrapPath);
-                var releaseCode = doc.Root?.Element("release_code")?.Value?.Trim();
-                return string.IsNullOrWhiteSpace(releaseCode) ? "未知" : releaseCode;
-            }
-            catch
-            {
-                return "未知";
-            }
-        }
-
-        private string ResolveLauncherVersion()
-        {
-            try
-            {
-                var launcherExe = _paths.GetLauncherExecutablePath();
-                if (File.Exists(launcherExe))
-                {
-                    var fileVersion = FileVersionInfo.GetVersionInfo(launcherExe);
-                    if (!string.IsNullOrWhiteSpace(fileVersion.FileVersion))
-                    {
-                        return fileVersion.FileVersion;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(fileVersion.ProductVersion))
-                    {
-                        return fileVersion.ProductVersion;
-                    }
-                }
-            }
-            catch
-            {
-            }
-
-            return "未知";
-        }
-
-        private void RefreshPathOverrideDependentUi()
-        {
-            RefreshSettingsVersionTexts();
-            UpdateCompatLayerStatus();
-            UpdateRecommendedSpiceConfigButtonVisibility();
-        }
-
-        private void ApplyPathOverrideTextBoxesFromViewModel()
-        {
-            _paths.SetContentsDirectoryOverride(_viewModel.Settings.GameDirectoryOverride);
-            _paths.SetAsphyxiaDirectoryOverride(_viewModel.Settings.AsphyxiaDirectoryOverride);
-
-            if (GameDirectoryOverrideTextBox != null)
-            {
-                GameDirectoryOverrideTextBox.Text = _viewModel.Settings.GameDirectoryOverride;
-            }
-
-            if (AsphyxiaDirectoryOverrideTextBox != null)
-            {
-                AsphyxiaDirectoryOverrideTextBox.Text = _viewModel.Settings.AsphyxiaDirectoryOverride;
-            }
-        }
-
-        private void RefreshSettingsVersionTexts()
-        {
-            _viewModel.Info.MachineProperty = ResolveMachineProperty();
-            _viewModel.Info.GameVersion = ResolveCurrentGameVersion();
-            _viewModel.Info.LauncherVersion = ResolveLauncherVersion();
-
-            ApplyInfoViewModelStateToUi();
-        }
-
         private void ApplyStartupSettingsViewModelStateToUi()
         {
             bool previousLoadingState = _isLoadingSettings;
@@ -288,8 +150,6 @@ namespace LazyBootstrap.Views
 
             try
             {
-                ApplyPathOverrideTextBoxesFromViewModel();
-
                 if (NoAsphyxiaToggleSwitch != null)
                 {
                     NoAsphyxiaToggleSwitch.IsChecked = _viewModel.Settings.NoAsphyxia;

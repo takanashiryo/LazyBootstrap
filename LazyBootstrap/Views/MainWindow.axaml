@@ -407,26 +407,19 @@
                                             </suki:SettingsLayoutItem.Content>
                                         </suki:SettingsLayoutItem>
 
-                                        <suki:SettingsLayoutItem Header="杂项">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="110,*,Auto" ColumnSpacing="8" RowSpacing="10">
-                                                            <TextBlock Text="游戏目录覆写" VerticalAlignment="Center"/>
-                                                            <TextBox x:Name="GameDirectoryOverrideTextBox" Grid.Column="1"/>
-                                                            <Button x:Name="SelectGameDirectoryOverrideButton" Grid.Column="2" Content="选择" MinWidth="72" Classes="Basic" Command="{Binding Settings.SelectGameDirectoryOverrideCommand}"/>
-                                                            <TextBlock Grid.Row="1" Text="氧无目录覆写" VerticalAlignment="Center"/>
-                                                            <TextBox x:Name="AsphyxiaDirectoryOverrideTextBox" Grid.Row="1" Grid.Column="1"/>
-                                                            <Button x:Name="SelectAsphyxiaDirectoryOverrideButton" Grid.Row="1" Grid.Column="2" Content="选择" MinWidth="72" Classes="Basic" Command="{Binding Settings.SelectAsphyxiaDirectoryOverrideCommand}"/>
-                                                        </Grid>
-                                                        <TextBlock Text="更多功能请前往spicecfg调整" Opacity="0.7" FontSize="12" Margin="0,2,0,4" HorizontalAlignment="Center" TextAlignment="Center"/>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
                                         </generic:List>
                                     </suki:SettingsLayout.Items>
                                 </suki:SettingsLayout>
+
+                                <TextBlock Text="更多功能请前往spicecfg调整"
+                                           IsVisible="{Binding Settings.IsSpiceConfigAvailable}"
+                                           IsHitTestVisible="False"
+                                           Opacity="0.7"
+                                           FontSize="12"
+                                           Margin="24,0,24,10"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Bottom"
+                                           TextAlignment="Center"/>
 
                                 <StackPanel x:Name="SettingsEmptyStatePanel"
                                             IsVisible="False"

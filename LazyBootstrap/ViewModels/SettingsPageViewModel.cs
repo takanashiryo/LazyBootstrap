@@ -46,12 +46,6 @@ namespace LazyBootstrap.ViewModels
         private bool isSettingsBusy;
 
         [ObservableProperty]
-        private string gameDirectoryOverride = string.Empty;
-
-        [ObservableProperty]
-        private string asphyxiaDirectoryOverride = string.Empty;
-
-        [ObservableProperty]
         private string activeServerPreset = string.Empty;
 
         [ObservableProperty]
@@ -213,11 +207,6 @@ namespace LazyBootstrap.ViewModels
             return _workflowService?.PersistLauncherSettingsAsync(this) ?? Task.CompletedTask;
         }
 
-        public Task PersistPathOverridesAsync()
-        {
-            return _workflowService?.PersistPathOverridesAsync(this) ?? Task.CompletedTask;
-        }
-
         public Task PersistSelectedServerPresetAsync()
         {
             return _workflowService?.PersistSelectedServerPresetAsync(this) ?? Task.CompletedTask;
@@ -308,12 +297,6 @@ namespace LazyBootstrap.ViewModels
                 await PersistCompatibilityRenderModeAsync();
             }
         }
-
-        [RelayCommand]
-        private Task SelectGameDirectoryOverrideAsync() => _workflowService?.SelectGameDirectoryOverrideAsync(this) ?? Task.CompletedTask;
-
-        [RelayCommand]
-        private Task SelectAsphyxiaDirectoryOverrideAsync() => _workflowService?.SelectAsphyxiaDirectoryOverrideAsync(this) ?? Task.CompletedTask;
 
         [RelayCommand]
         private Task OpenNetworkAdapterPickerAsync() => _workflowService?.OpenNetworkAdapterPickerAsync(this) ?? Task.CompletedTask;

@@ -489,7 +489,7 @@ namespace LazyBootstrap.Views
         private void InitializeCustomComponents()
         {
             InitializeCompatibilityControls();
-            InitializeNetworkAndOverrideBindings();
+            InitializeNetworkBindings();
             InitializeStartupSettingsBindings();
             InitializeSpiceSettingsBindings();
 
@@ -506,7 +506,7 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void InitializeNetworkAndOverrideBindings()
+        private void InitializeNetworkBindings()
         {
             if (ServerAddressTextBox != null)
             {
@@ -544,29 +544,6 @@ namespace LazyBootstrap.Views
                 OpenNetworkAdapterPickerButton.Content = "加载中...";
                 OpenNetworkAdapterPickerButton.IsEnabled = false;
                 ToolTip.SetTip(OpenNetworkAdapterPickerButton, "正在读取网卡配置...");
-            }
-
-            if (GameDirectoryOverrideTextBox != null)
-            {
-                GameDirectoryOverrideTextBox.Watermark = "contents";
-                GameDirectoryOverrideTextBox.TextChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings || _isSyncingModel) return;
-                    _viewModel.Settings.GameDirectoryOverride = GameDirectoryOverrideTextBox.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistPathOverridesAsync(_viewModel.Settings);
-                    RefreshPathOverrideDependentUi();
-                };
-            }
-            if (AsphyxiaDirectoryOverrideTextBox != null)
-            {
-                AsphyxiaDirectoryOverrideTextBox.Watermark = "asphyxia";
-                AsphyxiaDirectoryOverrideTextBox.TextChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings || _isSyncingModel) return;
-                    _viewModel.Settings.AsphyxiaDirectoryOverride = AsphyxiaDirectoryOverrideTextBox.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistPathOverridesAsync(_viewModel.Settings);
-                    RefreshPathOverrideDependentUi();
-                };
             }
         }
 
