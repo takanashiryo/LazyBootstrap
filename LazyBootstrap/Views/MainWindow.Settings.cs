@@ -84,6 +84,7 @@ namespace LazyBootstrap.Views
                         break;
 
                     case nameof(SettingsPageViewModel.Windowed):
+                    case nameof(SettingsPageViewModel.DllInjection):
                     case nameof(SettingsPageViewModel.NetDump):
                     case nameof(SettingsPageViewModel.DisableSubDisplay):
                     case nameof(SettingsPageViewModel.WindowModeIndex):
@@ -372,6 +373,11 @@ namespace LazyBootstrap.Views
             if (WindowedToggleSwitch != null)
             {
                 WindowedToggleSwitch.IsChecked = _viewModel.Settings.Windowed;
+            }
+
+            if (DllInjectionTextBox != null)
+            {
+                DllInjectionTextBox.Text = _viewModel.Settings.DllInjection ?? string.Empty;
             }
 
             if (NetDumpToggleSwitch != null)

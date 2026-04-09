@@ -608,6 +608,16 @@ namespace LazyBootstrap.Views
 
         private void InitializeSpiceSettingsBindings()
         {
+            if (DllInjectionTextBox != null)
+            {
+                DllInjectionTextBox.Watermark = "example.dll";
+                DllInjectionTextBox.TextChanged += async (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.DllInjection = DllInjectionTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+                };
+            }
             if (NetDumpToggleSwitch != null)
             {
                 NetDumpToggleSwitch.IsCheckedChanged += async (s, e) =>

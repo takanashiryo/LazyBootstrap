@@ -331,6 +331,10 @@
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
+                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
+                                                            <TextBlock Text="DLL注入" VerticalAlignment="Center"/>
+                                                            <TextBox x:Name="DllInjectionTextBox" Grid.Column="1"/>
+                                                        </Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="禁用副屏" VerticalAlignment="Center"/><ToggleSwitch x:Name="DisableSubDisplayToggleSwitch" Grid.Column="1"/></Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="网络抓包（NetDump）" VerticalAlignment="Center"/><ToggleSwitch x:Name="NetDumpToggleSwitch" Grid.Column="1"/></Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="大小核优化" VerticalAlignment="Center"/><ToggleSwitch x:Name="PCoreOptimizationToggleSwitch" Grid.Column="1"/></Grid>

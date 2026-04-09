@@ -79,6 +79,9 @@ namespace LazyBootstrap.ViewModels
         private bool windowed;
 
         [ObservableProperty]
+        private string dllInjection = string.Empty;
+
+        [ObservableProperty]
         private bool netDump;
 
         [ObservableProperty]

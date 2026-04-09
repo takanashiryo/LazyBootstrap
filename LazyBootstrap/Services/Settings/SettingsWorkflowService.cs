@@ -77,6 +77,7 @@ namespace LazyBootstrap.Services.Settings
         private sealed class SpiceSettingsSnapshot
         {
             public bool Windowed { get; init; }
+            public string DllInjection { get; init; } = string.Empty;
             public bool PCoreOptimization { get; init; }
             public bool DisableSubDisplay { get; init; }
             public int WindowModeIndex { get; init; }
@@ -928,6 +929,7 @@ namespace LazyBootstrap.Services.Settings
             return new SpiceSettingsSnapshot
             {
                 Windowed = string.Equals(context.GetOptionValue("w"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
+                DllInjection = context.GetOptionValue("k") ?? string.Empty,
                 PCoreOptimization = string.Equals(context.GetOptionValue("sp2x-processefficiency"), "pcores", StringComparison.OrdinalIgnoreCase),
                 DisableSubDisplay = string.Equals(context.GetOptionValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
                 WindowModeIndex = ResolveWindowModeIndex(context.GetOptionValue("sp2x-windowborder")),
@@ -954,6 +956,7 @@ namespace LazyBootstrap.Services.Settings
         private static void ApplySpiceSettingsSnapshot(SettingsPageViewModel viewModel, SpiceSettingsSnapshot snapshot)
         {
             viewModel.Windowed = snapshot.Windowed;
+            viewModel.DllInjection = snapshot.DllInjection;
             viewModel.PCoreOptimization = snapshot.PCoreOptimization;
             viewModel.DisableSubDisplay = snapshot.DisableSubDisplay;
             viewModel.WindowModeIndex = snapshot.WindowModeIndex;
@@ -1207,6 +1210,7 @@ namespace LazyBootstrap.Services.Settings
         private IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsPageViewModel viewModel)
         {
             yield return new SpiceOptionUpdate("w", viewModel.Windowed ? "/ENABLED" : string.Empty);
+            yield return new SpiceOptionUpdate("k", viewModel.DllInjection ?? string.Empty, false);
             yield return new SpiceOptionUpdate("sp2x-processefficiency", viewModel.PCoreOptimization ? "pcores" : string.Empty);
             yield return new SpiceOptionUpdate("sp2x-dx9on12", CompatibilitySettingsService.ResolveDxModeValue(viewModel.CompatibilityLayerEnabled, viewModel.CompatibilityRenderMode), false);
             yield return new SpiceOptionUpdate("sp2x-sdvxnosub", viewModel.DisableSubDisplay ? "/ENABLED" : string.Empty);
