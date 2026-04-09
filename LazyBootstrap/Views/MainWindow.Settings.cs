@@ -83,8 +83,12 @@ namespace LazyBootstrap.Views
                         ApplyServerPresetViewModelStateToUi();
                         break;
 
-                    case nameof(SettingsPageViewModel.Windowed):
                     case nameof(SettingsPageViewModel.DllInjection):
+                    case nameof(SettingsPageViewModel.WindowSize):
+                        ApplySpiceTextInputsFromViewModel();
+                        break;
+
+                    case nameof(SettingsPageViewModel.Windowed):
                     case nameof(SettingsPageViewModel.NetDump):
                     case nameof(SettingsPageViewModel.DisableSubDisplay):
                     case nameof(SettingsPageViewModel.WindowModeIndex):
@@ -92,7 +96,6 @@ namespace LazyBootstrap.Views
                     case nameof(SettingsPageViewModel.SubBorderless):
                     case nameof(SettingsPageViewModel.ShowCursorTouchSim):
                     case nameof(SettingsPageViewModel.WindowTopMost):
-                    case nameof(SettingsPageViewModel.WindowSize):
                     case nameof(SettingsPageViewModel.SingleAdapter):
                     case nameof(SettingsPageViewModel.SubWindowTopMost):
                     case nameof(SettingsPageViewModel.SubForceRender):
@@ -317,6 +320,7 @@ namespace LazyBootstrap.Views
                 }
 
                 ApplySpiceSettingsFromViewModel();
+                ApplySpiceTextInputsFromViewModel();
                 ApplyAsioDriverChoicesFromViewModel();
                 ApplyNetworkAdapterStateFromViewModel();
                 ApplyServerPresetViewModelStateToUi();
@@ -375,11 +379,6 @@ namespace LazyBootstrap.Views
                 WindowedToggleSwitch.IsChecked = _viewModel.Settings.Windowed;
             }
 
-            if (DllInjectionTextBox != null)
-            {
-                DllInjectionTextBox.Text = _viewModel.Settings.DllInjection ?? string.Empty;
-            }
-
             if (NetDumpToggleSwitch != null)
             {
                 NetDumpToggleSwitch.IsChecked = _viewModel.Settings.NetDump;
@@ -413,11 +412,6 @@ namespace LazyBootstrap.Views
             if (WindowTopMostToggleSwitch != null)
             {
                 WindowTopMostToggleSwitch.IsChecked = _viewModel.Settings.WindowTopMost;
-            }
-
-            if (WindowSizeTextBox != null)
-            {
-                WindowSizeTextBox.Text = _viewModel.Settings.WindowSize ?? string.Empty;
             }
 
             if (SingleAdapterToggleSwitch != null)
@@ -454,6 +448,12 @@ namespace LazyBootstrap.Views
             {
                 HidSmartCardToggleSwitch.IsChecked = _viewModel.Settings.HidSmartCard;
             }
+        }
+
+        private void ApplySpiceTextInputsFromViewModel()
+        {
+            SetTextBoxTextIfNeeded(DllInjectionTextBox, _viewModel.Settings.DllInjection);
+            SetTextBoxTextIfNeeded(WindowSizeTextBox, _viewModel.Settings.WindowSize);
         }
 
         private void ApplyAsioDriverChoicesFromViewModel()
@@ -503,15 +503,8 @@ namespace LazyBootstrap.Views
             _isUpdatingNetworkUi = true;
             try
             {
-                if (NetworkAdapterIpTextBox != null)
-                {
-                    NetworkAdapterIpTextBox.Text = networkIp;
-                }
-
-                if (NetworkAdapterSubnetTextBox != null)
-                {
-                    NetworkAdapterSubnetTextBox.Text = subnetMask;
-                }
+                SetTextBoxTextIfNeeded(NetworkAdapterIpTextBox, networkIp);
+                SetTextBoxTextIfNeeded(NetworkAdapterSubnetTextBox, subnetMask);
             }
             finally
             {
@@ -644,20 +637,29 @@ namespace LazyBootstrap.Views
             _isSyncingModel = true;
             try
             {
-                if (ServerAddressTextBox != null)
-                {
-                    ServerAddressTextBox.Text = _viewModel.Settings.ServerAddress ?? string.Empty;
-                }
-
-                if (PcbIdTextBox != null)
-                {
-                    PcbIdTextBox.Text = _viewModel.Settings.PcbId ?? string.Empty;
-                }
+                SetTextBoxTextIfNeeded(ServerAddressTextBox, _viewModel.Settings.ServerAddress);
+                SetTextBoxTextIfNeeded(PcbIdTextBox, _viewModel.Settings.PcbId);
             }
             finally
             {
                 _isSyncingModel = false;
             }
+        }
+
+        private static void SetTextBoxTextIfNeeded(TextBox textBox, string value)
+        {
+            if (textBox == null)
+            {
+                return;
+            }
+
+            string normalizedValue = value ?? string.Empty;
+            if (string.Equals(textBox.Text ?? string.Empty, normalizedValue, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            textBox.Text = normalizedValue;
         }
 
     }

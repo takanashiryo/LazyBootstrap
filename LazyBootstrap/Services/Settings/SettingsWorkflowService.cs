@@ -236,6 +236,7 @@ namespace LazyBootstrap.Services.Settings
                     LoadOptions.PreserveWhitespace,
                     false,
                     viewModel,
+                    reloadViewModelOnSuccess: true,
                     new SpiceOptionUpdate("url", viewModel.ServerAddress, false),
                     new SpiceOptionUpdate("p", viewModel.PcbId, false)))
             {
@@ -329,6 +330,7 @@ namespace LazyBootstrap.Services.Settings
                     LoadOptions.PreserveWhitespace,
                     false,
                     viewModel,
+                    false,
                     new SpiceOptionUpdate("network", viewModel.NetworkAdapterIp, false),
                     new SpiceOptionUpdate("subnet", viewModel.NetworkAdapterSubnet, false)))
             {
@@ -336,7 +338,7 @@ namespace LazyBootstrap.Services.Settings
                 return Task.CompletedTask;
             }
 
-            RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
+            SyncSelectedNetworkAdapter(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
             return Task.CompletedTask;
         }
 
@@ -349,14 +351,13 @@ namespace LazyBootstrap.Services.Settings
                     LoadOptions.PreserveWhitespace,
                     false,
                     viewModel,
+                    false,
                     BuildSpiceOptionUpdates(viewModel).ToArray()))
             {
                 ReloadRuntimeState(viewModel);
                 return Task.CompletedTask;
             }
 
-            RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
-            RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
             return Task.CompletedTask;
         }
 
@@ -919,6 +920,24 @@ namespace LazyBootstrap.Services.Settings
             viewModel.RunSilently(() => viewModel.SelectedNetworkAdapter = selectedOption);
         }
 
+        private void SyncSelectedNetworkAdapter(SettingsPageViewModel viewModel, string selectedIpAddress, string selectedSubnetMask)
+        {
+            var selectedOption = viewModel.NetworkAdapters.FirstOrDefault(choice =>
+                    string.Equals(choice.IpAddress, selectedIpAddress ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                    && string.Equals(choice.SubnetMask, selectedSubnetMask ?? string.Empty, StringComparison.OrdinalIgnoreCase));
+
+            if (selectedOption == null
+                && string.IsNullOrWhiteSpace(selectedIpAddress)
+                && string.IsNullOrWhiteSpace(selectedSubnetMask))
+            {
+                selectedOption = viewModel.NetworkAdapters.FirstOrDefault(choice =>
+                    string.IsNullOrWhiteSpace(choice.IpAddress)
+                    && string.IsNullOrWhiteSpace(choice.SubnetMask));
+            }
+
+            viewModel.RunSilently(() => viewModel.SelectedNetworkAdapter = selectedOption);
+        }
+
         private SpiceSettingsSnapshot ReadSpiceSettingsSnapshot()
         {
             if (!TryGetSpiceOptionsContext(_paths.GetSpiceXmlPath(), LoadOptions.PreserveWhitespace, false, out var context))
@@ -1147,6 +1166,7 @@ namespace LazyBootstrap.Services.Settings
             LoadOptions loadOptions,
             bool createOptionsWhenMissing,
             SettingsPageViewModel viewModel,
+            bool reloadViewModelOnSuccess = true,
             params SpiceOptionUpdate[] updates)
         {
             if (!TryGetSpiceOptionsContext(spiceXmlPath, loadOptions, createOptionsWhenMissing, out var context))
@@ -1160,7 +1180,8 @@ namespace LazyBootstrap.Services.Settings
                 _uiInteractionService.ShowWarningToast("配置格式修复失败", normalizationWarning);
             }
 
-            if (string.Equals(spiceXmlPath, _paths.GetSpiceXmlPath(), StringComparison.OrdinalIgnoreCase))
+            if (reloadViewModelOnSuccess
+                && string.Equals(spiceXmlPath, _paths.GetSpiceXmlPath(), StringComparison.OrdinalIgnoreCase))
             {
                 LoadSpiceSettings(viewModel);
             }
@@ -1180,6 +1201,7 @@ namespace LazyBootstrap.Services.Settings
                         LoadOptions.PreserveWhitespace,
                         false,
                         viewModel,
+                        reloadViewModelOnSuccess: true,
                         new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, false)))
                 {
                     return true;
