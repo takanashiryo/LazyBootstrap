@@ -202,7 +202,10 @@ namespace LazyBootstrap.Services.Launch
                 }
 
                 bool startAsphyxia = asphyxiaDevOnly || !settingsViewModel.NoAsphyxia;
-                if (startAsphyxia && !File.Exists(asphyxiaPath))
+                int existingAsphyxiaCount = 0;
+                bool isAsphyxiaCoreAlreadyRunning = startAsphyxia && IsAsphyxiaCoreRunning(out existingAsphyxiaCount);
+
+                if (startAsphyxia && !isAsphyxiaCoreAlreadyRunning && !File.Exists(asphyxiaPath))
                 {
                     FailLaunch(launchViewModel, $"未找到 asphyxia-core-x64.exe: {asphyxiaPath}", "未找到asphyxia-core-x64.exe");
                     return;
@@ -246,35 +249,47 @@ namespace LazyBootstrap.Services.Launch
 
                 if (startAsphyxia)
                 {
-                    AppendLaunchOutput(launchViewModel, "正在启动 Asphyxia Core...");
-                    var asphyxiaStartInfo = asphyxiaDevOnly
-                        ? new ProcessStartInfo
+                    if (isAsphyxiaCoreAlreadyRunning)
+                    {
+                        AppendLaunchOutput(
+                            launchViewModel,
+                            existingAsphyxiaCount > 1
+                                ? $"检测到已有 {existingAsphyxiaCount} 个 Asphyxia Core 进程，已跳过重复启动。"
+                                : "检测到已有 Asphyxia Core 进程，已跳过重复启动。",
+                            NotificationType.Warning);
+                    }
+                    else
+                    {
+                        AppendLaunchOutput(launchViewModel, "正在启动 Asphyxia Core...");
+                        var asphyxiaStartInfo = asphyxiaDevOnly
+                            ? new ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = $"/k \"\"{asphyxiaPath}\" --dev\"",
+                                UseShellExecute = true,
+                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                            }
+                            : new ProcessStartInfo
+                            {
+                                FileName = asphyxiaPath,
+                                UseShellExecute = true,
+                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                            };
+
+                        var asphyxiaProcess = Process.Start(asphyxiaStartInfo);
+                        if (asphyxiaProcess == null)
                         {
-                            FileName = "cmd.exe",
-                            Arguments = $"/k \"\"{asphyxiaPath}\" --dev\"",
-                            UseShellExecute = true,
-                            WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                            FailLaunch(launchViewModel, "Asphyxia 启动失败，进程未成功创建。");
+                            return;
                         }
-                        : new ProcessStartInfo
+
+                        if (!asphyxiaDevOnly)
                         {
-                            FileName = asphyxiaPath,
-                            UseShellExecute = true,
-                            WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
-                        };
+                            _gameProcessTracker.TrackManagedAsphyxiaProcess(asphyxiaProcess);
+                        }
 
-                    var asphyxiaProcess = Process.Start(asphyxiaStartInfo);
-                    if (asphyxiaProcess == null)
-                    {
-                        FailLaunch(launchViewModel, "Asphyxia 启动失败，进程未成功创建。");
-                        return;
+                        AppendLaunchOutput(launchViewModel, "Asphyxia Core 启动成功");
                     }
-
-                    if (!asphyxiaDevOnly)
-                    {
-                        _gameProcessTracker.TrackManagedAsphyxiaProcess(asphyxiaProcess);
-                    }
-
-                    AppendLaunchOutput(launchViewModel, "Asphyxia Core 启动成功");
                 }
                 else
                 {
@@ -822,6 +837,33 @@ namespace LazyBootstrap.Services.Launch
             }
 
             return count;
+        }
+
+        private bool IsAsphyxiaCoreRunning(out int processCount)
+        {
+            processCount = 0;
+
+            try
+            {
+                var processes = Process.GetProcessesByName("asphyxia-core-x64");
+                try
+                {
+                    processCount = processes.Length;
+                    return processCount > 0;
+                }
+                finally
+                {
+                    foreach (var process in processes)
+                    {
+                        process.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to inspect existing Asphyxia Core processes.");
+                return false;
+            }
         }
 
     }
