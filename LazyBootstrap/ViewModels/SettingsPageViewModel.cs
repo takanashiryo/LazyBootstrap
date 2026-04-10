@@ -256,9 +256,6 @@ namespace LazyBootstrap.ViewModels
         private Task ImportRecommendedConfigAsync() => _workflowService?.ImportRecommendedConfigAsync(this) ?? Task.CompletedTask;
 
         [RelayCommand]
-        private Task ImportPresetConfigAsync() => _workflowService?.ImportPresetConfigAsync(this) ?? Task.CompletedTask;
-
-        [RelayCommand]
         private async Task EnableCompatibilityLayerAsync()
         {
             CompatibilityLayerEnabled = true;

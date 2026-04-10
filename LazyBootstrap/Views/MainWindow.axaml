@@ -434,12 +434,12 @@
                                                TextWrapping="Wrap"
                                                FontSize="24"
                                                FontWeight="SemiBold"/>
-                                    <Button x:Name="ImportPresetConfigButton"
+                                    <Button x:Name="EmptyStateEditConfigButton"
                                             Classes="Flat"
                                             HorizontalAlignment="Center"
                                             MinWidth="180"
-                                            Content="导入预设配置"
-                                            Command="{Binding Settings.ImportPresetConfigCommand}"/>
+                                            Content="编辑 spicecfg"
+                                            Command="{Binding Settings.EditConfigCommand}"/>
                                 </StackPanel>
                             </Grid>
                         </suki:BusyArea>

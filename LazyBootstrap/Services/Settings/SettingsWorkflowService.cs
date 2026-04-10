@@ -27,7 +27,6 @@ namespace LazyBootstrap.Services.Settings
         Task PersistCompatibilityRenderModeAsync(SettingsPageViewModel viewModel);
         Task EditConfigAsync(SettingsPageViewModel viewModel);
         Task ImportRecommendedConfigAsync(SettingsPageViewModel viewModel);
-        Task ImportPresetConfigAsync(SettingsPageViewModel viewModel);
         Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel);
         Task AddServerPresetAsync(SettingsPageViewModel viewModel);
         Task DeleteServerPresetAsync(SettingsPageViewModel viewModel);
@@ -431,12 +430,6 @@ namespace LazyBootstrap.Services.Settings
             return ImportRecommendedConfigCoreAsync(viewModel);
         }
 
-        public Task ImportPresetConfigAsync(SettingsPageViewModel viewModel)
-        {
-            ArgumentNullException.ThrowIfNull(viewModel);
-            return ImportPresetConfigCoreAsync(viewModel);
-        }
-
         private async Task ImportRecommendedConfigCoreAsync(SettingsPageViewModel viewModel)
         {
             var confirmed = await _uiInteractionService.ShowDialogAsync(
@@ -483,55 +476,6 @@ namespace LazyBootstrap.Services.Settings
             catch (Exception ex)
             {
                 _uiInteractionService.ShowErrorToast("导入失败", ex.Message);
-            }
-        }
-
-        private async Task ImportPresetConfigCoreAsync(SettingsPageViewModel viewModel)
-        {
-            viewModel.IsSettingsBusy = true;
-
-            try
-            {
-                string sourcePath = Path.Combine(_paths.ApplicationDirectoryPath, "cfg", "spicetools.xml");
-                if (!File.Exists(sourcePath))
-                {
-                    _uiInteractionService.ShowErrorToast("导入失败", $"未找到预设配置文件: {sourcePath}");
-                    return;
-                }
-
-                string targetPath = _paths.GetSpiceXmlPath();
-                string targetDirectory = Path.GetDirectoryName(targetPath) ?? string.Empty;
-                if (!string.IsNullOrWhiteSpace(targetDirectory))
-                {
-                    Directory.CreateDirectory(targetDirectory);
-                }
-
-                if (File.Exists(targetPath))
-                {
-                    File.Copy(targetPath, targetPath + ".bak", overwrite: true);
-                }
-
-                File.Copy(sourcePath, targetPath, overwrite: true);
-
-                await InitializeStartupAsync(viewModel);
-                await WarmDeferredAsync(viewModel);
-
-                if (!viewModel.IsSpiceConfigAvailable)
-                {
-                    _uiInteractionService.ShowErrorToast("导入失败", "预设配置导入后仍未检测到 Sound Voltex 配置。");
-                    return;
-                }
-
-                _uiInteractionService.ShowInfoToast("导入完成", "预设 spice2x 配置已导入。");
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to import preset spice2x config.");
-                _uiInteractionService.ShowErrorToast("导入失败", ex.Message);
-            }
-            finally
-            {
-                viewModel.IsSettingsBusy = false;
             }
         }
 
