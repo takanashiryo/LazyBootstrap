@@ -768,8 +768,8 @@ namespace LazyBootstrap.Services.Settings
 
         private void RefreshCompatibilityState(SettingsPageViewModel viewModel)
         {
-            var configuredRenderMode = ReadConfiguredCompatibilityRenderMode();
             var runtimeState = GetCompatibilityLayerRuntimeState();
+            var configuredRenderMode = SyncCompatibilityConfigToRuntimeState(runtimeState);
 
             viewModel.RunSilently(() =>
             {
@@ -1086,6 +1086,40 @@ namespace LazyBootstrap.Services.Settings
         {
             return CompatibilitySettingsService.NormalizeRenderMode(
                 _configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
+        }
+
+        private string SyncCompatibilityConfigToRuntimeState(CompatibilityLayerRuntimeState runtimeState)
+        {
+            var configuredRenderMode = ReadConfiguredCompatibilityRenderMode();
+            var detectedRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
+                ? string.Empty
+                : CompatibilitySettingsService.NormalizeRenderMode(runtimeState.DetectedRenderMode);
+            var targetCompatEnabled = runtimeState.IsFullyApplied;
+
+            try
+            {
+                var currentCompatEnabled = ReadBool(SettingSectionName, "compatlayer", false);
+                if (currentCompatEnabled != targetCompatEnabled)
+                {
+                    _configHandler.WriteString(
+                        SettingSectionName,
+                        "compatlayer",
+                        targetCompatEnabled ? "true" : "false");
+                }
+
+                if (!string.IsNullOrWhiteSpace(detectedRenderMode)
+                    && !string.Equals(configuredRenderMode, detectedRenderMode, StringComparison.OrdinalIgnoreCase))
+                {
+                    _configHandler.WriteString(SettingSectionName, "cl-rendermode", detectedRenderMode);
+                    configuredRenderMode = detectedRenderMode;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to sync compatibility runtime state back to config.toml.");
+            }
+
+            return configuredRenderMode;
         }
 
         private static int ResolveWindowModeIndex(string windowBorderValue)
