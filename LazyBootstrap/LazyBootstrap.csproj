@@ -13,7 +13,7 @@
     <PublishAot>false</PublishAot>
     <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <Version>26.1</Version>
+    <Version>26.2</Version>
     <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
     <Description>A tool made for SDVX with spice2x</Description>
     <Company>LazyBootstrap - Lazy SDVX</Company>
