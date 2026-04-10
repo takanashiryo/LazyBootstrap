@@ -5,6 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <RootNamespace>LazyBootstrap</RootNamespace>
     <AssemblyName>LazyBootstrap</AssemblyName>
+    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -12,28 +13,33 @@
     <PublishAot>false</PublishAot>
     <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <AssemblyVersion>26.0.0.0</AssemblyVersion>
-    <FileVersion>26.0.0.0</FileVersion>
-<!--    <InformationalVersion>26.0</InformationalVersion>-->
+    <Version>26.2</Version>
     <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
-    <Description>only compatible with sdvx</Description>
+    <Description>A tool made for SDVX with spice2x</Description>
     <Company>LazyBootstrap - Lazy SDVX</Company>
     <Copyright>Copyright © 2025 Takanashi Ryo</Copyright>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
-    <PublishAot>true</PublishAot>
-    <PublishTrimmed>true</PublishTrimmed>
-    <TrimMode>full</TrimMode>
+    <PublishAot>false</PublishAot>
+    <PublishTrimmed>false</PublishTrimmed>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Avalonia" Version="11.3.12" />
     <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
-    <PackageReference Include="Avalonia.Diagnostics" Version="11.3.12" />
     <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
-    <PackageReference Include="SukiUI" Version="6.0.4-nightly20260124" />
+    <PackageReference Include="AvaloniaUI.DiagnosticsSupport" Version="2.2.0-beta3" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.0" />
+    <PackageReference Include="NAudio.Asio" Version="2.2.1" />
+    <PackageReference Include="Serilog" Version="4.3.0" />
+    <PackageReference Include="Serilog.Extensions.Logging" Version="9.0.2" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="System.Management" Version="10.0.0" />
+    <PackageReference Include="SukiUI" Version="6.0.4-nightly20260401" />
   </ItemGroup>
 
   <ItemGroup>
@@ -48,20 +54,30 @@
     <None Include="..\Resources\vii\vii_icon.ico">
       <Link>vii_icon.ico</Link>
     </None>
-    <None Include="SevenZip\7za.exe">
+    <None Include="Public\7z\7za.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>7za.exe</TargetPath>
     </None>
-    <None Include="SevenZip\7za.dll">
+    <None Include="Public\7z\7za.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>7za.dll</TargetPath>
     </None>
-    <None Include="SevenZip\7zxa.dll">
+    <None Include="Public\7z\7zxa.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>7zxa.dll</TargetPath>
+    </None>
+    <None Include="Public\libs\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+    </None>
+    <None Include="Public\cfg\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+      <TargetPath>cfg\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
     </None>
   </ItemGroup>
 

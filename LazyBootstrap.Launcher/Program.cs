@@ -3,9 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
-// LazyBootstrap Launcher — 最小化启动器
-// 启动 launcher 文件夹内的 LazyBootstrap 主程序
-
 string baseDir = Path.GetFullPath(AppContext.BaseDirectory);
 string targetExe = Path.Combine(baseDir, "launcher", "LazyBootstrap.exe");
 
@@ -18,9 +15,18 @@ var startInfo = new ProcessStartInfo
 {
     FileName = targetExe,
     UseShellExecute = true,
-    WorkingDirectory = Path.GetDirectoryName(targetExe) ?? baseDir,
-    Arguments = BuildForwardedArguments(args, baseDir)
+    WorkingDirectory = Path.GetDirectoryName(targetExe) ?? baseDir
 };
+
+foreach (var arg in args)
+{
+    startInfo.ArgumentList.Add(arg);
+}
+
+if (!HasBaseDirArgument(args))
+{
+    startInfo.ArgumentList.Add($"--basedir={baseDir}");
+}
 
 try
 {
@@ -31,21 +37,9 @@ catch
     Environment.Exit(1);
 }
 
-static string BuildForwardedArguments(string[] sourceArgs, string resolvedBaseDir)
+static bool HasBaseDirArgument(string[] sourceArgs)
 {
-    var allArgs = sourceArgs.Select(QuoteArg).ToList();
-    allArgs.Add(QuoteArg($"--basedir={resolvedBaseDir}"));
-    return string.Join(" ", allArgs);
-}
-
-static string QuoteArg(string arg)
-{
-    if (string.IsNullOrEmpty(arg))
-    {
-        return "\"\"";
-    }
-
-    return arg.IndexOfAny([' ', '\t', '"']) >= 0
-        ? "\"" + arg.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\""
-        : arg;
+    return sourceArgs.Any(static arg =>
+        arg.StartsWith("--basedir=", StringComparison.OrdinalIgnoreCase)
+        || string.Equals(arg, "--basedir", StringComparison.OrdinalIgnoreCase));
 }
