@@ -123,6 +123,12 @@ namespace LazyBootstrap.Services.Display
 
     internal class WindowsDisplayConfigurationService : IDisplayConfigurationService
     {
+        private static readonly (int Width, int Height)[] CommonProbeResolutions =
+        {
+            (1280, 720),
+            (1920, 1080)
+        };
+
         private const int DisplayDeviceActive = 0x1;
         private const int DisplayDevicePrimaryDevice = 0x4;
         private const int DisplayDeviceMirroringDriver = 0x8;
@@ -277,7 +283,7 @@ namespace LazyBootstrap.Services.Display
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 bool enumeratedAnyMode = false;
 
-                for (int index = 0; index < 512; index++)
+                for (int index = 0; ; index++)
                 {
                     var current = CreateDevMode();
                     bool success = TryEnumDisplaySettings(deviceName, index, ref current);
@@ -311,8 +317,15 @@ namespace LazyBootstrap.Services.Display
                     });
                 }
 
+                if (enumeratedAnyMode)
+                {
+                    SupplementCommonModes(deviceName, modes, seen);
+                }
+
                 var orderedModes = modes
                     .OrderBy(mode => mode.Width * mode.Height)
+                    .ThenBy(mode => mode.Width)
+                    .ThenBy(mode => mode.Height)
                     .ThenBy(mode => mode.RefreshRate)
                     .ToList();
 
@@ -477,6 +490,120 @@ namespace LazyBootstrap.Services.Display
         protected virtual int TryChangeDisplaySettings(string deviceName, ref DevMode devMode, int flags)
         {
             return ChangeDisplaySettingsEx(deviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
+        }
+
+        private void SupplementCommonModes(string deviceName, List<DisplayMode> modes, ISet<string> seen)
+        {
+            if (modes == null || modes.Count == 0)
+            {
+                return;
+            }
+
+            var currentStateResult = GetCurrentState(deviceName);
+            var currentState = currentStateResult.Succeeded ? currentStateResult.State : null;
+            var highestMode = modes
+                .OrderByDescending(mode => mode.Width * mode.Height)
+                .ThenByDescending(mode => mode.Width)
+                .ThenByDescending(mode => mode.Height)
+                .FirstOrDefault();
+            if (highestMode == null)
+            {
+                return;
+            }
+
+            int maxArea = highestMode.Width * highestMode.Height;
+            var refreshCandidates = BuildProbeRefreshCandidates(modes, currentState?.RefreshRate);
+
+            foreach (var resolution in CommonProbeResolutions)
+            {
+                if (resolution.Width * resolution.Height > maxArea)
+                {
+                    continue;
+                }
+
+                var adjustedResolution = AdjustResolutionForOrientation(resolution.Width, resolution.Height, currentState?.Orientation ?? DmdoDefault);
+                bool resolutionExists = modes.Any(mode =>
+                    mode.Width == adjustedResolution.Width
+                    && mode.Height == adjustedResolution.Height);
+                if (resolutionExists)
+                {
+                    continue;
+                }
+
+                foreach (int refreshRate in refreshCandidates)
+                {
+                    if (!TryProbeMode(deviceName, adjustedResolution.Width, adjustedResolution.Height, refreshRate))
+                    {
+                        continue;
+                    }
+
+                    string key = $"{adjustedResolution.Width}x{adjustedResolution.Height}@{refreshRate}";
+                    if (!seen.Add(key))
+                    {
+                        break;
+                    }
+
+                    modes.Add(new DisplayMode
+                    {
+                        Width = adjustedResolution.Width,
+                        Height = adjustedResolution.Height,
+                        RefreshRate = refreshRate
+                    });
+                    break;
+                }
+            }
+        }
+
+        private List<int> BuildProbeRefreshCandidates(IEnumerable<DisplayMode> modes, int? currentRefreshRate)
+        {
+            var candidates = new List<int>();
+            if (currentRefreshRate.HasValue && currentRefreshRate.Value > 0)
+            {
+                candidates.Add(currentRefreshRate.Value);
+            }
+
+            if (!candidates.Contains(60))
+            {
+                candidates.Add(60);
+            }
+
+            foreach (int refreshRate in modes
+                .Select(mode => mode.RefreshRate)
+                .Where(value => value > 0)
+                .Distinct()
+                .OrderBy(value => value))
+            {
+                if (!candidates.Contains(refreshRate))
+                {
+                    candidates.Add(refreshRate);
+                }
+            }
+
+            return candidates;
+        }
+
+        private bool TryProbeMode(string deviceName, int width, int height, int refreshRate)
+        {
+            var devMode = CreateDevMode();
+            if (!TryEnumDisplaySettings(deviceName, EnumCurrentSettings, ref devMode))
+            {
+                return false;
+            }
+
+            devMode.PelsWidth = width;
+            devMode.PelsHeight = height;
+            devMode.DisplayFrequency = refreshRate;
+            devMode.Fields = DmPelsWidth | DmPelsHeight | DmDisplayFrequency;
+
+            return TryChangeDisplaySettings(deviceName, ref devMode, CdsTest) == DispChangeSuccessful;
+        }
+
+        private static (int Width, int Height) AdjustResolutionForOrientation(int width, int height, int orientation)
+        {
+            bool isPortrait = orientation == Dmdo90 || orientation == Dmdo270;
+            return isPortrait
+                ? (Math.Min(width, height), Math.Max(width, height))
+                : (Math.Max(width, height), Math.Min(width, height));
         }
 
         private List<DisplayDevice> EnumerateActiveMonitors(string adapterDeviceName)

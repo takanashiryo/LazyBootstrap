@@ -121,6 +121,8 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncMainSelectionFromUi();
+                        _viewModel.Display.SelectedMainResolution = string.Empty;
+                        _viewModel.Display.SelectedMainRefreshRate = string.Empty;
                         await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
                     };
                 }
@@ -135,6 +137,8 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncSubSelectionFromUi();
+                        _viewModel.Display.SelectedSubResolution = string.Empty;
+                        _viewModel.Display.SelectedSubRefreshRate = string.Empty;
                         await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
                     };
                 }

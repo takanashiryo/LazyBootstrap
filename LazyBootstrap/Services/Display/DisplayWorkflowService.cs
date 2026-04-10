@@ -295,14 +295,11 @@ namespace LazyBootstrap.Services.Display
             var supportedModesResult = _displayConfigurationService.GetSupportedModes(selectedDisplay.Info.DeviceName);
             string tooltip = BuildTooltip(supportedModesResult);
 
-            var resolutionItems = supportedModesResult.Modes
-                .Select(mode => NormalizeResolutionByRotation(mode.Width, mode.Height, rotation))
-                .Distinct(StringComparer.OrdinalIgnoreCase)
-                .ToList();
+            var resolutionItems = BuildResolutionItems(supportedModesResult.Modes, rotation, out string highestResolution);
 
             if (!resolutionItems.Contains(selectedResolution ?? string.Empty, StringComparer.OrdinalIgnoreCase))
             {
-                selectedResolution = resolutionItems.FirstOrDefault() ?? string.Empty;
+                selectedResolution = highestResolution;
             }
 
             var refreshItems = supportedModesResult.Modes
@@ -319,6 +316,48 @@ namespace LazyBootstrap.Services.Display
             }
 
             return new DisplayOptionState(resolutionItems, refreshItems, selectedResolution, selectedRefreshRate, tooltip);
+        }
+
+        private static IReadOnlyList<string> BuildResolutionItems(IReadOnlyList<DisplayMode> modes, int rotation, out string highestResolution)
+        {
+            highestResolution = string.Empty;
+            if (modes == null || modes.Count == 0)
+            {
+                return Array.Empty<string>();
+            }
+
+            var highestMode = modes
+                .OrderByDescending(mode => mode.Width * mode.Height)
+                .ThenByDescending(mode => mode.Width)
+                .ThenByDescending(mode => mode.Height)
+                .First();
+            highestResolution = NormalizeResolutionByRotation(highestMode.Width, highestMode.Height, rotation);
+
+            var supportedResolutions = new HashSet<string>(
+                modes.Select(mode => NormalizeResolutionByRotation(mode.Width, mode.Height, rotation)),
+                StringComparer.OrdinalIgnoreCase);
+            var resolutionItems = new List<string>();
+
+            AddSupportedResolution(resolutionItems, supportedResolutions, NormalizeResolutionByRotation(1280, 720, rotation));
+            AddSupportedResolution(resolutionItems, supportedResolutions, NormalizeResolutionByRotation(1920, 1080, rotation));
+            AddSupportedResolution(resolutionItems, supportedResolutions, highestResolution);
+
+            return resolutionItems;
+        }
+
+        private static void AddSupportedResolution(ICollection<string> target, ISet<string> supportedResolutions, string resolution)
+        {
+            if (string.IsNullOrWhiteSpace(resolution) || !supportedResolutions.Contains(resolution))
+            {
+                return;
+            }
+
+            if (target.Contains(resolution, StringComparer.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            target.Add(resolution);
         }
 
         private void UpdateDisplayInfo(DisplayConfigurationPageViewModel viewModel, bool isMainTarget)
