@@ -1,8 +1,10 @@
 using System;
 using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Xml.Linq;
 using Avalonia.Controls.Notifications;
 using Microsoft.Extensions.Logging;
 
@@ -28,8 +30,12 @@ namespace LazyBootstrap.Services.Display
     internal sealed class DisplayWorkflowService : IDisplayWorkflowService
     {
         private const string DisplaySectionName = AppConfigBootstrapper.DisplaySectionName;
+        private const string MainMonitorOptionName = "mainmonitor";
+        private const string SubMonitorOptionName = "sdvxsubmonitor";
 
         private readonly IConfigHandler _configHandler;
+        private readonly ILauncherPaths _paths;
+        private readonly ISpiceConfigFileService _spiceConfigFileService;
         private readonly IDisplayConfigurationService _displayConfigurationService;
         private readonly IDisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator;
         private readonly IUiInteractionService _uiInteractionService;
@@ -37,12 +43,16 @@ namespace LazyBootstrap.Services.Display
 
         public DisplayWorkflowService(
             IConfigHandler configHandler,
+            ILauncherPaths paths,
+            ISpiceConfigFileService spiceConfigFileService,
             IDisplayConfigurationService displayConfigurationService,
             IDisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
             IUiInteractionService uiInteractionService,
             ILogger<DisplayWorkflowService> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
+            _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+            _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
             _displayConfigurationService = displayConfigurationService ?? throw new ArgumentNullException(nameof(displayConfigurationService));
             _displaySettingsTransactionCoordinator = displaySettingsTransactionCoordinator ?? throw new ArgumentNullException(nameof(displaySettingsTransactionCoordinator));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
@@ -102,6 +112,7 @@ namespace LazyBootstrap.Services.Display
             _configHandler.WriteString(DisplaySectionName, "displayconfigure", viewModel.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
             _configHandler.WriteString(DisplaySectionName, "mode", viewModel.IsDualDisplay ? "dual" : "single");
             _configHandler.WriteString(DisplaySectionName, "exitrestore", viewModel.ExitRestore.ToString().ToLowerInvariant());
+            SyncSpiceMonitorOverrides(viewModel);
             return Task.CompletedTask;
         }
 
@@ -413,6 +424,88 @@ namespace LazyBootstrap.Services.Display
             _configHandler.WriteString(DisplaySectionName, "subresolution", viewModel.SelectedSubResolution ?? string.Empty);
             _configHandler.WriteString(DisplaySectionName, "mainrefresh", viewModel.SelectedMainRefreshRate ?? string.Empty);
             _configHandler.WriteString(DisplaySectionName, "subrefresh", viewModel.SelectedSubRefreshRate ?? string.Empty);
+            SyncSpiceMonitorOverrides(viewModel);
+        }
+
+        private void SyncSpiceMonitorOverrides(DisplayConfigurationPageViewModel viewModel)
+        {
+            string mainMonitorValue = string.Empty;
+            string subMonitorValue = string.Empty;
+
+            if (viewModel.IsDisplayConfigurationEnabled)
+            {
+                mainMonitorValue = viewModel.SelectedMainDisplay?.Info?.DeviceName ?? string.Empty;
+                subMonitorValue = viewModel.IsDualDisplay
+                    ? viewModel.SelectedSubDisplay?.Info?.DeviceName ?? string.Empty
+                    : string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(mainMonitorValue))
+            {
+                mainMonitorValue = string.Empty;
+            }
+
+            if (string.IsNullOrWhiteSpace(subMonitorValue))
+            {
+                subMonitorValue = string.Empty;
+            }
+
+            try
+            {
+                string spiceXmlPath = _paths.GetSpiceXmlPath();
+                if (string.IsNullOrWhiteSpace(spiceXmlPath) || !File.Exists(spiceXmlPath))
+                {
+                    return;
+                }
+
+                if (!_spiceConfigFileService.TryLoadOptionsContext(
+                        spiceXmlPath,
+                        LoadOptions.PreserveWhitespace,
+                        false,
+                        out var context,
+                        out var message,
+                        out var warning))
+                {
+                    if (!string.IsNullOrWhiteSpace(message))
+                    {
+                        if (warning)
+                        {
+                            _logger.LogInformation("Skip syncing spice monitor overrides: {Message}", message);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Skip syncing spice monitor overrides: {Message}", message);
+                        }
+                    }
+
+                    return;
+                }
+
+                string currentMainMonitor = context.GetOptionValue(MainMonitorOptionName) ?? string.Empty;
+                string currentSubMonitor = context.GetOptionValue(SubMonitorOptionName) ?? string.Empty;
+                if (string.Equals(currentMainMonitor, mainMonitorValue, StringComparison.Ordinal)
+                    && string.Equals(currentSubMonitor, subMonitorValue, StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                var normalizationWarning = _spiceConfigFileService.ApplyUpdates(
+                    context,
+                    new[]
+                    {
+                        new SpiceOptionUpdate(MainMonitorOptionName, mainMonitorValue, false),
+                        new SpiceOptionUpdate(SubMonitorOptionName, subMonitorValue, false)
+                    });
+
+                if (!string.IsNullOrWhiteSpace(normalizationWarning))
+                {
+                    _uiInteractionService.ShowWarningToast("配置格式修复失败", normalizationWarning);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to sync spice monitor overrides.");
+            }
         }
 
         private static void EnsureRotationOptions(DisplayConfigurationPageViewModel viewModel)
