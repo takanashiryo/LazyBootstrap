@@ -21,11 +21,10 @@ LazyBootstrap是一个适用于街机游戏SOUND VOLTEX的辅助启动器，其�
 
 ## 指南
 AvaloniaUI Docs：https://docs.avaloniaui.net/
-- 可随时使用“avalonia-ui”MCP服务器进行查询
-- 界面部分交给SukiUI管理，Avalinia文档仅作为规划和开发的参考，原则上不直接使用AvaloniaUI的控件和样式
+- 界面部分交给SukiUI管理，Avalinia文档仅作为规划和开发的参考，请勿直接使用AvaloniaUI的控件和样式
 - 不用接入官方Dev Tools，因为不兼容
 SukiUI Docs：https://kikipoulet.github.io/SukiUI/
-- 可随时在Libs/SukiUI目录下查看源代码并纳入开发
+- 可随时在SukiUI目录下查看源代码并纳入开发
 - 由于SukiUI的文档较为简陋，新特性跟进很慢，建议直接查看源代码进行开发
 - SukiUI本身为单页面项目，不适合进行拆分，故UI需保持单axaml开发，逻辑可拆分
 - SukiUI自己本身管理一套系统，请避免使用AvaloniaUI的系统，以免导致冲突。
