@@ -483,7 +483,7 @@ namespace LazyBootstrap.Services.Settings
         {
             var confirmed = await _uiInteractionService.ShowDialogAsync(
                 "启用显卡兼容层",
-                "AMD 与 Intel 显卡通常需要开启显卡兼容层，NVIDIA 显卡通常不要开启。\n\n启用后会修改 spice2x 的兼容层设置。\n你确定要继续吗？",
+                "即将启用显卡兼容层，请确认你的显卡为 AMD 或者 Intel ，否则请勿开启。\n\n\n你确定要继续吗？",
                 "确认",
                 "取消",
                 NotificationType.Warning);

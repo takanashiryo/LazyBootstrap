@@ -209,8 +209,8 @@
                                                             <TextBlock Text="启用显卡兼容层" VerticalAlignment="Center"/>
                                                             <ToggleSwitch x:Name="CompatLayerToggleSwitch" Grid.Column="1"/>
                                                         </Grid>
-                                                        <TextBlock Text="AMD与Intel显卡必须要开启，NVIDIA显卡一定不能开启" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-18,0,0"/>
-                                                        <suki:BusyArea x:Name="CompatRenderModeBusyArea" BusyText="兼容层启用中...">
+                                                        <TextBlock Text="启用后会导入相关补丁并设置 spice2x" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-18,0,0"/>
+                                                        <suki:BusyArea x:Name="CompatRenderModeBusyArea" BusyText="兼容层已启动，请关闭以修改设置">
                                                             <Grid HorizontalAlignment="Center"
                                                                   MaxWidth="684"
                                                                   Margin="0,2,0,0"
