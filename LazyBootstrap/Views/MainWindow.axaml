@@ -237,6 +237,14 @@
                                                         </Grid>
                                                         <TextBlock Text="启用后会导入相关补丁并设置 spice2x" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-18,0,0"/>
                                                         <suki:BusyArea x:Name="CompatRenderModeBusyArea" BusyText="兼容层已启动，请关闭以修改设置">
+                                                            <suki:BusyArea.Styles>
+                                                                <Style Selector="suki|BusyArea[IsBusy=False] /template/ DockPanel#LoadingBusyArea">
+                                                                    <Setter Property="IsHitTestVisible" Value="False"/>
+                                                                </Style>
+                                                                <Style Selector="suki|BusyArea[IsBusy=True] /template/ DockPanel#LoadingBusyArea">
+                                                                    <Setter Property="IsHitTestVisible" Value="True"/>
+                                                                </Style>
+                                                            </suki:BusyArea.Styles>
                                                             <Grid HorizontalAlignment="Center"
                                                                   MaxWidth="684"
                                                                   Margin="0,2,0,0"
