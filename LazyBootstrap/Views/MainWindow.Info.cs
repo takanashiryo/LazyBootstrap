@@ -18,8 +18,8 @@ namespace LazyBootstrap.Views
         private async Task ShowEnvironmentScanErrorDialogAsync()
         {
             const string errorContent =
-                "(*´ - `*）啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
-                "c(*´∇｀)っNoah 建议的操作步骤：\n" +
+                "(*´ - `*)∩ 啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
+                "(∩^-^)∩(∩^-^)∩ Noah 建议的操作步骤：\n" +
                 "- 在工具页点击「安装运行库」按钮安装必要运行环境\n" +
                 "- 确保已安装最新的显卡驱动程序\n" +
                 "- 如为 AMD/Intel 显卡请启用“显卡兼容层”功能\n\n" +
