@@ -47,7 +47,7 @@ namespace LazyBootstrap.Services.Settings
             new("sp2x-lowlatencysharedaudio", "/ENABLED", false),
             new("sp2x-dx9on12", "0", false),
             new("url", AsphyxiaDefaultUrl, false),
-            new("sp2x-sdvxsubredraw", "/ENABLED", false)
+            // new("sp2x-sdvxsubredraw", "/ENABLED", false)
         };
 
         private readonly IConfigHandler _configHandler;
@@ -82,6 +82,7 @@ namespace LazyBootstrap.Services.Settings
             public bool WindowTopMost { get; init; }
             public string WindowSize { get; init; } = string.Empty;
             public bool SingleAdapter { get; init; }
+            public bool NvidiaPerformanceProfile { get; init; }
             public bool SubWindowTopMost { get; init; }
             public bool SubForceRender { get; init; }
             public bool NativeTouch { get; init; }
@@ -844,6 +845,7 @@ namespace LazyBootstrap.Services.Settings
                 WindowTopMost = string.Equals(context.GetOptionValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
                 WindowSize = context.GetOptionValue("sp2x-windowsize") ?? string.Empty,
                 SingleAdapter = string.Equals(context.GetOptionValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
+                NvidiaPerformanceProfile = string.Equals(context.GetOptionValue("sp2x-nvprofile"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
                 SubWindowTopMost = string.Equals(context.GetOptionValue("sdvxwsubtop"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
                 SubForceRender = string.Equals(context.GetOptionValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
                 NativeTouch = string.Equals(context.GetOptionValue("sdvxnativetouch"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
@@ -871,6 +873,7 @@ namespace LazyBootstrap.Services.Settings
             viewModel.WindowTopMost = snapshot.WindowTopMost;
             viewModel.WindowSize = snapshot.WindowSize;
             viewModel.SingleAdapter = snapshot.SingleAdapter;
+            viewModel.NvidiaPerformanceProfile = snapshot.NvidiaPerformanceProfile;
             viewModel.SubWindowTopMost = snapshot.SubWindowTopMost;
             viewModel.SubForceRender = snapshot.SubForceRender;
             viewModel.NativeTouch = snapshot.NativeTouch;
@@ -1166,6 +1169,7 @@ namespace LazyBootstrap.Services.Settings
             yield return new SpiceOptionUpdate("sp2x-windowalwaysontop", viewModel.WindowTopMost ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("sp2x-windowsize", viewModel.WindowSize ?? string.Empty);
             yield return new SpiceOptionUpdate("graphics-force-single-adapter", viewModel.SingleAdapter ? "/ENABLED" : string.Empty);
+            yield return new SpiceOptionUpdate("sp2x-nvprofile", viewModel.NvidiaPerformanceProfile ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("sdvxwsubtop", viewModel.SubWindowTopMost ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("sp2x-sdvxsubredraw", viewModel.SubForceRender ? "/ENABLED" : string.Empty);
             yield return new SpiceOptionUpdate("sdvxnativetouch", viewModel.NativeTouch ? "/ENABLED" : string.Empty);

@@ -668,6 +668,15 @@ namespace LazyBootstrap.Views
                     await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
+            if (NvidiaPerformanceProfileToggleSwitch != null)
+            {
+                NvidiaPerformanceProfileToggleSwitch.IsCheckedChanged += async (s, e) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _viewModel.Settings.NvidiaPerformanceProfile = NvidiaPerformanceProfileToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+                };
+            }
             if (SubWindowTopMostToggleSwitch != null)
             {
                 SubWindowTopMostToggleSwitch.IsCheckedChanged += async (s, e) =>

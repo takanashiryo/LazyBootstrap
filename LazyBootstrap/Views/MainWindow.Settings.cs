@@ -93,6 +93,7 @@ namespace LazyBootstrap.Views
                     case nameof(SettingsPageViewModel.ShowCursorTouchSim):
                     case nameof(SettingsPageViewModel.WindowTopMost):
                     case nameof(SettingsPageViewModel.SingleAdapter):
+                    case nameof(SettingsPageViewModel.NvidiaPerformanceProfile):
                     case nameof(SettingsPageViewModel.SubWindowTopMost):
                     case nameof(SettingsPageViewModel.SubForceRender):
                     case nameof(SettingsPageViewModel.NativeTouch):
@@ -277,6 +278,11 @@ namespace LazyBootstrap.Views
             if (SingleAdapterToggleSwitch != null)
             {
                 SingleAdapterToggleSwitch.IsChecked = _viewModel.Settings.SingleAdapter;
+            }
+
+            if (NvidiaPerformanceProfileToggleSwitch != null)
+            {
+                NvidiaPerformanceProfileToggleSwitch.IsChecked = _viewModel.Settings.NvidiaPerformanceProfile;
             }
 
             if (SubWindowTopMostToggleSwitch != null)

@@ -103,6 +103,9 @@ namespace LazyBootstrap.ViewModels
         private bool singleAdapter;
 
         [ObservableProperty]
+        private bool nvidiaPerformanceProfile;
+
+        [ObservableProperty]
         private bool subWindowTopMost;
 
         [ObservableProperty]
