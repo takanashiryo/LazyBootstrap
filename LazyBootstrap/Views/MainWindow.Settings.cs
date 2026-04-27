@@ -260,11 +260,6 @@ namespace LazyBootstrap.Views
             {
                 RevisionTextBox.Text = _viewModel.Info.GameVersion;
             }
-
-            if (LauncherVersionTextBox != null)
-            {
-                LauncherVersionTextBox.Text = _viewModel.Info.LauncherVersion;
-            }
         }
 
         private void ApplySpiceSettingsFromViewModel()

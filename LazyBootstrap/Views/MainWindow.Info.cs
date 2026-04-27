@@ -51,13 +51,14 @@ namespace LazyBootstrap.Views
                     return;
                 }
 
+                // Must match the "信息" SukiSideMenuItem Header in MainWindow.axaml (side menu order: 启动,设定,显示器,工具,信息,关于).
                 var target = MainSideMenu.Items?
                     .OfType<SukiSideMenuItem>()
                     .FirstOrDefault(item => string.Equals(item.Header?.ToString(), "信息", StringComparison.Ordinal));
 
                 if (target == null)
                 {
-                    target = MainSideMenu.Items?.OfType<SukiSideMenuItem>().Skip(4).FirstOrDefault();
+                    target = MainSideMenu.Items?.OfType<SukiSideMenuItem>().ElementAtOrDefault(4);
                 }
 
                 if (target != null)

@@ -654,13 +654,11 @@
                         <ScrollViewer x:Name="InfoPageView" Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Spacing="12">
                                 <suki:GlassCard>
-                                    <Grid Margin="14" ColumnDefinitions="120,*" RowDefinitions="Auto,Auto,Auto">
+                                    <Grid Margin="14" ColumnDefinitions="120,*" RowDefinitions="Auto,Auto">
                                         <TextBlock Text="机台属性" VerticalAlignment="Center"/>
                                         <TextBox x:Name="CurrentVersionTextBox" Grid.Column="1" IsReadOnly="True"/>
                                         <TextBlock Text="当前游戏版本" Grid.Row="1" VerticalAlignment="Center" Margin="0,8,0,0"/>
                                         <TextBox x:Name="RevisionTextBox" Grid.Row="1" Grid.Column="1" Margin="0,8,0,0" IsReadOnly="True"/>
-                                        <TextBlock Text="启动器版本" Grid.Row="2" VerticalAlignment="Center" Margin="0,8,0,0"/>
-                                        <TextBox x:Name="LauncherVersionTextBox" Grid.Row="2" Grid.Column="1" Margin="0,8,0,0" IsReadOnly="True"/>
                                     </Grid>
                                 </suki:GlassCard>
 
@@ -671,6 +669,50 @@
                                     </StackPanel>
                                 </suki:GlassCard>
                             </StackPanel>
+                        </ScrollViewer>
+                    </suki:SukiSideMenuItem.PageContent>
+                </suki:SukiSideMenuItem>
+
+                <suki:SukiSideMenuItem Header="关于">
+                    <suki:SukiSideMenuItem.Icon>
+                        <TextBlock Classes="FaIcon" Text="&#xF128;" FontSize="14"/>
+                    </suki:SukiSideMenuItem.Icon>
+                    <suki:SukiSideMenuItem.PageContent>
+                        <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                            <Grid MinHeight="520" VerticalAlignment="Center">
+                                <StackPanel x:Name="AboutPageContentStack"
+                                            MaxWidth="720"
+                                            HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Spacing="16">
+                                    <Image Height="120"
+                                           HorizontalAlignment="Center"
+                                           Stretch="Uniform"
+                                           Source="avares://LazyBootstrap/Assets/Images/about.png"/>
+                                    <TextBlock Text="SOUND VOLTEX LazyBootstrap"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               FontSize="20"
+                                               FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Info.LauncherVersion}"
+                                               HorizontalAlignment="Center"
+                                               TextAlignment="Center"
+                                               FontSize="15"
+                                               Opacity="0.9"/>
+                                    <TextBlock TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               FontSize="14"
+                                               LineHeight="24"
+                                               Opacity="0.88"
+                                               Text="此启动器的目的是为了让原本比较繁琐的步骤彻底懒人化，而非替代spice2x"/>
+                                    <TextBlock TextWrapping="Wrap"
+                                               TextAlignment="Center"
+                                               FontSize="14"
+                                               LineHeight="24"
+                                               Opacity="0.88"
+                                               Text="Takanashi Ryo©启动器版权所有，仅供学习使用，请于下载后24小时内删除，如果你是付费获取的，那你就被骗了"/>
+                                </StackPanel>
+                            </Grid>
                         </ScrollViewer>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
