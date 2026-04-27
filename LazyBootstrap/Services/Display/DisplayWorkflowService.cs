@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 using Avalonia.Controls.Notifications;
+using LazyBootstrap.Services.Config;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Display
@@ -30,6 +31,7 @@ namespace LazyBootstrap.Services.Display
     internal sealed class DisplayWorkflowService : IDisplayWorkflowService
     {
         private const string DisplaySectionName = AppConfigBootstrapper.DisplaySectionName;
+        private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
         private const string MainMonitorOptionName = "mainmonitor";
         private const string SubMonitorOptionName = "sdvxsubmonitor";
 
@@ -427,6 +429,15 @@ namespace LazyBootstrap.Services.Display
             SyncSpiceMonitorOverrides(viewModel);
         }
 
+        private string GetActiveSpiceXmlPathForMonitorSync()
+        {
+            bool useSystem = bool.TryParse(
+                _configHandler.ReadString(SettingSectionName, "use-system-config", "false"),
+                out var parsed)
+                && parsed;
+            return _paths.ResolveSpiceXmlPath(useSystem);
+        }
+
         private void SyncSpiceMonitorOverrides(DisplayConfigurationPageViewModel viewModel)
         {
             string mainMonitorValue = string.Empty;
@@ -452,7 +463,7 @@ namespace LazyBootstrap.Services.Display
 
             try
             {
-                string spiceXmlPath = _paths.GetSpiceXmlPath();
+                string spiceXmlPath = GetActiveSpiceXmlPathForMonitorSync();
                 if (string.IsNullOrWhiteSpace(spiceXmlPath) || !File.Exists(spiceXmlPath))
                 {
                     return;

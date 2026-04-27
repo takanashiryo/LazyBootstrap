@@ -30,6 +30,9 @@ namespace LazyBootstrap.ViewModels
         private bool noAsphyxia;
 
         [ObservableProperty]
+        private bool useSystemSpiceConfig;
+
+        [ObservableProperty]
         private bool compatibilityLayerEnabled;
 
         [ObservableProperty]
@@ -253,9 +256,6 @@ namespace LazyBootstrap.ViewModels
 
         [RelayCommand]
         private Task EditConfigAsync() => _workflowService?.EditConfigAsync(this) ?? Task.CompletedTask;
-
-        [RelayCommand]
-        private Task ImportRecommendedConfigAsync() => _workflowService?.ImportRecommendedConfigAsync(this) ?? Task.CompletedTask;
 
         [RelayCommand]
         private async Task EnableCompatibilityLayerAsync()

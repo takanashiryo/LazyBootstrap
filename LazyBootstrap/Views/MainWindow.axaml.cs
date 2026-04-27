@@ -556,6 +556,19 @@ namespace LazyBootstrap.Views
                     await _settingsWorkflowService.PersistLauncherSettingsAsync(_viewModel.Settings);
                 };
             }
+            if (UseSystemSpiceConfigToggleSwitch != null)
+            {
+                UseSystemSpiceConfigToggleSwitch.IsCheckedChanged += async (s, e) =>
+                {
+                    if (_isLoadingSettings)
+                    {
+                        return;
+                    }
+
+                    _viewModel.Settings.UseSystemSpiceConfig = UseSystemSpiceConfigToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistUseSystemSpiceConfigAsync(_viewModel.Settings);
+                };
+            }
             if (ExitRestoreToggleSwitch != null)
             {
                 ExitRestoreToggleSwitch.IsCheckedChanged += async (s, e) =>

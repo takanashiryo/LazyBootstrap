@@ -309,6 +309,12 @@ namespace LazyBootstrap.Services.Launch
                 }
 
                 var argumentsBuilder = new StringBuilder();
+                bool useSystemSpice = settingsViewModel?.UseSystemSpiceConfig ?? false;
+                string spiceArgLine = Spice64CommandLine.BuildGameLaunchArguments(useSystemSpice);
+                if (!string.IsNullOrWhiteSpace(spiceArgLine))
+                {
+                    argumentsBuilder.Append(spiceArgLine);
+                }
 
                 AppendLaunchOutput(launchViewModel, "正在启动游戏...");
                 AppendLaunchOutput(launchViewModel, $"启动参数: {argumentsBuilder}");

@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using LazyBootstrap.Models;
+using LazyBootstrap.ViewModels;
 using SukiUI.Dialogs;
 
 namespace LazyBootstrap.Views
@@ -30,6 +32,32 @@ namespace LazyBootstrap.Views
             _viewModel.Settings.AsioDrivers.CollectionChanged += OnSettingsCollectionChanged;
             _viewModel.Settings.NetworkAdapters.CollectionChanged -= OnSettingsCollectionChanged;
             _viewModel.Settings.NetworkAdapters.CollectionChanged += OnSettingsCollectionChanged;
+
+            _viewModel.PropertyChanged -= OnMainWindowViewModelPropertyChanged;
+            _viewModel.PropertyChanged += OnMainWindowViewModelPropertyChanged;
+        }
+
+        private void OnMainWindowViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (!string.Equals(e?.PropertyName, nameof(MainWindowViewModel.SelectedPage), StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            if (_viewModel.SelectedPage != ShellPage.Settings)
+            {
+                return;
+            }
+
+            _ = Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (_viewModel?.Settings == null)
+                {
+                    return;
+                }
+
+                ApplyServerPresetViewModelStateToUi();
+            });
         }
 
         private void UnhookSettingsViewModelState()
@@ -39,6 +67,7 @@ namespace LazyBootstrap.Views
                 return;
             }
 
+            _viewModel.PropertyChanged -= OnMainWindowViewModelPropertyChanged;
             _viewModel.Settings.PropertyChanged -= OnSettingsViewModelPropertyChanged;
             _viewModel.Settings.ServerPresets.CollectionChanged -= OnSettingsCollectionChanged;
             _viewModel.Settings.AsioDrivers.CollectionChanged -= OnSettingsCollectionChanged;
@@ -66,6 +95,7 @@ namespace LazyBootstrap.Views
                         break;
 
                     case nameof(SettingsPageViewModel.NoAsphyxia):
+                    case nameof(SettingsPageViewModel.UseSystemSpiceConfig):
                     case nameof(SettingsPageViewModel.CompatibilityLayerEnabled):
                     case nameof(SettingsPageViewModel.CompatibilityRenderMode):
                         ApplyStartupSettingsViewModelStateToUi();
@@ -155,6 +185,11 @@ namespace LazyBootstrap.Views
                     NoAsphyxiaToggleSwitch.IsChecked = _viewModel.Settings.NoAsphyxia;
                 }
 
+                if (UseSystemSpiceConfigToggleSwitch != null)
+                {
+                    UseSystemSpiceConfigToggleSwitch.IsChecked = _viewModel.Settings.UseSystemSpiceConfig;
+                }
+
                 ApplyCompatibilityStateFromViewModel();
                 ApplyServerPresetViewModelStateToUi();
                 ApplySettingsAvailabilityStateToUi();
@@ -211,7 +246,7 @@ namespace LazyBootstrap.Views
                 SettingsEmptyStateTextBlock.Text = _viewModel.Settings.SpiceConfigEmptyStateMessage ?? string.Empty;
             }
 
-            UpdateRecommendedSpiceConfigButtonVisibility();
+            UpdateUseSystemSpiceConfigSwitchVisibility();
         }
 
         private void ApplyInfoViewModelStateToUi()
@@ -503,10 +538,17 @@ namespace LazyBootstrap.Views
             _isSyncingModel = true;
             try
             {
-                if (ServerPresetComboBox != null
-                    && !ReferenceEquals(ServerPresetComboBox.SelectedItem, _viewModel.Settings.SelectedServerPreset))
+                if (ServerPresetComboBox != null)
                 {
-                    ServerPresetComboBox.SelectedItem = _viewModel.Settings.SelectedServerPreset;
+                    int index = FindServerPresetIndex(_viewModel.Settings.SelectedServerPreset);
+                    if (index >= 0
+                        && (ServerPresetComboBox.SelectedIndex != index
+                            || !ReferenceEquals(
+                                ServerPresetComboBox.SelectedItem,
+                                _viewModel.Settings.ServerPresets[index])))
+                    {
+                        ServerPresetComboBox.SelectedIndex = index;
+                    }
                 }
 
                 SetTextBoxTextIfNeeded(ServerAddressTextBox, _viewModel.Settings.ServerAddress);
@@ -517,6 +559,33 @@ namespace LazyBootstrap.Views
                 _isSyncingModel = false;
                 _isUpdatingServerPresetUi = false;
             }
+        }
+
+        private int FindServerPresetIndex(ServerPresetItem selected)
+        {
+            if (selected == null)
+            {
+                return -1;
+            }
+
+            var presets = _viewModel.Settings.ServerPresets;
+            for (int i = 0; i < presets.Count; i++)
+            {
+                if (ReferenceEquals(presets[i], selected))
+                {
+                    return i;
+                }
+            }
+
+            for (int i = 0; i < presets.Count; i++)
+            {
+                if (string.Equals(presets[i].Name, selected.Name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         private static void SetTextBoxTextIfNeeded(TextBox textBox, string value)
@@ -551,11 +620,16 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private void UpdateRecommendedSpiceConfigButtonVisibility()
+        private void UpdateUseSystemSpiceConfigSwitchVisibility()
         {
-            if (ImportRecommendedSpiceConfigButton != null)
+            bool show = _viewModel.Settings.IsSpiceConfigAvailable;
+            if (UseSystemSpiceConfigRow != null)
             {
-                ImportRecommendedSpiceConfigButton.IsVisible = _viewModel.Settings.IsSpiceConfigAvailable;
+                UseSystemSpiceConfigRow.IsVisible = show;
+            }
+            else if (UseSystemSpiceConfigToggleSwitch != null)
+            {
+                UseSystemSpiceConfigToggleSwitch.IsVisible = show;
             }
         }
     }

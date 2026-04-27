@@ -1,5 +1,4 @@
 using System;
-using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +7,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using LazyBootstrap.Services.Launch;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Settings
@@ -26,7 +26,7 @@ namespace LazyBootstrap.Services.Settings
         Task PersistCompatibilityToggleAsync(SettingsPageViewModel viewModel);
         Task PersistCompatibilityRenderModeAsync(SettingsPageViewModel viewModel);
         Task EditConfigAsync(SettingsPageViewModel viewModel);
-        Task ImportRecommendedConfigAsync(SettingsPageViewModel viewModel);
+        Task PersistUseSystemSpiceConfigAsync(SettingsPageViewModel viewModel);
         Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel);
         Task AddServerPresetAsync(SettingsPageViewModel viewModel);
         Task DeleteServerPresetAsync(SettingsPageViewModel viewModel);
@@ -38,16 +38,8 @@ namespace LazyBootstrap.Services.Settings
         private const string AsphyxiaPresetName = "Asphyxia";
         private const string AsphyxiaDefaultUrl = "http://localhost:8083";
         private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
+        private const string UseSystemConfigKey = "use-system-config";
         private const string MissingSpiceConfigMessage = "未找到任何spice2x配置文件";
-
-        private static readonly SpiceOptionUpdate[] RecommendedSpiceOptionUpdates =
-        {
-            new("k", "ifs_hook.dll", false),
-            new("sp2x-nvprofile", "/ENABLED", false),
-            new("sp2x-lowlatencysharedaudio", "/ENABLED", false),
-            new("sp2x-dx9on12", "0", false),
-            new("url", AsphyxiaDefaultUrl, false)
-        };
 
         private readonly IConfigHandler _configHandler;
         private readonly ILauncherPaths _paths;
@@ -114,13 +106,12 @@ namespace LazyBootstrap.Services.Settings
 
         public Task InitializeStartupAsync(SettingsPageViewModel viewModel)
         {
-            bool isSpiceConfigAvailable = IsSpiceConfigAvailable();
-
             viewModel.RunSilently(() =>
             {
                 viewModel.NoAsphyxia = ReadBool(SettingSectionName, "noasphyxia", false);
+                viewModel.UseSystemSpiceConfig = ReadBool(SettingSectionName, UseSystemConfigKey, false);
                 viewModel.CompatibilityRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
-                viewModel.IsSpiceConfigAvailable = isSpiceConfigAvailable;
+                viewModel.IsSpiceConfigAvailable = IsSpiceConfigAvailable(viewModel.UseSystemSpiceConfig);
                 viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
             RefreshCompatibilityState(viewModel);
@@ -146,7 +137,7 @@ namespace LazyBootstrap.Services.Settings
 
             var deferredState = await Task.Run(() =>
             {
-                var spiceSettings = ReadSpiceSettingsSnapshot();
+                var spiceSettings = ReadSpiceSettingsSnapshot(viewModel.UseSystemSpiceConfig);
                 var asioDrivers = BuildAsioDriverOptions(spiceSettings.AsioDriverValue);
                 var selectedAsioDriver = asioDrivers.FirstOrDefault(choice =>
                                              string.Equals(choice.Value, spiceSettings.AsioDriverValue ?? string.Empty, StringComparison.OrdinalIgnoreCase))
@@ -197,7 +188,7 @@ namespace LazyBootstrap.Services.Settings
             viewModel.PcbId = (viewModel.PcbId ?? string.Empty).Trim();
 
             if (!TryApplySpiceUpdates(
-                    _paths.GetSpiceXmlPath(),
+                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
                     LoadOptions.PreserveWhitespace,
                     false,
                     viewModel,
@@ -291,7 +282,7 @@ namespace LazyBootstrap.Services.Settings
             viewModel.NetworkAdapterSubnet = NormalizeNetworkValue(viewModel.NetworkAdapterSubnet);
 
             if (!TryApplySpiceUpdates(
-                    _paths.GetSpiceXmlPath(),
+                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
                     LoadOptions.PreserveWhitespace,
                     false,
                     viewModel,
@@ -312,7 +303,7 @@ namespace LazyBootstrap.Services.Settings
             ArgumentNullException.ThrowIfNull(viewModel);
 
             if (!TryApplySpiceUpdates(
-                    _paths.GetSpiceXmlPath(),
+                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
                     LoadOptions.PreserveWhitespace,
                     false,
                     viewModel,
@@ -378,19 +369,21 @@ namespace LazyBootstrap.Services.Settings
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            string cfgToolPath = Path.Combine(_paths.GetContentsDirectoryPath(), "spicecfg.exe");
+            string spicePath = _paths.GetSpicePath();
 
-            if (!File.Exists(cfgToolPath))
+            if (!File.Exists(spicePath))
             {
-                _uiInteractionService.ShowErrorToast("无法启动 spicecfg", $"未找到程序: {cfgToolPath}");
+                _uiInteractionService.ShowErrorToast("无法启动 spice 配置", $"未找到程序: {spicePath}");
                 return;
             }
 
             if (!File.Exists(_paths.ConfigFilePath))
             {
-                _uiInteractionService.ShowErrorToast("无法启动 spicecfg", $"未找到配置文件: {_paths.ConfigFilePath}");
+                _uiInteractionService.ShowErrorToast("无法启动 spice 配置", $"未找到配置文件: {_paths.ConfigFilePath}");
                 return;
             }
+
+            string arguments = Spice64CommandLine.BuildConfigEditorArguments(viewModel.UseSystemSpiceConfig);
 
             viewModel.IsSettingsBusy = true;
 
@@ -398,14 +391,15 @@ namespace LazyBootstrap.Services.Settings
             {
                 var process = Process.Start(new ProcessStartInfo
                 {
-                    FileName = cfgToolPath,
-                    Arguments = string.Empty,
-                    WorkingDirectory = Path.GetDirectoryName(cfgToolPath)
+                    FileName = spicePath,
+                    Arguments = arguments,
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(spicePath)
                 });
 
                 if (process == null)
                 {
-                    _uiInteractionService.ShowErrorToast("无法启动 spicecfg", "创建进程失败。");
+                    _uiInteractionService.ShowErrorToast("无法启动 spice 配置", "创建进程失败。");
                     return;
                 }
 
@@ -415,7 +409,7 @@ namespace LazyBootstrap.Services.Settings
             }
             catch (Exception ex)
             {
-                _uiInteractionService.ShowErrorToast("启动 spicecfg 失败", ex.Message);
+                _uiInteractionService.ShowErrorToast("启动 spice 配置失败", ex.Message);
             }
             finally
             {
@@ -423,60 +417,26 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
-        public Task ImportRecommendedConfigAsync(SettingsPageViewModel viewModel)
+        public Task PersistUseSystemSpiceConfigAsync(SettingsPageViewModel viewModel)
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            return ImportRecommendedConfigCoreAsync(viewModel);
-        }
-
-        private async Task ImportRecommendedConfigCoreAsync(SettingsPageViewModel viewModel)
-        {
-            var confirmed = await _uiInteractionService.ShowDialogAsync(
-                "导入推荐spice2x配置",
-                "导入推荐spice2x配置会清除以下页面的现有配置并导入新配置：\n\nOptions\nAdvanced\nDevelopment\n\n你确定要执行吗？",
-                "确认",
-                "取消",
-                NotificationType.Warning);
-
-            if (!confirmed)
-            {
-                return;
-            }
-
             try
             {
-                var appDataSpiceXmlPath = Path.Combine(
-                    SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.ApplicationData),
-                    "spicetools.xml");
-
-                if (!File.Exists(appDataSpiceXmlPath))
-                {
-                    _uiInteractionService.ShowErrorToast("导入失败", "未找到 %AppData%\\spicetools.xml，请先启动 spicecfg 重建配置文件再进行导入。");
-                    return;
-                }
-
-                if (!TryGetSpiceOptionsContext(appDataSpiceXmlPath, LoadOptions.PreserveWhitespace, true, out var context))
-                {
-                    _uiInteractionService.ShowErrorToast("导入失败", "未找到 Sound Voltex 配置项，无法导入推荐配置。");
-                    return;
-                }
-
-                var normalizationWarning = _spiceConfigFileService.ReplaceOptions(context, RecommendedSpiceOptionUpdates);
-                if (!string.IsNullOrWhiteSpace(normalizationWarning))
-                {
-                    _uiInteractionService.ShowWarningToast("配置格式修复失败", normalizationWarning);
-                }
-
-                LoadSpiceSettings(viewModel);
-                RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
-                RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
-                _uiInteractionService.ShowInfoToast("导入完成", "推荐 spice2x 配置已导入。");
+                _configHandler.WriteString(
+                    SettingSectionName,
+                    UseSystemConfigKey,
+                    viewModel.UseSystemSpiceConfig.ToString().ToLowerInvariant());
+                ReloadRuntimeState(viewModel);
             }
             catch (Exception ex)
             {
-                _uiInteractionService.ShowErrorToast("导入失败", ex.Message);
+                _logger.LogError(ex, "Failed to persist use-system-config.");
+                _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
+                viewModel.RunSilently(() => viewModel.UseSystemSpiceConfig = ReadBool(SettingSectionName, UseSystemConfigKey, false));
             }
+
+            return Task.CompletedTask;
         }
 
         private async Task ConfirmAndEnableCompatibilityLayerAsync(SettingsPageViewModel viewModel)
@@ -691,7 +651,7 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            var snapshot = ReadSpiceSettingsSnapshot();
+            var snapshot = ReadSpiceSettingsSnapshot(viewModel.UseSystemSpiceConfig);
             viewModel.RunSilently(() => ApplySpiceSettingsSnapshot(viewModel, snapshot));
             SyncSelectedServerPresetFromCurrentFields(viewModel);
         }
@@ -825,9 +785,10 @@ namespace LazyBootstrap.Services.Settings
             viewModel.RunSilently(() => viewModel.SelectedNetworkAdapter = selectedOption);
         }
 
-        private SpiceSettingsSnapshot ReadSpiceSettingsSnapshot()
+        private SpiceSettingsSnapshot ReadSpiceSettingsSnapshot(bool useSystemSpiceConfig)
         {
-            if (!TryGetSpiceOptionsContext(_paths.GetSpiceXmlPath(), LoadOptions.PreserveWhitespace, false, out var context))
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(useSystemSpiceConfig);
+            if (!TryGetSpiceOptionsContext(spiceXmlPath, LoadOptions.PreserveWhitespace, false, out var context))
             {
                 return new SpiceSettingsSnapshot();
             }
@@ -993,7 +954,7 @@ namespace LazyBootstrap.Services.Settings
 
         private bool RefreshSpiceConfigAvailability(SettingsPageViewModel viewModel)
         {
-            bool isSpiceConfigAvailable = IsSpiceConfigAvailable();
+            bool isSpiceConfigAvailable = IsSpiceConfigAvailable(viewModel.UseSystemSpiceConfig);
             viewModel.RunSilently(() =>
             {
                 viewModel.IsSpiceConfigAvailable = isSpiceConfigAvailable;
@@ -1003,9 +964,9 @@ namespace LazyBootstrap.Services.Settings
             return isSpiceConfigAvailable;
         }
 
-        private bool IsSpiceConfigAvailable()
+        private bool IsSpiceConfigAvailable(bool useSystemSpiceConfig)
         {
-            string spiceXmlPath = _paths.GetSpiceXmlPath();
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(useSystemSpiceConfig);
             if (!File.Exists(spiceXmlPath))
             {
                 return false;
@@ -1108,7 +1069,10 @@ namespace LazyBootstrap.Services.Settings
             }
 
             if (reloadViewModelOnSuccess
-                && string.Equals(spiceXmlPath, _paths.GetSpiceXmlPath(), StringComparison.OrdinalIgnoreCase))
+                && string.Equals(
+                    spiceXmlPath,
+                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
+                    StringComparison.OrdinalIgnoreCase))
             {
                 LoadSpiceSettings(viewModel);
             }
@@ -1118,7 +1082,7 @@ namespace LazyBootstrap.Services.Settings
 
         private bool TryApplyCompatibilityDxMode(SettingsPageViewModel viewModel, string dxModeValue)
         {
-            string spiceXmlPath = _paths.GetSpiceXmlPath();
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
             var spiceSnapshot = FileStateSnapshot.Capture(spiceXmlPath);
 
             try
@@ -1129,7 +1093,7 @@ namespace LazyBootstrap.Services.Settings
                         false,
                         viewModel,
                         reloadViewModelOnSuccess: false,
-                        new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, false)))
+                        new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, string.IsNullOrEmpty(dxModeValue))))
                 {
                     return true;
                 }
@@ -1142,7 +1106,10 @@ namespace LazyBootstrap.Services.Settings
             try
             {
                 spiceSnapshot.Restore();
-                if (string.Equals(spiceXmlPath, _paths.GetSpiceXmlPath(), StringComparison.OrdinalIgnoreCase)
+                if (string.Equals(
+                        spiceXmlPath,
+                        _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
+                        StringComparison.OrdinalIgnoreCase)
                     && File.Exists(spiceXmlPath))
                 {
                     LoadSpiceSettings(viewModel);

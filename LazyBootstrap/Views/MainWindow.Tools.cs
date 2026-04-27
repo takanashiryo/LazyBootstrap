@@ -68,7 +68,8 @@ namespace LazyBootstrap.Views
             if (NoAsphyxiaToggleSwitch != null) NoAsphyxiaToggleSwitch.IsEnabled = enabled;
             if (ExitRestoreToggleSwitch != null) ExitRestoreToggleSwitch.IsEnabled = enabled;
             if (EditConfigButton != null) EditConfigButton.IsEnabled = enabled;
-            if (ImportRecommendedSpiceConfigButton != null) ImportRecommendedSpiceConfigButton.IsEnabled = enabled;
+            if (UseSystemSpiceConfigRow != null) UseSystemSpiceConfigRow.IsEnabled = enabled;
+            else if (UseSystemSpiceConfigToggleSwitch != null) UseSystemSpiceConfigToggleSwitch.IsEnabled = enabled;
             if (EmptyStateEditConfigButton != null) EmptyStateEditConfigButton.IsEnabled = enabled;
             if (ServerPresetComboBox != null) ServerPresetComboBox.IsEnabled = enabled;
             if (AddServerPresetButton != null) AddServerPresetButton.IsEnabled = enabled;

@@ -22,6 +22,10 @@ namespace LazyBootstrap.Services.Paths
 
         string GetSpiceXmlPath();
 
+        string GetLazySpiceXmlPath();
+
+        string ResolveSpiceXmlPath(bool useSystemSpiceConfig);
+
         string GetBundledLibsDirectoryPath();
 
         string GetBundledSevenZipExecutablePath();
@@ -83,6 +87,16 @@ namespace LazyBootstrap.Services.Paths
         {
             string appDataDir = SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.ApplicationData);
             return Path.Combine(appDataDir, "spicetools.xml");
+        }
+
+        public string GetLazySpiceXmlPath()
+        {
+            return Path.Combine(GetContentsDirectoryPath(), "lazy", "spicetools.xml");
+        }
+
+        public string ResolveSpiceXmlPath(bool useSystemSpiceConfig)
+        {
+            return useSystemSpiceConfig ? GetSpiceXmlPath() : GetLazySpiceXmlPath();
         }
 
         public string GetBundledLibsDirectoryPath()

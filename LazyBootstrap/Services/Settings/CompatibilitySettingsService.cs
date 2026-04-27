@@ -137,7 +137,7 @@ namespace LazyBootstrap.Services.Settings
         {
             if (!compatLayerEnabled)
             {
-                return "0";
+                return string.Empty;
             }
 
             return string.Equals(NormalizeRenderMode(renderMode), "dx9on12", StringComparison.Ordinal)

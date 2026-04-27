@@ -217,7 +217,10 @@
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
                                                         <Button x:Name="EditConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="编辑 spicecfg" Command="{Binding Settings.EditConfigCommand}"/>
-                                                        <Button x:Name="ImportRecommendedSpiceConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="导入推荐spice2x配置" Command="{Binding Settings.ImportRecommendedConfigCommand}"/>
+                                                        <Grid x:Name="UseSystemSpiceConfigRow" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                            <TextBlock Text="切换为系统配置" VerticalAlignment="Center"/>
+                                                            <ToggleSwitch x:Name="UseSystemSpiceConfigToggleSwitch" Grid.Column="1"/>
+                                                        </Grid>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                             <TextBlock Text="不启动氧无" VerticalAlignment="Center"/>
                                                             <ToggleSwitch x:Name="NoAsphyxiaToggleSwitch" Grid.Column="1"/>
@@ -321,6 +324,7 @@
                                                                           Width="220"
                                                                           HorizontalAlignment="Left"
                                                                           ItemsSource="{Binding Settings.ServerPresets}"
+                                                                          SelectedItem="{Binding Settings.SelectedServerPreset, Mode=TwoWay}"
                                                                           SelectionChanged="OnServerPresetSelectionChanged"/>
                                                                 <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.AddServerPresetCommand}"/>
                                                                 <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.DeleteServerPresetCommand}"/>
