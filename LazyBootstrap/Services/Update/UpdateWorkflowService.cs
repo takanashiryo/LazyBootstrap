@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
@@ -46,7 +45,7 @@ namespace LazyBootstrap.Services.Update
                 return;
             }
 
-            if (!IsValidGameLayout(_paths.BaseDir))
+            if (!MediaUpdatePaths.IsValidGameRoot(_paths.BaseDir))
             {
                 _uiInteractionService.ShowErrorToast(
                     "无法更新",
@@ -82,7 +81,7 @@ namespace LazyBootstrap.Services.Update
                     return;
                 }
 
-                if (string.IsNullOrEmpty(FindSyncBatchPath(staging)))
+                if (string.IsNullOrEmpty(MediaUpdatePaths.FindShallowestFile(staging, MediaUpdateConstants.SyncBatchFileName)))
                 {
                     _uiInteractionService.ShowErrorToast("更新失败", $"压缩包中未找到 {MediaUpdateConstants.SyncBatchFileName}。");
                     return;
@@ -133,13 +132,6 @@ namespace LazyBootstrap.Services.Update
                     global::System.Environment.Exit(0);
                 }
             }
-        }
-
-        private static bool IsValidGameLayout(string baseDir)
-        {
-            string contents = Path.Combine(baseDir, "contents");
-            string asphyxia = Path.Combine(baseDir, "asphyxia");
-            return Directory.Exists(contents) && Directory.Exists(asphyxia);
         }
 
         private static void ClearStagingDirectory(string staging)
@@ -198,18 +190,6 @@ namespace LazyBootstrap.Services.Update
             }
 
             return true;
-        }
-
-        private static string FindSyncBatchPath(string stagingRoot)
-        {
-            if (!Directory.Exists(stagingRoot))
-            {
-                return string.Empty;
-            }
-
-            return Directory.EnumerateFiles(stagingRoot, MediaUpdateConstants.SyncBatchFileName, SearchOption.AllDirectories)
-                .OrderBy(p => p.Length)
-                .FirstOrDefault() ?? string.Empty;
         }
 
         private static bool TryStartMediaUpdater(

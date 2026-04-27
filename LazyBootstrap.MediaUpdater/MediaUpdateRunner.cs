@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,13 +26,13 @@ namespace LazyBootstrap.MediaUpdate
                 gamePath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gamePath));
                 stagingPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(stagingPath));
 
-                if (!IsValidGameLayout(gamePath))
+                if (!MediaUpdatePaths.IsValidGameRoot(gamePath))
                 {
                     log("错误: 游戏目录中未找到 contents 或 asphyxia。");
                     return;
                 }
 
-                string syncBat = FindShallowestFile(stagingPath, MediaUpdateConstants.SyncBatchFileName);
+                string syncBat = MediaUpdatePaths.FindShallowestFile(stagingPath, MediaUpdateConstants.SyncBatchFileName);
                 if (string.IsNullOrEmpty(syncBat) || !File.Exists(syncBat))
                 {
                     log($"错误: 在 staging 中未找到 {MediaUpdateConstants.SyncBatchFileName}。");
@@ -60,9 +59,9 @@ namespace LazyBootstrap.MediaUpdate
                     return;
                 }
 
-                string cache = Path.Combine(gamePath, "contents", "data_mods", "_cache");
-                if (Directory.Exists(Path.GetDirectoryName(cache))
-                    && Directory.Exists(cache))
+                string dataMods = Path.Combine(gamePath, "contents", "data_mods");
+                string cache = Path.Combine(dataMods, "_cache");
+                if (Directory.Exists(dataMods) && Directory.Exists(cache))
                 {
                     log("正在清除 data_mods 缓存…");
                     try
@@ -123,24 +122,6 @@ namespace LazyBootstrap.MediaUpdate
             {
                 log("错误: " + ex);
             }
-        }
-
-        private static bool IsValidGameLayout(string baseDir)
-        {
-            return Directory.Exists(Path.Combine(baseDir, "contents"))
-                   && Directory.Exists(Path.Combine(baseDir, "asphyxia"));
-        }
-
-        private static string FindShallowestFile(string root, string fileName)
-        {
-            if (!Directory.Exists(root))
-            {
-                return string.Empty;
-            }
-
-            return Directory.EnumerateFiles(root, fileName, SearchOption.AllDirectories)
-                .OrderBy(p => p.Length)
-                .FirstOrDefault() ?? string.Empty;
         }
 
         private static void TryKillLauncher()

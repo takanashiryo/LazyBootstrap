@@ -36,29 +36,7 @@ function Copy-RequiredFile {
     Copy-Item -LiteralPath $SourcePath -Destination $DestinationDirectory -Force
 }
 
-function Copy-MainPayload {
-    param(
-        [Parameter(Mandatory = $true)]
-        [string] $SourceDirectory,
-
-        [Parameter(Mandatory = $true)]
-        [string] $DestinationDirectory
-    )
-
-    Get-ChildItem -LiteralPath $SourceDirectory -File | Where-Object {
-        $_.Extension -notin '.pdb', '.log', '.tmp', '.bak'
-    } | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination $DestinationDirectory -Force
-    }
-
-    Get-ChildItem -LiteralPath $SourceDirectory -Directory | ForEach-Object {
-        Copy-Item -LiteralPath $_.FullName -Destination $DestinationDirectory -Recurse -Force
-    }
-}
-
-# Native AOT MediaUpdater (win-x64); publish output is mostly MediaUpdater.exe plus any native satellites.
-# Merge into launcher so it sits next to LazyBootstrap.dll; does not lay down a second managed runtime.
-function Copy-MediaUpdaterPayload {
+function Copy-PublishTree {
     param(
         [Parameter(Mandatory = $true)]
         [string] $SourceDirectory,
@@ -105,8 +83,9 @@ try {
     } | Remove-Item -Force
 
     Copy-RequiredFile -SourcePath (Join-Path $launcherPublish 'LazyBootstrap.exe') -DestinationDirectory $buildDirectory
-    Copy-MainPayload -SourceDirectory $mainPublish -DestinationDirectory $launcherBuildDirectory
-    Copy-MediaUpdaterPayload -SourceDirectory $mediaUpdaterPublish -DestinationDirectory $launcherBuildDirectory
+    Copy-PublishTree -SourceDirectory $mainPublish -DestinationDirectory $launcherBuildDirectory
+    # MediaUpdater Native AOT: same tree copy; exe + satellites next to launcher.
+    Copy-PublishTree -SourceDirectory $mediaUpdaterPublish -DestinationDirectory $launcherBuildDirectory
 
     $mediaUpdaterNextToLauncher = Join-Path $launcherBuildDirectory 'MediaUpdater.exe'
     if (-not (Test-Path -LiteralPath $mediaUpdaterNextToLauncher -PathType Leaf)) {

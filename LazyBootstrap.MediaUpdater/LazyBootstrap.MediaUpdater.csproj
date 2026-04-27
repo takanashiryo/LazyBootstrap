@@ -24,9 +24,6 @@
 
   <ItemGroup>
     <TrimmerRootAssembly Include="MediaUpdater" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\Resources\vii\vii_icon.ico">
       <Link>vii_icon.ico</Link>
     </None>
