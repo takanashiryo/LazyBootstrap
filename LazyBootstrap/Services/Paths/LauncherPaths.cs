@@ -36,6 +36,8 @@ namespace LazyBootstrap.Services.Paths
 
         string GetSavedataBackupDirectoryPath();
 
+        string GetUpdateStagingDirectoryPath();
+
         string ResolveSevenZipExecutablePath();
     }
 
@@ -122,6 +124,11 @@ namespace LazyBootstrap.Services.Paths
         public string GetSavedataBackupDirectoryPath()
         {
             return Path.Combine(BaseDir, "savedata_backup");
+        }
+
+        public string GetUpdateStagingDirectoryPath()
+        {
+            return Path.Combine(BaseDir, "update_tmp");
         }
 
         public string ResolveSevenZipExecutablePath()

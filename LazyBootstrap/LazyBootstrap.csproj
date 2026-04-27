@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
+    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
     <RootNamespace>LazyBootstrap</RootNamespace>
     <AssemblyName>LazyBootstrap</AssemblyName>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
@@ -73,6 +74,12 @@
       <CopyToPublishDirectory>Always</CopyToPublishDirectory>
       <TargetPath>libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
     </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateConstants.cs" Link="MediaUpdate\MediaUpdateConstants.cs" />
+    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateArguments.cs" Link="MediaUpdate\MediaUpdateArguments.cs" />
+    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateRunner.cs" Link="MediaUpdate\MediaUpdateRunner.cs" />
   </ItemGroup>
 
 </Project>

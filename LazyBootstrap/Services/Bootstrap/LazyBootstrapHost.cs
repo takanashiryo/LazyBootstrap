@@ -4,6 +4,7 @@ using System.IO;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using LazyBootstrap.Services.Update;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
@@ -87,11 +88,13 @@ namespace LazyBootstrap.Services.Bootstrap
             services.AddSingleton<IDisplayWorkflowService, DisplayWorkflowService>();
             services.AddSingleton<IToolsWorkflowService, ToolsWorkflowService>();
             services.AddSingleton<IEnvironmentScanService, EnvironmentScanService>();
+            services.AddSingleton<IUpdateWorkflowService, UpdateWorkflowService>();
 
             services.AddSingleton<LaunchPageViewModel>();
             services.AddSingleton<SettingsPageViewModel>();
             services.AddSingleton<DisplayConfigurationPageViewModel>();
             services.AddSingleton<ToolsPageViewModel>();
+            services.AddSingleton<UpdatePageViewModel>();
             services.AddSingleton<InfoPageViewModel>();
             services.AddSingleton<MainWindowViewModel>();
 

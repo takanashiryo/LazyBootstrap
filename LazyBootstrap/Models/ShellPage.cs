@@ -6,7 +6,8 @@ namespace LazyBootstrap.Models
         Settings = 1,
         Display = 2,
         Tools = 3,
-        Info = 4,
-        About = 5
+        Update = 4,
+        Info = 5,
+        About = 6
     }
 }

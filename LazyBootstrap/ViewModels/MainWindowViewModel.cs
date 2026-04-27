@@ -17,6 +17,7 @@ namespace LazyBootstrap.ViewModels
                 new SettingsPageViewModel(),
                 new DisplayConfigurationPageViewModel(),
                 new ToolsPageViewModel(),
+                new UpdatePageViewModel(),
                 new InfoPageViewModel())
         {
         }
@@ -27,6 +28,7 @@ namespace LazyBootstrap.ViewModels
             SettingsPageViewModel settings,
             DisplayConfigurationPageViewModel display,
             ToolsPageViewModel tools,
+            UpdatePageViewModel update,
             InfoPageViewModel info)
         {
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
@@ -34,6 +36,7 @@ namespace LazyBootstrap.ViewModels
             Settings = settings;
             Display = display;
             Tools = tools;
+            Update = update;
             Info = info;
             _shellStateService.PropertyChanged += OnShellStatePropertyChanged;
         }
@@ -47,6 +50,8 @@ namespace LazyBootstrap.ViewModels
         public DisplayConfigurationPageViewModel Display { get; }
 
         public ToolsPageViewModel Tools { get; }
+
+        public UpdatePageViewModel Update { get; }
 
         public InfoPageViewModel Info { get; }
 

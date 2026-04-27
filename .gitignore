@@ -13,7 +13,7 @@
 # .NET build outputs
 **/bin/
 **/obj/
-artifacts/
+**/artifacts/
 build/
 build_tmp/
 publish/
