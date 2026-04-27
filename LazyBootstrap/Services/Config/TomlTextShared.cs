@@ -16,27 +16,6 @@ internal static class TomlTextShared
             .Replace("\t", "\\t");
     }
 
-    public static bool TryParseTomlKeyValue(string line, Func<string, string> parseValue, out string key, out string value)
-    {
-        key = string.Empty;
-        value = string.Empty;
-
-        int eqIndex = line.IndexOf('=');
-        if (eqIndex <= 0)
-        {
-            return false;
-        }
-
-        key = line.Substring(0, eqIndex).Trim();
-        if (string.IsNullOrWhiteSpace(key))
-        {
-            return false;
-        }
-
-        value = parseValue?.Invoke(line.Substring(eqIndex + 1).Trim()) ?? string.Empty;
-        return true;
-    }
-
     public static void NormalizeBlankLines(List<string> lines, bool preserveSectionSeparator)
     {
         if (lines == null || lines.Count == 0)

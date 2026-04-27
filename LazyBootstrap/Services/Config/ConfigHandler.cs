@@ -3,11 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using LazyBootstrap;
 
-/// <summary>
-/// Provides thread-safe helpers for reading and writing the launcher's TOML configuration file.
-/// </summary>
 public interface IConfigHandler
 {
     void WriteString(string section, string key, string value);
@@ -25,30 +21,17 @@ public interface IConfigHandler
     void SaveServerPresets(IEnumerable<ServerPresetItem> presets, string activePreset, string nonePresetName);
 }
 
-/// <summary>
-/// Provides thread-safe helpers for reading and writing the launcher's TOML configuration file.
-/// </summary>
 public class ConfigHandler : IConfigHandler
 {
     private readonly string _path;
     private readonly object _sync = new object();
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="ConfigHandler"/> class.
-    /// </summary>
-    /// <param name="tomlPath">A path to the TOML configuration file.</param>
     public ConfigHandler(string tomlPath)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tomlPath);
         _path = new FileInfo(tomlPath).FullName;
     }
 
-    /// <summary>
-    /// Writes a string value into the specified section and key.
-    /// </summary>
-    /// <param name="section">A section name.</param>
-    /// <param name="key">A key name.</param>
-    /// <param name="value">A value to write.</param>
     public void WriteString(string section, string key, string value)
     {
         lock (_sync)
@@ -76,11 +59,6 @@ public class ConfigHandler : IConfigHandler
         }
     }
 
-    /// <summary>
-    /// Renames a section while preserving any keys that already exist in the target section.
-    /// </summary>
-    /// <param name="sourceSection">A source section name.</param>
-    /// <param name="targetSection">A target section name.</param>
     public void RenameSection(string sourceSection, string targetSection)
     {
         lock (_sync)
@@ -135,12 +113,6 @@ public class ConfigHandler : IConfigHandler
         }
     }
 
-    /// <summary>
-    /// Moves a key from one section to another.
-    /// </summary>
-    /// <param name="sourceSection">A source section name.</param>
-    /// <param name="targetSection">A target section name.</param>
-    /// <param name="key">A key name.</param>
     public void MoveKey(string sourceSection, string targetSection, string key)
     {
         lock (_sync)
@@ -200,11 +172,6 @@ public class ConfigHandler : IConfigHandler
         }
     }
 
-    /// <summary>
-    /// Deletes a key from the specified section.
-    /// </summary>
-    /// <param name="section">A section name.</param>
-    /// <param name="key">A key name.</param>
     public void DeleteKey(string section, string key)
     {
         lock (_sync)
@@ -249,13 +216,6 @@ public class ConfigHandler : IConfigHandler
         }
     }
 
-    /// <summary>
-    /// Reads a string value from the specified section and key.
-    /// </summary>
-    /// <param name="section">A section name.</param>
-    /// <param name="key">A key name.</param>
-    /// <param name="defaultValue">A fallback value returned when the key is not present.</param>
-    /// <returns>A configuration value, or <paramref name="defaultValue" /> when the key cannot be found.</returns>
     public string ReadString(string section, string key, string defaultValue = "")
     {
         lock (_sync)
@@ -317,13 +277,6 @@ public class ConfigHandler : IConfigHandler
         }
     }
 
-    /// <summary>
-    /// Loads server presets and ensures that built-in presets are present.
-    /// </summary>
-    /// <param name="nonePresetName">The display name for the empty preset.</param>
-    /// <param name="asphyxiaPresetName">The display name for the built-in Asphyxia preset.</param>
-    /// <param name="asphyxiaDefaultUrl">The default URL used for the built-in Asphyxia preset.</param>
-    /// <returns>The loaded presets, the active preset name, and a value that indicates whether the file should be rewritten.</returns>
     public (List<ServerPresetItem> Presets, string ActivePreset, bool Mutated) LoadServerPresets(string nonePresetName, string asphyxiaPresetName, string asphyxiaDefaultUrl)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nonePresetName);
@@ -470,12 +423,6 @@ public class ConfigHandler : IConfigHandler
         }
     }
 
-    /// <summary>
-    /// Saves server presets back to the TOML configuration file.
-    /// </summary>
-    /// <param name="presets">A sequence of presets to persist.</param>
-    /// <param name="activePreset">The active preset name.</param>
-    /// <param name="nonePresetName">The display name for the empty preset.</param>
     public void SaveServerPresets(IEnumerable<ServerPresetItem> presets, string activePreset, string nonePresetName)
     {
         ArgumentNullException.ThrowIfNull(presets);

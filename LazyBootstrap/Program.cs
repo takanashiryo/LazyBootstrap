@@ -24,10 +24,6 @@ namespace LazyBootstrap
             Failed
         }
 
-        /// <summary>
-        /// Application entry point.
-        /// </summary>
-        /// <param name="args">Command-line arguments.</param>
         [STAThread]
         public static void Main(string[] args)
         {
@@ -64,10 +60,6 @@ namespace LazyBootstrap
             }
         }
 
-        /// <summary>
-        /// Builds the Avalonia application.
-        /// </summary>
-        /// <returns>The configured <see cref="AppBuilder"/> instance.</returns>
         public static AppBuilder BuildAvaloniaApp()
             => AppBuilder.Configure<App>()
                 .With(new Win32PlatformOptions

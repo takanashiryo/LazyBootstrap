@@ -46,8 +46,7 @@ namespace LazyBootstrap.Services.Settings
             new("sp2x-nvprofile", "/ENABLED", false),
             new("sp2x-lowlatencysharedaudio", "/ENABLED", false),
             new("sp2x-dx9on12", "0", false),
-            new("url", AsphyxiaDefaultUrl, false),
-            // new("sp2x-sdvxsubredraw", "/ENABLED", false)
+            new("url", AsphyxiaDefaultUrl, false)
         };
 
         private readonly IConfigHandler _configHandler;

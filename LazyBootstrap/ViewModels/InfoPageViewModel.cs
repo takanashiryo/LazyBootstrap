@@ -1,7 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
 
 namespace LazyBootstrap.ViewModels
 {
@@ -44,8 +43,5 @@ namespace LazyBootstrap.ViewModels
         {
             return _workflowService?.RunScanAsync(this) ?? Task.CompletedTask;
         }
-
-        [RelayCommand]
-        private Task RunEnvironmentScanCommandAsync() => RunEnvironmentScanAsync();
     }
 }

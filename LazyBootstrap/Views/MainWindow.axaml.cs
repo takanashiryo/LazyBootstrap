@@ -9,11 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Animation;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
 using Avalonia.Controls.Notifications;
 using Avalonia.Media;
-using Avalonia.Media.Imaging;
-using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
@@ -35,8 +32,6 @@ namespace LazyBootstrap.Views
         private readonly IDisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator = null!;
         private readonly ISettingsWorkflowService _settingsWorkflowService = null!;
 
-        private static Bitmap _warningDialogIconCache;
-        private static Bitmap _errorDialogIconCache;
         private DispatcherTimer _displayPulseTimer;
         private double _displayPulsePhase = 0d;
         private readonly ISukiDialogManager _dialogManager = null!;
@@ -282,16 +277,10 @@ namespace LazyBootstrap.Views
 
             EnsureLayeredWindowStyle(hwnd);
 
-            try
-            {
-                SetWindowAlpha(hwnd, fromAlpha);
-                await AnimateNativeWindowAlphaAsync(hwnd, fromAlpha, toAlpha);
-                SetWindowAlpha(hwnd, toAlpha);
-                return true;
-            }
-            finally
-            {
-            }
+            SetWindowAlpha(hwnd, fromAlpha);
+            await AnimateNativeWindowAlphaAsync(hwnd, fromAlpha, toAlpha);
+            SetWindowAlpha(hwnd, toAlpha);
+            return true;
         }
 
         private async Task AnimateNativeWindowAlphaAsync(IntPtr hwnd, byte fromAlpha, byte toAlpha)
@@ -801,49 +790,9 @@ namespace LazyBootstrap.Views
             UpdateCompatLayerStatus();
         }
 
-        private string GetAsphyxiaPath()
-        {
-            return _paths.GetAsphyxiaPath();
-        }
-
-        private string GetSpicePath()
-        {
-            return _paths.GetSpicePath();
-        }
-
-        private string GetSpiceXmlPath()
-        {
-            return _paths.GetSpiceXmlPath();
-        }
-
-        private string GetConfigTomlPath()
-        {
-            return _paths.ConfigFilePath;
-        }
-
-        private string GetApplicationDirectoryPath()
-        {
-            return _paths.ApplicationDirectoryPath;
-        }
-
-        private string GetBundledLibsDirectoryPath()
-        {
-            return _paths.GetBundledLibsDirectoryPath();
-        }
-
-        private string GetBundledSevenZipExecutablePath()
-        {
-            return _paths.GetBundledSevenZipExecutablePath();
-        }
-
         private string GetContentsDirectoryPath()
         {
             return _paths.GetContentsDirectoryPath();
-        }
-
-        private string GetAsphyxiaDirectoryPath()
-        {
-            return _paths.GetAsphyxiaDirectoryPath();
         }
 
         private void SetSettingsBusy(bool isBusy)
@@ -858,76 +807,6 @@ namespace LazyBootstrap.Views
             {
                 EditConfigButton.IsEnabled = !isBusy;
                 EditConfigButton.Content = isBusy ? "编辑 spicecfg（运行中...）" : "编辑 spicecfg";
-            }
-        }
-
-        private void ShowInfoToast(string title, string content)
-        {
-            _toastManager.CreateToast()
-                .WithTitle(title)
-                .WithContent(content)
-                .OfType(NotificationType.Information)
-                .Dismiss().After(TimeSpan.FromSeconds(3))
-                .Dismiss().ByClicking()
-                .Queue();
-        }
-
-        private void ShowErrorToast(string title, string content)
-        {
-            _toastManager.CreateToast()
-                .WithTitle(title)
-                .WithContent(content)
-                .OfType(NotificationType.Error)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
-        }
-
-        private void ShowWarningToast(string title, string content)
-        {
-            _toastManager.CreateToast()
-                .WithTitle(title)
-                .WithContent(content)
-                .OfType(NotificationType.Warning)
-                .Dismiss().After(TimeSpan.FromSeconds(4))
-                .Dismiss().ByClicking()
-                .Queue();
-        }
-
-        private static void ApplyDialogNotificationIcon(SukiDialogBuilder builder, NotificationType type)
-        {
-            if (builder?.Dialog == null)
-            {
-                return;
-            }
-
-            var iconBitmap = type switch
-            {
-                NotificationType.Warning => _warningDialogIconCache ??= TryLoadDialogNotificationBitmap("warning.png"),
-                NotificationType.Error => _errorDialogIconCache ??= TryLoadDialogNotificationBitmap("error.png"),
-                _ => null
-            };
-
-            if (iconBitmap == null)
-            {
-                return;
-            }
-
-            builder.Dialog.Icon = iconBitmap;
-            builder.Dialog.IconColor = null;
-        }
-
-        private static Bitmap TryLoadDialogNotificationBitmap(string assetFileName)
-        {
-            try
-            {
-                var assetUri = new Uri($"avares://LazyBootstrap/Assets/Images/{assetFileName}");
-                var stream = AssetLoader.Open(assetUri);
-                return new Bitmap(stream);
-            }
-            catch
-            {
-                return null;
             }
         }
     }
