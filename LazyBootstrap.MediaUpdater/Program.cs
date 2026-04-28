@@ -32,19 +32,19 @@ namespace LazyBootstrap.MediaUpdater
 
             try
             {
-                await MediaUpdateRunner.RunAsync(
+                int exit = await MediaUpdateRunner.RunAsync(
                     gamePath,
                     stagingPath,
                     static line => Console.WriteLine(line),
-                    onUpdateComplete: WriteUpdateCompleteInGreen).ConfigureAwait(true);
+                    onUpdateComplete: WriteUpdateCompleteInGreen,
+                    onSecurityBlockUi: SecurityConsolePresentation.ShowBlockedDriveWarning).ConfigureAwait(true);
+                return exit;
             }
             catch (Exception ex)
             {
                 Console.Error.WriteLine(ex);
                 return 3;
             }
-
-            return 0;
         }
 
         private static void WriteUpdateCompleteInGreen()

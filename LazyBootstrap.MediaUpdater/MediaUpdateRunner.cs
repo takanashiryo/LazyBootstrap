@@ -9,12 +9,15 @@ namespace LazyBootstrap.MediaUpdate
 {
     public static class MediaUpdateRunner
     {
-        public static async Task RunAsync(
+        public const int ExitSecurityBlocked = 4;
+
+        public static async Task<int> RunAsync(
             string gamePath,
             string stagingPath,
             Action<string> log,
             CancellationToken cancellationToken = default,
-            Action onUpdateComplete = null)
+            Action onUpdateComplete = null,
+            Action<string> onSecurityBlockUi = null)
         {
             if (log == null)
             {
@@ -29,14 +32,29 @@ namespace LazyBootstrap.MediaUpdate
                 if (!MediaUpdatePaths.IsValidGameRoot(gamePath))
                 {
                     log("错误: 游戏目录中未找到 contents 或 asphyxia。");
-                    return;
+                    return 0;
                 }
 
                 string syncBat = MediaUpdatePaths.FindShallowestFile(stagingPath, MediaUpdateConstants.SyncBatchFileName);
                 if (string.IsNullOrEmpty(syncBat) || !File.Exists(syncBat))
                 {
                     log($"错误: 在 staging 中未找到 {MediaUpdateConstants.SyncBatchFileName}。");
-                    return;
+                    return 0;
+                }
+
+                if (!MediaUpdateSecurity.TryValidateStagingBatches(stagingPath, gamePath, out string securityError))
+                {
+                    string msg = securityError ?? MediaUpdateSecurity.BlockedNonGamePathMessage;
+                    if (onSecurityBlockUi != null)
+                    {
+                        onSecurityBlockUi(msg);
+                    }
+                    else
+                    {
+                        log(msg);
+                    }
+
+                    return ExitSecurityBlocked;
                 }
 
                 string syncDir = Path.GetDirectoryName(syncBat) ?? stagingPath;
@@ -56,7 +74,7 @@ namespace LazyBootstrap.MediaUpdate
                         log("详见: " + updaterLog);
                     }
 
-                    return;
+                    return 0;
                 }
 
                 string dataMods = Path.Combine(gamePath, "contents", "data_mods");
@@ -91,28 +109,18 @@ namespace LazyBootstrap.MediaUpdate
 
                 await Task.Delay(5000, cancellationToken).ConfigureAwait(true);
 
-                string starter = Path.Combine(gamePath, MediaUpdateConstants.GameLauncherExeName);
-                if (File.Exists(starter))
+                string gameLauncherPath = Path.Combine(gamePath, MediaUpdateConstants.GameLauncherExeName);
+                string outerShellPath = Path.Combine(gamePath, MediaUpdateConstants.LauncherProcessImageFileName);
+                if (!TryStartShellExe(gameLauncherPath, gamePath, log, MediaUpdateConstants.GameLauncherExeName))
                 {
-                    try
+                    if (!TryStartShellExe(outerShellPath, gamePath, log, MediaUpdateConstants.LauncherProcessImageFileName))
                     {
-                        var psi = new ProcessStartInfo
-                        {
-                            FileName = starter,
-                            WorkingDirectory = gamePath,
-                            UseShellExecute = true
-                        };
-                        Process.Start(psi);
-                    }
-                    catch (Exception ex)
-                    {
-                        log("无法启动 " + MediaUpdateConstants.GameLauncherExeName + ": " + ex.Message);
+                        log(
+                            $"未找到 {MediaUpdateConstants.GameLauncherExeName} 与 {MediaUpdateConstants.LauncherProcessImageFileName}，请从游戏根目录手动运行启动器。");
                     }
                 }
-                else
-                {
-                    log("未找到 " + MediaUpdateConstants.GameLauncherExeName + "，请从游戏根目录手动运行启动器。");
-                }
+
+                return 0;
             }
             catch (OperationCanceledException)
             {
@@ -121,6 +129,34 @@ namespace LazyBootstrap.MediaUpdate
             catch (Exception ex)
             {
                 log("错误: " + ex);
+            }
+
+            return 0;
+        }
+
+        // Outer shell path is game root LazyBootstrap.exe, not launcher/LazyBootstrap.exe.
+        private static bool TryStartShellExe(string exePath, string workingDirectory, Action<string> log, string displayName)
+        {
+            if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+            {
+                return false;
+            }
+
+            try
+            {
+                var psi = new ProcessStartInfo
+                {
+                    FileName = exePath,
+                    WorkingDirectory = workingDirectory,
+                    UseShellExecute = true
+                };
+                Process.Start(psi);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                log("无法启动 " + displayName + ": " + ex.Message);
+                return false;
             }
         }
 

@@ -8,7 +8,7 @@
     <AssemblyName>MediaUpdater</AssemblyName>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
-    <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\media-updater.ico</ApplicationIcon>
     <PublishAot>false</PublishAot>
     <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>true</InvariantGlobalization>
@@ -24,9 +24,8 @@
 
   <ItemGroup>
     <TrimmerRootAssembly Include="MediaUpdater" />
-    <None Include="..\Resources\vii\vii_icon.ico">
-      <Link>vii_icon.ico</Link>
-    </None>
+    <None Include="Assets\media-updater.png" />
+    <None Include="Assets\media-updater.ico" />
   </ItemGroup>
 
 </Project>
