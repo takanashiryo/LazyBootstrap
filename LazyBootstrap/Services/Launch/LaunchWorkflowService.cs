@@ -37,8 +37,7 @@ namespace LazyBootstrap.Services.Launch
     internal sealed class LaunchWorkflowService : ILaunchWorkflowService
     {
         private const int MaxLogLines = 1200;
-        private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(1);
-        private static readonly TimeSpan RestartDetectionGracePeriod = TimeSpan.FromSeconds(5);
+        private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(3);
 
         private readonly ILauncherPaths _paths;
         private readonly IGameProcessTracker _gameProcessTracker;
@@ -541,7 +540,7 @@ namespace LazyBootstrap.Services.Launch
 
                     try
                     {
-                        var restartedProcess = _gameProcessTracker.TryFindRestartedSpiceProcess(exitedAtUtc, RestartDetectionGracePeriod);
+                        var restartedProcess = _gameProcessTracker.TryFindRestartedSpiceProcess(exitedAtUtc);
                         if (restartedProcess != null)
                         {
                             restartedProcess.EnableRaisingEvents = true;

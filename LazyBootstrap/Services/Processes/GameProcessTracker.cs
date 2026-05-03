@@ -11,7 +11,7 @@ namespace LazyBootstrap.Services.Processes
 
         void RegisterTrackedSpiceProcess(Process process);
 
-        Process TryFindRestartedSpiceProcess(DateTime exitedAtUtc, TimeSpan gracePeriod);
+        Process TryFindRestartedSpiceProcess(DateTime exitedAtUtc);
 
         void TrackManagedAsphyxiaProcess(Process process);
 
@@ -24,6 +24,8 @@ namespace LazyBootstrap.Services.Processes
 
     internal sealed class GameProcessTracker : IGameProcessTracker
     {
+        private static readonly TimeSpan RestartStartTimeSkewTolerance = TimeSpan.FromSeconds(2);
+
         private readonly HashSet<int> _trackedSpiceProcessIds = new HashSet<int>();
         private string _trackedSpiceExecutablePath = string.Empty;
         private Process _managedAsphyxiaProcess;
@@ -74,7 +76,7 @@ namespace LazyBootstrap.Services.Processes
             }
         }
 
-        public Process TryFindRestartedSpiceProcess(DateTime exitedAtUtc, TimeSpan gracePeriod)
+        public Process TryFindRestartedSpiceProcess(DateTime exitedAtUtc)
         {
             if (string.IsNullOrWhiteSpace(_trackedSpiceExecutablePath) || exitedAtUtc == DateTime.MinValue)
             {
@@ -83,7 +85,9 @@ namespace LazyBootstrap.Services.Processes
 
             Process matchedProcess = null;
             var matchedCount = 0;
-            var latestAcceptedStartTimeUtc = exitedAtUtc + gracePeriod;
+            var probeUtc = DateTime.UtcNow;
+            var earliestAcceptedStartUtc = exitedAtUtc - RestartStartTimeSkewTolerance;
+            var latestAcceptedStartUtc = probeUtc + RestartStartTimeSkewTolerance;
 
             foreach (var process in Process.GetProcessesByName("spice64"))
             {
@@ -111,7 +115,7 @@ namespace LazyBootstrap.Services.Processes
                         continue;
                     }
 
-                    if (startTimeUtc < exitedAtUtc || startTimeUtc > latestAcceptedStartTimeUtc)
+                    if (startTimeUtc < earliestAcceptedStartUtc || startTimeUtc > latestAcceptedStartUtc)
                     {
                         continue;
                     }
