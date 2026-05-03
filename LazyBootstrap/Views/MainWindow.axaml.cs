@@ -51,11 +51,7 @@ namespace LazyBootstrap.Views
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
-        private bool _isApplyingAspectRatio;
         private bool _isUpdatingAsioDriverUi;
-        private double _lastNormalWidth;
-        private double _lastNormalHeight;
-        private const double MainWindowAspectRatio = 16d / 9d;
         private bool _isUpdatingNetworkUi;
         private bool _startupSequenceStarted;
         private bool _isDisplayLayoutInitialized;
@@ -150,9 +146,6 @@ namespace LazyBootstrap.Views
             HookDisplayViewModelState();
             HookToolsViewModelState();
             _isLoadingSettings = false;
-            _lastNormalWidth = Width;
-            _lastNormalHeight = Height;
-            SizeChanged += OnMainWindowSizeChanged;
             _logger.LogInformation("Main window initialized for base directory {BaseDirectory}.", _paths.BaseDir);
         }
 
@@ -390,48 +383,6 @@ namespace LazyBootstrap.Views
                     }
                 }
             };
-        }
-
-        private void OnMainWindowSizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (_isApplyingAspectRatio || WindowState != WindowState.Normal)
-            {
-                return;
-            }
-
-            var decision = AspectRatioResizeCalculator.Calculate(
-                Width,
-                Height,
-                _lastNormalWidth,
-                _lastNormalHeight,
-                MinWidth,
-                MinHeight,
-                MainWindowAspectRatio);
-
-            if (decision.Action == AspectRatioResizeAction.None)
-            {
-                return;
-            }
-
-            if (decision.Action == AspectRatioResizeAction.InitializeTracking)
-            {
-                _lastNormalWidth = decision.Width;
-                _lastNormalHeight = decision.Height;
-                return;
-            }
-
-            _isApplyingAspectRatio = true;
-            try
-            {
-                Width = decision.Width;
-                Height = decision.Height;
-                _lastNormalWidth = decision.Width;
-                _lastNormalHeight = decision.Height;
-            }
-            finally
-            {
-                _isApplyingAspectRatio = false;
-            }
         }
 
         private void UpdateAsioControlPanelButtonState()

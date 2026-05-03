@@ -14,6 +14,5 @@ global using LazyBootstrap.Services.Settings;
 global using LazyBootstrap.Services.Shell;
 global using LazyBootstrap.Services.Tools;
 global using LazyBootstrap.Services.UI;
-global using LazyBootstrap.Services.Windowing;
 global using LazyBootstrap.ViewModels;
 global using LazyBootstrap.Views;
