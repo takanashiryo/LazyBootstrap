@@ -410,8 +410,9 @@ namespace LazyBootstrap.Services.Launch
                     _gameProcess.Kill();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Failed to terminate game process during window close.");
             }
             finally
             {
@@ -465,8 +466,9 @@ namespace LazyBootstrap.Services.Launch
                     _gameProcessMonitorCts.Cancel();
                 }
             }
-            catch
+            catch (Exception ex)
             {
+                _logger.LogDebug(ex, "Game process monitor cancellation failed.");
             }
             finally
             {

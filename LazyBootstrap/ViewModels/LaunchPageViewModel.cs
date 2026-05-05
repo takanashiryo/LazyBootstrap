@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,17 +9,21 @@ namespace LazyBootstrap.ViewModels
 {
     public partial class LaunchPageViewModel : ObservableObject
     {
-        private readonly ILaunchWorkflowService _workflowService;
+        private ILaunchWorkflowService _workflowService;
         private SettingsPageViewModel _settingsViewModel;
         private DisplayConfigurationPageViewModel _displayViewModel;
 
         public LaunchPageViewModel()
         {
+            if (!Design.IsDesignMode)
+            {
+                throw new InvalidOperationException("LaunchPageViewModel requires dependency injection outside of the Avalonia designer.");
+            }
         }
 
         public LaunchPageViewModel(ILaunchWorkflowService workflowService)
         {
-            _workflowService = workflowService;
+            _workflowService = workflowService ?? throw new ArgumentNullException(nameof(workflowService));
         }
 
         [ObservableProperty]
@@ -64,12 +69,22 @@ namespace LazyBootstrap.ViewModels
 
         public Task InitializeStartupAsync()
         {
-            return _workflowService?.InitializeStartupAsync(this, _settingsViewModel, _displayViewModel) ?? Task.CompletedTask;
+            if (_workflowService is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _workflowService.InitializeStartupAsync(this, _settingsViewModel, _displayViewModel);
         }
 
         public Task HandleClosingAsync()
         {
-            return _workflowService?.HandleClosingAsync(_displayViewModel) ?? Task.CompletedTask;
+            if (_workflowService is null)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _workflowService.HandleClosingAsync(_displayViewModel);
         }
 
         partial void OnIsLaunchingChanged(bool value)
@@ -83,37 +98,37 @@ namespace LazyBootstrap.ViewModels
         }
 
         [RelayCommand]
-        private Task ToggleLaunchLogAsync() => _workflowService?.ToggleLaunchLogAsync(this) ?? Task.CompletedTask;
+        private Task ToggleLaunchLogAsync() => _workflowService is null ? Task.CompletedTask : _workflowService.ToggleLaunchLogAsync(this);
 
         [RelayCommand]
-        private Task GoToSettingsAsync() => _workflowService?.NavigateToSettingsAsync() ?? Task.CompletedTask;
+        private Task GoToSettingsAsync() => _workflowService is null ? Task.CompletedTask : _workflowService.NavigateToSettingsAsync();
 
         [RelayCommand]
-        private Task OpenLogAsync() => _workflowService?.OpenLogAsync() ?? Task.CompletedTask;
+        private Task OpenLogAsync() => _workflowService is null ? Task.CompletedTask : _workflowService.OpenLogAsync();
 
         [RelayCommand]
-        private Task KillProcessesAsync() => _workflowService?.KillProcessesAsync() ?? Task.CompletedTask;
+        private Task KillProcessesAsync() => _workflowService is null ? Task.CompletedTask : _workflowService.KillProcessesAsync();
 
         [RelayCommand]
         private Task StartAsync()
         {
-            if (!CanStartLaunch)
+            if (!CanStartLaunch || _workflowService is null)
             {
                 return Task.CompletedTask;
             }
 
-            return _workflowService?.StartAsync(this, _settingsViewModel, _displayViewModel, false) ?? Task.CompletedTask;
+            return _workflowService.StartAsync(this, _settingsViewModel, _displayViewModel, false);
         }
 
         [RelayCommand]
         private Task StartAsphyxiaDevAsync()
         {
-            if (!CanStartLaunch)
+            if (!CanStartLaunch || _workflowService is null)
             {
                 return Task.CompletedTask;
             }
 
-            return _workflowService?.StartAsync(this, _settingsViewModel, _displayViewModel, true) ?? Task.CompletedTask;
+            return _workflowService.StartAsync(this, _settingsViewModel, _displayViewModel, true);
         }
     }
 }

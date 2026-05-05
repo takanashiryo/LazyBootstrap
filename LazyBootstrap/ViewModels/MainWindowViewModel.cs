@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Threading.Tasks;
+using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace LazyBootstrap.ViewModels
@@ -20,6 +21,10 @@ namespace LazyBootstrap.ViewModels
                 new UpdatePageViewModel(),
                 new InfoPageViewModel())
         {
+            if (!Design.IsDesignMode)
+            {
+                throw new InvalidOperationException("MainWindowViewModel requires dependency injection outside of the Avalonia designer.");
+            }
         }
 
         public MainWindowViewModel(

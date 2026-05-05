@@ -1,4 +1,6 @@
 global using LazyBootstrap.Models;
+global using LazyBootstrap.Services;
+global using Microsoft.Extensions.Logging;
 global using LazyBootstrap.Services.Audio;
 global using LazyBootstrap.Services.Bootstrap;
 global using LazyBootstrap.Services.Config;

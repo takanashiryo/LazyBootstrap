@@ -7,8 +7,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Media;
-using Avalonia.Threading;
-using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
 
 namespace LazyBootstrap.Views

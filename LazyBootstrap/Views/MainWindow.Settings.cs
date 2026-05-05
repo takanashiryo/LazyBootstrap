@@ -8,8 +8,6 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using LazyBootstrap.Models;
-using LazyBootstrap.ViewModels;
 using SukiUI.Dialogs;
 
 namespace LazyBootstrap.Views
@@ -420,24 +418,24 @@ namespace LazyBootstrap.Views
                         : "未检测到可用网卡");
             }
         }
-    }
-}
 
-
-namespace LazyBootstrap.Views
-{
-    public partial class MainWindow
-    {
         private async void OnCompatLayerToggleChanged(object sender, RoutedEventArgs e)
         {
-            if (_isLoadingSettings || _isUpdatingCompatUi)
+            try
             {
-                return;
-            }
+                if (_isLoadingSettings || _isUpdatingCompatUi)
+                {
+                    return;
+                }
 
-            _viewModel.Settings.CompatibilityLayerEnabled = CompatLayerToggleSwitch?.IsChecked == true;
-            await _settingsWorkflowService.PersistCompatibilityToggleAsync(_viewModel.Settings);
-            ApplyCompatibilityStateFromViewModel();
+                _viewModel.Settings.CompatibilityLayerEnabled = CompatLayerToggleSwitch?.IsChecked == true;
+                await _settingsWorkflowService.PersistCompatibilityToggleAsync(_viewModel.Settings);
+                ApplyCompatibilityStateFromViewModel();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Persist compatibility layer toggle failed.");
+            }
         }
 
         private void UpdateCompatLayerStatus()
@@ -502,29 +500,29 @@ namespace LazyBootstrap.Views
         {
             return Directory.Exists(GetCompatModulesDirectoryPath());
         }
-    }
-}
 
-
-namespace LazyBootstrap.Views
-{
-    public partial class MainWindow
-    {
         private async void OnServerPresetSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (_isLoadingSettings || _isSyncingModel || _isUpdatingServerPresetUi)
+            try
             {
-                return;
-            }
+                if (_isLoadingSettings || _isSyncingModel || _isUpdatingServerPresetUi)
+                {
+                    return;
+                }
 
-            if (ServerPresetComboBox?.SelectedItem is not ServerPresetItem preset)
+                if (ServerPresetComboBox?.SelectedItem is not ServerPresetItem preset)
+                {
+                    return;
+                }
+
+                _viewModel.Settings.SelectedServerPreset = preset;
+                await _settingsWorkflowService.PersistSelectedServerPresetAsync(_viewModel.Settings);
+                ApplyServerPresetViewModelStateToUi();
+            }
+            catch (Exception ex)
             {
-                return;
+                _logger.LogError(ex, "Persist server preset selection failed.");
             }
-
-            _viewModel.Settings.SelectedServerPreset = preset;
-            await _settingsWorkflowService.PersistSelectedServerPresetAsync(_viewModel.Settings);
-            ApplyServerPresetViewModelStateToUi();
         }
 
         private void ApplyServerPresetViewModelStateToUi()
@@ -599,22 +597,6 @@ namespace LazyBootstrap.Views
             textBox.Text = normalizedValue;
         }
 
-    }
-}
-
-
-namespace LazyBootstrap.Views
-{
-    public partial class MainWindow
-    {
-    }
-}
-
-
-namespace LazyBootstrap.Views
-{
-    public partial class MainWindow
-    {
         private void UpdateUseSystemSpiceConfigSwitchVisibility()
         {
             bool show = _viewModel.Settings.IsSpiceConfigAvailable;

@@ -4,14 +4,10 @@ LazyBootstrap是一个适用于街机游戏SOUND VOLTEX的辅助启动器，其�
 
 ## 项目框架
 项目基于C#语言开发，使用了Avalonia UI框架，采用实用型MVVM+部分code-behind设计模式，使用SukiUI主题库。虽然使用跨平台框架，但是仅Windows平台可用  
-为了方便分发，最终使用Native AOT编译。
+主项目使用自分发，包含runtime，其他的分支项目使用Native AOT编译
 
 ## 项目结构
-- Models
-- ViewModels
-- Views
-- Services
-- Styles
+以MVVM框架整理
 
 ## 库
 - NAudio.Asio

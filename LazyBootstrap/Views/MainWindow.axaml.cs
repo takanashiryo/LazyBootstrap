@@ -13,7 +13,6 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
-using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
@@ -184,15 +183,22 @@ namespace LazyBootstrap.Views
 
         private async void OnWindowOpened(object sender, EventArgs e)
         {
-            Opened -= OnWindowOpened;
-
-            if (!_pendingEnvironmentScanErrorDialog)
+            try
             {
-                return;
-            }
+                Opened -= OnWindowOpened;
 
-            _pendingEnvironmentScanErrorDialog = false;
-            await ShowEnvironmentScanErrorDialogAsync();
+                if (!_pendingEnvironmentScanErrorDialog)
+                {
+                    return;
+                }
+
+                _pendingEnvironmentScanErrorDialog = false;
+                await ShowEnvironmentScanErrorDialogAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Environment scan error dialog failed.");
+            }
         }
 
         internal async Task PrepareForDisplayAsync()

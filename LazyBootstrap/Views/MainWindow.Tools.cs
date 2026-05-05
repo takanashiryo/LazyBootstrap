@@ -15,7 +15,7 @@ namespace LazyBootstrap.Views
 
             _viewModel.Tools.PropertyChanged -= OnToolsViewModelPropertyChanged;
             _viewModel.Tools.PropertyChanged += OnToolsViewModelPropertyChanged;
-            _ = ApplyRuntimeInstallOverlayVisibilityAsync();
+            ApplyRuntimeInstallOverlayVisibilityAsync().ForgetWithLogging(_logger, "Failed to apply runtime install overlay visibility.");
         }
 
         private void UnhookToolsViewModelState()
@@ -33,7 +33,7 @@ namespace LazyBootstrap.Views
             if (string.IsNullOrWhiteSpace(e?.PropertyName)
                 || string.Equals(e.PropertyName, nameof(ToolsPageViewModel.IsRuntimeInstallVisible), StringComparison.Ordinal))
             {
-                _ = ApplyRuntimeInstallOverlayVisibilityAsync();
+                ApplyRuntimeInstallOverlayVisibilityAsync().ForgetWithLogging(_logger, "Failed to apply runtime install overlay visibility.");
             }
         }
 
@@ -151,9 +151,13 @@ namespace LazyBootstrap.Views
             AsioDriverRegistry.DisposeControlPanelDrivers();
             try
             {
-                _viewModel.HandleClosingAsync().GetAwaiter().GetResult();
+                // HandleClosingAsync is currently synchronous (returns completed tasks); keep a sync wait for the final close path.
+                _viewModel.HandleClosingAsync().ConfigureAwait(false).GetAwaiter().GetResult();
             }
-            catch (Exception) { }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Final window close cleanup failed.");
+            }
         }
     }
 }
