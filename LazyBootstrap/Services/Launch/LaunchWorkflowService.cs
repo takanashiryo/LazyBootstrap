@@ -38,6 +38,7 @@ namespace LazyBootstrap.Services.Launch
     {
         private const int MaxLogLines = 1200;
         private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan LauncherAutoMinimizeDelay = TimeSpan.FromSeconds(2);
 
         private readonly ILauncherPaths _paths;
         private readonly IGameProcessTracker _gameProcessTracker;
@@ -350,6 +351,7 @@ namespace LazyBootstrap.Services.Launch
                 _shellStateService.StatusText = "游戏运行中";
                 launchViewModel.StateText = _shellStateService.StatusText;
                 AppendLaunchOutput(launchViewModel, "游戏已启动并进入运行状态。");
+                _ = MinimizeLauncherWindowDelayedAsync();
                 StartGameProcessMonitoring();
             }
             catch (Exception ex)
@@ -660,6 +662,8 @@ namespace LazyBootstrap.Services.Launch
                             ClearLaunchMessage(_launchViewModel);
                         }
                     }
+
+                    _uiInteractionService.RestoreAttachedWindow();
                 }
 
                 _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
@@ -673,6 +677,23 @@ namespace LazyBootstrap.Services.Launch
                 {
                     exitedProcess?.Dispose();
                 }
+            }
+        }
+
+        private async Task MinimizeLauncherWindowDelayedAsync()
+        {
+            try
+            {
+                await Task.Delay(LauncherAutoMinimizeDelay);
+
+                if (_launchViewModel?.IsGameRunning == true)
+                {
+                    _uiInteractionService.MinimizeAttachedWindow();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to auto minimize launcher window.");
             }
         }
 

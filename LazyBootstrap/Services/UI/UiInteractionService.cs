@@ -7,6 +7,7 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
+using Avalonia.Threading;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
@@ -37,6 +38,10 @@ namespace LazyBootstrap.Services.UI
         Task<string> PickFolderAsync(string title);
 
         Task<string> PickFileAsync(string title, IReadOnlyList<string> patterns);
+
+        void MinimizeAttachedWindow();
+
+        void RestoreAttachedWindow();
     }
 
     internal sealed class UiInteractionService : IUiInteractionService
@@ -169,6 +174,35 @@ namespace LazyBootstrap.Services.UI
             }
 
             return PathHelper.NormalizePath(files[0].TryGetLocalPath());
+        }
+
+        public void MinimizeAttachedWindow()
+        {
+            if (_window == null)
+            {
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() => _window.WindowState = WindowState.Minimized);
+        }
+
+        public void RestoreAttachedWindow()
+        {
+            if (_window == null)
+            {
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_window.WindowState == WindowState.Minimized)
+                {
+                    _window.WindowState = WindowState.Normal;
+                }
+
+                _window.Show();
+                _window.Activate();
+            });
         }
 
         private void CreateToast(string title, string content, NotificationType type, int seconds)
