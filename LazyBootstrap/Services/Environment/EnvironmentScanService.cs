@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using LazyBootstrap.ViewModels;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Environment
@@ -18,6 +19,7 @@ namespace LazyBootstrap.Services.Environment
 
     internal sealed class EnvironmentScanService : IEnvironmentScanService
     {
+        private static readonly List<EnvironmentScan.ScanResultItem> EmptyScanBucket = [];
         private readonly ILauncherPaths _paths;
         private readonly IShellStateService _shellStateService;
         private readonly IUiInteractionService _uiInteractionService;
@@ -50,6 +52,7 @@ namespace LazyBootstrap.Services.Environment
             ArgumentNullException.ThrowIfNull(viewModel);
 
             viewModel.HasEnvironmentScanErrors = false;
+            ResetScanPresentation(viewModel);
 
             try
             {
@@ -67,7 +70,7 @@ namespace LazyBootstrap.Services.Environment
 
                 viewModel.EnvironmentSummary = summary.ErrorSummary ?? string.Empty;
                 viewModel.HasEnvironmentScanErrors = summary.HadError;
-                PopulateGroups(viewModel, summary);
+                PopulateScanSlots(viewModel, summary);
             }
             catch (Exception ex)
             {
@@ -82,121 +85,324 @@ namespace LazyBootstrap.Services.Environment
             }
         }
 
-        private static void PopulateGroups(InfoPageViewModel viewModel, EnvironmentScan.ScanSummary summary)
+        private static void ResetScanPresentation(InfoPageViewModel vm)
         {
-            viewModel.Groups.Clear();
+            vm.CpuPrimaryRow.ApplyResult(
+                "—",
+                string.Empty,
+                false,
+                false,
+                EnvironmentScan.ScanResultLevel.Success,
+                string.Empty);
+            vm.GpuAdapterRows.Clear();
+            vm.GpuAdapterRows.Add(CreateDashPlaceholderRow());
+            vm.NvidiaSkipNoticeRow.Hide();
+            vm.NvidiaDetailVisible = true;
+            vm.NvidiaNvcuda.Hide();
+            vm.NvidiaNvcuvid.Hide();
+            vm.NvidiaEncodeApi.Hide();
+            vm.DirectXRuntimeFaultRow.Hide();
+            vm.DirectXD3d9.Hide();
+            vm.DirectXD3Dx43.Hide();
+            vm.MediaPackRuntimeFaultRow.Hide();
+            vm.MediaPackMf.Hide();
+            vm.MediaPackMfplat.Hide();
+            vm.MediaPackWmvCore.Hide();
+            vm.Vc2010X86RuntimeFaultRow.Hide();
+            vm.Vc2010X86Msvcr.Hide();
+            vm.Vc2010X86Msvcp.Hide();
+            vm.Vc2010X64RuntimeFaultRow.Hide();
+            vm.Vc2010X64Msvcr.Hide();
+            vm.Vc2010X64Msvcp.Hide();
+            vm.ScanRootAlerts.Clear();
+            vm.HasScanRootAlerts = false;
+            vm.ScanUiReady = false;
+        }
 
-            var groupedItems = new Dictionary<string, List<EnvironmentScan.ScanResultItem>>(StringComparer.OrdinalIgnoreCase);
-            var rootItems = new List<EnvironmentScan.ScanResultItem>();
+        private static void PopulateScanSlots(InfoPageViewModel vm, EnvironmentScan.ScanSummary summary)
+        {
+            PartitionSummaryItems(summary.Items, out var roots, out var grouped);
 
-            foreach (var item in summary.Items)
+            ApplyCpuSlots(vm, grouped);
+            ApplyGpuSlots(vm, grouped);
+
+            PopulateDllGroup(vm, grouped, new DllGroupSpec
+            {
+                GroupKey = "NVIDIA API",
+                FaultToken = "系统库检测",
+                FaultTitle = "兼容层",
+                NotFoundTitle = "NVIDIA API",
+                FaultRow = vm.NvidiaSkipNoticeRow,
+                Outcomes = [("nvcuda.dll", vm.NvidiaNvcuda), ("nvcuvid.dll", vm.NvidiaNvcuvid), ("nvEncodeAPI64.dll", vm.NvidiaEncodeApi)],
+                OnFault = v => v.NvidiaDetailVisible = false
+            });
+            PopulateDllGroup(vm, grouped, new DllGroupSpec
+            {
+                GroupKey = "DirectX9",
+                FaultToken = "运行时检测",
+                FaultTitle = "DirectX 9 运行时",
+                NotFoundTitle = "DirectX 9",
+                FaultRow = vm.DirectXRuntimeFaultRow,
+                Outcomes = [("d3d9.dll", vm.DirectXD3d9), ("d3dx9_43.dll", vm.DirectXD3Dx43)]
+            });
+            PopulateDllGroup(vm, grouped, new DllGroupSpec
+            {
+                GroupKey = "媒体功能包",
+                FaultToken = "运行时检测",
+                FaultTitle = "媒体功能包 运行时",
+                NotFoundTitle = "系统媒体功能包",
+                FaultRow = vm.MediaPackRuntimeFaultRow,
+                Outcomes = [("MF.dll", vm.MediaPackMf), ("MFPLAT.dll", vm.MediaPackMfplat), ("WMVCore.dll", vm.MediaPackWmvCore)]
+            });
+            PopulateDllGroup(vm, grouped, new DllGroupSpec
+            {
+                GroupKey = "VC++2010 x86",
+                FaultToken = "运行时检测",
+                FaultTitle = "VC++2010 x86 运行时",
+                NotFoundTitle = "VC++2010 x86 运行时",
+                FaultRow = vm.Vc2010X86RuntimeFaultRow,
+                Outcomes = [("msvcr100.dll", vm.Vc2010X86Msvcr), ("msvcp100.dll", vm.Vc2010X86Msvcp)]
+            });
+            PopulateDllGroup(vm, grouped, new DllGroupSpec
+            {
+                GroupKey = "VC++2010 x64",
+                FaultToken = "运行时检测",
+                FaultTitle = "VC++2010 x64 运行时",
+                NotFoundTitle = "VC++2010 x64 运行时",
+                FaultRow = vm.Vc2010X64RuntimeFaultRow,
+                Outcomes = [("msvcr100.dll", vm.Vc2010X64Msvcr), ("msvcp100.dll", vm.Vc2010X64Msvcp)]
+            });
+
+            vm.ScanRootAlerts.Clear();
+            foreach (var root in roots)
+            {
+                string line = string.IsNullOrWhiteSpace(root.Detail)
+                    ? root.Item
+                    : $"{root.Item} — {root.Detail.Trim()}";
+                vm.ScanRootAlerts.Add(line);
+            }
+
+            vm.HasScanRootAlerts = vm.ScanRootAlerts.Count > 0;
+            vm.ScanUiReady = true;
+            vm.NotifyScanPresentationChanged();
+        }
+
+        private sealed class DllGroupSpec
+        {
+            public string GroupKey { get; init; }
+            public string FaultToken { get; init; }
+            public string FaultTitle { get; init; }
+            public string NotFoundTitle { get; init; }
+            public EnvironmentScanDisplayRow FaultRow { get; init; }
+            public (string FileToken, EnvironmentScanLineOutcome Outcome)[] Outcomes { get; init; }
+            public Action<InfoPageViewModel> OnFault { get; init; }
+        }
+
+        private static void PopulateDllGroup(
+            InfoPageViewModel vm,
+            Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped,
+            DllGroupSpec spec)
+        {
+            if (!grouped.TryGetValue(spec.GroupKey, out var bucket) || bucket.Count == 0)
+            {
+                spec.FaultRow.ApplyResult(
+                    spec.NotFoundTitle,
+                    "未有检测输出",
+                    true,
+                    true,
+                    EnvironmentScan.ScanResultLevel.Warning,
+                    BadgeText(EnvironmentScan.ScanResultLevel.Warning));
+                foreach (var (token, outcome) in spec.Outcomes)
+                    MapLibraryOutcome(EmptyScanBucket, token, outcome);
+                return;
+            }
+
+            var faultItem = bucket.Find(v =>
+                v.Item.IndexOf(spec.FaultToken, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (faultItem != null)
+            {
+                bool detailVisible = !string.IsNullOrWhiteSpace(faultItem.Detail);
+                spec.FaultRow.ApplyResult(
+                    spec.FaultTitle,
+                    detailVisible ? faultItem.Detail.Trim() : "检测过程中发生异常。",
+                    detailVisible,
+                    true,
+                    faultItem.Level,
+                    BadgeText(faultItem.Level));
+                foreach (var (token, outcome) in spec.Outcomes)
+                    MapLibraryOutcome(EmptyScanBucket, token, outcome);
+                spec.OnFault?.Invoke(vm);
+                return;
+            }
+
+            foreach (var (token, outcome) in spec.Outcomes)
+                MapLibraryOutcome(bucket, token, outcome);
+        }
+
+        private static void PartitionSummaryItems(
+            IReadOnlyList<EnvironmentScan.ScanResultItem> items,
+            out List<EnvironmentScan.ScanResultItem> roots,
+            out Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
+        {
+            roots = new List<EnvironmentScan.ScanResultItem>();
+            grouped = new Dictionary<string, List<EnvironmentScan.ScanResultItem>>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var item in items)
             {
                 int slashIndex = item.Item.IndexOf('/');
                 if (slashIndex <= 0 || slashIndex >= item.Item.Length - 1)
                 {
-                    rootItems.Add(item);
+                    roots.Add(item);
                     continue;
                 }
 
                 string groupName = item.Item[..slashIndex].Trim();
-                if (!groupedItems.TryGetValue(groupName, out var list))
+                if (!grouped.TryGetValue(groupName, out var bucket))
                 {
-                    list = new List<EnvironmentScan.ScanResultItem>();
-                    groupedItems[groupName] = list;
+                    bucket = new List<EnvironmentScan.ScanResultItem>();
+                    grouped[groupName] = bucket;
                 }
 
-                list.Add(item);
-            }
-
-            foreach (var item in rootItems)
-            {
-                var group = new EnvironmentScanGroup
-                {
-                    Title = item.Item,
-                    ShowStatus = true,
-                    Level = item.Level
-                };
-                group.Items.Add(BuildItem(item.Item, item.Detail, true, item.Level));
-                viewModel.Groups.Add(group);
-            }
-
-            foreach (var pair in groupedItems)
-            {
-                var level = pair.Value.Any(value => value.Level == EnvironmentScan.ScanResultLevel.Error)
-                    ? EnvironmentScan.ScanResultLevel.Error
-                    : pair.Value.Any(value => value.Level == EnvironmentScan.ScanResultLevel.Warning)
-                        ? EnvironmentScan.ScanResultLevel.Warning
-                        : EnvironmentScan.ScanResultLevel.Success;
-
-                var group = new EnvironmentScanGroup
-                {
-                    Title = pair.Key,
-                    ShowStatus = false,
-                    Level = level
-                };
-
-                bool isHardwareInfoGroup =
-                    string.Equals(pair.Key, "CPU", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(pair.Key, "GPU", StringComparison.OrdinalIgnoreCase);
-
-                foreach (var child in pair.Value)
-                {
-                    int slashIndex = child.Item.IndexOf('/');
-                    string childLabel = slashIndex >= 0 && slashIndex < child.Item.Length - 1
-                        ? child.Item[(slashIndex + 1)..]
-                        : child.Item;
-                    bool isVirtualMachine = !string.IsNullOrWhiteSpace(child.Detail)
-                        && child.Detail.Contains("虚拟机", StringComparison.OrdinalIgnoreCase);
-
-                    string labelText;
-                    if (isHardwareInfoGroup)
-                    {
-                        labelText = string.Equals(pair.Key, "CPU", StringComparison.OrdinalIgnoreCase) && !string.IsNullOrWhiteSpace(child.Detail)
-                            ? child.Detail
-                            : childLabel;
-                    }
-                    else
-                    {
-                        labelText = string.IsNullOrWhiteSpace(child.Detail)
-                            ? childLabel
-                            : $"{childLabel} - {child.Detail}";
-                    }
-
-                    group.Items.Add(BuildItem(
-                        labelText,
-                        child.Detail,
-                        !isHardwareInfoGroup || isVirtualMachine,
-                        child.Level,
-                        isVirtualMachine));
-                }
-
-                viewModel.Groups.Add(group);
+                bucket.Add(item);
             }
         }
 
-        private static EnvironmentScanItem BuildItem(
-            string label,
-            string detail,
-            bool showStatus,
-            EnvironmentScan.ScanResultLevel level,
-            bool isVirtualMachine = false)
+        private static string ChildSegment(string itemKey)
         {
-            return new EnvironmentScanItem
+            int slash = itemKey.IndexOf('/');
+            return slash >= 0 && slash < itemKey.Length - 1
+                ? itemKey[(slash + 1)..].Trim()
+                : itemKey.Trim();
+        }
+
+        private static string BadgeText(EnvironmentScan.ScanResultLevel level)
+        {
+            return level switch
             {
-                Label = label ?? string.Empty,
-                Detail = detail ?? string.Empty,
-                ShowStatus = showStatus,
-                IsVirtualMachine = isVirtualMachine,
-                Level = level,
-                StatusText = isVirtualMachine
-                    ? "虚拟机"
-                    : level switch
-                    {
-                        EnvironmentScan.ScanResultLevel.Success => "通过",
-                        EnvironmentScan.ScanResultLevel.Warning => "警告",
-                        _ => "失败"
-                    }
+                EnvironmentScan.ScanResultLevel.Success => "通过",
+                EnvironmentScan.ScanResultLevel.Warning => "警告",
+                _ => "失败"
             };
+        }
+
+        private static EnvironmentScan.ScanResultLevel AggregateWorst(IEnumerable<EnvironmentScan.ScanResultItem> seq)
+        {
+            EnvironmentScan.ScanResultLevel lvl = EnvironmentScan.ScanResultLevel.Success;
+
+            foreach (var item in seq)
+            {
+                lvl = WorstTwo(lvl, item.Level);
+            }
+
+            return lvl;
+        }
+
+        private static EnvironmentScan.ScanResultLevel WorstTwo(EnvironmentScan.ScanResultLevel a, EnvironmentScan.ScanResultLevel b)
+        {
+            static int Rank(EnvironmentScan.ScanResultLevel level) =>
+                level switch
+                {
+                    EnvironmentScan.ScanResultLevel.Error => 2,
+                    EnvironmentScan.ScanResultLevel.Warning => 1,
+                    _ => 0,
+                };
+
+            return Rank(a) >= Rank(b) ? a : b;
+        }
+
+        private static void ApplyCpuSlots(InfoPageViewModel vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
+        {
+            if (!grouped.TryGetValue("CPU", out List<EnvironmentScan.ScanResultItem> bucket) || bucket.Count == 0)
+            {
+                vm.CpuPrimaryRow.ApplyResult(
+                    "未产生检测结果",
+                    string.Empty,
+                    false,
+                    false,
+                    EnvironmentScan.ScanResultLevel.Warning,
+                    string.Empty);
+                return;
+            }
+
+            EnvironmentScan.ScanResultLevel groupLevel = AggregateWorst(bucket);
+            EnvironmentScan.ScanResultItem anchor = bucket[0];
+            string primary = !string.IsNullOrWhiteSpace(anchor.Detail)
+                ? anchor.Detail.Trim()
+                : ChildSegment(anchor.Item);
+            vm.CpuPrimaryRow.ApplyResult(
+                primary,
+                string.Empty,
+                false,
+                false,
+                groupLevel,
+                string.Empty);
+        }
+
+        private static void ApplyGpuSlots(InfoPageViewModel vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
+        {
+            vm.GpuAdapterRows.Clear();
+
+            if (!grouped.TryGetValue("GPU", out List<EnvironmentScan.ScanResultItem> bucket) || bucket.Count == 0)
+            {
+                var row = new EnvironmentScanDisplayRow();
+                row.ApplyResult(
+                    "未发现可用的显示适配器",
+                    string.Empty,
+                    false,
+                    false,
+                    EnvironmentScan.ScanResultLevel.Warning,
+                    string.Empty);
+                vm.GpuAdapterRows.Add(row);
+                return;
+            }
+
+            foreach (EnvironmentScan.ScanResultItem entry in bucket)
+            {
+                string slug = ChildSegment(entry.Item);
+                EnvironmentScan.ScanResultLevel rowLevel = entry.Level;
+
+                var row = new EnvironmentScanDisplayRow();
+                row.ApplyResult(
+                    slug,
+                    string.Empty,
+                    false,
+                    false,
+                    rowLevel,
+                    string.Empty);
+                vm.GpuAdapterRows.Add(row);
+            }
+        }
+
+        private static EnvironmentScanDisplayRow CreateDashPlaceholderRow()
+        {
+            var row = new EnvironmentScanDisplayRow();
+            row.ApplyResult(
+                "—",
+                string.Empty,
+                false,
+                false,
+                EnvironmentScan.ScanResultLevel.Success,
+                string.Empty);
+            return row;
+        }
+
+        private static void MapLibraryOutcome(
+            List<EnvironmentScan.ScanResultItem> bucket,
+            string fileToken,
+            EnvironmentScanLineOutcome outcome)
+        {
+            EnvironmentScan.ScanResultItem hit = bucket.Find(value =>
+                value.Item.IndexOf(fileToken, StringComparison.OrdinalIgnoreCase) >= 0);
+
+            if (hit == null)
+            {
+                outcome.Apply(EnvironmentScan.ScanResultLevel.Error, BadgeText(EnvironmentScan.ScanResultLevel.Error));
+            }
+            else
+            {
+                outcome.Apply(hit.Level, BadgeText(hit.Level));
+            }
         }
 
         private string ResolveMachineProperty()

@@ -249,15 +249,7 @@ namespace LazyBootstrap.Views
 
         private void ApplyInfoViewModelStateToUi()
         {
-            if (CurrentVersionTextBox != null)
-            {
-                CurrentVersionTextBox.Text = _viewModel.Info.MachineProperty;
-            }
-
-            if (RevisionTextBox != null)
-            {
-                RevisionTextBox.Text = _viewModel.Info.GameVersion;
-            }
+            RefreshEnvironmentOverviewChrome();
         }
 
         private void ApplySpiceSettingsFromViewModel()

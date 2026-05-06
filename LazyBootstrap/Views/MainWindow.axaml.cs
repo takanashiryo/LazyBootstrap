@@ -144,6 +144,7 @@ namespace LazyBootstrap.Views
             HookSettingsViewModelState();
             HookDisplayViewModelState();
             HookToolsViewModelState();
+            HookInfoViewModelState();
             _isLoadingSettings = false;
             _logger.LogInformation("Main window initialized for base directory {BaseDirectory}.", _paths.BaseDir);
         }
@@ -178,6 +179,7 @@ namespace LazyBootstrap.Views
             UnhookSettingsViewModelState();
             UnhookDisplayViewModelState();
             UnhookToolsViewModelState();
+            UnhookInfoViewModelState();
             _uiInteractionService.DetachWindow(this);
         }
 
@@ -221,7 +223,7 @@ namespace LazyBootstrap.Views
                 ApplyDeferredSettingsViewModelStateToUi();
                 ApplyInfoViewModelStateToUi();
                 InitializeDisplayLayoutControls();
-                RefreshEnvironmentScanResultCard();
+                RefreshEnvironmentOverviewChrome();
                 _pendingEnvironmentScanErrorDialog = _viewModel.Info.HasEnvironmentScanErrors;
             }
             catch (Exception ex)

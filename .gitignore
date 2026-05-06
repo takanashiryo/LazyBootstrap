@@ -37,7 +37,8 @@ coverage*.info
 *.nupkg
 *.snupkg
 
-# Local workspace-only directories (do not exclude .github — CI/workflows belong in the repo unless you intentionally omit them elsewhere)
+# Agents
 .agents/
+.claude/
 .codex-tools
 Todo.md

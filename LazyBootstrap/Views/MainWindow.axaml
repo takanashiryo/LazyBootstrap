@@ -3,6 +3,8 @@
                  xmlns:generic="clr-namespace:System.Collections.Generic;assembly=System.Collections"
                  xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
                  xmlns:vm="clr-namespace:LazyBootstrap.ViewModels"
+                 xmlns:conv="clr-namespace:LazyBootstrap.Converters;assembly=LazyBootstrap"
+                 xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                  x:Class="LazyBootstrap.Views.MainWindow"
                  x:DataType="vm:MainWindowViewModel"
                  Title="SOUND VOLTEX LazyBootstrap"
@@ -12,6 +14,83 @@
                  BackgroundStyle="Gradient"
                  CanResize="True"
                  WindowStartupLocation="CenterScreen">
+    <suki:SukiWindow.Resources>
+        <conv:EnvironmentScanAccentConverter x:Key="EnvScanAccent"/>
+        <DataTemplate x:Key="EnvScanDisplayRowTemplate"
+                      x:DataType="vm:EnvironmentScanDisplayRow">
+            <Border CornerRadius="8"
+                    Margin="0,0,0,2"
+                    Padding="12,10"
+                    BorderThickness="1"
+                    IsVisible="{Binding IsShown}"
+                    Background="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=RowFill}"
+                    BorderBrush="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=RowStroke}">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                    <Ellipse Width="8" Height="8"
+                             VerticalAlignment="Center"
+                             Fill="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Fg}"/>
+                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                        <TextBlock FontSize="13"
+                                   LineHeight="18"
+                                   Text="{Binding PrimaryText}"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock FontSize="12"
+                                   IsVisible="{Binding SecondaryVisible}"
+                                   LineHeight="16"
+                                   Opacity="0.65"
+                                   Text="{Binding SecondaryText}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <Border Grid.Column="2"
+                            CornerRadius="999"
+                            Padding="10,3"
+                            BorderThickness="1"
+                            IsVisible="{Binding ShowStatusBadge}"
+                            Background="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=BadgeBg}"
+                            BorderBrush="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Border}">
+                        <TextBlock FontSize="11.5"
+                                   FontWeight="DemiBold"
+                                   VerticalAlignment="Center"
+                                   Foreground="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Fg}"
+                                   Text="{Binding StatusText}"/>
+                    </Border>
+                </Grid>
+            </Border>
+        </DataTemplate>
+        <DataTemplate x:Key="EnvScanCpuGpuTextRowTemplate"
+                      x:DataType="vm:EnvironmentScanDisplayRow">
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,1">
+                <Ellipse Width="6" Height="6"
+                         VerticalAlignment="Center"
+                         Fill="{DynamicResource SukiMuteText}"/>
+                <TextBlock Grid.Column="1"
+                           FontSize="13"
+                           IsVisible="{Binding IsShown}"
+                           LineHeight="18"
+                           Text="{Binding PrimaryText}"
+                           TextWrapping="Wrap"/>
+            </Grid>
+        </DataTemplate>
+        <DataTemplate x:Key="EnvScanLineOutcomeBadge"
+                      x:DataType="vm:EnvironmentScanLineOutcome">
+            <Border Padding="10,3"
+                    CornerRadius="999"
+                    BorderThickness="1"
+                    MinWidth="56"
+                    HorizontalAlignment="Right"
+                    IsVisible="{Binding OutcomeVisible}"
+                    Background="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=BadgeBg}"
+                    BorderBrush="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Border}">
+                <TextBlock FontSize="11.5"
+                           FontWeight="DemiBold"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"
+                           Foreground="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Fg}"
+                           Text="{Binding StatusText}"/>
+            </Border>
+        </DataTemplate>
+    </suki:SukiWindow.Resources>
+
     <suki:SukiWindow.Hosts>
         <suki:SukiDialogHost x:Name="DialogHost"/>
         <suki:SukiToastHost x:Name="ToastHost"/>
@@ -693,19 +772,381 @@
                     <suki:SukiSideMenuItem.PageContent>
                         <ScrollViewer x:Name="InfoPageView" Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Spacing="12">
-                                <suki:GlassCard>
-                                    <Grid Margin="14" ColumnDefinitions="120,*" RowDefinitions="Auto,Auto">
-                                        <TextBlock Text="机台属性" VerticalAlignment="Center"/>
-                                        <TextBox x:Name="CurrentVersionTextBox" Grid.Column="1" IsReadOnly="True"/>
-                                        <TextBlock Text="当前游戏版本" Grid.Row="1" VerticalAlignment="Center" Margin="0,8,0,0"/>
-                                        <TextBox x:Name="RevisionTextBox" Grid.Row="1" Grid.Column="1" Margin="0,8,0,0" IsReadOnly="True"/>
-                                    </Grid>
+                                <suki:GlassCard IsAnimated="False">
+                                    <StackPanel Margin="16,14" Spacing="10">
+                                        <TextBlock Text="系统与版本" FontSize="15" FontWeight="SemiBold"/>
+                                        <Grid ColumnDefinitions="108,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                            <TextBlock VerticalAlignment="Center"
+                                                       Opacity="0.78"
+                                                       Text="机台属性"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBox Grid.Column="1"
+                                                     Classes="Flat"
+                                                     IsReadOnly="True"
+                                                     Text="{Binding Info.MachineProperty}"
+                                                     TextWrapping="Wrap"/>
+                                            <TextBlock Grid.Row="1"
+                                                       VerticalAlignment="Center"
+                                                       Opacity="0.78"
+                                                       Text="当前游戏版本"
+                                                       TextWrapping="Wrap"/>
+                                            <TextBox Grid.Row="1"
+                                                     Grid.Column="1"
+                                                     Classes="Flat"
+                                                     IsReadOnly="True"
+                                                     Text="{Binding Info.GameVersion}"
+                                                     TextWrapping="Wrap"/>
+                                        </Grid>
+                                    </StackPanel>
                                 </suki:GlassCard>
 
-                                <suki:GlassCard>
-                                    <StackPanel Margin="14" Spacing="10">
-                                        <TextBlock Text="环境检测结果" FontSize="16" FontWeight="SemiBold"/>
-                                        <StackPanel x:Name="PanelEnvScanResults" Spacing="8"/>
+                                <suki:GlassCard IsAnimated="False">
+                                    <StackPanel Margin="16,14" Spacing="12">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Spacing="2">
+                                                <TextBlock Text="环境诊断" FontSize="16" FontWeight="SemiBold"/>
+                                                <TextBlock FontSize="12"
+                                                           Opacity="0.6"
+                                                           TextWrapping="Wrap"
+                                                           Text="检测系统运行环境"/>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right" Spacing="6">
+                                                <Button Classes="Flat"
+                                                        Padding="14,10"
+                                                        MinWidth="118"
+                                                        Command="{Binding Info.RefreshEnvironmentScanCommand}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="14" Text="&#xF021;" VerticalAlignment="Center"/>
+                                                        <TextBlock VerticalAlignment="Center" Text="重新检测"/>
+                                                    </StackPanel>
+                                                </Button>
+                                                <TextBlock FontSize="11.5"
+                                                           HorizontalAlignment="Right"
+                                                           IsVisible="{Binding Info.ScanUiPendingHintVisible}"
+                                                           Opacity="0.5"
+                                                           Text="正在刷新检测结果…"
+                                                           TextWrapping="Wrap"/>
+                                            </StackPanel>
+                                        </Grid>
+                                        <suki:InfoBar x:Name="EnvironmentOverviewInfoBar"
+                                                      IsClosable="False"
+                                                      IsOpen="True"
+                                                      MessageTextAlignment="Left"
+                                                      IsVisible="False"/>
+                                        <StackPanel Spacing="8">
+
+                                            <!-- CPU -->
+                                            <suki:GlassCard CornerRadius="16">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF2DB;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="CPU"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ContentControl HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    Content="{Binding Info.CpuPrimaryRow}"
+                                                                    ContentTemplate="{StaticResource EnvScanCpuGpuTextRowTemplate}"/>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                            <!-- GPU -->
+                                            <suki:GlassCard CornerRadius="16">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF26C;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="GPU"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ItemsControl HorizontalAlignment="Stretch"
+                                                                  ItemsSource="{Binding Info.GpuAdapterRows}">
+                                                        <ItemsControl.ItemsPanel>
+                                                            <ItemsPanelTemplate>
+                                                                <StackPanel Spacing="2"/>
+                                                            </ItemsPanelTemplate>
+                                                        </ItemsControl.ItemsPanel>
+                                                        <ItemsControl.ItemTemplate>
+                                                            <StaticResource ResourceKey="EnvScanCpuGpuTextRowTemplate"/>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                            <!-- NVIDIA API -->
+                                            <suki:GlassCard CornerRadius="16">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF121;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="NVIDIA API"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ContentControl HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    Content="{Binding Info.NvidiaSkipNoticeRow}"
+                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <StackPanel Spacing="2" Margin="0,4,0,0"
+                                                                IsVisible="{Binding Info.NvidiaDetailVisible}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="System32/nvcuda.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.NvidiaNvcuda}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="System32/nvcuvid.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.NvidiaNvcuvid}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="System32/nvEncodeAPI64.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.NvidiaEncodeApi}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                            <!-- DirectX 9 -->
+                                            <suki:GlassCard CornerRadius="16">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF06E;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="DirectX 9"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ContentControl HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    Content="{Binding Info.DirectXRuntimeFaultRow}"
+                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <StackPanel Spacing="2" Margin="0,4,0,0">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="d3d9.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.DirectXD3d9}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="d3dx9_43.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.DirectXD3Dx43}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                            <!-- Windows media foundation DLLs -->
+                                            <suki:GlassCard CornerRadius="16">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF03D;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="系统媒体功能包"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ContentControl HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    Content="{Binding Info.MediaPackRuntimeFaultRow}"
+                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <StackPanel Spacing="2" Margin="0,4,0,0">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="MF.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.MediaPackMf}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="MFPLAT.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.MediaPackMfplat}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="WMVCore.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.MediaPackWmvCore}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                            <!-- VC++ 2010 x86 -->
+                                            <suki:GlassCard CornerRadius="16">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF121;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="Visual C++ 2010 (x86)"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ContentControl HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    Content="{Binding Info.Vc2010X86RuntimeFaultRow}"
+                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <StackPanel Spacing="2" Margin="0,4,0,0">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="SysWOW64/msvcr100.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.Vc2010X86Msvcr}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="SysWOW64/msvcp100.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.Vc2010X86Msvcp}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                            <!-- VC++ 2010 x64 -->
+                                            <suki:GlassCard CornerRadius="16">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF121;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="Visual C++ 2010 (x64)"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ContentControl HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"
+                                                                    Content="{Binding Info.Vc2010X64RuntimeFaultRow}"
+                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <StackPanel Spacing="2" Margin="0,4,0,0">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="System32/msvcr100.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.Vc2010X64Msvcr}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                                            <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                            <TextBlock Grid.Column="1" VerticalAlignment="Center"
+                                                                       FontSize="13" LineHeight="18"
+                                                                       Text="System32/msvcp100.dll"/>
+                                                            <ContentControl Grid.Column="2"
+                                                                            Content="{Binding Info.Vc2010X64Msvcp}"
+                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                        </Grid>
+                                                    </StackPanel>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                            <!-- Ungrouped scan output -->
+                                            <suki:GlassCard CornerRadius="16"
+                                                            IsVisible="{Binding Info.HasScanRootAlerts}">
+                                                <StackPanel Margin="16,12" Spacing="4">
+                                                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                                        <TextBlock Classes="FaIcon" FontSize="15"
+                                                                   Text="&#xF06A;" VerticalAlignment="Center"
+                                                                   Opacity="0.7"/>
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="未分组扫描输出"/>
+                                                    </Grid>
+                                                    <Border Height="1" Margin="0,2"
+                                                            HorizontalAlignment="Stretch"
+                                                            Background="{DynamicResource SukiControlBorderBrush}"
+                                                            Opacity="0.3"/>
+                                                    <ItemsControl ItemsSource="{Binding Info.ScanRootAlerts}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="sys:String">
+                                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,1">
+                                                                    <Ellipse Width="6" Height="6" VerticalAlignment="Center"
+                                                                             Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                    <TextBlock Grid.Column="1"
+                                                                               FontSize="13"
+                                                                               LineHeight="18"
+                                                                               Opacity="0.8"
+                                                                               Text="{Binding}"
+                                                                               TextWrapping="Wrap"/>
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </suki:GlassCard>
+
+                                        </StackPanel>
                                     </StackPanel>
                                 </suki:GlassCard>
                             </StackPanel>

@@ -1,18 +1,59 @@
 using System;
-using System.Collections.Generic;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Avalonia;
-using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Media;
+using Avalonia.Threading;
 using SukiUI.Controls;
 
 namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
+        private void AttachEnvironmentScanCollections()
+        {
+            _viewModel.Info.GpuAdapterRows.CollectionChanged += OnEnvironmentScanSurfaceChanged;
+            _viewModel.Info.ScanRootAlerts.CollectionChanged += OnEnvironmentScanSurfaceChanged;
+        }
+
+        private void DetachEnvironmentScanCollections()
+        {
+            _viewModel.Info.GpuAdapterRows.CollectionChanged -= OnEnvironmentScanSurfaceChanged;
+            _viewModel.Info.ScanRootAlerts.CollectionChanged -= OnEnvironmentScanSurfaceChanged;
+        }
+
+        private void HookInfoViewModelState()
+        {
+            _viewModel.Info.PropertyChanged += OnInfoViewModelPropertyChanged;
+            AttachEnvironmentScanCollections();
+        }
+
+        private void UnhookInfoViewModelState()
+        {
+            _viewModel.Info.PropertyChanged -= OnInfoViewModelPropertyChanged;
+            DetachEnvironmentScanCollections();
+        }
+
+        private void OnEnvironmentScanSurfaceChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            Dispatcher.UIThread.Post(RefreshEnvironmentOverviewChrome, DispatcherPriority.Background);
+        }
+
+        private void OnInfoViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            var propertyName = e.PropertyName;
+
+            if (string.IsNullOrEmpty(propertyName)
+                || propertyName.Equals(nameof(InfoPageViewModel.EnvironmentSummary), StringComparison.Ordinal)
+                || propertyName.Equals(nameof(InfoPageViewModel.HasEnvironmentScanErrors), StringComparison.Ordinal)
+                || propertyName.Equals(nameof(InfoPageViewModel.EnvironmentScanPresentationRevision), StringComparison.Ordinal))
+            {
+                Dispatcher.UIThread.Post(RefreshEnvironmentOverviewChrome, DispatcherPriority.Background);
+            }
+        }
+
         private async Task ShowEnvironmentScanErrorDialogAsync()
         {
             const string errorContent =
@@ -69,85 +110,39 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void RefreshEnvironmentScanResultCard()
+        internal void RefreshEnvironmentOverviewChrome()
         {
-            if (PanelEnvScanResults == null)
+            if (EnvironmentOverviewInfoBar == null || _viewModel?.Info == null)
             {
                 return;
             }
 
-            PanelEnvScanResults.Children.Clear();
+            var info = _viewModel.Info;
 
-            void AddRow(string labelText, string statusText, bool showStatus, EnvironmentScan.ScanResultLevel level, bool isVirtualMachine, double indentLeft)
+            EnvironmentOverviewInfoBar.MessageTextAlignment = TextAlignment.Left;
+            EnvironmentOverviewInfoBar.IsClosable = false;
+            EnvironmentOverviewInfoBar.IsVisible = true;
+
+            if (info.HasEnvironmentScanErrors)
             {
-                var row = new Grid
-                {
-                    ColumnDefinitions = new ColumnDefinitions("300,80,*"),
-                    ColumnSpacing = 8,
-                    Margin = new Thickness(indentLeft, 0, 0, 0)
-                };
-
-                var label = new TextBlock
-                {
-                    Text = labelText,
-                    TextWrapping = TextWrapping.Wrap
-                };
-                row.Children.Add(label);
-
-                if (showStatus)
-                {
-                    var status = new TextBlock
-                    {
-                        Text = statusText,
-                        Foreground = ResolveStatusBrush(level, isVirtualMachine),
-                        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Center
-                    };
-                    Grid.SetColumn(status, 1);
-                    row.Children.Add(status);
-                }
-
-                PanelEnvScanResults.Children.Add(row);
+                EnvironmentOverviewInfoBar.Severity = NotificationType.Error;
+                EnvironmentOverviewInfoBar.Title = "存在未通过的检查项";
+                EnvironmentOverviewInfoBar.Message = string.IsNullOrWhiteSpace(info.EnvironmentSummary)
+                    ? "请对照下方固定检测项查看未通过条目。"
+                    : info.EnvironmentSummary.Trim();
             }
-
-            foreach (var group in _viewModel.Info.Groups)
+            else if (info.HasAnyEnvironmentScanWarning())
             {
-                AddRow(group.Title, ResolveStatusText(group.Level, false), group.ShowStatus, group.Level, false, 0);
-
-                foreach (var item in group.Items)
-                {
-                    AddRow(item.Label, item.StatusText, item.ShowStatus, item.Level, item.IsVirtualMachine, 28);
-                }
+                EnvironmentOverviewInfoBar.Severity = NotificationType.Warning;
+                EnvironmentOverviewInfoBar.Title = "存在警告";
+                EnvironmentOverviewInfoBar.Message = string.Empty;
             }
-        }
-
-        private static string ResolveStatusText(EnvironmentScan.ScanResultLevel level, bool isVirtualMachine)
-        {
-            if (isVirtualMachine)
+            else
             {
-                return "虚拟机";
+                EnvironmentOverviewInfoBar.Severity = NotificationType.Success;
+                EnvironmentOverviewInfoBar.Title = "检测通过";
+                EnvironmentOverviewInfoBar.Message = string.Empty;
             }
-
-            return level switch
-            {
-                EnvironmentScan.ScanResultLevel.Success => "通过",
-                EnvironmentScan.ScanResultLevel.Warning => "警告",
-                _ => "失败"
-            };
-        }
-
-        private static IBrush ResolveStatusBrush(EnvironmentScan.ScanResultLevel level, bool isVirtualMachine)
-        {
-            if (isVirtualMachine)
-            {
-                return Brushes.Goldenrod;
-            }
-
-            return level switch
-            {
-                EnvironmentScan.ScanResultLevel.Success => Brushes.LightGreen,
-                EnvironmentScan.ScanResultLevel.Warning => Brushes.Orange,
-                _ => Brushes.IndianRed
-            };
         }
     }
 }

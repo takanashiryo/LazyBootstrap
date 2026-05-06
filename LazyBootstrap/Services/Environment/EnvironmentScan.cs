@@ -149,6 +149,25 @@ namespace LazyBootstrap.Services.Environment
                 }
             }
 
+            void CheckDlls(string groupName, string dllDirectory, string[] dllNames, string faultLabel = "运行时检测")
+            {
+                try
+                {
+                    foreach (var dll in dllNames)
+                    {
+                        bool ok = File.Exists(Path.Combine(dllDirectory, dll));
+                        AddResult($"{groupName}/{dll}", string.Empty, ok ? ScanResultLevel.Success : ScanResultLevel.Error);
+                    }
+                }
+                catch (Exception)
+                {
+                    AddResult($"{groupName}/{faultLabel}", string.Empty, ScanResultLevel.Error);
+                }
+            }
+
+            var sysDir = Path.Combine(SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows), "System32");
+            var winDir = SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows);
+
             void LogCpu()
             {
                 var cpuName = GetCpuName();
@@ -164,33 +183,9 @@ namespace LazyBootstrap.Services.Environment
                     return;
                 }
 
-                var vmKeywords = new[]
+                foreach (var gpu in gpus)
                 {
-                    "VMware",
-                    "VirtIO",
-                    "VirtualBox",
-                    "Hyper-V",
-                    "QEMU",
-                    "Parallels",
-                    "KVM"
-                };
-
-                bool isVirtualMachine = gpus.Any(gpu =>
-                    vmKeywords.Any(keyword => gpu.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0));
-
-                if (isVirtualMachine)
-                {
-                    foreach (var gpu in gpus)
-                    {
-                        AddResult($"GPU/{gpu}", "虚拟机", ScanResultLevel.Warning);
-                    }
-                }
-                else
-                {
-                    foreach (var gpu in gpus)
-                    {
-                        AddResult($"GPU/{gpu}", string.Empty, ScanResultLevel.Success);
-                    }
+                    AddResult($"GPU/{gpu}", string.Empty, ScanResultLevel.Success);
                 }
             }
 
@@ -201,73 +196,28 @@ namespace LazyBootstrap.Services.Environment
                     AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", ScanResultLevel.Success);
                     return;
                 }
-                try
-                {
-                    var sys32 = Path.Combine(SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows), "System32");
-                    foreach (var f in new[] { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" })
-                    {
-                        bool ok = File.Exists(Path.Combine(sys32, f));
-                        AddResult($"NVIDIA API/{f}", string.Empty, ok ? ScanResultLevel.Success : ScanResultLevel.Error);
-                    }
-                }
-                catch (Exception)
-                {
-                    AddResult("NVIDIA API/系统库检测", string.Empty, ScanResultLevel.Error);
-                }
+                CheckDlls("NVIDIA API", sysDir, ["nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll"], "系统库检测");
             }
 
             void LogDirectX()
             {
-                try
-                {
-                    var sys32 = Path.Combine(SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows), "System32");
-                    bool hasCore = File.Exists(Path.Combine(sys32, "d3d9.dll"));
-                    bool hasJun = File.Exists(Path.Combine(sys32, "d3dx9_43.dll"));
-                    AddResult("DirectX9/d3d9.dll", string.Empty, hasCore ? ScanResultLevel.Success : ScanResultLevel.Error);
-                    AddResult("DirectX9/d3dx9_43.dll", string.Empty, hasJun ? ScanResultLevel.Success : ScanResultLevel.Error);
-                }
-                catch (Exception)
-                {
-                    AddResult("DirectX9/运行时检测", string.Empty, ScanResultLevel.Error);
-                }
+                CheckDlls("DirectX9", sysDir, ["d3d9.dll", "d3dx9_43.dll"]);
             }
 
-            // 新增：系统媒体功能包（MF.dll、MFPLAT.dll、WMVCore.dll）
             void LogMediaFeaturePack()
             {
-                try
-                {
-                    var sys32 = Path.Combine(SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows), "System32");
-                    foreach (var f in new[] { "MF.dll", "MFPLAT.dll", "WMVCore.dll" })
-                    {
-                        bool ok = File.Exists(Path.Combine(sys32, f));
-                        AddResult($"媒体功能包/{f}", string.Empty, ok ? ScanResultLevel.Success : ScanResultLevel.Error);
-                    }
-                }
-                catch (Exception)
-                {
-                    AddResult("媒体功能包/运行时检测", string.Empty, ScanResultLevel.Error);
-                }
+                CheckDlls("媒体功能包", sysDir, ["MF.dll", "MFPLAT.dll", "WMVCore.dll"]);
             }
 
             void LogVc2010(bool x64)
             {
                 string arch = x64 ? "x64" : "x86";
-                try
-                {
-                    var winDir = SystemEnvironment.GetFolderPath(SystemEnvironment.SpecialFolder.Windows);
-                    string dllDir = x64 ? Path.Combine(winDir, "System32") : (SystemEnvironment.Is64BitOperatingSystem ? Path.Combine(winDir, "SysWOW64") : Path.Combine(winDir, "System32"));
-                    var dlls = new[] { "msvcr100.dll", "msvcp100.dll" };
-                    foreach (var d in dlls)
-                    {
-                        bool ok = File.Exists(Path.Combine(dllDir, d));
-                        AddResult($"VC++2010 {arch}/{d}", string.Empty, ok ? ScanResultLevel.Success : ScanResultLevel.Error);
-                    }
-                }
-                catch (Exception)
-                {
-                    AddResult($"VC++2010 {arch}/运行时检测", string.Empty, ScanResultLevel.Error);
-                }
+                string dllDir = x64
+                    ? Path.Combine(winDir, "System32")
+                    : SystemEnvironment.Is64BitOperatingSystem
+                        ? Path.Combine(winDir, "SysWOW64")
+                        : Path.Combine(winDir, "System32");
+                CheckDlls($"VC++2010 {arch}", dllDir, ["msvcr100.dll", "msvcp100.dll"]);
             }
 
             // 步骤定义数组，循环执行
