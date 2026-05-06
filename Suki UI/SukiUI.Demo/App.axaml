@@ -1,0 +1,55 @@
+<Application x:Class="SukiUI.Demo.App"
+             xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:avalonia="clr-namespace:Material.Icons.Avalonia;assembly=Material.Icons.Avalonia"
+             xmlns:avaloniaEdit="https://github.com/avaloniaui/avaloniaedit"
+             xmlns:common="clr-namespace:SukiUI.Demo.Common"
+             xmlns:suki="https://github.com/kikipoulet/SukiUI"
+             RequestedThemeVariant="Default">
+
+    <TrayIcon.Icons>
+        <TrayIcons>
+            <TrayIcon Icon="/Assets/OIG.N5o-removebg-preview.png" ToolTipText="SukiUI Native Menu Demo">
+                <TrayIcon.Menu>
+                    <NativeMenu>
+                        <NativeMenuItem Header="Native Menu Demo">
+                            <NativeMenu>
+                                <NativeMenuItem Header="Option 1" />
+                                <NativeMenuItem Header="Option 2" />
+                                <NativeMenuItemSeparator />
+                                <NativeMenuItem Header="Option 3" />
+                            </NativeMenu>
+                        </NativeMenuItem>
+                    </NativeMenu>
+                </TrayIcon.Menu>
+            </TrayIcon>
+        </TrayIcons>
+    </TrayIcon.Icons>
+
+    <!--
+        Refer to the link below to customize your font.
+        https://kikipoulet.github.io/SukiUI/documentation/faq/custom-font.html#how-to-use-custom-font
+    -->
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="Styles/CompletionWindowStyles.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+    <Application.Styles>
+        <FluentTheme />
+        <StyleInclude Source="avares://SukiUI.Dock/Index.axaml" />
+        <StyleInclude Source="avares://Avalonia.Controls.ColorPicker/Themes/Fluent/Fluent.xaml" />
+        <StyleInclude Source="avares://AvaloniaEdit/Themes/Fluent/AvaloniaEdit.xaml" />
+        <suki:SukiTheme Locale="en-US" ThemeColor="Blue" />
+        <StyleInclude Source="avares://SukiUI.Demo/Styles/ShowMeTheXamlStyles.axaml" />
+        <StyleInclude Source="avares://SukiUI.Demo/Styles/WrapPanelStyles.axaml" />
+        <StyleInclude Source="avares://SukiUI.Demo/Styles/TextStyles.axaml" />
+        <StyleInclude Source="avares://SukiUI.Demo/Styles/GlassCardStyles.axaml" />
+        <StyleInclude Source="avares://SukiUI.Demo/Styles/MaterialIconStyles.axaml" />
+
+        <avalonia:MaterialIconStyles />
+    </Application.Styles>
+
+</Application>

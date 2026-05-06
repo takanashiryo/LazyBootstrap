@@ -1,0 +1,30 @@
+﻿<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Design.PreviewWith>
+        <Border MinWidth="200"
+                Padding="20"
+                Background="{DynamicResource SukiBackground}">
+            <TreeView>
+                <TreeViewItem Header="blub" IsExpanded="True">
+                    <TreeViewItem Header="blub" IsExpanded="True">
+                        <TreeViewItem Header="blub" IsSelected="True" />
+                        <TreeViewItem Header="blub">
+                            <TreeViewItem Header="blub" />
+                        </TreeViewItem>
+                    </TreeViewItem>
+                    <TreeViewItem Header="blub" IsEnabled="False" />
+                </TreeViewItem>
+                <TreeViewItem Header="blub" />
+                <TreeViewItem Header="blub" />
+            </TreeView>
+        </Border>
+    </Design.PreviewWith>    
+
+    <Style Selector="TreeView">
+        <Setter Property="CornerRadius" Value="{DynamicResource SmallCornerRadius}" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="BorderBrush" Value="#dedede" />
+        <Setter Property="Margin" Value="0" />
+        <Setter Property="Padding" Value="0" />
+    </Style>
+</Styles>

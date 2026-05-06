@@ -112,6 +112,7 @@
             <Setter Property="LineHeight" Value="20"/>
         </Style>
 
+
         <Style Selector="suki|SukiWindow /template/ suki|GlassCard#PART_TitleBarBackground">
             <Setter Property="Background" Value="#33000000"/>
         </Style>
