@@ -1186,13 +1186,13 @@
                                                FontSize="14"
                                                LineHeight="24"
                                                Opacity="0.88"
-                                               Text="此启动器的目的是为了让原本比较繁琐的步骤彻底懒人化，而非替代spice2x"/>
+                                               Text="此启动器的目的是为了让原本比较繁琐的步骤彻底懒人化，而非替代spice2x；包体仅供学习使用，请于下载后24小时内删除，如果你是付费获取的，那你就被骗了"/>
                                     <TextBlock TextWrapping="Wrap"
                                                TextAlignment="Center"
                                                FontSize="14"
                                                LineHeight="24"
                                                Opacity="0.88"
-                                               Text="Takanashi Ryo©启动器版权所有，仅供学习使用，请于下载后24小时内删除，如果你是付费获取的，那你就被骗了"/>
+                                               Text="Launcher Copyright © Takanashi Ryo. All Rights Reserved."/>
                                 </StackPanel>
                             </Grid>
                         </ScrollViewer>
