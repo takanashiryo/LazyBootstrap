@@ -33,7 +33,7 @@ namespace LazyBootstrap.Services.Processes
         public void PrepareTrackedSpiceSession(string spicePath)
         {
             _trackedSpiceProcessIds.Clear();
-            _trackedSpiceExecutablePath = NormalizeTrackedProcessPath(spicePath);
+            _trackedSpiceExecutablePath = PathHelper.NormalizePath(spicePath);
 
             if (string.IsNullOrWhiteSpace(_trackedSpiceExecutablePath))
             {
@@ -44,7 +44,7 @@ namespace LazyBootstrap.Services.Processes
             {
                 try
                 {
-                    var processPath = NormalizeTrackedProcessPath(TryGetProcessExecutablePath(process));
+                    var processPath = PathHelper.NormalizePath(TryGetProcessExecutablePath(process));
                     if (string.Equals(processPath, _trackedSpiceExecutablePath, StringComparison.OrdinalIgnoreCase))
                     {
                         _trackedSpiceProcessIds.Add(process.Id);
@@ -99,7 +99,7 @@ namespace LazyBootstrap.Services.Processes
                         continue;
                     }
 
-                    var processPath = NormalizeTrackedProcessPath(TryGetProcessExecutablePath(process));
+                    var processPath = PathHelper.NormalizePath(TryGetProcessExecutablePath(process));
                     if (!string.Equals(processPath, _trackedSpiceExecutablePath, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
@@ -235,21 +235,6 @@ namespace LazyBootstrap.Services.Processes
             }
         }
 
-        private static string NormalizeTrackedProcessPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return string.Empty;
-            }
-
-            try
-            {
-                return Path.GetFullPath(path);
-            }
-            catch
-            {
-                return path.Trim();
-            }
-        }
+        // Path normalization delegated to PathHelper.NormalizePath
     }
 }

@@ -37,7 +37,6 @@ namespace LazyBootstrap.Services.Settings
         private const string NonePresetName = "无";
         private const string AsphyxiaPresetName = "Asphyxia";
         private const string AsphyxiaDefaultUrl = "http://localhost:8083";
-        private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
         private const string UseSystemConfigKey = "use-system-config";
         private const string MissingSpiceConfigMessage = "未找到任何spice2x配置文件";
 
@@ -108,9 +107,9 @@ namespace LazyBootstrap.Services.Settings
         {
             viewModel.RunSilently(() =>
             {
-                viewModel.NoAsphyxia = ReadBool(SettingSectionName, "noasphyxia", false);
-                viewModel.UseSystemSpiceConfig = ReadBool(SettingSectionName, UseSystemConfigKey, false);
-                viewModel.CompatibilityRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
+                viewModel.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
+                viewModel.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
+                viewModel.CompatibilityRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
                 viewModel.IsSpiceConfigAvailable = IsSpiceConfigAvailable(viewModel.UseSystemSpiceConfig);
                 viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
@@ -168,13 +167,13 @@ namespace LazyBootstrap.Services.Settings
         {
             try
             {
-                _configHandler.WriteString(SettingSectionName, "noasphyxia", viewModel.NoAsphyxia.ToString().ToLowerInvariant());
+                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, "noasphyxia", viewModel.NoAsphyxia.ToString().ToLowerInvariant());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to persist launcher settings.");
                 _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
-                viewModel.RunSilently(() => viewModel.NoAsphyxia = ReadBool(SettingSectionName, "noasphyxia", false));
+                viewModel.RunSilently(() => viewModel.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false));
             }
 
             return Task.CompletedTask;
@@ -278,8 +277,8 @@ namespace LazyBootstrap.Services.Settings
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            viewModel.NetworkAdapterIp = NormalizeNetworkValue(viewModel.NetworkAdapterIp);
-            viewModel.NetworkAdapterSubnet = NormalizeNetworkValue(viewModel.NetworkAdapterSubnet);
+            viewModel.NetworkAdapterIp = ConfigHelper.NormalizeNetworkValue(viewModel.NetworkAdapterIp);
+            viewModel.NetworkAdapterSubnet = ConfigHelper.NormalizeNetworkValue(viewModel.NetworkAdapterSubnet);
 
             if (!TryApplySpiceUpdates(
                     _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
@@ -424,7 +423,7 @@ namespace LazyBootstrap.Services.Settings
             try
             {
                 _configHandler.WriteString(
-                    SettingSectionName,
+                    AppConfigBootstrapper.SettingSectionName,
                     UseSystemConfigKey,
                     viewModel.UseSystemSpiceConfig.ToString().ToLowerInvariant());
                 ReloadRuntimeState(viewModel);
@@ -433,7 +432,7 @@ namespace LazyBootstrap.Services.Settings
             {
                 _logger.LogError(ex, "Failed to persist use-system-config.");
                 _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
-                viewModel.RunSilently(() => viewModel.UseSystemSpiceConfig = ReadBool(SettingSectionName, UseSystemConfigKey, false));
+                viewModel.RunSilently(() => viewModel.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false));
             }
 
             return Task.CompletedTask;
@@ -814,8 +813,8 @@ namespace LazyBootstrap.Services.Settings
                 CardIo = string.Equals(context.GetOptionValue("cardio"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
                 HidSmartCard = string.Equals(context.GetOptionValue("scard"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
                 NetDump = string.Equals(context.GetOptionValue("netdump"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                NetworkAdapterIp = NormalizeNetworkValue(context.GetOptionValue("network")),
-                NetworkAdapterSubnet = NormalizeNetworkValue(context.GetOptionValue("subnet")),
+                NetworkAdapterIp = ConfigHelper.NormalizeNetworkValue(context.GetOptionValue("network")),
+                NetworkAdapterSubnet = ConfigHelper.NormalizeNetworkValue(context.GetOptionValue("subnet")),
                 ServerAddress = context.GetOptionValue("url") ?? string.Empty,
                 PcbId = context.GetOptionValue("p") ?? string.Empty
             };
@@ -947,10 +946,6 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
-        private bool ReadBool(string section, string key, bool defaultValue)
-        {
-            return bool.TryParse(_configHandler.ReadString(section, key, defaultValue ? "true" : "false"), out var value) && value;
-        }
 
         private bool RefreshSpiceConfigAvailability(SettingsPageViewModel viewModel)
         {
@@ -992,7 +987,7 @@ namespace LazyBootstrap.Services.Settings
         private string ReadConfiguredCompatibilityRenderMode()
         {
             return CompatibilitySettingsService.NormalizeRenderMode(
-                _configHandler.ReadString(SettingSectionName, "cl-rendermode", "dx9on12"));
+                _configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
         }
 
         private string SyncCompatibilityConfigToRuntimeState(CompatibilityLayerRuntimeState runtimeState)
@@ -1005,11 +1000,11 @@ namespace LazyBootstrap.Services.Settings
 
             try
             {
-                var currentCompatEnabled = ReadBool(SettingSectionName, "compatlayer", false);
+                var currentCompatEnabled = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "compatlayer", false);
                 if (currentCompatEnabled != targetCompatEnabled)
                 {
                     _configHandler.WriteString(
-                        SettingSectionName,
+                        AppConfigBootstrapper.SettingSectionName,
                         "compatlayer",
                         targetCompatEnabled ? "true" : "false");
                 }
@@ -1017,7 +1012,7 @@ namespace LazyBootstrap.Services.Settings
                 if (!string.IsNullOrWhiteSpace(detectedRenderMode)
                     && !string.Equals(configuredRenderMode, detectedRenderMode, StringComparison.OrdinalIgnoreCase))
                 {
-                    _configHandler.WriteString(SettingSectionName, "cl-rendermode", detectedRenderMode);
+                    _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", detectedRenderMode);
                     configuredRenderMode = detectedRenderMode;
                 }
             }
@@ -1039,10 +1034,6 @@ namespace LazyBootstrap.Services.Settings
             };
         }
 
-        private static string NormalizeNetworkValue(string value)
-        {
-            return value?.Trim() ?? string.Empty;
-        }
 
         private void SaveServerPresets(SettingsPageViewModel viewModel)
         {

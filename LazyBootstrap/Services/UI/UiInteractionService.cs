@@ -135,7 +135,7 @@ namespace LazyBootstrap.Services.UI
                 return string.Empty;
             }
 
-            return NormalizeLocalPath(folders[0].TryGetLocalPath());
+            return PathHelper.NormalizePath(folders[0].TryGetLocalPath());
         }
 
         public async Task<string> PickFileAsync(string title, IReadOnlyList<string> patterns)
@@ -168,7 +168,7 @@ namespace LazyBootstrap.Services.UI
                 return string.Empty;
             }
 
-            return NormalizeLocalPath(files[0].TryGetLocalPath());
+            return PathHelper.NormalizePath(files[0].TryGetLocalPath());
         }
 
         private void CreateToast(string title, string content, NotificationType type, int seconds)
@@ -249,22 +249,6 @@ namespace LazyBootstrap.Services.UI
             }
         }
 
-        private static string NormalizeLocalPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return string.Empty;
-            }
-
-            try
-            {
-                return Path.GetFullPath(path.Trim());
-            }
-            catch
-            {
-                return path.Trim();
-            }
-        }
 
         private static string[] SplitClasses(string classes)
         {

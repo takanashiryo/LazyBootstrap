@@ -38,11 +38,6 @@ namespace LazyBootstrap.Views
         private readonly IUiInteractionService _uiInteractionService = null!;
         private readonly ILogger<MainWindow> _logger = null!;
 
-        private const string NonePresetName = "无";
-        private const string AsphyxiaPresetName = "Asphyxia";
-        private const string AsphyxiaDefaultUrl = "http://localhost:8083";
-        private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
-        private const string DisplaySectionName = AppConfigBootstrapper.DisplaySectionName;
         private bool _isSettingsBusy;
         private bool _isSyncingModel;
         private bool _isUpdatingCompatUi;
@@ -78,13 +73,6 @@ namespace LazyBootstrap.Views
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
-
-        private enum DisplaySelectionTarget
-        {
-            None,
-            Main,
-            Sub
-        }
 
         public MainWindow()
         {
@@ -339,22 +327,17 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private static IntPtr GetWindowExStyle(IntPtr hwnd)
-        {
-            return IntPtr.Size == 8
+        private static nint GetWindowExStyle(nint hwnd) =>
+            nint.Size == 8
                 ? GetWindowLongPtr64(hwnd, ExStyleIndex)
-                : new IntPtr(GetWindowLong32(hwnd, ExStyleIndex));
-        }
+                : GetWindowLong32(hwnd, ExStyleIndex);
 
-        private static void SetWindowExStyle(IntPtr hwnd, IntPtr exStyle)
+        private static void SetWindowExStyle(nint hwnd, nint exStyle)
         {
-            if (IntPtr.Size == 8)
-            {
+            if (nint.Size == 8)
                 SetWindowLongPtr64(hwnd, ExStyleIndex, exStyle);
-                return;
-            }
-
-            SetWindowLong32(hwnd, ExStyleIndex, exStyle.ToInt32());
+            else
+                SetWindowLong32(hwnd, ExStyleIndex, (int)exStyle);
         }
 
         private static Animation CreateWindowOpacityAnimation(double fromOpacity, double toOpacity)
@@ -408,15 +391,23 @@ namespace LazyBootstrap.Views
                 && !string.IsNullOrWhiteSpace(selectedDriverValue);
         }
 
-        private static string NormalizeNetworkValue(string value)
+        private Task PersistSpice() => _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+
+        private void BindToggleSwitch(ToggleSwitch toggle, Action<bool> setValue, Func<Task> persist)
         {
-            return value?.Trim() ?? string.Empty;
+            if (toggle is null) return;
+            toggle.IsCheckedChanged += async (_, _) =>
+            {
+                if (_isLoadingSettings) return;
+                setValue(toggle.IsChecked == true);
+                await persist();
+            };
         }
 
         private static string BuildCurrentNetworkAdapterDisplayName(string ipAddress, string subnetMask)
         {
-            var normalizedIpAddress = NormalizeNetworkValue(ipAddress);
-            var normalizedSubnetMask = NormalizeNetworkValue(subnetMask);
+            var normalizedIpAddress = ConfigHelper.NormalizeNetworkValue(ipAddress);
+            var normalizedSubnetMask = ConfigHelper.NormalizeNetworkValue(subnetMask);
             if (string.IsNullOrEmpty(normalizedIpAddress) && string.IsNullOrEmpty(normalizedSubnetMask))
             {
                 return "无";
@@ -498,45 +489,34 @@ namespace LazyBootstrap.Views
 
         private void InitializeStartupSettingsBindings()
         {
-            if (WindowedToggleSwitch != null)
-            {
-                WindowedToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.Windowed = WindowedToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
+            BindToggleSwitch(WindowedToggleSwitch,
+                v => _viewModel.Settings.Windowed = v,
+                () => _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings));
+
             if (NoAsphyxiaToggleSwitch != null)
             {
-                NoAsphyxiaToggleSwitch.IsCheckedChanged += async (s, e) =>
+                NoAsphyxiaToggleSwitch.IsCheckedChanged += async (_, _) =>
                 {
                     _viewModel.Settings.NoAsphyxia = NoAsphyxiaToggleSwitch.IsChecked == true;
                     await _settingsWorkflowService.PersistLauncherSettingsAsync(_viewModel.Settings);
                 };
             }
+
             if (UseSystemSpiceConfigToggleSwitch != null)
             {
-                UseSystemSpiceConfigToggleSwitch.IsCheckedChanged += async (s, e) =>
+                UseSystemSpiceConfigToggleSwitch.IsCheckedChanged += async (_, _) =>
                 {
-                    if (_isLoadingSettings)
-                    {
-                        return;
-                    }
-
+                    if (_isLoadingSettings) return;
                     _viewModel.Settings.UseSystemSpiceConfig = UseSystemSpiceConfigToggleSwitch.IsChecked == true;
                     await _settingsWorkflowService.PersistUseSystemSpiceConfigAsync(_viewModel.Settings);
                 };
             }
+
             if (ExitRestoreToggleSwitch != null)
             {
-                ExitRestoreToggleSwitch.IsCheckedChanged += async (s, e) =>
+                ExitRestoreToggleSwitch.IsCheckedChanged += async (_, _) =>
                 {
-                    if (_isLoadingSettings)
-                    {
-                        return;
-                    }
-
+                    if (_isLoadingSettings) return;
                     bool enabled = ExitRestoreToggleSwitch.IsChecked == true;
                     _viewModel.Display.ExitRestore = enabled;
                     _viewModel.Settings.ExitRestore = enabled;
@@ -550,146 +530,46 @@ namespace LazyBootstrap.Views
             if (DllInjectionTextBox != null)
             {
                 DllInjectionTextBox.Watermark = "example.dll";
-                DllInjectionTextBox.TextChanged += async (s, e) =>
+                DllInjectionTextBox.TextChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
                     _viewModel.Settings.DllInjection = DllInjectionTextBox.Text ?? string.Empty;
                     await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
                 };
             }
-            if (NetDumpToggleSwitch != null)
-            {
-                NetDumpToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.NetDump = NetDumpToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (DisableSubDisplayToggleSwitch != null)
-            {
-                DisableSubDisplayToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.DisableSubDisplay = DisableSubDisplayToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
+
+            BindToggleSwitch(NetDumpToggleSwitch, v => _viewModel.Settings.NetDump = v, PersistSpice);
+            BindToggleSwitch(DisableSubDisplayToggleSwitch, v => _viewModel.Settings.DisableSubDisplay = v, PersistSpice);
+
             if (WindowModeComboBox != null)
             {
-                WindowModeComboBox.SelectionChanged += async (s, e) =>
+                WindowModeComboBox.SelectionChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
                     _viewModel.Settings.WindowModeIndex = WindowModeComboBox.SelectedIndex < 0 ? 0 : WindowModeComboBox.SelectedIndex;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+                    await PersistSpice();
                 };
             }
-            if (PCoreOptimizationToggleSwitch != null)
-            {
-                PCoreOptimizationToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.PCoreOptimization = PCoreOptimizationToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (SubBorderlessToggleSwitch != null)
-            {
-                SubBorderlessToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.SubBorderless = SubBorderlessToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (ShowCursorTouchSimToggleSwitch != null)
-            {
-                ShowCursorTouchSimToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.ShowCursorTouchSim = ShowCursorTouchSimToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (WindowTopMostToggleSwitch != null)
-            {
-                WindowTopMostToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.WindowTopMost = WindowTopMostToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (SingleAdapterToggleSwitch != null)
-            {
-                SingleAdapterToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.SingleAdapter = SingleAdapterToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (NvidiaPerformanceProfileToggleSwitch != null)
-            {
-                NvidiaPerformanceProfileToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.NvidiaPerformanceProfile = NvidiaPerformanceProfileToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (SubWindowTopMostToggleSwitch != null)
-            {
-                SubWindowTopMostToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.SubWindowTopMost = SubWindowTopMostToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (SubForceRenderToggleSwitch != null)
-            {
-                SubForceRenderToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.SubForceRender = SubForceRenderToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (NativeTouchToggleSwitch != null)
-            {
-                NativeTouchToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.NativeTouch = NativeTouchToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (CardIoToggleSwitch != null)
-            {
-                CardIoToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.CardIo = CardIoToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
-            if (HidSmartCardToggleSwitch != null)
-            {
-                HidSmartCardToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.HidSmartCard = HidSmartCardToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
+
+            BindToggleSwitch(PCoreOptimizationToggleSwitch, v => _viewModel.Settings.PCoreOptimization = v, PersistSpice);
+            BindToggleSwitch(SubBorderlessToggleSwitch, v => _viewModel.Settings.SubBorderless = v, PersistSpice);
+            BindToggleSwitch(ShowCursorTouchSimToggleSwitch, v => _viewModel.Settings.ShowCursorTouchSim = v, PersistSpice);
+            BindToggleSwitch(WindowTopMostToggleSwitch, v => _viewModel.Settings.WindowTopMost = v, PersistSpice);
+            BindToggleSwitch(SingleAdapterToggleSwitch, v => _viewModel.Settings.SingleAdapter = v, PersistSpice);
+            BindToggleSwitch(NvidiaPerformanceProfileToggleSwitch, v => _viewModel.Settings.NvidiaPerformanceProfile = v, PersistSpice);
+            BindToggleSwitch(SubWindowTopMostToggleSwitch, v => _viewModel.Settings.SubWindowTopMost = v, PersistSpice);
+            BindToggleSwitch(SubForceRenderToggleSwitch, v => _viewModel.Settings.SubForceRender = v, PersistSpice);
+            BindToggleSwitch(NativeTouchToggleSwitch, v => _viewModel.Settings.NativeTouch = v, PersistSpice);
+            BindToggleSwitch(CardIoToggleSwitch, v => _viewModel.Settings.CardIo = v, PersistSpice);
+            BindToggleSwitch(HidSmartCardToggleSwitch, v => _viewModel.Settings.HidSmartCard = v, PersistSpice);
+
             if (WindowSizeTextBox != null)
             {
-                WindowSizeTextBox.TextChanged += async (s, e) =>
+                WindowSizeTextBox.TextChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
                     _viewModel.Settings.WindowSize = WindowSizeTextBox.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+                    await PersistSpice();
                 };
             }
             if (AsioDriverComboBox != null)
@@ -701,7 +581,7 @@ namespace LazyBootstrap.Views
                     ApplyAsioDriverChoicesFromViewModel();
                 };
 
-                AsioDriverComboBox.SelectionChanged += async (s, e) =>
+                AsioDriverComboBox.SelectionChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings || _isUpdatingAsioDriverUi) return;
                     if (AsioDriverComboBox.SelectedItem is AsioDriverOption choice)
@@ -715,18 +595,10 @@ namespace LazyBootstrap.Views
                         _viewModel.Settings.AsioDriverValue = string.Empty;
                     }
 
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+                    await PersistSpice();
                 };
             }
-            if (LowLatencySharedAudioToggleSwitch != null)
-            {
-                LowLatencySharedAudioToggleSwitch.IsCheckedChanged += async (s, e) =>
-                {
-                    if (_isLoadingSettings) return;
-                    _viewModel.Settings.LowLatencySharedAudio = LowLatencySharedAudioToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
-                };
-            }
+            BindToggleSwitch(LowLatencySharedAudioToggleSwitch, v => _viewModel.Settings.LowLatencySharedAudio = v, PersistSpice);
         }
 
         private void InitializeServerPresetBindings()

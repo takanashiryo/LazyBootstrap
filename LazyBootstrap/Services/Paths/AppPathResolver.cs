@@ -22,12 +22,12 @@ namespace LazyBootstrap.Services.Paths
             var argumentBaseDir = TryGetBaseDirFromArguments(commandLineArgs);
             if (!string.IsNullOrWhiteSpace(argumentBaseDir))
             {
-                return NormalizePath(argumentBaseDir);
+                return PathHelper.NormalizePath(argumentBaseDir);
             }
 
             if (!string.IsNullOrWhiteSpace(environmentBaseDir))
             {
-                return NormalizePath(environmentBaseDir);
+                return PathHelper.NormalizePath(environmentBaseDir);
             }
 
             return InferBaseDirFromApplicationDirectory(applicationBaseDirectory);
@@ -63,26 +63,10 @@ namespace LazyBootstrap.Services.Paths
             return string.Empty;
         }
 
-        private static string NormalizePath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return string.Empty;
-            }
-
-            try
-            {
-                return System.IO.Path.GetFullPath(path);
-            }
-            catch
-            {
-                return path;
-            }
-        }
 
         private static string InferBaseDirFromApplicationDirectory(string applicationBaseDirectory)
         {
-            var normalizedApplicationBaseDirectory = NormalizePath(applicationBaseDirectory);
+            var normalizedApplicationBaseDirectory = PathHelper.NormalizePath(applicationBaseDirectory);
             if (string.IsNullOrWhiteSpace(normalizedApplicationBaseDirectory))
             {
                 return string.Empty;
@@ -109,7 +93,7 @@ namespace LazyBootstrap.Services.Paths
                 return normalizedApplicationBaseDirectory;
             }
 
-            return NormalizePath(parentDirectory.FullName);
+            return PathHelper.NormalizePath(parentDirectory.FullName);
         }
     }
 }

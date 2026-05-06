@@ -382,8 +382,8 @@ namespace LazyBootstrap.Views
 
         private void ApplyNetworkAdapterStateFromViewModel()
         {
-            var networkIp = NormalizeNetworkValue(_viewModel.Settings.NetworkAdapterIp);
-            var subnetMask = NormalizeNetworkValue(_viewModel.Settings.NetworkAdapterSubnet);
+            var networkIp = ConfigHelper.NormalizeNetworkValue(_viewModel.Settings.NetworkAdapterIp);
+            var subnetMask = ConfigHelper.NormalizeNetworkValue(_viewModel.Settings.NetworkAdapterSubnet);
 
             _isUpdatingNetworkUi = true;
             try

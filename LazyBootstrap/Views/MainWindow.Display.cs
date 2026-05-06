@@ -405,7 +405,7 @@ namespace LazyBootstrap.Views
                 ToolTip.SetTip(SubResolutionComboBox, string.IsNullOrWhiteSpace(_viewModel.Display.SubDiagnosticsTooltip) ? null : _viewModel.Display.SubDiagnosticsTooltip);
                 ToolTip.SetTip(SubRefreshRateComboBox, string.IsNullOrWhiteSpace(_viewModel.Display.SubDiagnosticsTooltip) ? null : _viewModel.Display.SubDiagnosticsTooltip);
 
-                SelectDisplayTarget(MapDisplaySelectionTarget(_viewModel.Display.SelectedTarget));
+                SelectDisplayTarget(_viewModel.Display.SelectedTarget);
                 UpdateDisplayLayoutControlsEnabled();
             }
             finally
@@ -473,22 +473,12 @@ namespace LazyBootstrap.Views
             return options.IndexOf(selected);
         }
 
-        private static DisplaySelectionTarget MapDisplaySelectionTarget(global::LazyBootstrap.Models.DisplaySelectionTarget target)
-        {
-            return target switch
-            {
-                global::LazyBootstrap.Models.DisplaySelectionTarget.Main => DisplaySelectionTarget.Main,
-                global::LazyBootstrap.Models.DisplaySelectionTarget.Sub => DisplaySelectionTarget.Sub,
-                _ => DisplaySelectionTarget.None
-            };
-        }
-
         private void UpdateDisplayLayoutControlsEnabled()
         {
             bool enabled = _viewModel?.Display?.IsDisplayConfigurationEnabled == true;
             bool isDualDisplay = _viewModel?.Display?.IsDualDisplay == true;
             bool subEnabled = enabled && isDualDisplay;
-            var selectedTarget = MapDisplaySelectionTarget(_viewModel?.Display?.SelectedTarget ?? global::LazyBootstrap.Models.DisplaySelectionTarget.None);
+            var selectedTarget = _viewModel?.Display?.SelectedTarget ?? global::LazyBootstrap.Models.DisplaySelectionTarget.None;
 
             if (DisplayConfigDisabledMask != null)
             {

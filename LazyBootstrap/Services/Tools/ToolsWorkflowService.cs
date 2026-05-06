@@ -472,8 +472,8 @@ namespace LazyBootstrap.Services.Tools
                     return null;
                 }
 
-                string gameDirectory = NormalizeDirectoryPath(gameDirectoryBox.Text);
-                string asphyxiaDirectory = NormalizeDirectoryPath(asphyxiaDirectoryBox.Text);
+                string gameDirectory = PathHelper.NormalizePath(gameDirectoryBox.Text);
+                string asphyxiaDirectory = PathHelper.NormalizePath(asphyxiaDirectoryBox.Text);
                 if (!Directory.Exists(gameDirectory))
                 {
                     _uiInteractionService.ShowWarningToast("存档迁移", "请选择有效的旧游戏目录。");
@@ -587,21 +587,6 @@ namespace LazyBootstrap.Services.Tools
             return grid;
         }
 
-        private static string NormalizeDirectoryPath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path))
-            {
-                return string.Empty;
-            }
-
-            try
-            {
-                return Path.GetFullPath(path.Trim());
-            }
-            catch
-            {
-                return path.Trim();
-            }
-        }
+        // Path normalization delegated to PathHelper.NormalizePath
     }
 }

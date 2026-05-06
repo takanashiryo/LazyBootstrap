@@ -30,8 +30,6 @@ namespace LazyBootstrap.Services.Display
 
     internal sealed class DisplayWorkflowService : IDisplayWorkflowService
     {
-        private const string DisplaySectionName = AppConfigBootstrapper.DisplaySectionName;
-        private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
         private const string MainMonitorOptionName = "mainmonitor";
         private const string SubMonitorOptionName = "sdvxsubmonitor";
 
@@ -81,23 +79,23 @@ namespace LazyBootstrap.Services.Display
 
                 EnsureRotationOptions(viewModel);
 
-                viewModel.IsDisplayConfigurationEnabled = ReadBool(DisplaySectionName, "displayconfigure", false);
-                viewModel.IsDualDisplay = !string.Equals(_configHandler.ReadString(DisplaySectionName, "mode", "single"), "single", StringComparison.OrdinalIgnoreCase);
-                viewModel.ExitRestore = ReadBool(DisplaySectionName, "exitrestore", true);
+                viewModel.IsDisplayConfigurationEnabled = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", false);
+                viewModel.IsDualDisplay = !string.Equals(_configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mode", "single"), "single", StringComparison.OrdinalIgnoreCase);
+                viewModel.ExitRestore = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "exitrestore", true);
 
-                int mainIndex = ReadInt(DisplaySectionName, "mainscreen", 0);
-                int subIndex = ReadInt(DisplaySectionName, "subscreen", Math.Min(1, Math.Max(0, viewModel.Displays.Count - 1)));
-                int mainRotation = NormalizeRotationValue(ReadInt(DisplaySectionName, "mainrotation", 0));
-                int subRotation = NormalizeRotationValue(ReadInt(DisplaySectionName, "subrotation", 0));
+                int mainIndex = ReadInt(AppConfigBootstrapper.DisplaySectionName, "mainscreen", 0);
+                int subIndex = ReadInt(AppConfigBootstrapper.DisplaySectionName, "subscreen", Math.Min(1, Math.Max(0, viewModel.Displays.Count - 1)));
+                int mainRotation = NormalizeRotationValue(ReadInt(AppConfigBootstrapper.DisplaySectionName, "mainrotation", 0));
+                int subRotation = NormalizeRotationValue(ReadInt(AppConfigBootstrapper.DisplaySectionName, "subrotation", 0));
 
                 viewModel.SelectedMainDisplay = GetDisplayByIndex(viewModel, mainIndex);
                 viewModel.SelectedSubDisplay = GetDisplayByIndex(viewModel, subIndex);
                 viewModel.SelectedMainRotation = viewModel.Rotations.FirstOrDefault(option => option.Angle == mainRotation) ?? viewModel.Rotations.FirstOrDefault();
                 viewModel.SelectedSubRotation = viewModel.Rotations.FirstOrDefault(option => option.Angle == subRotation) ?? viewModel.Rotations.FirstOrDefault();
-                viewModel.SelectedMainResolution = _configHandler.ReadString(DisplaySectionName, "mainresolution", string.Empty);
-                viewModel.SelectedSubResolution = _configHandler.ReadString(DisplaySectionName, "subresolution", string.Empty);
-                viewModel.SelectedMainRefreshRate = _configHandler.ReadString(DisplaySectionName, "mainrefresh", string.Empty);
-                viewModel.SelectedSubRefreshRate = _configHandler.ReadString(DisplaySectionName, "subrefresh", string.Empty);
+                viewModel.SelectedMainResolution = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mainresolution", string.Empty);
+                viewModel.SelectedSubResolution = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "subresolution", string.Empty);
+                viewModel.SelectedMainRefreshRate = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mainrefresh", string.Empty);
+                viewModel.SelectedSubRefreshRate = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "subrefresh", string.Empty);
                 viewModel.SelectedTarget = DisplaySelectionTarget.None;
                 viewModel.ShowNoScreenSelected = true;
                 viewModel.ShowMainScreenConfig = false;
@@ -111,9 +109,9 @@ namespace LazyBootstrap.Services.Display
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            _configHandler.WriteString(DisplaySectionName, "displayconfigure", viewModel.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
-            _configHandler.WriteString(DisplaySectionName, "mode", viewModel.IsDualDisplay ? "dual" : "single");
-            _configHandler.WriteString(DisplaySectionName, "exitrestore", viewModel.ExitRestore.ToString().ToLowerInvariant());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", viewModel.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mode", viewModel.IsDualDisplay ? "dual" : "single");
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "exitrestore", viewModel.ExitRestore.ToString().ToLowerInvariant());
             SyncSpiceMonitorOverrides(viewModel);
             return Task.CompletedTask;
         }
@@ -415,24 +413,24 @@ namespace LazyBootstrap.Services.Display
 
         private void PersistSelectionState(DisplayConfigurationPageViewModel viewModel)
         {
-            _configHandler.WriteString(DisplaySectionName, "displayconfigure", viewModel.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
-            _configHandler.WriteString(DisplaySectionName, "mode", viewModel.IsDualDisplay ? "dual" : "single");
-            _configHandler.WriteString(DisplaySectionName, "exitrestore", viewModel.ExitRestore.ToString().ToLowerInvariant());
-            _configHandler.WriteString(DisplaySectionName, "mainscreen", GetIndex(viewModel.Displays, viewModel.SelectedMainDisplay).ToString());
-            _configHandler.WriteString(DisplaySectionName, "subscreen", GetIndex(viewModel.Displays, viewModel.SelectedSubDisplay).ToString());
-            _configHandler.WriteString(DisplaySectionName, "mainrotation", (viewModel.SelectedMainRotation?.Angle ?? 0).ToString());
-            _configHandler.WriteString(DisplaySectionName, "subrotation", (viewModel.SelectedSubRotation?.Angle ?? 0).ToString());
-            _configHandler.WriteString(DisplaySectionName, "mainresolution", viewModel.SelectedMainResolution ?? string.Empty);
-            _configHandler.WriteString(DisplaySectionName, "subresolution", viewModel.SelectedSubResolution ?? string.Empty);
-            _configHandler.WriteString(DisplaySectionName, "mainrefresh", viewModel.SelectedMainRefreshRate ?? string.Empty);
-            _configHandler.WriteString(DisplaySectionName, "subrefresh", viewModel.SelectedSubRefreshRate ?? string.Empty);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", viewModel.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mode", viewModel.IsDualDisplay ? "dual" : "single");
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "exitrestore", viewModel.ExitRestore.ToString().ToLowerInvariant());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainscreen", GetIndex(viewModel.Displays, viewModel.SelectedMainDisplay).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subscreen", GetIndex(viewModel.Displays, viewModel.SelectedSubDisplay).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainrotation", (viewModel.SelectedMainRotation?.Angle ?? 0).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subrotation", (viewModel.SelectedSubRotation?.Angle ?? 0).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainresolution", viewModel.SelectedMainResolution ?? string.Empty);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subresolution", viewModel.SelectedSubResolution ?? string.Empty);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainrefresh", viewModel.SelectedMainRefreshRate ?? string.Empty);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subrefresh", viewModel.SelectedSubRefreshRate ?? string.Empty);
             SyncSpiceMonitorOverrides(viewModel);
         }
 
         private string GetActiveSpiceXmlPathForMonitorSync()
         {
             bool useSystem = bool.TryParse(
-                _configHandler.ReadString(SettingSectionName, "use-system-config", "false"),
+                _configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "use-system-config", "false"),
                 out var parsed)
                 && parsed;
             return _paths.ResolveSpiceXmlPath(useSystem);
@@ -714,10 +712,6 @@ namespace LazyBootstrap.Services.Display
             string SelectedRefreshRate,
             string Tooltip);
 
-        private bool ReadBool(string section, string key, bool defaultValue)
-        {
-            return bool.TryParse(_configHandler.ReadString(section, key, defaultValue ? "true" : "false"), out var value) && value;
-        }
 
         private int ReadInt(string section, string key, int defaultValue)
         {

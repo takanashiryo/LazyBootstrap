@@ -2,13 +2,10 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services
+namespace LazyBootstrap.Services.Shared
 {
     internal static class TaskObservationExtensions
     {
-        /// <summary>
-        /// Observes a task on a fire-and-forget async void path and logs failures.
-        /// </summary>
         internal static void ForgetWithLogging(this Task task, ILogger logger, string errorMessage)
         {
             if (task is null)

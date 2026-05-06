@@ -19,7 +19,6 @@ namespace LazyBootstrap.Services.Settings
 
     internal sealed class CompatibilitySettingsService : ICompatibilitySettingsService
     {
-        private const string SettingSectionName = AppConfigBootstrapper.SettingSectionName;
         private static readonly string[] BaseCompatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
         private static readonly string[] ManagedCompatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
 
@@ -61,8 +60,8 @@ namespace LazyBootstrap.Services.Settings
                     return false;
                 }
 
-                _configFile.WriteString(SettingSectionName, "compatlayer", enable ? "true" : "false");
-                _configFile.WriteString(SettingSectionName, "cl-rendermode", renderMode);
+                _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "compatlayer", enable ? "true" : "false");
+                _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
 
                 if (!tryApplyDxModeValue(ResolveDxModeValue(enable, renderMode)))
                 {
@@ -90,7 +89,7 @@ namespace LazyBootstrap.Services.Settings
 
             try
             {
-                _configFile.WriteString(SettingSectionName, "cl-rendermode", renderMode);
+                _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
 
                 if (!compatLayerEnabled)
                 {

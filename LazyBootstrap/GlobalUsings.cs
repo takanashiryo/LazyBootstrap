@@ -13,6 +13,7 @@ global using LazyBootstrap.Services.Processes;
 global using LazyBootstrap.Services.Savedata;
 global using LazyBootstrap.Services.Security;
 global using LazyBootstrap.Services.Settings;
+global using LazyBootstrap.Services.Shared;
 global using LazyBootstrap.Services.Shell;
 global using LazyBootstrap.Services.Tools;
 global using LazyBootstrap.Services.UI;
