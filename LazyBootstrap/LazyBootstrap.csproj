@@ -47,7 +47,6 @@
     <AvaloniaResource Include="Assets\Fonts\*.otf" />
     <AvaloniaResource Include="Assets\Images\*.png" />
     <AvaloniaResource Include="Assets\Images\*.jpg" />
-    <AvaloniaResource Include="Assets\Images\*.jpeg" />
   </ItemGroup>
 
   <ItemGroup>

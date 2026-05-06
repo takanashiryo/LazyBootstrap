@@ -7,7 +7,8 @@ LazyBootstrap是一个适用于街机游戏SOUND VOLTEX的辅助启动器，其�
 主项目使用自分发，包含runtime，其他的分支项目使用Native AOT编译
 
 ## 项目结构
-以MVVM框架整理
+以MVVM框架整理  
+SukiUI通过本地引入，不要进行任何修改
 
 ## 库
 - NAudio.Asio
