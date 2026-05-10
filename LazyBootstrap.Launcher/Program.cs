@@ -1,31 +1,25 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
-string baseDir = Path.GetFullPath(AppContext.BaseDirectory);
-string targetExe = Path.Combine(baseDir, "launcher", "LazyBootstrap.exe");
+string baseDirectory = Path.GetFullPath(AppContext.BaseDirectory);
+string targetExe = Path.Combine(baseDirectory, "launcher", "LazyBootstrap.exe");
 
 if (!File.Exists(targetExe))
 {
-    Environment.Exit(1);
+    return;
 }
 
 var startInfo = new ProcessStartInfo
 {
     FileName = targetExe,
     UseShellExecute = true,
-    WorkingDirectory = Path.GetDirectoryName(targetExe) ?? baseDir
+    WorkingDirectory = Path.GetDirectoryName(targetExe) ?? baseDirectory
 };
 
 foreach (var arg in args)
 {
     startInfo.ArgumentList.Add(arg);
-}
-
-if (!HasBaseDirArgument(args))
-{
-    startInfo.ArgumentList.Add($"--basedir={baseDir}");
 }
 
 try
@@ -34,12 +28,4 @@ try
 }
 catch
 {
-    Environment.Exit(1);
-}
-
-static bool HasBaseDirArgument(string[] sourceArgs)
-{
-    return sourceArgs.Any(static arg =>
-        arg.StartsWith("--basedir=", StringComparison.OrdinalIgnoreCase)
-        || string.Equals(arg, "--basedir", StringComparison.OrdinalIgnoreCase));
 }

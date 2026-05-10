@@ -19,10 +19,4 @@
     <PublishTrimmed>true</PublishTrimmed>
   </PropertyGroup>
 
-  <ItemGroup>
-    <None Include="..\Resources\vii\vii_icon.ico">
-      <Link>vii_icon.ico</Link>
-    </None>
-  </ItemGroup>
-
 </Project>
