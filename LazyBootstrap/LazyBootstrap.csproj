@@ -24,7 +24,10 @@
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
     <PublishAot>false</PublishAot>
-    <PublishTrimmed>false</PublishTrimmed>
+    <PublishTrimmed>true</PublishTrimmed>
+    <PublishSingleFile>true</PublishSingleFile>
+    <SelfContained>true</SelfContained>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,7 +42,7 @@
     <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="System.Management" Version="10.0.7" />
-    <ProjectReference Include="..\Suki UI\SukiUI\SukiUI.csproj" />
+    <PackageReference Include="SukiUI" Version="6.1.0" />
   </ItemGroup>
 
   <ItemGroup>
