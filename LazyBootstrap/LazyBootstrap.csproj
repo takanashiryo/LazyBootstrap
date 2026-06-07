@@ -11,8 +11,6 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <PublishAot>false</PublishAot>
-    <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>false</InvariantGlobalization>
     <Version>26.3</Version>
     <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
