@@ -38,14 +38,17 @@ namespace LazyBootstrap.Services.Settings
             _spiceConfigFileService = spiceConfigFileService;
         }
 
+        private sealed record CompatSnapshots(
+            FileStateSnapshot Config,
+            List<FileStateSnapshot> Modules,
+            FileStateSnapshot SpiceXml);
+
         public bool TryToggleCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error)
         {
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
 
-            var configSnapshot = FileStateSnapshot.Capture(_paths.ConfigFilePath);
-            var moduleSnapshots = CaptureCompatModuleSnapshots();
-            var spiceSnapshot = FileStateSnapshot.Capture(spiceXmlPath);
+            var snapshots = CaptureAllSnapshots(spiceXmlPath);
 
             try
             {
@@ -53,28 +56,22 @@ namespace LazyBootstrap.Services.Settings
                 {
                     if (!ApplyCompatLayerFiles(renderMode, out error))
                     {
-                        error = CombineErrors(error, RestoreSnapshots(configSnapshot, moduleSnapshots, spiceSnapshot));
+                        error = CombineErrors(error, RestoreSnapshots(snapshots));
                         return false;
                     }
                 }
                 else if (!RemoveCompatLayerFilesFromModules(out error))
                 {
-                    error = CombineErrors(error, RestoreSnapshots(configSnapshot, moduleSnapshots, spiceSnapshot));
+                    error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
                 }
 
                 _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "compatlayer", enable ? "true" : "false");
                 _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
 
-                string dxModeValue = ResolveDxModeValue(enable, renderMode);
-                var dxUpdates = new[]
+                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(enable, renderMode), out var spiceError))
                 {
-                    new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, string.IsNullOrEmpty(dxModeValue))
-                };
-
-                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, dxUpdates, out var spiceError))
-                {
-                    error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(configSnapshot, moduleSnapshots, spiceSnapshot));
+                    error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));
                     return false;
                 }
 
@@ -82,7 +79,7 @@ namespace LazyBootstrap.Services.Settings
             }
             catch (Exception ex)
             {
-                error = CombineErrors(ex.Message, RestoreSnapshots(configSnapshot, moduleSnapshots, spiceSnapshot));
+                error = CombineErrors(ex.Message, RestoreSnapshots(snapshots));
                 return false;
             }
         }
@@ -91,9 +88,7 @@ namespace LazyBootstrap.Services.Settings
         {
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
-            var configSnapshot = FileStateSnapshot.Capture(_paths.ConfigFilePath);
-            var moduleSnapshots = CaptureCompatModuleSnapshots();
-            var spiceSnapshot = FileStateSnapshot.Capture(spiceXmlPath);
+            var snapshots = CaptureAllSnapshots(spiceXmlPath);
 
             try
             {
@@ -106,19 +101,13 @@ namespace LazyBootstrap.Services.Settings
 
                 if (!ApplyCompatLayerFiles(renderMode, out error))
                 {
-                    error = CombineErrors(error, RestoreSnapshots(configSnapshot, moduleSnapshots, spiceSnapshot));
+                    error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
                 }
 
-                string dxModeValue = ResolveDxModeValue(true, renderMode);
-                var dxUpdates = new[]
+                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(true, renderMode), out var spiceError))
                 {
-                    new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, string.IsNullOrEmpty(dxModeValue))
-                };
-
-                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, dxUpdates, out var spiceError))
-                {
-                    error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(configSnapshot, moduleSnapshots, spiceSnapshot));
+                    error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));
                     return false;
                 }
 
@@ -126,7 +115,7 @@ namespace LazyBootstrap.Services.Settings
             }
             catch (Exception ex)
             {
-                error = CombineErrors(ex.Message, RestoreSnapshots(configSnapshot, moduleSnapshots, spiceSnapshot));
+                error = CombineErrors(ex.Message, RestoreSnapshots(snapshots));
                 return false;
             }
         }
@@ -362,6 +351,28 @@ namespace LazyBootstrap.Services.Settings
             }
 
             return rightStream.ReadByte() == -1;
+        }
+
+        private CompatSnapshots CaptureAllSnapshots(string spiceXmlPath)
+        {
+            return new CompatSnapshots(
+                FileStateSnapshot.Capture(_paths.ConfigFilePath),
+                CaptureCompatModuleSnapshots(),
+                FileStateSnapshot.Capture(spiceXmlPath));
+        }
+
+        private static SpiceOptionUpdate[] BuildDxModeUpdates(bool compatLayerEnabled, string renderMode)
+        {
+            string dxModeValue = ResolveDxModeValue(compatLayerEnabled, renderMode);
+            return
+            [
+                new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, string.IsNullOrEmpty(dxModeValue))
+            ];
+        }
+
+        private static string RestoreSnapshots(CompatSnapshots snapshots)
+        {
+            return RestoreSnapshots(snapshots.Config, snapshots.Modules, snapshots.SpiceXml);
         }
 
         private static string RestoreSnapshots(FileStateSnapshot configSnapshot, IEnumerable<FileStateSnapshot> moduleSnapshots, FileStateSnapshot spiceSnapshot)

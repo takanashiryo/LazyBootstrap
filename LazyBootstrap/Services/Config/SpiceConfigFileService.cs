@@ -13,7 +13,7 @@ namespace LazyBootstrap.Services.Config
     {
         bool TryLoadOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context, out string message, out bool warning);
 
-        string ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates);
+        void ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates);
 
         bool ApplySpiceOptions(string spiceXmlPath, IEnumerable<SpiceOptionUpdate> updates, out string error);
     }
@@ -84,7 +84,7 @@ namespace LazyBootstrap.Services.Config
             return true;
         }
 
-        public string ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates)
+        public void ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(updates);
@@ -94,7 +94,7 @@ namespace LazyBootstrap.Services.Config
                 .ToList();
             if (updateList.Count == 0)
             {
-                return string.Empty;
+                return;
             }
 
             var options = context.OptionsElement;
@@ -152,7 +152,7 @@ namespace LazyBootstrap.Services.Config
                 existing.SetAttributeValue("value", update.Value ?? string.Empty);
             }
 
-            return SaveDocument(context.Document, context.FilePath, newline);
+            SaveDocument(context.Document, context.FilePath, newline);
         }
 
         public bool ApplySpiceOptions(string spiceXmlPath, IEnumerable<SpiceOptionUpdate> updates, out string error)

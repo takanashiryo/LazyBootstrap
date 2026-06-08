@@ -65,7 +65,7 @@ namespace LazyBootstrap.Services.Settings
                 vm => getter(vm) ?? string.Empty,
                 (vm, xmlValue) => setter(vm, xmlValue ?? string.Empty));
 
-        private static readonly SpiceOptionDescriptor[] SpiceOptions =
+        private static readonly SpiceOptionDescriptor[] GeneralSpiceOptions =
         [
             B("w", vm => vm.Windowed, (vm, v) => vm.Windowed = v, "/ENABLED"),
             S("k", vm => vm.DllInjection, (vm, v) => vm.DllInjection = v),
@@ -90,6 +90,10 @@ namespace LazyBootstrap.Services.Settings
             B("cardio", vm => vm.CardIo, (vm, v) => vm.CardIo = v, "/ENABLED"),
             B("scard", vm => vm.HidSmartCard, (vm, v) => vm.HidSmartCard = v, "/ENABLED"),
             B("netdump", vm => vm.NetDump, (vm, v) => vm.NetDump = v, "/ENABLED"),
+        ];
+
+        private static readonly SpiceOptionDescriptor[] ExtraSpiceOptions =
+        [
             new("network",
                 vm => vm.NetworkAdapterIp ?? "",
                 (vm, v) => vm.NetworkAdapterIp = ConfigHelper.NormalizeNetworkValue(v)),
@@ -99,6 +103,9 @@ namespace LazyBootstrap.Services.Settings
             S("url", vm => vm.ServerAddress, (vm, v) => vm.ServerAddress = v),
             S("p", vm => vm.PcbId, (vm, v) => vm.PcbId = v),
         ];
+
+        private static readonly SpiceOptionDescriptor[] SpiceOptions =
+            [.. GeneralSpiceOptions, .. ExtraSpiceOptions];
 
         private sealed class DeferredSettingsState
         {
@@ -1026,7 +1033,7 @@ namespace LazyBootstrap.Services.Settings
 
         private static IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsPageViewModel viewModel)
         {
-            foreach (var option in SpiceOptions)
+            foreach (var option in GeneralSpiceOptions)
             {
                 yield return new SpiceOptionUpdate(option.XmlName, option.GetXmlValue(viewModel), false);
             }
