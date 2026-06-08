@@ -467,48 +467,34 @@ namespace LazyBootstrap.Services.Display
                     return;
                 }
 
-                if (!_spiceConfigFileService.TryLoadOptionsContext(
+                // Pre-check: skip write if the monitor values are already set correctly.
+                if (_spiceConfigFileService.TryLoadOptionsContext(
                         spiceXmlPath,
                         LoadOptions.PreserveWhitespace,
                         false,
                         out var context,
-                        out var message,
-                        out var warning))
+                        out _,
+                        out _))
                 {
-                    if (!string.IsNullOrWhiteSpace(message))
+                    string currentMainMonitor = context.GetOptionValue(MainMonitorOptionName) ?? string.Empty;
+                    string currentSubMonitor = context.GetOptionValue(SubMonitorOptionName) ?? string.Empty;
+                    if (string.Equals(currentMainMonitor, mainMonitorValue, StringComparison.Ordinal)
+                        && string.Equals(currentSubMonitor, subMonitorValue, StringComparison.Ordinal))
                     {
-                        if (warning)
-                        {
-                            _logger.LogInformation("Skip syncing spice monitor overrides: {Message}", message);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Skip syncing spice monitor overrides: {Message}", message);
-                        }
+                        return;
                     }
-
-                    return;
                 }
 
-                string currentMainMonitor = context.GetOptionValue(MainMonitorOptionName) ?? string.Empty;
-                string currentSubMonitor = context.GetOptionValue(SubMonitorOptionName) ?? string.Empty;
-                if (string.Equals(currentMainMonitor, mainMonitorValue, StringComparison.Ordinal)
-                    && string.Equals(currentSubMonitor, subMonitorValue, StringComparison.Ordinal))
+                if (!_spiceConfigFileService.ApplySpiceOptions(
+                        spiceXmlPath,
+                        new[]
+                        {
+                            new SpiceOptionUpdate(MainMonitorOptionName, mainMonitorValue, false),
+                            new SpiceOptionUpdate(SubMonitorOptionName, subMonitorValue, false)
+                        },
+                        out var error))
                 {
-                    return;
-                }
-
-                var normalizationWarning = _spiceConfigFileService.ApplyUpdates(
-                    context,
-                    new[]
-                    {
-                        new SpiceOptionUpdate(MainMonitorOptionName, mainMonitorValue, false),
-                        new SpiceOptionUpdate(SubMonitorOptionName, subMonitorValue, false)
-                    });
-
-                if (!string.IsNullOrWhiteSpace(normalizationWarning))
-                {
-                    _uiInteractionService.ShowWarningToast("配置格式修复失败", normalizationWarning);
+                    _logger.LogWarning("Failed to sync spice monitor overrides: {Error}", error);
                 }
             }
             catch (Exception ex)

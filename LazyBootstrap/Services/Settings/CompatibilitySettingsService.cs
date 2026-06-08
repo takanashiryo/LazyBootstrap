@@ -2,14 +2,15 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using LazyBootstrap.Services.Config;
 
 namespace LazyBootstrap.Services.Settings
 {
     internal interface ICompatibilitySettingsService
     {
-        bool TryToggleCompatLayer(bool enable, string renderMode, Func<string, bool> tryApplyDxModeValue, out string error);
+        bool TryToggleCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error);
 
-        bool TryPersistRenderMode(string renderMode, bool compatLayerEnabled, Func<string, bool> tryApplyDxModeValue, out string error);
+        bool TryPersistRenderMode(string renderMode, bool compatLayerEnabled, string spiceXmlPath, out string error);
     }
 
     internal readonly record struct CompatibilityLayerRuntimeState(
@@ -24,25 +25,30 @@ namespace LazyBootstrap.Services.Settings
 
         private readonly IConfigHandler _configFile;
         private readonly ILauncherPaths _paths;
+        private readonly ISpiceConfigFileService _spiceConfigFileService;
 
-        public CompatibilitySettingsService(IConfigHandler configFile, ILauncherPaths paths)
+        public CompatibilitySettingsService(IConfigHandler configFile, ILauncherPaths paths, ISpiceConfigFileService spiceConfigFileService)
         {
             ArgumentNullException.ThrowIfNull(configFile);
             ArgumentNullException.ThrowIfNull(paths);
+            ArgumentNullException.ThrowIfNull(spiceConfigFileService);
 
             _configFile = configFile;
             _paths = paths;
+            _spiceConfigFileService = spiceConfigFileService;
         }
 
-        public bool TryToggleCompatLayer(bool enable, string renderMode, Func<string, bool> tryApplyDxModeValue, out string error)
-        {
-            ArgumentNullException.ThrowIfNull(tryApplyDxModeValue);
+        private sealed record CompatSnapshots(
+            FileStateSnapshot Config,
+            List<FileStateSnapshot> Modules,
+            FileStateSnapshot SpiceXml);
 
+        public bool TryToggleCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error)
+        {
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
 
-            var configSnapshot = FileStateSnapshot.Capture(_paths.ConfigFilePath);
-            var moduleSnapshots = CaptureCompatModuleSnapshots();
+            var snapshots = CaptureAllSnapshots(spiceXmlPath);
 
             try
             {
@@ -50,22 +56,22 @@ namespace LazyBootstrap.Services.Settings
                 {
                     if (!ApplyCompatLayerFiles(renderMode, out error))
                     {
-                        error = CombineErrors(error, RestoreSnapshots(configSnapshot, moduleSnapshots));
+                        error = CombineErrors(error, RestoreSnapshots(snapshots));
                         return false;
                     }
                 }
                 else if (!RemoveCompatLayerFilesFromModules(out error))
                 {
-                    error = CombineErrors(error, RestoreSnapshots(configSnapshot, moduleSnapshots));
+                    error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
                 }
 
                 _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "compatlayer", enable ? "true" : "false");
                 _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
 
-                if (!tryApplyDxModeValue(ResolveDxModeValue(enable, renderMode)))
+                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(enable, renderMode), out var spiceError))
                 {
-                    error = CombineErrors("写入 spicetools.xml 失败，已恢复兼容层状态。", RestoreSnapshots(configSnapshot, moduleSnapshots));
+                    error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));
                     return false;
                 }
 
@@ -73,19 +79,16 @@ namespace LazyBootstrap.Services.Settings
             }
             catch (Exception ex)
             {
-                error = CombineErrors(ex.Message, RestoreSnapshots(configSnapshot, moduleSnapshots));
+                error = CombineErrors(ex.Message, RestoreSnapshots(snapshots));
                 return false;
             }
         }
 
-        public bool TryPersistRenderMode(string renderMode, bool compatLayerEnabled, Func<string, bool> tryApplyDxModeValue, out string error)
+        public bool TryPersistRenderMode(string renderMode, bool compatLayerEnabled, string spiceXmlPath, out string error)
         {
-            ArgumentNullException.ThrowIfNull(tryApplyDxModeValue);
-
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
-            var configSnapshot = FileStateSnapshot.Capture(_paths.ConfigFilePath);
-            var moduleSnapshots = CaptureCompatModuleSnapshots();
+            var snapshots = CaptureAllSnapshots(spiceXmlPath);
 
             try
             {
@@ -98,13 +101,13 @@ namespace LazyBootstrap.Services.Settings
 
                 if (!ApplyCompatLayerFiles(renderMode, out error))
                 {
-                    error = CombineErrors(error, RestoreSnapshots(configSnapshot, moduleSnapshots));
+                    error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
                 }
 
-                if (!tryApplyDxModeValue(ResolveDxModeValue(true, renderMode)))
+                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(true, renderMode), out var spiceError))
                 {
-                    error = CombineErrors("写入 spicetools.xml 失败，已恢复兼容模式。", RestoreSnapshots(configSnapshot, moduleSnapshots));
+                    error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));
                     return false;
                 }
 
@@ -112,7 +115,7 @@ namespace LazyBootstrap.Services.Settings
             }
             catch (Exception ex)
             {
-                error = CombineErrors(ex.Message, RestoreSnapshots(configSnapshot, moduleSnapshots));
+                error = CombineErrors(ex.Message, RestoreSnapshots(snapshots));
                 return false;
             }
         }
@@ -350,7 +353,29 @@ namespace LazyBootstrap.Services.Settings
             return rightStream.ReadByte() == -1;
         }
 
-        private static string RestoreSnapshots(FileStateSnapshot configSnapshot, IEnumerable<FileStateSnapshot> moduleSnapshots)
+        private CompatSnapshots CaptureAllSnapshots(string spiceXmlPath)
+        {
+            return new CompatSnapshots(
+                FileStateSnapshot.Capture(_paths.ConfigFilePath),
+                CaptureCompatModuleSnapshots(),
+                FileStateSnapshot.Capture(spiceXmlPath));
+        }
+
+        private static SpiceOptionUpdate[] BuildDxModeUpdates(bool compatLayerEnabled, string renderMode)
+        {
+            string dxModeValue = ResolveDxModeValue(compatLayerEnabled, renderMode);
+            return
+            [
+                new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, string.IsNullOrEmpty(dxModeValue))
+            ];
+        }
+
+        private static string RestoreSnapshots(CompatSnapshots snapshots)
+        {
+            return RestoreSnapshots(snapshots.Config, snapshots.Modules, snapshots.SpiceXml);
+        }
+
+        private static string RestoreSnapshots(FileStateSnapshot configSnapshot, IEnumerable<FileStateSnapshot> moduleSnapshots, FileStateSnapshot spiceSnapshot)
         {
             var errors = new List<string>();
 
@@ -367,6 +392,12 @@ namespace LazyBootstrap.Services.Settings
                 {
                     errors.Add($"兼容层文件回滚失败: {moduleRestoreError}");
                 }
+            }
+
+            var spiceRestoreError = RestoreSnapshot(spiceSnapshot);
+            if (!string.IsNullOrWhiteSpace(spiceRestoreError))
+            {
+                errors.Add($"spicetools.xml 回滚失败: {spiceRestoreError}");
             }
 
             return errors.Count == 0 ? string.Empty : string.Join(" ", errors);

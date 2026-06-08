@@ -47,9 +47,69 @@ namespace LazyBootstrap.Services.Settings
         private readonly IUiInteractionService _uiInteractionService;
         private readonly ILogger<SettingsWorkflowService> _logger;
 
+        private sealed record SpiceOptionDescriptor(
+            string XmlName,
+            Func<SettingsPageViewModel, string> GetXmlValue,
+            Action<SettingsPageViewModel, string> ApplyXmlValue);
+
+        private static SpiceOptionDescriptor B(string name,
+            Func<SettingsPageViewModel, bool> getter,
+            Action<SettingsPageViewModel, bool> setter,
+            string enabledValue) => new(name,
+                vm => getter(vm) ? enabledValue : string.Empty,
+                (vm, xmlValue) => setter(vm, string.Equals(xmlValue, enabledValue, StringComparison.OrdinalIgnoreCase)));
+
+        private static SpiceOptionDescriptor S(string name,
+            Func<SettingsPageViewModel, string> getter,
+            Action<SettingsPageViewModel, string> setter) => new(name,
+                vm => getter(vm) ?? string.Empty,
+                (vm, xmlValue) => setter(vm, xmlValue ?? string.Empty));
+
+        private static readonly SpiceOptionDescriptor[] GeneralSpiceOptions =
+        [
+            B("w", vm => vm.Windowed, (vm, v) => vm.Windowed = v, "/ENABLED"),
+            S("k", vm => vm.DllInjection, (vm, v) => vm.DllInjection = v),
+            B("sp2x-processefficiency", vm => vm.PCoreOptimization, (vm, v) => vm.PCoreOptimization = v, "pcores"),
+            B("sp2x-sdvxnosub", vm => vm.DisableSubDisplay, (vm, v) => vm.DisableSubDisplay = v, "/ENABLED"),
+            new("sp2x-windowborder",
+                vm => vm.WindowModeIndex switch { 1 => "1", 2 => "2", _ => "" },
+                (vm, v) => vm.WindowModeIndex = v switch { "1" => 1, "2" => 2, _ => 0 }),
+            B("sdvxwsubborderless", vm => vm.SubBorderless, (vm, v) => vm.SubBorderless = v, "/ENABLED"),
+            B("s", vm => vm.ShowCursorTouchSim, (vm, v) => vm.ShowCursorTouchSim = v, "/ENABLED"),
+            B("sp2x-windowalwaysontop", vm => vm.WindowTopMost, (vm, v) => vm.WindowTopMost = v, "/ENABLED"),
+            S("sp2x-windowsize", vm => vm.WindowSize, (vm, v) => vm.WindowSize = v),
+            B("graphics-force-single-adapter", vm => vm.SingleAdapter, (vm, v) => vm.SingleAdapter = v, "/ENABLED"),
+            B("sp2x-nvprofile", vm => vm.NvidiaPerformanceProfile, (vm, v) => vm.NvidiaPerformanceProfile = v, "/ENABLED"),
+            B("sdvxwsubtop", vm => vm.SubWindowTopMost, (vm, v) => vm.SubWindowTopMost = v, "/ENABLED"),
+            B("sp2x-sdvxsubredraw", vm => vm.SubForceRender, (vm, v) => vm.SubForceRender = v, "/ENABLED"),
+            B("sdvxnativetouch", vm => vm.NativeTouch, (vm, v) => vm.NativeTouch = v, "/ENABLED"),
+            new("sp2x-sdvxasio",
+                vm => vm.SelectedAsioDriver?.Value ?? vm.AsioDriverValue ?? "",
+                (vm, v) => vm.AsioDriverValue = v ?? ""),
+            B("sp2x-lowlatencysharedaudio", vm => vm.LowLatencySharedAudio, (vm, v) => vm.LowLatencySharedAudio = v, "/ENABLED"),
+            B("cardio", vm => vm.CardIo, (vm, v) => vm.CardIo = v, "/ENABLED"),
+            B("scard", vm => vm.HidSmartCard, (vm, v) => vm.HidSmartCard = v, "/ENABLED"),
+            B("netdump", vm => vm.NetDump, (vm, v) => vm.NetDump = v, "/ENABLED"),
+        ];
+
+        private static readonly SpiceOptionDescriptor[] ExtraSpiceOptions =
+        [
+            new("network",
+                vm => vm.NetworkAdapterIp ?? "",
+                (vm, v) => vm.NetworkAdapterIp = ConfigHelper.NormalizeNetworkValue(v)),
+            new("subnet",
+                vm => vm.NetworkAdapterSubnet ?? "",
+                (vm, v) => vm.NetworkAdapterSubnet = ConfigHelper.NormalizeNetworkValue(v)),
+            S("url", vm => vm.ServerAddress, (vm, v) => vm.ServerAddress = v),
+            S("p", vm => vm.PcbId, (vm, v) => vm.PcbId = v),
+        ];
+
+        private static readonly SpiceOptionDescriptor[] SpiceOptions =
+            [.. GeneralSpiceOptions, .. ExtraSpiceOptions];
+
         private sealed class DeferredSettingsState
         {
-            public required SpiceSettingsSnapshot SpiceSettings { get; init; }
+            public required Dictionary<string, string> SpiceOptionValues { get; init; }
 
             public required List<AsioDriverOption> AsioDrivers { get; init; }
 
@@ -58,33 +118,6 @@ namespace LazyBootstrap.Services.Settings
             public required List<NetworkAdapterOption> NetworkAdapters { get; init; }
 
             public required NetworkAdapterOption SelectedNetworkAdapter { get; init; }
-        }
-
-        private sealed class SpiceSettingsSnapshot
-        {
-            public bool Windowed { get; init; }
-            public string DllInjection { get; init; } = string.Empty;
-            public bool PCoreOptimization { get; init; }
-            public bool DisableSubDisplay { get; init; }
-            public int WindowModeIndex { get; init; }
-            public bool SubBorderless { get; init; }
-            public bool ShowCursorTouchSim { get; init; }
-            public bool WindowTopMost { get; init; }
-            public string WindowSize { get; init; } = string.Empty;
-            public bool SingleAdapter { get; init; }
-            public bool NvidiaPerformanceProfile { get; init; }
-            public bool SubWindowTopMost { get; init; }
-            public bool SubForceRender { get; init; }
-            public bool NativeTouch { get; init; }
-            public string AsioDriverValue { get; init; } = string.Empty;
-            public bool LowLatencySharedAudio { get; init; }
-            public bool CardIo { get; init; }
-            public bool HidSmartCard { get; init; }
-            public bool NetDump { get; init; }
-            public string NetworkAdapterIp { get; init; } = string.Empty;
-            public string NetworkAdapterSubnet { get; init; } = string.Empty;
-            public string ServerAddress { get; init; } = string.Empty;
-            public string PcbId { get; init; } = string.Empty;
         }
 
         public SettingsWorkflowService(
@@ -136,23 +169,28 @@ namespace LazyBootstrap.Services.Settings
 
             var deferredState = await Task.Run(() =>
             {
-                var spiceSettings = ReadSpiceSettingsSnapshot(viewModel.UseSystemSpiceConfig);
-                var asioDrivers = BuildAsioDriverOptions(spiceSettings.AsioDriverValue);
+                string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
+                var optionValues = ReadSpiceOptionValues(spiceXmlPath);
+
+                var asioDriverValue = optionValues.TryGetValue("sp2x-sdvxasio", out var asioVal) ? asioVal : string.Empty;
+                var asioDrivers = BuildAsioDriverOptions(asioDriverValue);
                 var selectedAsioDriver = asioDrivers.FirstOrDefault(choice =>
-                                             string.Equals(choice.Value, spiceSettings.AsioDriverValue ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                                             string.Equals(choice.Value, asioDriverValue, StringComparison.OrdinalIgnoreCase))
                                          ?? asioDrivers.FirstOrDefault()
                                          ?? new AsioDriverOption("无", string.Empty);
 
-                var networkAdapters = BuildNetworkAdapterOptions(spiceSettings.NetworkAdapterIp, spiceSettings.NetworkAdapterSubnet);
+                var networkIp = optionValues.TryGetValue("network", out var netIp) ? netIp : string.Empty;
+                var networkSubnet = optionValues.TryGetValue("subnet", out var netSub) ? netSub : string.Empty;
+                var networkAdapters = BuildNetworkAdapterOptions(networkIp, networkSubnet);
                 var selectedNetworkAdapter = networkAdapters.FirstOrDefault(choice =>
-                                                   string.Equals(choice.IpAddress, spiceSettings.NetworkAdapterIp ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-                                                   && string.Equals(choice.SubnetMask, spiceSettings.NetworkAdapterSubnet ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                                                   string.Equals(choice.IpAddress, networkIp, StringComparison.OrdinalIgnoreCase)
+                                                   && string.Equals(choice.SubnetMask, networkSubnet, StringComparison.OrdinalIgnoreCase))
                                                ?? networkAdapters.FirstOrDefault()
                                                ?? new NetworkAdapterOption("无", string.Empty, string.Empty);
 
                 return new DeferredSettingsState
                 {
-                    SpiceSettings = spiceSettings,
+                    SpiceOptionValues = optionValues,
                     AsioDrivers = asioDrivers,
                     SelectedAsioDriver = selectedAsioDriver,
                     NetworkAdapters = networkAdapters,
@@ -188,8 +226,6 @@ namespace LazyBootstrap.Services.Settings
 
             if (!TryApplySpiceUpdates(
                     _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
-                    LoadOptions.PreserveWhitespace,
-                    false,
                     viewModel,
                     reloadViewModelOnSuccess: false,
                     new SpiceOptionUpdate("url", viewModel.ServerAddress, false),
@@ -282,8 +318,6 @@ namespace LazyBootstrap.Services.Settings
 
             if (!TryApplySpiceUpdates(
                     _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
-                    LoadOptions.PreserveWhitespace,
-                    false,
                     viewModel,
                     false,
                     new SpiceOptionUpdate("network", viewModel.NetworkAdapterIp, false),
@@ -303,8 +337,6 @@ namespace LazyBootstrap.Services.Settings
 
             if (!TryApplySpiceUpdates(
                     _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
-                    LoadOptions.PreserveWhitespace,
-                    false,
                     viewModel,
                     false,
                     BuildSpiceOptionUpdates(viewModel).ToArray()))
@@ -326,10 +358,11 @@ namespace LazyBootstrap.Services.Settings
             }
 
             var renderMode = CompatibilitySettingsService.NormalizeRenderMode(viewModel.CompatibilityRenderMode);
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
             if (_compatibilitySettingsService.TryToggleCompatLayer(
                     viewModel.CompatibilityLayerEnabled,
                     renderMode,
-                    dxModeValue => TryApplyCompatibilityDxMode(viewModel, dxModeValue),
+                    spiceXmlPath,
                     out var error))
             {
                 viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
@@ -348,10 +381,11 @@ namespace LazyBootstrap.Services.Settings
 
             var renderMode = CompatibilitySettingsService.NormalizeRenderMode(viewModel.CompatibilityRenderMode);
 
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
             if (_compatibilitySettingsService.TryPersistRenderMode(
                     renderMode,
                     viewModel.CompatibilityLayerEnabled,
-                    dxModeValue => TryApplyCompatibilityDxMode(viewModel, dxModeValue),
+                    spiceXmlPath,
                     out var error))
             {
                 viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
@@ -454,10 +488,11 @@ namespace LazyBootstrap.Services.Settings
             }
 
             var renderMode = CompatibilitySettingsService.NormalizeRenderMode(viewModel.CompatibilityRenderMode);
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
             if (_compatibilitySettingsService.TryToggleCompatLayer(
                     true,
                     renderMode,
-                    dxModeValue => TryApplyCompatibilityDxMode(viewModel, dxModeValue),
+                    spiceXmlPath,
                     out var error))
             {
                 viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
@@ -650,8 +685,9 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            var snapshot = ReadSpiceSettingsSnapshot(viewModel.UseSystemSpiceConfig);
-            viewModel.RunSilently(() => ApplySpiceSettingsSnapshot(viewModel, snapshot));
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
+            var optionValues = ReadSpiceOptionValues(spiceXmlPath);
+            viewModel.RunSilently(() => ApplySpiceOptionValues(viewModel, optionValues));
             SyncSelectedServerPresetFromCurrentFields(viewModel);
         }
 
@@ -687,9 +723,10 @@ namespace LazyBootstrap.Services.Settings
         {
             viewModel.AsioDrivers.Clear();
             viewModel.NetworkAdapters.Clear();
+            var emptyValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             viewModel.RunSilently(() =>
             {
-                ApplySpiceSettingsSnapshot(viewModel, new SpiceSettingsSnapshot());
+                ApplySpiceOptionValues(viewModel, emptyValues);
                 viewModel.SelectedAsioDriver = null;
                 viewModel.SelectedNetworkAdapter = null;
             });
@@ -712,28 +749,6 @@ namespace LazyBootstrap.Services.Settings
 
             viewModel.RunSilently(() => viewModel.SelectedServerPreset = selectedPreset);
             viewModel.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
-        }
-
-        private bool TryGetSpiceOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context)
-        {
-            if (!_spiceConfigFileService.TryLoadOptionsContext(spiceXmlPath, loadOptions, createOptionsWhenMissing, out context, out var message, out var warning))
-            {
-                if (!string.IsNullOrWhiteSpace(message))
-                {
-                    if (warning)
-                    {
-                        _uiInteractionService.ShowWarningToast("读取配置异常", message);
-                    }
-                    else
-                    {
-                        _uiInteractionService.ShowErrorToast("读取配置失败", message);
-                    }
-                }
-
-                return false;
-            }
-
-            return true;
         }
 
         private void RefreshAsioDrivers(SettingsPageViewModel viewModel, string selectedValue)
@@ -784,67 +799,37 @@ namespace LazyBootstrap.Services.Settings
             viewModel.RunSilently(() => viewModel.SelectedNetworkAdapter = selectedOption);
         }
 
-        private SpiceSettingsSnapshot ReadSpiceSettingsSnapshot(bool useSystemSpiceConfig)
+        private Dictionary<string, string> ReadSpiceOptionValues(string spiceXmlPath)
         {
-            string spiceXmlPath = _paths.ResolveSpiceXmlPath(useSystemSpiceConfig);
-            if (!TryGetSpiceOptionsContext(spiceXmlPath, LoadOptions.PreserveWhitespace, false, out var context))
+            var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            if (!_spiceConfigFileService.TryLoadOptionsContext(
+                    spiceXmlPath, LoadOptions.PreserveWhitespace, false, out var context, out _, out _))
             {
-                return new SpiceSettingsSnapshot();
+                return values;
             }
 
-            return new SpiceSettingsSnapshot
+            foreach (var option in SpiceOptions)
             {
-                Windowed = string.Equals(context.GetOptionValue("w"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                DllInjection = context.GetOptionValue("k") ?? string.Empty,
-                PCoreOptimization = string.Equals(context.GetOptionValue("sp2x-processefficiency"), "pcores", StringComparison.OrdinalIgnoreCase),
-                DisableSubDisplay = string.Equals(context.GetOptionValue("sp2x-sdvxnosub"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                WindowModeIndex = ResolveWindowModeIndex(context.GetOptionValue("sp2x-windowborder")),
-                SubBorderless = string.Equals(context.GetOptionValue("sdvxwsubborderless"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                ShowCursorTouchSim = string.Equals(context.GetOptionValue("s"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                WindowTopMost = string.Equals(context.GetOptionValue("sp2x-windowalwaysontop"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                WindowSize = context.GetOptionValue("sp2x-windowsize") ?? string.Empty,
-                SingleAdapter = string.Equals(context.GetOptionValue("graphics-force-single-adapter"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                NvidiaPerformanceProfile = string.Equals(context.GetOptionValue("sp2x-nvprofile"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                SubWindowTopMost = string.Equals(context.GetOptionValue("sdvxwsubtop"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                SubForceRender = string.Equals(context.GetOptionValue("sp2x-sdvxsubredraw"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                NativeTouch = string.Equals(context.GetOptionValue("sdvxnativetouch"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                AsioDriverValue = context.GetOptionValue("sp2x-sdvxasio") ?? string.Empty,
-                LowLatencySharedAudio = string.Equals(context.GetOptionValue("sp2x-lowlatencysharedaudio"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                CardIo = string.Equals(context.GetOptionValue("cardio"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                HidSmartCard = string.Equals(context.GetOptionValue("scard"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                NetDump = string.Equals(context.GetOptionValue("netdump"), "/ENABLED", StringComparison.OrdinalIgnoreCase),
-                NetworkAdapterIp = ConfigHelper.NormalizeNetworkValue(context.GetOptionValue("network")),
-                NetworkAdapterSubnet = ConfigHelper.NormalizeNetworkValue(context.GetOptionValue("subnet")),
-                ServerAddress = context.GetOptionValue("url") ?? string.Empty,
-                PcbId = context.GetOptionValue("p") ?? string.Empty
-            };
+                values[option.XmlName] = context.GetOptionValue(option.XmlName) ?? string.Empty;
+            }
+
+            return values;
         }
 
-        private static void ApplySpiceSettingsSnapshot(SettingsPageViewModel viewModel, SpiceSettingsSnapshot snapshot)
+        private void ApplySpiceOptionValues(SettingsPageViewModel viewModel, Dictionary<string, string> values)
         {
-            viewModel.Windowed = snapshot.Windowed;
-            viewModel.DllInjection = snapshot.DllInjection;
-            viewModel.PCoreOptimization = snapshot.PCoreOptimization;
-            viewModel.DisableSubDisplay = snapshot.DisableSubDisplay;
-            viewModel.WindowModeIndex = snapshot.WindowModeIndex;
-            viewModel.SubBorderless = snapshot.SubBorderless;
-            viewModel.ShowCursorTouchSim = snapshot.ShowCursorTouchSim;
-            viewModel.WindowTopMost = snapshot.WindowTopMost;
-            viewModel.WindowSize = snapshot.WindowSize;
-            viewModel.SingleAdapter = snapshot.SingleAdapter;
-            viewModel.NvidiaPerformanceProfile = snapshot.NvidiaPerformanceProfile;
-            viewModel.SubWindowTopMost = snapshot.SubWindowTopMost;
-            viewModel.SubForceRender = snapshot.SubForceRender;
-            viewModel.NativeTouch = snapshot.NativeTouch;
-            viewModel.AsioDriverValue = snapshot.AsioDriverValue;
-            viewModel.LowLatencySharedAudio = snapshot.LowLatencySharedAudio;
-            viewModel.CardIo = snapshot.CardIo;
-            viewModel.HidSmartCard = snapshot.HidSmartCard;
-            viewModel.NetDump = snapshot.NetDump;
-            viewModel.NetworkAdapterIp = snapshot.NetworkAdapterIp;
-            viewModel.NetworkAdapterSubnet = snapshot.NetworkAdapterSubnet;
-            viewModel.ServerAddress = snapshot.ServerAddress;
-            viewModel.PcbId = snapshot.PcbId;
+            foreach (var option in SpiceOptions)
+            {
+                if (values.TryGetValue(option.XmlName, out var xmlValue))
+                {
+                    option.ApplyXmlValue(viewModel, xmlValue);
+                }
+                else
+                {
+                    option.ApplyXmlValue(viewModel, string.Empty);
+                }
+            }
         }
 
         private void ApplyDeferredSettingsState(
@@ -854,10 +839,7 @@ namespace LazyBootstrap.Services.Settings
             string currentNetworkIp,
             string currentNetworkSubnet)
         {
-            viewModel.RunSilently(() =>
-            {
-                ApplySpiceSettingsSnapshot(viewModel, deferredState.SpiceSettings);
-            });
+            ApplySpiceOptionValues(viewModel, deferredState.SpiceOptionValues);
 
             viewModel.AsioDrivers.Clear();
             foreach (var option in deferredState.AsioDrivers)
@@ -962,10 +944,6 @@ namespace LazyBootstrap.Services.Settings
         private bool IsSpiceConfigAvailable(bool useSystemSpiceConfig)
         {
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(useSystemSpiceConfig);
-            if (!File.Exists(spiceXmlPath))
-            {
-                return false;
-            }
 
             try
             {
@@ -1024,17 +1002,6 @@ namespace LazyBootstrap.Services.Settings
             return configuredRenderMode;
         }
 
-        private static int ResolveWindowModeIndex(string windowBorderValue)
-        {
-            return windowBorderValue switch
-            {
-                "1" => 1,
-                "2" => 2,
-                _ => 0
-            };
-        }
-
-
         private void SaveServerPresets(SettingsPageViewModel viewModel)
         {
             _configHandler.SaveServerPresets(viewModel.ServerPresets, viewModel.ActiveServerPreset, NonePresetName);
@@ -1042,21 +1009,14 @@ namespace LazyBootstrap.Services.Settings
 
         private bool TryApplySpiceUpdates(
             string spiceXmlPath,
-            LoadOptions loadOptions,
-            bool createOptionsWhenMissing,
             SettingsPageViewModel viewModel,
             bool reloadViewModelOnSuccess = true,
             params SpiceOptionUpdate[] updates)
         {
-            if (!TryGetSpiceOptionsContext(spiceXmlPath, loadOptions, createOptionsWhenMissing, out var context))
+            if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, updates, out var error))
             {
+                _uiInteractionService.ShowErrorToast("写入配置失败", error);
                 return false;
-            }
-
-            var normalizationWarning = _spiceConfigFileService.ApplyUpdates(context, updates);
-            if (!string.IsNullOrWhiteSpace(normalizationWarning))
-            {
-                _uiInteractionService.ShowWarningToast("配置格式修复失败", normalizationWarning);
             }
 
             if (reloadViewModelOnSuccess
@@ -1071,80 +1031,13 @@ namespace LazyBootstrap.Services.Settings
             return true;
         }
 
-        private bool TryApplyCompatibilityDxMode(SettingsPageViewModel viewModel, string dxModeValue)
+        private static IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsPageViewModel viewModel)
         {
-            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
-            var spiceSnapshot = FileStateSnapshot.Capture(spiceXmlPath);
-
-            try
+            foreach (var option in GeneralSpiceOptions)
             {
-                if (TryApplySpiceUpdates(
-                        spiceXmlPath,
-                        LoadOptions.PreserveWhitespace,
-                        false,
-                        viewModel,
-                        reloadViewModelOnSuccess: false,
-                        new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, string.IsNullOrEmpty(dxModeValue))))
-                {
-                    return true;
-                }
+                yield return new SpiceOptionUpdate(option.XmlName, option.GetXmlValue(viewModel), false);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Failed to update spice compatibility dx mode.");
-            }
-
-            try
-            {
-                spiceSnapshot.Restore();
-                if (string.Equals(
-                        spiceXmlPath,
-                        _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
-                        StringComparison.OrdinalIgnoreCase)
-                    && File.Exists(spiceXmlPath))
-                {
-                    LoadSpiceSettings(viewModel);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to restore spice compatibility dx mode snapshot.");
-            }
-
-            return false;
         }
 
-        private IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsPageViewModel viewModel)
-        {
-            yield return new SpiceOptionUpdate("w", viewModel.Windowed ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("k", viewModel.DllInjection ?? string.Empty, false);
-            yield return new SpiceOptionUpdate("sp2x-processefficiency", viewModel.PCoreOptimization ? "pcores" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-sdvxnosub", viewModel.DisableSubDisplay ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-windowborder", ResolveWindowBorderValue(viewModel.WindowModeIndex));
-            yield return new SpiceOptionUpdate("sdvxwsubborderless", viewModel.SubBorderless ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("s", viewModel.ShowCursorTouchSim ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-windowalwaysontop", viewModel.WindowTopMost ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-windowsize", viewModel.WindowSize ?? string.Empty);
-            yield return new SpiceOptionUpdate("graphics-force-single-adapter", viewModel.SingleAdapter ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-nvprofile", viewModel.NvidiaPerformanceProfile ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sdvxwsubtop", viewModel.SubWindowTopMost ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-sdvxsubredraw", viewModel.SubForceRender ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sdvxnativetouch", viewModel.NativeTouch ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-sdvxasio", viewModel.SelectedAsioDriver?.Value ?? viewModel.AsioDriverValue ?? string.Empty);
-            yield return new SpiceOptionUpdate("sp2x-lowlatencysharedaudio", viewModel.LowLatencySharedAudio ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("cardio", viewModel.CardIo ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("scard", viewModel.HidSmartCard ? "/ENABLED" : string.Empty);
-            yield return new SpiceOptionUpdate("netdump", viewModel.NetDump ? "/ENABLED" : string.Empty);
-        }
-
-        private static string ResolveWindowBorderValue(int windowModeIndex)
-        {
-            return windowModeIndex switch
-            {
-                1 => "1",
-                2 => "2",
-                _ => string.Empty
-            };
-        }
     }
 }

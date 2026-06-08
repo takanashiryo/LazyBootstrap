@@ -13,9 +13,9 @@ namespace LazyBootstrap.Services.Config
     {
         bool TryLoadOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context, out string message, out bool warning);
 
-        string ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates);
+        void ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates);
 
-        string ReplaceOptions(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates);
+        bool ApplySpiceOptions(string spiceXmlPath, IEnumerable<SpiceOptionUpdate> updates, out string error);
     }
 
     internal sealed class SpiceConfigFileService : ISpiceConfigFileService
@@ -84,7 +84,7 @@ namespace LazyBootstrap.Services.Config
             return true;
         }
 
-        public string ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates)
+        public void ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates)
         {
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(updates);
@@ -94,7 +94,7 @@ namespace LazyBootstrap.Services.Config
                 .ToList();
             if (updateList.Count == 0)
             {
-                return string.Empty;
+                return;
             }
 
             var options = context.OptionsElement;
@@ -152,40 +152,21 @@ namespace LazyBootstrap.Services.Config
                 existing.SetAttributeValue("value", update.Value ?? string.Empty);
             }
 
-            return SaveDocument(context.Document, context.FilePath, newline);
+            SaveDocument(context.Document, context.FilePath, newline);
         }
 
-        public string ReplaceOptions(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates)
+        public bool ApplySpiceOptions(string spiceXmlPath, IEnumerable<SpiceOptionUpdate> updates, out string error)
         {
-            ArgumentNullException.ThrowIfNull(context);
-            ArgumentNullException.ThrowIfNull(updates);
+            error = string.Empty;
 
-            var replacementList = updates
-                .Where(update => update != null && !string.IsNullOrEmpty(update.Name) && !update.ShouldRemove && !string.IsNullOrEmpty(update.Value))
-                .ToList();
-
-            var options = context.OptionsElement;
-            var soundVoltex = context.SoundVoltex;
-            string newline = "\r\n";
-            string optionsIndent = ExtractIndentation(options.PreviousNode as XText, ref newline) ?? string.Empty;
-            string indentStep = DetermineIndentStep(soundVoltex, ref newline) ?? new string(' ', 4);
-            string optionIndent = optionsIndent + indentStep;
-            string optionLinePrefix = newline + optionIndent;
-            string closingLinePrefix = newline + optionsIndent;
-
-            options.RemoveNodes();
-            context.OptionLookup.Clear();
-
-            var closingWhitespace = EnsureClosingWhitespace(options, closingLinePrefix);
-            foreach (var update in replacementList)
+            if (!TryLoadOptionsContext(spiceXmlPath, LoadOptions.PreserveWhitespace, true, out var context, out var message, out _))
             {
-                closingWhitespace.AddBeforeSelf(new XText(optionLinePrefix));
-                var optionElement = CreateOptionElement(update);
-                closingWhitespace.AddBeforeSelf(optionElement);
-                context.OptionLookup[update.Name] = optionElement;
+                error = string.IsNullOrWhiteSpace(message) ? "Unable to load spice config file." : message;
+                return false;
             }
 
-            return SaveDocument(context.Document, context.FilePath, newline);
+            ApplyUpdates(context, updates);
+            return true;
         }
 
         private static XElement CreateOptionElement(SpiceOptionUpdate update)
