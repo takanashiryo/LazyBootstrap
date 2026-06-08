@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LazyBootstrap.Services.Display
 {
-    internal sealed class DisplaySettingsRequest
+    public sealed class DisplaySettingsRequest
     {
         public DisplaySettingsRequest(string targetName, string deviceName, int angle, int width, int height, int refreshRate)
         {
@@ -31,7 +31,7 @@ namespace LazyBootstrap.Services.Display
         public int RefreshRate { get; }
     }
 
-    internal sealed class DisplaySettingsTransactionResult
+    public sealed class DisplaySettingsTransactionResult
     {
         public DisplaySettingsTransactionResult(bool succeeded, IReadOnlyDictionary<string, DisplayState> restoreStates, IReadOnlyList<string> messages)
         {
@@ -47,16 +47,12 @@ namespace LazyBootstrap.Services.Display
         public IReadOnlyList<string> Messages { get; }
     }
 
-    internal interface IDisplaySettingsTransactionCoordinator
-    {
-        DisplaySettingsTransactionResult Apply(IReadOnlyList<DisplaySettingsRequest> requests);
-    }
 
-    internal sealed class DisplaySettingsTransactionCoordinator : IDisplaySettingsTransactionCoordinator
+    public sealed class DisplaySettingsTransactionCoordinator
     {
-        private readonly IDisplayConfigurationService _displayConfigurationService;
+        private readonly WindowsDisplayConfigurationService _displayConfigurationService;
 
-        public DisplaySettingsTransactionCoordinator(IDisplayConfigurationService displayConfigurationService)
+        public DisplaySettingsTransactionCoordinator(WindowsDisplayConfigurationService displayConfigurationService)
         {
             ArgumentNullException.ThrowIfNull(displayConfigurationService);
             _displayConfigurationService = displayConfigurationService;

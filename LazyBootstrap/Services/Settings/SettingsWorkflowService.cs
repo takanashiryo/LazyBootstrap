@@ -12,28 +12,8 @@ using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Settings
 {
-    public interface ISettingsWorkflowService
-    {
-        Task InitializeStartupAsync(SettingsPageViewModel viewModel);
-        Task WarmDeferredAsync(SettingsPageViewModel viewModel);
-        Task PersistLauncherSettingsAsync(SettingsPageViewModel viewModel);
-        Task PersistSelectedServerPresetAsync(SettingsPageViewModel viewModel);
-        Task PersistServerEndpointAsync(SettingsPageViewModel viewModel);
-        Task ApplySelectedNetworkAdapterAsync(SettingsPageViewModel viewModel);
-        Task OpenNetworkAdapterPickerAsync(SettingsPageViewModel viewModel);
-        Task PersistNetworkSettingsAsync(SettingsPageViewModel viewModel);
-        Task PersistSpiceSettingsAsync(SettingsPageViewModel viewModel);
-        Task PersistGpuCompatLayerToggleAsync(SettingsPageViewModel viewModel);
-        Task PersistGpuCompatLayerRenderModeAsync(SettingsPageViewModel viewModel);
-        Task EditConfigAsync(SettingsPageViewModel viewModel);
-        Task PersistUseSystemSpiceConfigAsync(SettingsPageViewModel viewModel);
-        bool HasGpuCompatLayerModulesDirectory();
-        Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel);
-        Task AddServerPresetAsync(SettingsPageViewModel viewModel);
-        Task DeleteServerPresetAsync(SettingsPageViewModel viewModel);
-    }
 
-    internal sealed class SettingsWorkflowService : ISettingsWorkflowService
+    public sealed class SettingsWorkflowService
     {
         private const string NonePresetName = "无";
         private const string AsphyxiaPresetName = "Asphyxia";
@@ -41,28 +21,28 @@ namespace LazyBootstrap.Services.Settings
         private const string UseSystemConfigKey = "use-system-config";
         private const string MissingSpiceConfigMessage = "未找到任何spice2x配置文件";
 
-        private readonly IConfigHandler _configHandler;
-        private readonly ILauncherPaths _paths;
-        private readonly ISpiceConfigFileService _spiceConfigFileService;
-        private readonly IGpuCompatLayerService _gpuCompatLayerService;
-        private readonly IUiInteractionService _uiInteractionService;
+        private readonly ConfigHandler _configHandler;
+        private readonly LauncherPaths _paths;
+        private readonly SpiceConfigFileService _spiceConfigFileService;
+        private readonly GpuCompatLayerService _gpuCompatLayerService;
+        private readonly UiInteractionService _uiInteractionService;
         private readonly ILogger<SettingsWorkflowService> _logger;
 
         private sealed record SpiceOptionDescriptor(
             string XmlName,
-            Func<SettingsPageViewModel, string> GetXmlValue,
-            Action<SettingsPageViewModel, string> ApplyXmlValue);
+            Func<SettingsConfigurationSnapshot, string> GetXmlValue,
+            Action<SettingsConfigurationSnapshot, string> ApplyXmlValue);
 
         private static SpiceOptionDescriptor B(string name,
-            Func<SettingsPageViewModel, bool> getter,
-            Action<SettingsPageViewModel, bool> setter,
+            Func<SettingsConfigurationSnapshot, bool> getter,
+            Action<SettingsConfigurationSnapshot, bool> setter,
             string enabledValue) => new(name,
                 vm => getter(vm) ? enabledValue : string.Empty,
                 (vm, xmlValue) => setter(vm, string.Equals(xmlValue, enabledValue, StringComparison.OrdinalIgnoreCase)));
 
         private static SpiceOptionDescriptor S(string name,
-            Func<SettingsPageViewModel, string> getter,
-            Action<SettingsPageViewModel, string> setter) => new(name,
+            Func<SettingsConfigurationSnapshot, string> getter,
+            Action<SettingsConfigurationSnapshot, string> setter) => new(name,
                 vm => getter(vm) ?? string.Empty,
                 (vm, xmlValue) => setter(vm, xmlValue ?? string.Empty));
 
@@ -122,11 +102,11 @@ namespace LazyBootstrap.Services.Settings
         }
 
         public SettingsWorkflowService(
-            IConfigHandler configHandler,
-            ILauncherPaths paths,
-            ISpiceConfigFileService spiceConfigFileService,
-            IGpuCompatLayerService gpuCompatLayerService,
-            IUiInteractionService uiInteractionService,
+            ConfigHandler configHandler,
+            LauncherPaths paths,
+            SpiceConfigFileService spiceConfigFileService,
+            GpuCompatLayerService gpuCompatLayerService,
+            UiInteractionService uiInteractionService,
             ILogger<SettingsWorkflowService> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
@@ -137,40 +117,40 @@ namespace LazyBootstrap.Services.Settings
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task InitializeStartupAsync(SettingsPageViewModel viewModel)
+        public Task InitializeStartupAsync(SettingsConfigurationSnapshot settings)
         {
-            viewModel.RunSilently(() =>
+            settings.RunSilently(() =>
             {
-                viewModel.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
-                viewModel.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
-                viewModel.GpuCompatLayerRenderMode = GpuCompatLayerService.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
-                viewModel.IsSpiceConfigAvailable = IsSpiceConfigAvailable(viewModel.UseSystemSpiceConfig);
-                viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
+                settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
+                settings.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
+                settings.GpuCompatLayerRenderMode = GpuCompatLayerService.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
+                settings.IsSpiceConfigAvailable = IsSpiceConfigAvailable(settings.UseSystemSpiceConfig);
+                settings.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
-            RefreshGpuCompatLayerState(viewModel);
+            RefreshGpuCompatLayerState(settings);
 
-            LoadServerPresets(viewModel);
+            LoadServerPresets(settings);
             return Task.CompletedTask;
         }
 
-        public async Task WarmDeferredAsync(SettingsPageViewModel viewModel)
+        public async Task WarmDeferredAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            if (!RefreshSpiceConfigAvailability(viewModel))
+            if (!RefreshSpiceConfigAvailability(settings))
             {
-                viewModel.AsioDrivers.Clear();
-                viewModel.NetworkAdapters.Clear();
+                settings.AsioDrivers.Clear();
+                settings.NetworkAdapters.Clear();
                 return;
             }
 
-            var currentAsioDriverValue = viewModel.AsioDriverValue;
-            var currentNetworkIp = viewModel.NetworkAdapterIp;
-            var currentNetworkSubnet = viewModel.NetworkAdapterSubnet;
+            var currentAsioDriverValue = settings.AsioDriverValue;
+            var currentNetworkIp = settings.NetworkAdapterIp;
+            var currentNetworkSubnet = settings.NetworkAdapterSubnet;
 
             var deferredState = await Task.Run(() =>
             {
-                string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
+                string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
                 var optionValues = ReadSpiceOptionValues(spiceXmlPath);
 
                 var asioDriverValue = optionValues.TryGetValue("sp2x-sdvxasio", out var asioVal) ? asioVal : string.Empty;
@@ -199,70 +179,70 @@ namespace LazyBootstrap.Services.Settings
                 };
             });
 
-            ApplyDeferredSettingsState(viewModel, deferredState, currentAsioDriverValue, currentNetworkIp, currentNetworkSubnet);
+            ApplyDeferredSettingsState(settings, deferredState, currentAsioDriverValue, currentNetworkIp, currentNetworkSubnet);
         }
 
-        public Task PersistLauncherSettingsAsync(SettingsPageViewModel viewModel)
+        public Task PersistLauncherSettingsAsync(SettingsConfigurationSnapshot settings)
         {
             try
             {
-                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, "noasphyxia", viewModel.NoAsphyxia.ToString().ToLowerInvariant());
+                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, "noasphyxia", settings.NoAsphyxia.ToString().ToLowerInvariant());
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to persist launcher settings.");
                 _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
-                viewModel.RunSilently(() => viewModel.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false));
+                settings.RunSilently(() => settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false));
             }
 
             return Task.CompletedTask;
         }
 
-        public Task PersistServerEndpointAsync(SettingsPageViewModel viewModel)
+        public Task PersistServerEndpointAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            viewModel.ServerAddress = (viewModel.ServerAddress ?? string.Empty).Trim();
-            viewModel.PcbId = (viewModel.PcbId ?? string.Empty).Trim();
+            settings.ServerAddress = (settings.ServerAddress ?? string.Empty).Trim();
+            settings.PcbId = (settings.PcbId ?? string.Empty).Trim();
 
             if (!TryApplySpiceUpdates(
-                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
-                    viewModel,
-                    reloadViewModelOnSuccess: false,
-                    new SpiceOptionUpdate("url", viewModel.ServerAddress, false),
-                    new SpiceOptionUpdate("p", viewModel.PcbId, false)))
+                    _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig),
+                    settings,
+                    reloadSettingsOnSuccess: false,
+                    new SpiceOptionUpdate("url", settings.ServerAddress, false),
+                    new SpiceOptionUpdate("p", settings.PcbId, false)))
             {
-                ReloadRuntimeState(viewModel);
+                ReloadRuntimeState(settings);
                 return Task.CompletedTask;
             }
 
-            SyncSelectedServerPresetFromCurrentFields(viewModel);
-            SaveServerPresets(viewModel);
+            SyncSelectedServerPresetFromCurrentFields(settings);
+            SaveServerPresets(settings);
             return Task.CompletedTask;
         }
 
-        public Task ApplySelectedNetworkAdapterAsync(SettingsPageViewModel viewModel)
+        public Task ApplySelectedNetworkAdapterAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            var selectedAdapter = viewModel.SelectedNetworkAdapter;
-            viewModel.RunSilently(() =>
+            var selectedAdapter = settings.SelectedNetworkAdapter;
+            settings.RunSilently(() =>
             {
-                viewModel.NetworkAdapterIp = selectedAdapter?.IpAddress ?? string.Empty;
-                viewModel.NetworkAdapterSubnet = selectedAdapter?.SubnetMask ?? string.Empty;
+                settings.NetworkAdapterIp = selectedAdapter?.IpAddress ?? string.Empty;
+                settings.NetworkAdapterSubnet = selectedAdapter?.SubnetMask ?? string.Empty;
             });
 
-            return PersistNetworkSettingsAsync(viewModel);
+            return PersistNetworkSettingsAsync(settings);
         }
 
-        public async Task OpenNetworkAdapterPickerAsync(SettingsPageViewModel viewModel)
+        public async Task OpenNetworkAdapterPickerAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            var choices = BuildNetworkAdapterOptions(viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
+            var choices = BuildNetworkAdapterOptions(settings.NetworkAdapterIp, settings.NetworkAdapterSubnet);
             var selectedChoice = choices.FirstOrDefault(choice =>
-                                     string.Equals(choice.IpAddress, viewModel.NetworkAdapterIp ?? string.Empty, StringComparison.OrdinalIgnoreCase)
-                                     && string.Equals(choice.SubnetMask, viewModel.NetworkAdapterSubnet ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                                     string.Equals(choice.IpAddress, settings.NetworkAdapterIp ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                                     && string.Equals(choice.SubnetMask, settings.NetworkAdapterSubnet ?? string.Empty, StringComparison.OrdinalIgnoreCase))
                                  ?? choices.FirstOrDefault();
 
             var adapterListBox = new ListBox
@@ -300,108 +280,108 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            viewModel.RunSilently(() =>
+            settings.RunSilently(() =>
             {
-                viewModel.SelectedNetworkAdapter = choice;
-                viewModel.NetworkAdapterIp = choice.IpAddress;
-                viewModel.NetworkAdapterSubnet = choice.SubnetMask;
+                settings.SelectedNetworkAdapter = choice;
+                settings.NetworkAdapterIp = choice.IpAddress;
+                settings.NetworkAdapterSubnet = choice.SubnetMask;
             });
 
-            await PersistNetworkSettingsAsync(viewModel);
+            await PersistNetworkSettingsAsync(settings);
         }
 
-        public Task PersistNetworkSettingsAsync(SettingsPageViewModel viewModel)
+        public Task PersistNetworkSettingsAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            viewModel.NetworkAdapterIp = ConfigHelper.NormalizeNetworkValue(viewModel.NetworkAdapterIp);
-            viewModel.NetworkAdapterSubnet = ConfigHelper.NormalizeNetworkValue(viewModel.NetworkAdapterSubnet);
+            settings.NetworkAdapterIp = ConfigHelper.NormalizeNetworkValue(settings.NetworkAdapterIp);
+            settings.NetworkAdapterSubnet = ConfigHelper.NormalizeNetworkValue(settings.NetworkAdapterSubnet);
 
             if (!TryApplySpiceUpdates(
-                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
-                    viewModel,
+                    _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig),
+                    settings,
                     false,
-                    new SpiceOptionUpdate("network", viewModel.NetworkAdapterIp, false),
-                    new SpiceOptionUpdate("subnet", viewModel.NetworkAdapterSubnet, false)))
+                    new SpiceOptionUpdate("network", settings.NetworkAdapterIp, false),
+                    new SpiceOptionUpdate("subnet", settings.NetworkAdapterSubnet, false)))
             {
-                ReloadRuntimeState(viewModel);
+                ReloadRuntimeState(settings);
                 return Task.CompletedTask;
             }
 
-            SyncSelectedNetworkAdapter(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
+            SyncSelectedNetworkAdapter(settings, settings.NetworkAdapterIp, settings.NetworkAdapterSubnet);
             return Task.CompletedTask;
         }
 
-        public Task PersistSpiceSettingsAsync(SettingsPageViewModel viewModel)
+        public Task PersistSpiceSettingsAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
             if (!TryApplySpiceUpdates(
-                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
-                    viewModel,
+                    _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig),
+                    settings,
                     false,
-                    BuildSpiceOptionUpdates(viewModel).ToArray()))
+                    BuildSpiceOptionUpdates(settings).ToArray()))
             {
-                ReloadRuntimeState(viewModel);
+                ReloadRuntimeState(settings);
                 return Task.CompletedTask;
             }
 
             return Task.CompletedTask;
         }
 
-        public Task PersistGpuCompatLayerToggleAsync(SettingsPageViewModel viewModel)
+        public Task PersistGpuCompatLayerToggleAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            if (viewModel.GpuCompatLayerEnabled && !GetGpuCompatLayerRuntimeState().IsFullyApplied)
+            if (settings.GpuCompatLayerEnabled && !GetGpuCompatLayerRuntimeState().IsFullyApplied)
             {
-                return ConfirmAndEnableGpuCompatLayerAsync(viewModel);
+                return ConfirmAndEnableGpuCompatLayerAsync(settings);
             }
 
-            var renderMode = GpuCompatLayerService.NormalizeRenderMode(viewModel.GpuCompatLayerRenderMode);
-            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
+            var renderMode = GpuCompatLayerService.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
             if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
-                    viewModel.GpuCompatLayerEnabled,
+                    settings.GpuCompatLayerEnabled,
                     renderMode,
                     spiceXmlPath,
                     out var error))
             {
-                viewModel.RunSilently(() => viewModel.GpuCompatLayerRenderMode = renderMode);
-                RefreshGpuCompatLayerState(viewModel);
+                settings.RunSilently(() => settings.GpuCompatLayerRenderMode = renderMode);
+                RefreshGpuCompatLayerState(settings);
                 return Task.CompletedTask;
             }
 
             _uiInteractionService.ShowErrorToast("兼容层切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            RefreshGpuCompatLayerState(viewModel);
+            RefreshGpuCompatLayerState(settings);
             return Task.CompletedTask;
         }
 
-        public Task PersistGpuCompatLayerRenderModeAsync(SettingsPageViewModel viewModel)
+        public Task PersistGpuCompatLayerRenderModeAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            var renderMode = GpuCompatLayerService.NormalizeRenderMode(viewModel.GpuCompatLayerRenderMode);
+            var renderMode = GpuCompatLayerService.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
 
-            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
             if (_gpuCompatLayerService.TryPersistGpuCompatLayerRenderMode(
                     renderMode,
-                    viewModel.GpuCompatLayerEnabled,
+                    settings.GpuCompatLayerEnabled,
                     spiceXmlPath,
                     out var error))
             {
-                viewModel.RunSilently(() => viewModel.GpuCompatLayerRenderMode = renderMode);
-                RefreshGpuCompatLayerState(viewModel);
+                settings.RunSilently(() => settings.GpuCompatLayerRenderMode = renderMode);
+                RefreshGpuCompatLayerState(settings);
                 return Task.CompletedTask;
             }
 
             _uiInteractionService.ShowErrorToast("兼容模式切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            RefreshGpuCompatLayerState(viewModel);
+            RefreshGpuCompatLayerState(settings);
             return Task.CompletedTask;
         }
 
-        public async Task EditConfigAsync(SettingsPageViewModel viewModel)
+        public async Task EditConfigAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
             string spicePath = _paths.GetSpicePath();
 
@@ -417,9 +397,9 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            string arguments = Spice64CommandLine.BuildConfigEditorArguments(viewModel.UseSystemSpiceConfig);
+            string arguments = Spice64CommandLine.BuildConfigEditorArguments(settings.UseSystemSpiceConfig);
 
-            viewModel.IsSettingsBusy = true;
+            settings.IsSettingsBusy = true;
 
             try
             {
@@ -438,8 +418,8 @@ namespace LazyBootstrap.Services.Settings
                 }
 
                 await process.WaitForExitAsync();
-                await InitializeStartupAsync(viewModel);
-                await WarmDeferredAsync(viewModel);
+                await InitializeStartupAsync(settings);
+                await WarmDeferredAsync(settings);
             }
             catch (Exception ex)
             {
@@ -447,33 +427,33 @@ namespace LazyBootstrap.Services.Settings
             }
             finally
             {
-                viewModel.IsSettingsBusy = false;
+                settings.IsSettingsBusy = false;
             }
         }
 
-        public Task PersistUseSystemSpiceConfigAsync(SettingsPageViewModel viewModel)
+        public Task PersistUseSystemSpiceConfigAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
             try
             {
                 _configHandler.WriteString(
                     AppConfigBootstrapper.SettingSectionName,
                     UseSystemConfigKey,
-                    viewModel.UseSystemSpiceConfig.ToString().ToLowerInvariant());
-                ReloadRuntimeState(viewModel);
+                    settings.UseSystemSpiceConfig.ToString().ToLowerInvariant());
+                ReloadRuntimeState(settings);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to persist use-system-config.");
                 _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
-                viewModel.RunSilently(() => viewModel.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false));
+                settings.RunSilently(() => settings.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false));
             }
 
             return Task.CompletedTask;
         }
 
-        private async Task ConfirmAndEnableGpuCompatLayerAsync(SettingsPageViewModel viewModel)
+        private async Task ConfirmAndEnableGpuCompatLayerAsync(SettingsConfigurationSnapshot settings)
         {
             var confirmed = await _uiInteractionService.ShowDialogAsync(
                 "启用显卡兼容层",
@@ -484,25 +464,25 @@ namespace LazyBootstrap.Services.Settings
 
             if (!confirmed)
             {
-                viewModel.RunSilently(() => viewModel.GpuCompatLayerEnabled = false);
+                settings.RunSilently(() => settings.GpuCompatLayerEnabled = false);
                 return;
             }
 
-            var renderMode = GpuCompatLayerService.NormalizeRenderMode(viewModel.GpuCompatLayerRenderMode);
-            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
+            var renderMode = GpuCompatLayerService.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
             if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
                     true,
                     renderMode,
                     spiceXmlPath,
                     out var error))
             {
-                viewModel.RunSilently(() => viewModel.GpuCompatLayerRenderMode = renderMode);
-                RefreshGpuCompatLayerState(viewModel);
+                settings.RunSilently(() => settings.GpuCompatLayerRenderMode = renderMode);
+                RefreshGpuCompatLayerState(settings);
                 return;
             }
 
             _uiInteractionService.ShowErrorToast("兼容层切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            RefreshGpuCompatLayerState(viewModel);
+            RefreshGpuCompatLayerState(settings);
         }
 
         public bool HasGpuCompatLayerModulesDirectory()
@@ -510,11 +490,11 @@ namespace LazyBootstrap.Services.Settings
             return Directory.Exists(Path.Combine(_paths.GetContentsDirectoryPath(), "modules"));
         }
 
-        public Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel)
+        public Task OpenAsioControlPanelAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            var driverName = viewModel.SelectedAsioDriver?.Value ?? viewModel.AsioDriverValue;
+            var driverName = settings.SelectedAsioDriver?.Value ?? settings.AsioDriverValue;
             if (string.IsNullOrWhiteSpace(driverName))
             {
                 return Task.CompletedTask;
@@ -530,9 +510,9 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public async Task AddServerPresetAsync(SettingsPageViewModel viewModel)
+        public async Task AddServerPresetAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
             var nameBox = new TextBox { Watermark = "预设名" };
             var urlBox = new TextBox { Watermark = "http://SERVERURL:PORT" };
@@ -571,7 +551,7 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            if (viewModel.ServerPresets.Any(preset => string.Equals(preset.Name, presetName, StringComparison.OrdinalIgnoreCase)))
+            if (settings.ServerPresets.Any(preset => string.Equals(preset.Name, presetName, StringComparison.OrdinalIgnoreCase)))
             {
                 _uiInteractionService.ShowErrorToast("新建预设失败", $"已存在同名预设：{presetName}");
                 return;
@@ -584,17 +564,17 @@ namespace LazyBootstrap.Services.Settings
                 PcbId = pcbId
             };
 
-            viewModel.ServerPresets.Add(newPreset);
-            viewModel.RunSilently(() => viewModel.SelectedServerPreset = newPreset);
-            await PersistSelectedServerPresetAsync(viewModel);
+            settings.ServerPresets.Add(newPreset);
+            settings.RunSilently(() => settings.SelectedServerPreset = newPreset);
+            await PersistSelectedServerPresetAsync(settings);
             _uiInteractionService.ShowInfoToast("新建预设", $"已创建预设：{presetName}");
         }
 
-        public async Task DeleteServerPresetAsync(SettingsPageViewModel viewModel)
+        public async Task DeleteServerPresetAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            var preset = viewModel.SelectedServerPreset;
+            var preset = settings.SelectedServerPreset;
             if (preset == null)
             {
                 _uiInteractionService.ShowWarningToast("删除预设", "请先选择要删除的预设。");
@@ -625,44 +605,44 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            viewModel.ServerPresets.Remove(preset);
-            var fallback = viewModel.ServerPresets.FirstOrDefault(item => string.Equals(item.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
-                ?? viewModel.ServerPresets.FirstOrDefault();
+            settings.ServerPresets.Remove(preset);
+            var fallback = settings.ServerPresets.FirstOrDefault(item => string.Equals(item.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
+                ?? settings.ServerPresets.FirstOrDefault();
 
-            viewModel.RunSilently(() => viewModel.SelectedServerPreset = fallback);
-            await PersistSelectedServerPresetAsync(viewModel);
+            settings.RunSilently(() => settings.SelectedServerPreset = fallback);
+            await PersistSelectedServerPresetAsync(settings);
             _uiInteractionService.ShowInfoToast("删除预设", $"已删除预设：{preset.Name}");
         }
 
-        public async Task PersistSelectedServerPresetAsync(SettingsPageViewModel viewModel)
+        public async Task PersistSelectedServerPresetAsync(SettingsConfigurationSnapshot settings)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(settings);
 
-            var preset = viewModel.SelectedServerPreset;
+            var preset = settings.SelectedServerPreset;
             if (preset == null)
             {
                 return;
             }
 
-            viewModel.ActiveServerPreset = preset.Name ?? NonePresetName;
-            viewModel.RunSilently(() =>
+            settings.ActiveServerPreset = preset.Name ?? NonePresetName;
+            settings.RunSilently(() =>
             {
                 if (string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
                 {
-                    viewModel.ServerAddress = string.Empty;
-                    viewModel.PcbId = string.Empty;
+                    settings.ServerAddress = string.Empty;
+                    settings.PcbId = string.Empty;
                 }
                 else
                 {
-                    viewModel.ServerAddress = (preset.ServerUrl ?? string.Empty).Trim();
-                    viewModel.PcbId = (preset.PcbId ?? string.Empty).Trim();
+                    settings.ServerAddress = (preset.ServerUrl ?? string.Empty).Trim();
+                    settings.PcbId = (preset.PcbId ?? string.Empty).Trim();
                 }
             });
 
-            await PersistServerEndpointAsync(viewModel);
+            await PersistServerEndpointAsync(settings);
         }
 
-        private void LoadServerPresets(SettingsPageViewModel viewModel)
+        private void LoadServerPresets(SettingsConfigurationSnapshot settings)
         {
             var result = _configHandler.LoadServerPresets(NonePresetName, AsphyxiaPresetName, AsphyxiaDefaultUrl);
             if (result.Mutated)
@@ -670,126 +650,126 @@ namespace LazyBootstrap.Services.Settings
                 _configHandler.SaveServerPresets(result.Presets, result.ActivePreset, NonePresetName);
             }
 
-            viewModel.ServerPresets.Clear();
+            settings.ServerPresets.Clear();
             foreach (var preset in result.Presets)
             {
-                viewModel.ServerPresets.Add(preset);
+                settings.ServerPresets.Add(preset);
             }
 
-            var selectedPreset = viewModel.ServerPresets.FirstOrDefault(p => string.Equals(p.Name, result.ActivePreset, StringComparison.OrdinalIgnoreCase))
-                ?? viewModel.ServerPresets.FirstOrDefault(p => string.Equals(p.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
-                ?? viewModel.ServerPresets.FirstOrDefault();
+            var selectedPreset = settings.ServerPresets.FirstOrDefault(p => string.Equals(p.Name, result.ActivePreset, StringComparison.OrdinalIgnoreCase))
+                ?? settings.ServerPresets.FirstOrDefault(p => string.Equals(p.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
+                ?? settings.ServerPresets.FirstOrDefault();
 
-            viewModel.RunSilently(() => viewModel.SelectedServerPreset = selectedPreset);
-            viewModel.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
+            settings.RunSilently(() => settings.SelectedServerPreset = selectedPreset);
+            settings.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
         }
 
-        private void LoadSpiceSettings(SettingsPageViewModel viewModel)
+        private void LoadSpiceSettings(SettingsConfigurationSnapshot settings)
         {
-            if (!viewModel.IsSpiceConfigAvailable)
+            if (!settings.IsSpiceConfigAvailable)
             {
                 return;
             }
 
-            string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
+            string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
             var optionValues = ReadSpiceOptionValues(spiceXmlPath);
-            viewModel.RunSilently(() => ApplySpiceOptionValues(viewModel, optionValues));
-            SyncSelectedServerPresetFromCurrentFields(viewModel);
+            settings.RunSilently(() => ApplySpiceOptionValues(settings, optionValues));
+            SyncSelectedServerPresetFromCurrentFields(settings);
         }
 
-        private void ReloadRuntimeState(SettingsPageViewModel viewModel)
+        private void ReloadRuntimeState(SettingsConfigurationSnapshot settings)
         {
-            if (!RefreshSpiceConfigAvailability(viewModel))
+            if (!RefreshSpiceConfigAvailability(settings))
             {
-                ApplyUnavailableSpiceState(viewModel);
+                ApplyUnavailableSpiceState(settings);
                 return;
             }
 
-            RefreshGpuCompatLayerState(viewModel);
-            LoadSpiceSettings(viewModel);
-            RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
-            RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
+            RefreshGpuCompatLayerState(settings);
+            LoadSpiceSettings(settings);
+            RefreshAsioDrivers(settings, settings.AsioDriverValue);
+            RefreshNetworkAdapters(settings, settings.NetworkAdapterIp, settings.NetworkAdapterSubnet);
         }
 
-        private void RefreshGpuCompatLayerState(SettingsPageViewModel viewModel)
+        private void RefreshGpuCompatLayerState(SettingsConfigurationSnapshot settings)
         {
             var runtimeState = GetGpuCompatLayerRuntimeState();
             var configuredRenderMode = SyncGpuCompatLayerConfigToRuntimeState(runtimeState);
 
-            viewModel.RunSilently(() =>
+            settings.RunSilently(() =>
             {
-                viewModel.GpuCompatLayerRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
+                settings.GpuCompatLayerRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
                     ? configuredRenderMode
                     : runtimeState.DetectedRenderMode;
-                viewModel.GpuCompatLayerEnabled = runtimeState.IsFullyApplied;
+                settings.GpuCompatLayerEnabled = runtimeState.IsFullyApplied;
             });
         }
 
-        private void ApplyUnavailableSpiceState(SettingsPageViewModel viewModel)
+        private void ApplyUnavailableSpiceState(SettingsConfigurationSnapshot settings)
         {
-            viewModel.AsioDrivers.Clear();
-            viewModel.NetworkAdapters.Clear();
+            settings.AsioDrivers.Clear();
+            settings.NetworkAdapters.Clear();
             var emptyValues = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            viewModel.RunSilently(() =>
+            settings.RunSilently(() =>
             {
-                ApplySpiceOptionValues(viewModel, emptyValues);
-                viewModel.SelectedAsioDriver = null;
-                viewModel.SelectedNetworkAdapter = null;
+                ApplySpiceOptionValues(settings, emptyValues);
+                settings.SelectedAsioDriver = null;
+                settings.SelectedNetworkAdapter = null;
             });
-            SyncSelectedServerPresetFromCurrentFields(viewModel);
+            SyncSelectedServerPresetFromCurrentFields(settings);
         }
 
-        private void SyncSelectedServerPresetFromCurrentFields(SettingsPageViewModel viewModel)
+        private void SyncSelectedServerPresetFromCurrentFields(SettingsConfigurationSnapshot settings)
         {
-            var serverUrl = (viewModel.ServerAddress ?? string.Empty).Trim();
-            var pcbId = (viewModel.PcbId ?? string.Empty).Trim();
+            var serverUrl = (settings.ServerAddress ?? string.Empty).Trim();
+            var pcbId = (settings.PcbId ?? string.Empty).Trim();
 
-            var matchedPreset = viewModel.ServerPresets.FirstOrDefault(preset =>
+            var matchedPreset = settings.ServerPresets.FirstOrDefault(preset =>
                 !string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase)
                 && string.Equals((preset.ServerUrl ?? string.Empty).Trim(), serverUrl, StringComparison.OrdinalIgnoreCase)
                 && string.Equals((preset.PcbId ?? string.Empty).Trim(), pcbId, StringComparison.OrdinalIgnoreCase));
 
-            var fallbackPreset = viewModel.ServerPresets.FirstOrDefault(preset => string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
-                ?? viewModel.ServerPresets.FirstOrDefault();
+            var fallbackPreset = settings.ServerPresets.FirstOrDefault(preset => string.Equals(preset.Name, NonePresetName, StringComparison.OrdinalIgnoreCase))
+                ?? settings.ServerPresets.FirstOrDefault();
             var selectedPreset = matchedPreset ?? fallbackPreset;
 
-            viewModel.RunSilently(() => viewModel.SelectedServerPreset = selectedPreset);
-            viewModel.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
+            settings.RunSilently(() => settings.SelectedServerPreset = selectedPreset);
+            settings.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
         }
 
-        private void RefreshAsioDrivers(SettingsPageViewModel viewModel, string selectedValue)
+        private void RefreshAsioDrivers(SettingsConfigurationSnapshot settings, string selectedValue)
         {
             var choices = BuildAsioDriverOptions(selectedValue);
-            viewModel.AsioDrivers.Clear();
+            settings.AsioDrivers.Clear();
             foreach (var choice in choices)
             {
-                viewModel.AsioDrivers.Add(choice);
+                settings.AsioDrivers.Add(choice);
             }
 
-            var selectedOption = viewModel.AsioDrivers.FirstOrDefault(choice => string.Equals(choice.Value, selectedValue ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                ?? viewModel.AsioDrivers.FirstOrDefault();
-            viewModel.RunSilently(() => viewModel.SelectedAsioDriver = selectedOption);
+            var selectedOption = settings.AsioDrivers.FirstOrDefault(choice => string.Equals(choice.Value, selectedValue ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                ?? settings.AsioDrivers.FirstOrDefault();
+            settings.RunSilently(() => settings.SelectedAsioDriver = selectedOption);
         }
 
-        private void RefreshNetworkAdapters(SettingsPageViewModel viewModel, string selectedIpAddress, string selectedSubnetMask)
+        private void RefreshNetworkAdapters(SettingsConfigurationSnapshot settings, string selectedIpAddress, string selectedSubnetMask)
         {
             var choices = BuildNetworkAdapterOptions(selectedIpAddress, selectedSubnetMask);
-            viewModel.NetworkAdapters.Clear();
+            settings.NetworkAdapters.Clear();
             foreach (var choice in choices)
             {
-                viewModel.NetworkAdapters.Add(choice);
+                settings.NetworkAdapters.Add(choice);
             }
 
-            var selectedOption = viewModel.NetworkAdapters.FirstOrDefault(choice =>
+            var selectedOption = settings.NetworkAdapters.FirstOrDefault(choice =>
                     string.Equals(choice.IpAddress, selectedIpAddress ?? string.Empty, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(choice.SubnetMask, selectedSubnetMask ?? string.Empty, StringComparison.OrdinalIgnoreCase))
-                ?? viewModel.NetworkAdapters.FirstOrDefault();
-            viewModel.RunSilently(() => viewModel.SelectedNetworkAdapter = selectedOption);
+                ?? settings.NetworkAdapters.FirstOrDefault();
+            settings.RunSilently(() => settings.SelectedNetworkAdapter = selectedOption);
         }
 
-        private void SyncSelectedNetworkAdapter(SettingsPageViewModel viewModel, string selectedIpAddress, string selectedSubnetMask)
+        private void SyncSelectedNetworkAdapter(SettingsConfigurationSnapshot settings, string selectedIpAddress, string selectedSubnetMask)
         {
-            var selectedOption = viewModel.NetworkAdapters.FirstOrDefault(choice =>
+            var selectedOption = settings.NetworkAdapters.FirstOrDefault(choice =>
                     string.Equals(choice.IpAddress, selectedIpAddress ?? string.Empty, StringComparison.OrdinalIgnoreCase)
                     && string.Equals(choice.SubnetMask, selectedSubnetMask ?? string.Empty, StringComparison.OrdinalIgnoreCase));
 
@@ -797,12 +777,12 @@ namespace LazyBootstrap.Services.Settings
                 && string.IsNullOrWhiteSpace(selectedIpAddress)
                 && string.IsNullOrWhiteSpace(selectedSubnetMask))
             {
-                selectedOption = viewModel.NetworkAdapters.FirstOrDefault(choice =>
+                selectedOption = settings.NetworkAdapters.FirstOrDefault(choice =>
                     string.IsNullOrWhiteSpace(choice.IpAddress)
                     && string.IsNullOrWhiteSpace(choice.SubnetMask));
             }
 
-            viewModel.RunSilently(() => viewModel.SelectedNetworkAdapter = selectedOption);
+            settings.RunSilently(() => settings.SelectedNetworkAdapter = selectedOption);
         }
 
         private Dictionary<string, string> ReadSpiceOptionValues(string spiceXmlPath)
@@ -823,59 +803,59 @@ namespace LazyBootstrap.Services.Settings
             return values;
         }
 
-        private void ApplySpiceOptionValues(SettingsPageViewModel viewModel, Dictionary<string, string> values)
+        private void ApplySpiceOptionValues(SettingsConfigurationSnapshot settings, Dictionary<string, string> values)
         {
             foreach (var option in SpiceOptions)
             {
                 if (values.TryGetValue(option.XmlName, out var xmlValue))
                 {
-                    option.ApplyXmlValue(viewModel, xmlValue);
+                    option.ApplyXmlValue(settings, xmlValue);
                 }
                 else
                 {
-                    option.ApplyXmlValue(viewModel, string.Empty);
+                    option.ApplyXmlValue(settings, string.Empty);
                 }
             }
         }
 
         private void ApplyDeferredSettingsState(
-            SettingsPageViewModel viewModel,
+            SettingsConfigurationSnapshot settings,
             DeferredSettingsState deferredState,
             string currentAsioDriverValue,
             string currentNetworkIp,
             string currentNetworkSubnet)
         {
-            ApplySpiceOptionValues(viewModel, deferredState.SpiceOptionValues);
+            ApplySpiceOptionValues(settings, deferredState.SpiceOptionValues);
 
-            viewModel.AsioDrivers.Clear();
+            settings.AsioDrivers.Clear();
             foreach (var option in deferredState.AsioDrivers)
             {
-                viewModel.AsioDrivers.Add(option);
+                settings.AsioDrivers.Add(option);
             }
 
-            viewModel.NetworkAdapters.Clear();
+            settings.NetworkAdapters.Clear();
             foreach (var option in deferredState.NetworkAdapters)
             {
-                viewModel.NetworkAdapters.Add(option);
+                settings.NetworkAdapters.Add(option);
             }
 
-            viewModel.RunSilently(() =>
+            settings.RunSilently(() =>
             {
-                viewModel.SelectedAsioDriver = deferredState.SelectedAsioDriver;
-                viewModel.SelectedNetworkAdapter = deferredState.SelectedNetworkAdapter;
+                settings.SelectedAsioDriver = deferredState.SelectedAsioDriver;
+                settings.SelectedNetworkAdapter = deferredState.SelectedNetworkAdapter;
                 if (!string.IsNullOrWhiteSpace(currentAsioDriverValue))
                 {
-                    viewModel.AsioDriverValue = currentAsioDriverValue;
+                    settings.AsioDriverValue = currentAsioDriverValue;
                 }
 
                 if (!string.IsNullOrWhiteSpace(currentNetworkIp) || !string.IsNullOrWhiteSpace(currentNetworkSubnet))
                 {
-                    viewModel.NetworkAdapterIp = currentNetworkIp;
-                    viewModel.NetworkAdapterSubnet = currentNetworkSubnet;
+                    settings.NetworkAdapterIp = currentNetworkIp;
+                    settings.NetworkAdapterSubnet = currentNetworkSubnet;
                 }
             });
 
-            SyncSelectedServerPresetFromCurrentFields(viewModel);
+            SyncSelectedServerPresetFromCurrentFields(settings);
         }
 
         private static List<AsioDriverOption> BuildAsioDriverOptions(string selectedValue)
@@ -930,13 +910,13 @@ namespace LazyBootstrap.Services.Settings
         }
 
 
-        private bool RefreshSpiceConfigAvailability(SettingsPageViewModel viewModel)
+        private bool RefreshSpiceConfigAvailability(SettingsConfigurationSnapshot settings)
         {
-            bool isSpiceConfigAvailable = IsSpiceConfigAvailable(viewModel.UseSystemSpiceConfig);
-            viewModel.RunSilently(() =>
+            bool isSpiceConfigAvailable = IsSpiceConfigAvailable(settings.UseSystemSpiceConfig);
+            settings.RunSilently(() =>
             {
-                viewModel.IsSpiceConfigAvailable = isSpiceConfigAvailable;
-                viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
+                settings.IsSpiceConfigAvailable = isSpiceConfigAvailable;
+                settings.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
 
             return isSpiceConfigAvailable;
@@ -998,15 +978,15 @@ namespace LazyBootstrap.Services.Settings
             return configuredRenderMode;
         }
 
-        private void SaveServerPresets(SettingsPageViewModel viewModel)
+        private void SaveServerPresets(SettingsConfigurationSnapshot settings)
         {
-            _configHandler.SaveServerPresets(viewModel.ServerPresets, viewModel.ActiveServerPreset, NonePresetName);
+            _configHandler.SaveServerPresets(settings.ServerPresets, settings.ActiveServerPreset, NonePresetName);
         }
 
         private bool TryApplySpiceUpdates(
             string spiceXmlPath,
-            SettingsPageViewModel viewModel,
-            bool reloadViewModelOnSuccess = true,
+            SettingsConfigurationSnapshot settings,
+            bool reloadSettingsOnSuccess = true,
             params SpiceOptionUpdate[] updates)
         {
             if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, updates, out var error))
@@ -1015,23 +995,23 @@ namespace LazyBootstrap.Services.Settings
                 return false;
             }
 
-            if (reloadViewModelOnSuccess
+            if (reloadSettingsOnSuccess
                 && string.Equals(
                     spiceXmlPath,
-                    _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig),
+                    _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig),
                     StringComparison.OrdinalIgnoreCase))
             {
-                LoadSpiceSettings(viewModel);
+                LoadSpiceSettings(settings);
             }
 
             return true;
         }
 
-        private static IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsPageViewModel viewModel)
+        private static IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsConfigurationSnapshot settings)
         {
             foreach (var option in GeneralSpiceOptions)
             {
-                yield return new SpiceOptionUpdate(option.XmlName, option.GetXmlValue(viewModel), false);
+                yield return new SpiceOptionUpdate(option.XmlName, option.GetXmlValue(settings), false);
             }
         }
 

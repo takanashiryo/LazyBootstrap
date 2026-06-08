@@ -1,66 +1,52 @@
 using System;
-using System.ComponentModel;
-using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
+using LazyBootstrap.Services;
 
 namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private void HookToolsViewModelState()
-        {
-            if (_viewModel?.Tools == null)
-            {
-                return;
-            }
+        private bool _isRuntimeInstallVisible;
+        private string _runtimeStatusText = "正在准备安装运行库...";
+        private double _runtimeProgressValue;
 
-            _viewModel.Tools.PropertyChanged -= OnToolsViewModelPropertyChanged;
-            _viewModel.Tools.PropertyChanged += OnToolsViewModelPropertyChanged;
-            ApplyRuntimeInstallOverlayVisibilityAsync().ForgetWithLogging(_logger, "Failed to apply runtime install overlay visibility.");
+        private void SetRuntimeInstallProgress(string statusText, double progressValue)
+        {
+            _runtimeStatusText = statusText ?? string.Empty;
+            _runtimeProgressValue = Math.Clamp(progressValue, 0d, 100d);
+            if (RuntimeStatusText != null) RuntimeStatusText.Text = _runtimeStatusText;
+            if (RuntimeProgressBar != null) RuntimeProgressBar.Value = _runtimeProgressValue;
+            var pct = $"{Math.Clamp((int)Math.Round(_runtimeProgressValue), 0, 100)}%";
+            if (RuntimeProgressValueText != null) RuntimeProgressValueText.Text = pct;
         }
 
-        private void UnhookToolsViewModelState()
+        private async void OnClearCacheClick(object sender, RoutedEventArgs e) =>
+            await AppServices.ToolsWorkflow.ClearCacheAsync();
+        private async void OnAddFirewallRuleClick(object sender, RoutedEventArgs e) =>
+            await AppServices.ToolsWorkflow.AddFirewallRuleAsync();
+        private async void OnOpenAudioPanelClick(object sender, RoutedEventArgs e) =>
+            await AppServices.ToolsWorkflow.OpenAudioPanelAsync();
+        private async void OnInstallRuntimeClick(object sender, RoutedEventArgs e)
         {
-            if (_viewModel?.Tools == null)
-            {
-                return;
-            }
-
-            _viewModel.Tools.PropertyChanged -= OnToolsViewModelPropertyChanged;
+            await AppServices.ToolsWorkflow.InstallRuntimeAsync(
+                visible =>
+                {
+                    _isRuntimeInstallVisible = visible;
+                    if (RuntimeInstallOverlay != null)
+                    {
+                        RuntimeInstallOverlay.IsVisible = visible;
+                        RuntimeInstallOverlay.Opacity = visible ? 1 : 0;
+                    }
+                },
+                SetRuntimeInstallProgress);
         }
-
-        private void OnToolsViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(e?.PropertyName)
-                || string.Equals(e.PropertyName, nameof(ToolsPageViewModel.IsRuntimeInstallVisible), StringComparison.Ordinal))
-            {
-                ApplyRuntimeInstallOverlayVisibilityAsync().ForgetWithLogging(_logger, "Failed to apply runtime install overlay visibility.");
-            }
-        }
-
-        private async Task ApplyRuntimeInstallOverlayVisibilityAsync()
-        {
-            if (RuntimeInstallOverlay == null)
-            {
-                return;
-            }
-
-            if (_viewModel.Tools.IsRuntimeInstallVisible)
-            {
-                RuntimeInstallOverlay.IsVisible = true;
-                RuntimeInstallOverlay.Opacity = 1;
-                return;
-            }
-
-            RuntimeInstallOverlay.Opacity = 0;
-            await Task.Delay(300);
-
-            if (!_viewModel.Tools.IsRuntimeInstallVisible)
-            {
-                RuntimeInstallOverlay.IsVisible = false;
-            }
-        }
-
+        private async void OnBackupSavedataClick(object sender, RoutedEventArgs e) =>
+            await AppServices.ToolsWorkflow.BackupSavedataAsync();
+        private async void OnImportSavedataClick(object sender, RoutedEventArgs e) =>
+            await AppServices.ToolsWorkflow.ImportSavedataAsync();
+        private async void OnMigrateSavedataClick(object sender, RoutedEventArgs e) =>
+            await AppServices.ToolsWorkflow.MigrateSavedataAsync();
         private void SetControlsEnabled(bool enabled)
         {
             foreach (var c in GetToggleableControls())
@@ -69,7 +55,7 @@ namespace LazyBootstrap.Views
             }
 
             if (SelectSubScreenAreaButton != null)
-                SelectSubScreenAreaButton.IsEnabled = enabled && _viewModel.Display.IsDualDisplay;
+                SelectSubScreenAreaButton.IsEnabled = enabled && _displayState.IsDualDisplay;
 
             if (KillProcessesButton != null) KillProcessesButton.IsEnabled = true;
 
@@ -161,8 +147,7 @@ namespace LazyBootstrap.Views
             AsioDriverRegistry.DisposeControlPanelDrivers();
             try
             {
-                // HandleClosingAsync is currently synchronous (returns completed tasks); keep a sync wait for the final close path.
-                _viewModel.HandleClosingAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                _launchWorkflowService.HandleClosingAsync(_displayState).ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {

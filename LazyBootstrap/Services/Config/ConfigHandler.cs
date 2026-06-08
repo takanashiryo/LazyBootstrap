@@ -81,24 +81,8 @@ internal static class TomlTextShared
     }
 }
 
-public interface IConfigHandler
-{
-    void WriteString(string section, string key, string value);
 
-    void RenameSection(string sourceSection, string targetSection);
-
-    void MoveKey(string sourceSection, string targetSection, string key);
-
-    void DeleteKey(string section, string key);
-
-    string ReadString(string section, string key, string defaultValue = "");
-
-    (List<ServerPresetItem> Presets, string ActivePreset, bool Mutated) LoadServerPresets(string nonePresetName, string asphyxiaPresetName, string asphyxiaDefaultUrl);
-
-    void SaveServerPresets(IEnumerable<ServerPresetItem> presets, string activePreset, string nonePresetName);
-}
-
-public class ConfigHandler : IConfigHandler
+public class ConfigHandler
 {
     private readonly string _path;
     private readonly object _sync = new object();

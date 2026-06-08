@@ -9,16 +9,7 @@ using System.Xml.Linq;
 
 namespace LazyBootstrap.Services.Config
 {
-    internal interface ISpiceConfigFileService
-    {
-        bool TryLoadOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context, out string message, out bool warning);
-
-        void ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates);
-
-        bool ApplySpiceOptions(string spiceXmlPath, IEnumerable<SpiceOptionUpdate> updates, out string error);
-    }
-
-    internal sealed class SpiceConfigFileService : ISpiceConfigFileService
+    public sealed class SpiceConfigFileService
     {
         public bool TryLoadOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context, out string message, out bool warning)
         {
@@ -300,7 +291,7 @@ namespace LazyBootstrap.Services.Config
         }
     }
 
-    internal sealed class SpiceOptionsContext
+    public sealed class SpiceOptionsContext
     {
         public SpiceOptionsContext(string filePath, XDocument document, XElement soundVoltex, XElement optionsElement, Dictionary<string, XElement> optionLookup)
         {

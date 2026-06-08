@@ -11,7 +11,7 @@ namespace LazyBootstrap.Services.Config
         public const string LegacySettingsSectionName = "Settings";
         public const string DisplaySectionName = "Display";
 
-        public static void InitializeAndMigrate(string configPath, IConfigHandler config)
+        public static void InitializeAndMigrate(string configPath, ConfigHandler config)
         {
             if (!File.Exists(configPath))
             {
@@ -56,7 +56,7 @@ namespace LazyBootstrap.Services.Config
             EnsureDefaults(config);
         }
 
-        private static void EnsureDefaults(IConfigHandler config)
+        private static void EnsureDefaults(ConfigHandler config)
         {
             EnsureDefault(config, SettingSectionName, "noasphyxia", "false");
             EnsureDefault(config, SettingSectionName, "compatlayer", "false");
@@ -76,7 +76,7 @@ namespace LazyBootstrap.Services.Config
             EnsureDefault(config, DisplaySectionName, "subrefresh", "59");
         }
 
-        private static void EnsureDefault(IConfigHandler config, string section, string key, string defaultValue)
+        private static void EnsureDefault(ConfigHandler config, string section, string key, string defaultValue)
         {
             var existing = config.ReadString(section, key, string.Empty);
             if (string.IsNullOrWhiteSpace(existing))

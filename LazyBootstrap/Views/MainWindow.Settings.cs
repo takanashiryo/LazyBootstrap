@@ -1,177 +1,77 @@
 using System;
-using System.Collections.Specialized;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
-using SukiUI.Dialogs;
 
 namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private void HookSettingsViewModelState()
+        private async void OnEditConfigClick(object sender, RoutedEventArgs e)
         {
-            if (_viewModel?.Settings == null)
+            try
+            {
+                SetSettingsBusy(true);
+                await _settingsWorkflowService.EditConfigAsync(_settingsState);
+                ApplyStartupSettingsStateToUi();
+                ApplyDeferredSettingsStateToUi();
+            }
+            finally
+            {
+                SetSettingsBusy(_settingsState.IsSettingsBusy);
+            }
+        }
+
+        private async void OnSelectGpuCompatLayerRenderModeClick(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button btn)
             {
                 return;
             }
 
-            _viewModel.Settings.PropertyChanged -= OnSettingsViewModelPropertyChanged;
-            _viewModel.Settings.PropertyChanged += OnSettingsViewModelPropertyChanged;
-
-            _viewModel.Settings.ServerPresets.CollectionChanged -= OnSettingsCollectionChanged;
-            _viewModel.Settings.ServerPresets.CollectionChanged += OnSettingsCollectionChanged;
-            _viewModel.Settings.AsioDrivers.CollectionChanged -= OnSettingsCollectionChanged;
-            _viewModel.Settings.AsioDrivers.CollectionChanged += OnSettingsCollectionChanged;
-            _viewModel.Settings.NetworkAdapters.CollectionChanged -= OnSettingsCollectionChanged;
-            _viewModel.Settings.NetworkAdapters.CollectionChanged += OnSettingsCollectionChanged;
-
-            _viewModel.PropertyChanged -= OnMainWindowViewModelPropertyChanged;
-            _viewModel.PropertyChanged += OnMainWindowViewModelPropertyChanged;
-        }
-
-        private void OnMainWindowViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (!string.Equals(e?.PropertyName, nameof(MainWindowViewModel.SelectedPage), StringComparison.Ordinal))
+            var mode = btn.Tag?.ToString() ?? btn.CommandParameter?.ToString() ?? string.Empty;
+            string normalizedMode = GpuCompatLayerService.NormalizeRenderMode(mode);
+            if (string.Equals(
+                    GpuCompatLayerService.NormalizeRenderMode(_settingsState.GpuCompatLayerRenderMode),
+                    normalizedMode,
+                    StringComparison.OrdinalIgnoreCase))
             {
+                _settingsState.GpuCompatLayerRenderMode = normalizedMode;
+                UpdateGpuCompatLayerStatus();
                 return;
             }
 
-            if (_viewModel.SelectedPage != ShellPage.Settings)
-            {
-                return;
-            }
-
-            _ = Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (_viewModel?.Settings == null)
-                {
-                    return;
-                }
-
-                ApplyServerPresetViewModelStateToUi();
-            });
+            _settingsState.GpuCompatLayerRenderMode = normalizedMode;
+            await _settingsWorkflowService.PersistGpuCompatLayerRenderModeAsync(_settingsState);
+            UpdateGpuCompatLayerStatus();
         }
 
-        private void UnhookSettingsViewModelState()
+        private async void OnAddServerPresetClick(object sender, RoutedEventArgs e)
         {
-            if (_viewModel?.Settings == null)
-            {
-                return;
-            }
-
-            _viewModel.PropertyChanged -= OnMainWindowViewModelPropertyChanged;
-            _viewModel.Settings.PropertyChanged -= OnSettingsViewModelPropertyChanged;
-            _viewModel.Settings.ServerPresets.CollectionChanged -= OnSettingsCollectionChanged;
-            _viewModel.Settings.AsioDrivers.CollectionChanged -= OnSettingsCollectionChanged;
-            _viewModel.Settings.NetworkAdapters.CollectionChanged -= OnSettingsCollectionChanged;
+            await _settingsWorkflowService.AddServerPresetAsync(_settingsState);
+            ApplyServerPresetStateToUi();
         }
 
-        private void OnSettingsViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        private async void OnDeleteServerPresetClick(object sender, RoutedEventArgs e)
         {
-            _ = Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                var propertyName = e?.PropertyName;
-                if (string.IsNullOrWhiteSpace(propertyName))
-                {
-                    ApplyStartupSettingsViewModelStateToUi();
-                    ApplyDeferredSettingsViewModelStateToUi();
-                    SetSettingsBusy(_viewModel.Settings.IsSettingsBusy);
-                    return;
-                }
-
-                switch (propertyName)
-                {
-                    case nameof(SettingsPageViewModel.IsSpiceConfigAvailable):
-                    case nameof(SettingsPageViewModel.SpiceConfigEmptyStateMessage):
-                        ApplySettingsAvailabilityStateToUi();
-                        break;
-
-                    case nameof(SettingsPageViewModel.NoAsphyxia):
-                    case nameof(SettingsPageViewModel.UseSystemSpiceConfig):
-                    case nameof(SettingsPageViewModel.GpuCompatLayerEnabled):
-                    case nameof(SettingsPageViewModel.GpuCompatLayerRenderMode):
-                        ApplyStartupSettingsViewModelStateToUi();
-                        break;
-
-                    case nameof(SettingsPageViewModel.ServerAddress):
-                    case nameof(SettingsPageViewModel.PcbId):
-                    case nameof(SettingsPageViewModel.ActiveServerPreset):
-                    case nameof(SettingsPageViewModel.SelectedServerPreset):
-                        ApplyServerPresetViewModelStateToUi();
-                        break;
-
-                    case nameof(SettingsPageViewModel.DllInjection):
-                    case nameof(SettingsPageViewModel.WindowSize):
-                        ApplySpiceTextInputsFromViewModel();
-                        break;
-
-                    case nameof(SettingsPageViewModel.Windowed):
-                    case nameof(SettingsPageViewModel.NetDump):
-                    case nameof(SettingsPageViewModel.DisableSubDisplay):
-                    case nameof(SettingsPageViewModel.WindowModeIndex):
-                    case nameof(SettingsPageViewModel.PCoreOptimization):
-                    case nameof(SettingsPageViewModel.SubBorderless):
-                    case nameof(SettingsPageViewModel.ShowCursorTouchSim):
-                    case nameof(SettingsPageViewModel.WindowTopMost):
-                    case nameof(SettingsPageViewModel.SingleAdapter):
-                    case nameof(SettingsPageViewModel.NvidiaPerformanceProfile):
-                    case nameof(SettingsPageViewModel.SubWindowTopMost):
-                    case nameof(SettingsPageViewModel.SubForceRender):
-                    case nameof(SettingsPageViewModel.NativeTouch):
-                    case nameof(SettingsPageViewModel.LowLatencySharedAudio):
-                    case nameof(SettingsPageViewModel.CardIo):
-                    case nameof(SettingsPageViewModel.HidSmartCard):
-                        ApplySpiceSettingsFromViewModel();
-                        break;
-
-                    case nameof(SettingsPageViewModel.AsioDriverValue):
-                    case nameof(SettingsPageViewModel.SelectedAsioDriver):
-                        ApplyAsioDriverChoicesFromViewModel();
-                        break;
-
-                    case nameof(SettingsPageViewModel.NetworkAdapterIp):
-                    case nameof(SettingsPageViewModel.NetworkAdapterSubnet):
-                    case nameof(SettingsPageViewModel.SelectedNetworkAdapter):
-                        ApplyNetworkAdapterStateFromViewModel();
-                        break;
-
-                    case nameof(SettingsPageViewModel.IsSettingsBusy):
-                        SetSettingsBusy(_viewModel.Settings.IsSettingsBusy);
-                        break;
-                }
-            });
+            await _settingsWorkflowService.DeleteServerPresetAsync(_settingsState);
+            ApplyServerPresetStateToUi();
         }
 
-        private void OnSettingsCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private async void OnOpenNetworkAdapterPickerClick(object sender, RoutedEventArgs e)
         {
-            _ = Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                if (ReferenceEquals(sender, _viewModel.Settings.ServerPresets))
-                {
-                    ApplyServerPresetViewModelStateToUi();
-                    return;
-                }
-
-                if (ReferenceEquals(sender, _viewModel.Settings.AsioDrivers))
-                {
-                    ApplyAsioDriverChoicesFromViewModel();
-                    return;
-                }
-
-                if (ReferenceEquals(sender, _viewModel.Settings.NetworkAdapters))
-                {
-                    ApplyNetworkAdapterStateFromViewModel();
-                }
-            });
+            await _settingsWorkflowService.OpenNetworkAdapterPickerAsync(_settingsState);
+            ApplyNetworkAdapterStateFromState();
         }
 
-        private void ApplyStartupSettingsViewModelStateToUi()
+        private async void OnOpenAsioControlPanelClick(object sender, RoutedEventArgs e)
+        {
+            await _settingsWorkflowService.OpenAsioControlPanelAsync(_settingsState);
+        }
+
+        private void ApplyStartupSettingsStateToUi()
         {
             bool previousLoadingState = _isLoadingSettings;
             _isLoadingSettings = true;
@@ -180,16 +80,16 @@ namespace LazyBootstrap.Views
             {
                 if (NoAsphyxiaToggleSwitch != null)
                 {
-                    NoAsphyxiaToggleSwitch.IsChecked = _viewModel.Settings.NoAsphyxia;
+                    NoAsphyxiaToggleSwitch.IsChecked = _settingsState.NoAsphyxia;
                 }
 
                 if (UseSystemSpiceConfigToggleSwitch != null)
                 {
-                    UseSystemSpiceConfigToggleSwitch.IsChecked = _viewModel.Settings.UseSystemSpiceConfig;
+                    UseSystemSpiceConfigToggleSwitch.IsChecked = _settingsState.UseSystemSpiceConfig;
                 }
 
                 UpdateGpuCompatLayerStatus();
-                ApplyServerPresetViewModelStateToUi();
+                ApplyServerPresetStateToUi();
                 ApplySettingsAvailabilityStateToUi();
             }
             finally
@@ -198,7 +98,7 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void ApplyDeferredSettingsViewModelStateToUi()
+        private void ApplyDeferredSettingsStateToUi()
         {
             bool previousLoadingState = _isLoadingSettings;
             _isLoadingSettings = true;
@@ -206,17 +106,17 @@ namespace LazyBootstrap.Views
             try
             {
                 ApplySettingsAvailabilityStateToUi();
-                ApplyInfoViewModelStateToUi();
-                if (!_viewModel.Settings.IsSpiceConfigAvailable)
+                ApplyInfoStateToUi();
+                if (!_settingsState.IsSpiceConfigAvailable)
                 {
                     return;
                 }
 
-                ApplySpiceSettingsFromViewModel();
-                ApplySpiceTextInputsFromViewModel();
-                ApplyAsioDriverChoicesFromViewModel();
-                ApplyNetworkAdapterStateFromViewModel();
-                ApplyServerPresetViewModelStateToUi();
+                ApplySpiceSettingsFromState();
+                ApplySpiceTextInputsFromState();
+                ApplyAsioDriverChoicesFromState();
+                ApplyNetworkAdapterStateFromState();
+                ApplyServerPresetStateToUi();
                 UpdateGpuCompatLayerStatus();
             }
             finally
@@ -227,7 +127,7 @@ namespace LazyBootstrap.Views
 
         private void ApplySettingsAvailabilityStateToUi()
         {
-            bool isSpiceConfigAvailable = _viewModel.Settings.IsSpiceConfigAvailable;
+            bool isSpiceConfigAvailable = _settingsState.IsSpiceConfigAvailable;
 
             if (GameSettingsLayout != null)
             {
@@ -241,119 +141,119 @@ namespace LazyBootstrap.Views
 
             if (SettingsEmptyStateTextBlock != null)
             {
-                SettingsEmptyStateTextBlock.Text = _viewModel.Settings.SpiceConfigEmptyStateMessage ?? string.Empty;
+                SettingsEmptyStateTextBlock.Text = _settingsState.SpiceConfigEmptyStateMessage ?? string.Empty;
+            }
+
+            if (SettingsMoreFeaturesHintTextBlock != null)
+            {
+                SettingsMoreFeaturesHintTextBlock.IsVisible = isSpiceConfigAvailable;
             }
 
             UpdateUseSystemSpiceConfigSwitchVisibility();
         }
 
-        private void ApplyInfoViewModelStateToUi()
-        {
-            RefreshEnvironmentOverviewChrome();
-        }
-
-        private void ApplySpiceSettingsFromViewModel()
+        private void ApplySpiceSettingsFromState()
         {
             if (WindowedToggleSwitch != null)
             {
-                WindowedToggleSwitch.IsChecked = _viewModel.Settings.Windowed;
+                WindowedToggleSwitch.IsChecked = _settingsState.Windowed;
             }
 
             if (NetDumpToggleSwitch != null)
             {
-                NetDumpToggleSwitch.IsChecked = _viewModel.Settings.NetDump;
+                NetDumpToggleSwitch.IsChecked = _settingsState.NetDump;
             }
 
             if (DisableSubDisplayToggleSwitch != null)
             {
-                DisableSubDisplayToggleSwitch.IsChecked = _viewModel.Settings.DisableSubDisplay;
+                DisableSubDisplayToggleSwitch.IsChecked = _settingsState.DisableSubDisplay;
             }
 
             if (WindowModeComboBox != null)
             {
-                WindowModeComboBox.SelectedIndex = Math.Clamp(_viewModel.Settings.WindowModeIndex, 0, Math.Max(0, WindowModeComboBox.ItemCount - 1));
+                WindowModeComboBox.SelectedIndex = Math.Clamp(_settingsState.WindowModeIndex, 0, Math.Max(0, WindowModeComboBox.ItemCount - 1));
             }
 
             if (PCoreOptimizationToggleSwitch != null)
             {
-                PCoreOptimizationToggleSwitch.IsChecked = _viewModel.Settings.PCoreOptimization;
+                PCoreOptimizationToggleSwitch.IsChecked = _settingsState.PCoreOptimization;
             }
 
             if (SubBorderlessToggleSwitch != null)
             {
-                SubBorderlessToggleSwitch.IsChecked = _viewModel.Settings.SubBorderless;
+                SubBorderlessToggleSwitch.IsChecked = _settingsState.SubBorderless;
             }
 
             if (ShowCursorTouchSimToggleSwitch != null)
             {
-                ShowCursorTouchSimToggleSwitch.IsChecked = _viewModel.Settings.ShowCursorTouchSim;
+                ShowCursorTouchSimToggleSwitch.IsChecked = _settingsState.ShowCursorTouchSim;
             }
 
             if (WindowTopMostToggleSwitch != null)
             {
-                WindowTopMostToggleSwitch.IsChecked = _viewModel.Settings.WindowTopMost;
+                WindowTopMostToggleSwitch.IsChecked = _settingsState.WindowTopMost;
             }
 
             if (SingleAdapterToggleSwitch != null)
             {
-                SingleAdapterToggleSwitch.IsChecked = _viewModel.Settings.SingleAdapter;
+                SingleAdapterToggleSwitch.IsChecked = _settingsState.SingleAdapter;
             }
 
             if (NvidiaPerformanceProfileToggleSwitch != null)
             {
-                NvidiaPerformanceProfileToggleSwitch.IsChecked = _viewModel.Settings.NvidiaPerformanceProfile;
+                NvidiaPerformanceProfileToggleSwitch.IsChecked = _settingsState.NvidiaPerformanceProfile;
             }
 
             if (SubWindowTopMostToggleSwitch != null)
             {
-                SubWindowTopMostToggleSwitch.IsChecked = _viewModel.Settings.SubWindowTopMost;
+                SubWindowTopMostToggleSwitch.IsChecked = _settingsState.SubWindowTopMost;
             }
 
             if (SubForceRenderToggleSwitch != null)
             {
-                SubForceRenderToggleSwitch.IsChecked = _viewModel.Settings.SubForceRender;
+                SubForceRenderToggleSwitch.IsChecked = _settingsState.SubForceRender;
             }
 
             if (NativeTouchToggleSwitch != null)
             {
-                NativeTouchToggleSwitch.IsChecked = _viewModel.Settings.NativeTouch;
+                NativeTouchToggleSwitch.IsChecked = _settingsState.NativeTouch;
             }
 
             if (LowLatencySharedAudioToggleSwitch != null)
             {
-                LowLatencySharedAudioToggleSwitch.IsChecked = _viewModel.Settings.LowLatencySharedAudio;
+                LowLatencySharedAudioToggleSwitch.IsChecked = _settingsState.LowLatencySharedAudio;
             }
 
             if (CardIoToggleSwitch != null)
             {
-                CardIoToggleSwitch.IsChecked = _viewModel.Settings.CardIo;
+                CardIoToggleSwitch.IsChecked = _settingsState.CardIo;
             }
 
             if (HidSmartCardToggleSwitch != null)
             {
-                HidSmartCardToggleSwitch.IsChecked = _viewModel.Settings.HidSmartCard;
+                HidSmartCardToggleSwitch.IsChecked = _settingsState.HidSmartCard;
             }
         }
 
-        private void ApplySpiceTextInputsFromViewModel()
+        private void ApplySpiceTextInputsFromState()
         {
-            SetTextBoxTextIfNeeded(DllInjectionTextBox, _viewModel.Settings.DllInjection);
-            SetTextBoxTextIfNeeded(WindowSizeTextBox, _viewModel.Settings.WindowSize);
+            SetTextBoxTextIfNeeded(DllInjectionTextBox, _settingsState.DllInjection);
+            SetTextBoxTextIfNeeded(WindowSizeTextBox, _settingsState.WindowSize);
         }
 
-        private void ApplyAsioDriverChoicesFromViewModel()
+        private void ApplyAsioDriverChoicesFromState()
         {
             if (AsioDriverComboBox == null)
             {
                 return;
             }
 
-            var choices = _viewModel.Settings.AsioDrivers.Count > 0
-                ? _viewModel.Settings.AsioDrivers.ToList()
+            var choices = _settingsState.AsioDrivers.Count > 0
+                ? _settingsState.AsioDrivers.ToList()
                 : new List<AsioDriverOption> { new("无", string.Empty) };
 
-            var selectedValue = _viewModel.Settings.SelectedAsioDriver?.Value
-                ?? _viewModel.Settings.AsioDriverValue
+            var selectedValue = _settingsState.SelectedAsioDriver?.Value
+                ?? _settingsState.AsioDriverValue
                 ?? string.Empty;
 
             var targetChoice = choices.FirstOrDefault(choice =>
@@ -380,10 +280,10 @@ namespace LazyBootstrap.Views
             UpdateAsioControlPanelButtonState();
         }
 
-        private void ApplyNetworkAdapterStateFromViewModel()
+        private void ApplyNetworkAdapterStateFromState()
         {
-            var networkIp = ConfigHelper.NormalizeNetworkValue(_viewModel.Settings.NetworkAdapterIp);
-            var subnetMask = ConfigHelper.NormalizeNetworkValue(_viewModel.Settings.NetworkAdapterSubnet);
+            var networkIp = ConfigHelper.NormalizeNetworkValue(_settingsState.NetworkAdapterIp);
+            var subnetMask = ConfigHelper.NormalizeNetworkValue(_settingsState.NetworkAdapterSubnet);
 
             _isUpdatingNetworkUi = true;
             try
@@ -398,8 +298,8 @@ namespace LazyBootstrap.Views
 
             if (OpenNetworkAdapterPickerButton != null)
             {
-                bool hasSelectableChoice = _viewModel.Settings.NetworkAdapters.Count > 1;
-                var selectedAdapter = _viewModel.Settings.SelectedNetworkAdapter;
+                bool hasSelectableChoice = _settingsState.NetworkAdapters.Count > 1;
+                var selectedAdapter = _settingsState.SelectedNetworkAdapter;
 
                 OpenNetworkAdapterPickerButton.Content = hasSelectableChoice ? "选择" : "无可用网卡";
                 OpenNetworkAdapterPickerButton.IsEnabled = true;
@@ -420,8 +320,8 @@ namespace LazyBootstrap.Views
                     return;
                 }
 
-                _viewModel.Settings.GpuCompatLayerEnabled = GpuCompatLayerToggleSwitch?.IsChecked == true;
-                await _settingsWorkflowService.PersistGpuCompatLayerToggleAsync(_viewModel.Settings);
+                _settingsState.GpuCompatLayerEnabled = GpuCompatLayerToggleSwitch?.IsChecked == true;
+                await _settingsWorkflowService.PersistGpuCompatLayerToggleAsync(_settingsState);
                 UpdateGpuCompatLayerStatus();
             }
             catch (Exception ex)
@@ -433,7 +333,7 @@ namespace LazyBootstrap.Views
         private void UpdateGpuCompatLayerStatus()
         {
             bool modulesDirectoryExists = _settingsWorkflowService.HasGpuCompatLayerModulesDirectory();
-            bool gpuCompatLayerEnabled = _viewModel.Settings.GpuCompatLayerEnabled;
+            bool gpuCompatLayerEnabled = _settingsState.GpuCompatLayerEnabled;
 
             if (GpuCompatLayerRenderModeBusyArea != null)
             {
@@ -464,6 +364,22 @@ namespace LazyBootstrap.Views
                 }
 
                 bool chipsEnabled = !gpuCompatLayerEnabled && modulesDirectoryExists;
+                string renderMode = GpuCompatLayerService.NormalizeRenderMode(_settingsState.GpuCompatLayerRenderMode);
+                if (GpuCompatLayerDx9on12RadioButton != null)
+                {
+                    GpuCompatLayerDx9on12RadioButton.IsChecked = string.Equals(renderMode, "dx9on12", StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (GpuCompatLayerDx9on12ExternalRadioButton != null)
+                {
+                    GpuCompatLayerDx9on12ExternalRadioButton.IsChecked = string.Equals(renderMode, "dx9on12_external", StringComparison.OrdinalIgnoreCase);
+                }
+
+                if (GpuCompatLayerDxvkRadioButton != null)
+                {
+                    GpuCompatLayerDxvkRadioButton.IsChecked = string.Equals(renderMode, "dxvk", StringComparison.OrdinalIgnoreCase);
+                }
+
                 if (GpuCompatLayerDx9on12RadioButton != null) GpuCompatLayerDx9on12RadioButton.IsEnabled = chipsEnabled;
                 if (GpuCompatLayerDx9on12ExternalRadioButton != null) GpuCompatLayerDx9on12ExternalRadioButton.IsEnabled = chipsEnabled;
                 if (GpuCompatLayerDxvkRadioButton != null) GpuCompatLayerDxvkRadioButton.IsEnabled = chipsEnabled;
@@ -488,9 +404,9 @@ namespace LazyBootstrap.Views
                     return;
                 }
 
-                _viewModel.Settings.SelectedServerPreset = preset;
-                await _settingsWorkflowService.PersistSelectedServerPresetAsync(_viewModel.Settings);
-                ApplyServerPresetViewModelStateToUi();
+                _settingsState.SelectedServerPreset = preset;
+                await _settingsWorkflowService.PersistSelectedServerPresetAsync(_settingsState);
+                ApplyServerPresetStateToUi();
             }
             catch (Exception ex)
             {
@@ -498,7 +414,7 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void ApplyServerPresetViewModelStateToUi()
+        private void ApplyServerPresetStateToUi()
         {
             _isUpdatingServerPresetUi = true;
             _isSyncingModel = true;
@@ -506,19 +422,25 @@ namespace LazyBootstrap.Views
             {
                 if (ServerPresetComboBox != null)
                 {
-                    int index = FindServerPresetIndex(_viewModel.Settings.SelectedServerPreset);
+                    ServerPresetComboBox.Items.Clear();
+                    foreach (var preset in _settingsState.ServerPresets)
+                    {
+                        ServerPresetComboBox.Items.Add(preset);
+                    }
+
+                    int index = FindServerPresetIndex(_settingsState.SelectedServerPreset);
                     if (index >= 0
                         && (ServerPresetComboBox.SelectedIndex != index
                             || !ReferenceEquals(
                                 ServerPresetComboBox.SelectedItem,
-                                _viewModel.Settings.ServerPresets[index])))
+                                _settingsState.ServerPresets[index])))
                     {
                         ServerPresetComboBox.SelectedIndex = index;
                     }
                 }
 
-                SetTextBoxTextIfNeeded(ServerAddressTextBox, _viewModel.Settings.ServerAddress);
-                SetTextBoxTextIfNeeded(PcbIdTextBox, _viewModel.Settings.PcbId);
+                SetTextBoxTextIfNeeded(ServerAddressTextBox, _settingsState.ServerAddress);
+                SetTextBoxTextIfNeeded(PcbIdTextBox, _settingsState.PcbId);
             }
             finally
             {
@@ -534,7 +456,7 @@ namespace LazyBootstrap.Views
                 return -1;
             }
 
-            var presets = _viewModel.Settings.ServerPresets;
+            var presets = _settingsState.ServerPresets;
             for (int i = 0; i < presets.Count; i++)
             {
                 if (ReferenceEquals(presets[i], selected))
@@ -572,7 +494,7 @@ namespace LazyBootstrap.Views
 
         private void UpdateUseSystemSpiceConfigSwitchVisibility()
         {
-            bool show = _viewModel.Settings.IsSpiceConfigAvailable;
+            bool show = _settingsState.IsSpiceConfigAvailable;
             if (UseSystemSpiceConfigRow != null)
             {
                 UseSystemSpiceConfigRow.IsVisible = show;

@@ -6,28 +6,22 @@ using LazyBootstrap.Services.Config;
 
 namespace LazyBootstrap.Services.Settings
 {
-    internal interface IGpuCompatLayerService
-    {
-        bool TryToggleGpuCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error);
-
-        bool TryPersistGpuCompatLayerRenderMode(string renderMode, bool gpuCompatLayerEnabled, string spiceXmlPath, out string error);
-    }
 
     internal readonly record struct GpuCompatLayerRuntimeState(
         bool IsFullyApplied,
         string DetectedRenderMode,
         bool HasInconsistentFiles);
 
-    internal sealed class GpuCompatLayerService : IGpuCompatLayerService
+    public sealed class GpuCompatLayerService
     {
         private static readonly string[] BaseGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
         private static readonly string[] ManagedGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
 
-        private readonly IConfigHandler _configFile;
-        private readonly ILauncherPaths _paths;
-        private readonly ISpiceConfigFileService _spiceConfigFileService;
+        private readonly ConfigHandler _configFile;
+        private readonly LauncherPaths _paths;
+        private readonly SpiceConfigFileService _spiceConfigFileService;
 
-        public GpuCompatLayerService(IConfigHandler configFile, ILauncherPaths paths, ISpiceConfigFileService spiceConfigFileService)
+        public GpuCompatLayerService(ConfigHandler configFile, LauncherPaths paths, SpiceConfigFileService spiceConfigFileService)
         {
             ArgumentNullException.ThrowIfNull(configFile);
             ArgumentNullException.ThrowIfNull(paths);
@@ -432,7 +426,7 @@ namespace LazyBootstrap.Services.Settings
         }
     }
 
-    internal sealed class FileStateSnapshot
+    public sealed class FileStateSnapshot
     {
         private readonly byte[] _content;
 

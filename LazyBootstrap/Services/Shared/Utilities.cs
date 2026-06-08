@@ -10,7 +10,7 @@ namespace LazyBootstrap.Services.Shared
     {
         public static string NormalizeNetworkValue(string value) => (value ?? string.Empty).Trim();
 
-        public static bool TryReadBool(this IConfigHandler config, string section, string key, bool defaultValue)
+        public static bool TryReadBool(this ConfigHandler config, string section, string key, bool defaultValue)
         {
             return bool.TryParse(
                 config.ReadString(section, key, defaultValue ? "true" : "false"),

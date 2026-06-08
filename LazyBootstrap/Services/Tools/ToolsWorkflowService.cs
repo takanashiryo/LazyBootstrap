@@ -12,36 +12,19 @@ using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Tools
 {
-    public interface IToolsWorkflowService
+    public sealed class ToolsWorkflowService
     {
-        Task ClearCacheAsync();
-
-        Task AddFirewallRuleAsync();
-
-        Task OpenAudioPanelAsync();
-
-        Task InstallRuntimeAsync(ToolsPageViewModel viewModel);
-
-        Task BackupSavedataAsync();
-
-        Task ImportSavedataAsync();
-
-        Task MigrateSavedataAsync();
-    }
-
-    internal sealed class ToolsWorkflowService : IToolsWorkflowService
-    {
-        private readonly ILauncherPaths _paths;
-        private readonly ISavedataTransferPlanner _savedataTransferPlanner;
-        private readonly IUiInteractionService _uiInteractionService;
-        private readonly IShellStateService _shellStateService;
+        private readonly LauncherPaths _paths;
+        private readonly SavedataTransferPlanner _savedataTransferPlanner;
+        private readonly UiInteractionService _uiInteractionService;
+        private readonly ShellStateService _shellStateService;
         private readonly ILogger<ToolsWorkflowService> _logger;
 
         public ToolsWorkflowService(
-            ILauncherPaths paths,
-            ISavedataTransferPlanner savedataTransferPlanner,
-            IUiInteractionService uiInteractionService,
-            IShellStateService shellStateService,
+            LauncherPaths paths,
+            SavedataTransferPlanner savedataTransferPlanner,
+            UiInteractionService uiInteractionService,
+            ShellStateService shellStateService,
             ILogger<ToolsWorkflowService> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
@@ -146,10 +129,8 @@ namespace LazyBootstrap.Services.Tools
             return Task.CompletedTask;
         }
 
-        public async Task InstallRuntimeAsync(ToolsPageViewModel viewModel)
+        public async Task InstallRuntimeAsync(Action<bool> setVisible, Action<string, double> setProgress)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
-
             string runtimePath = _paths.GetRuntimeDirectoryPath();
             string dxSetupPath = Path.Combine(runtimePath, "directx", "DXSETUP.exe");
             string vcRedistPath = Path.Combine(runtimePath, "vcredist", "VisualCppRedist_AIO_x86_x64.exe");
@@ -164,22 +145,29 @@ namespace LazyBootstrap.Services.Tools
                 return;
             }
 
-            viewModel.IsRuntimeInstallVisible = true;
-            SetRuntimeInstallProgress(viewModel, "正在准备安装运行库...", 5d);
+            // Track the most recent progress value so cancellation messages keep the current bar position.
+            double lastProgress = 5d;
+            void Report(string text, double value)
+            {
+                lastProgress = value;
+                setProgress(text, value);
+            }
+
+            setVisible(true);
+            Report("正在准备安装运行库...", 5d);
             _shellStateService.IsInteractionEnabled = false;
 
             try
             {
                 if (hasDirectXInstaller)
                 {
-                    SetRuntimeInstallProgress(
-                        viewModel,
+                    Report(
                         "正在安装 DirectX...",
                         CalculateRuntimeInstallProgress(totalInstallers, completedInstallers, true));
                     var dxResult = await ProcessExecutionHelper.RunElevatedInstallerAsync(dxSetupPath, "/silent", Path.Combine(runtimePath, "directx"));
                     if (dxResult == -1223)
                     {
-                        SetRuntimeInstallProgress(viewModel, "DirectX 安装已取消", viewModel.RuntimeProgressValue);
+                        Report("DirectX 安装已取消", lastProgress);
                         _uiInteractionService.ShowWarningToast("安装运行库", "用户取消了 DirectX 安装授权。");
                         return;
                     }
@@ -190,22 +178,20 @@ namespace LazyBootstrap.Services.Tools
                     }
 
                     completedInstallers++;
-                    SetRuntimeInstallProgress(
-                        viewModel,
+                    Report(
                         hasVcRedistInstaller ? "DirectX 安装完成，正在准备下一步..." : "DirectX 安装完成",
                         CalculateRuntimeInstallProgress(totalInstallers, completedInstallers, false));
                 }
 
                 if (hasVcRedistInstaller)
                 {
-                    SetRuntimeInstallProgress(
-                        viewModel,
+                    Report(
                         "正在安装 Visual C++ Redistributable...",
                         CalculateRuntimeInstallProgress(totalInstallers, completedInstallers, true));
                     var vcResult = await ProcessExecutionHelper.RunElevatedInstallerAsync(vcRedistPath, "/y", Path.Combine(runtimePath, "vcredist"));
                     if (vcResult == -1223)
                     {
-                        SetRuntimeInstallProgress(viewModel, "Visual C++ Redistributable 安装已取消", viewModel.RuntimeProgressValue);
+                        Report("Visual C++ Redistributable 安装已取消", lastProgress);
                         _uiInteractionService.ShowWarningToast("安装运行库", "用户取消了 Visual C++ Redistributable 安装授权。");
                         return;
                     }
@@ -216,13 +202,12 @@ namespace LazyBootstrap.Services.Tools
                     }
 
                     completedInstallers++;
-                    SetRuntimeInstallProgress(
-                        viewModel,
+                    Report(
                         "Visual C++ Redistributable 安装完成",
                         CalculateRuntimeInstallProgress(totalInstallers, completedInstallers, false));
                 }
 
-                SetRuntimeInstallProgress(viewModel, "运行库安装完成", 100d);
+                Report("运行库安装完成", 100d);
                 await Task.Delay(250);
                 _uiInteractionService.ShowInfoToast("运行库安装完成", "DirectX 和 Visual C++ Redistributable 安装完成。");
             }
@@ -233,15 +218,9 @@ namespace LazyBootstrap.Services.Tools
             }
             finally
             {
-                viewModel.IsRuntimeInstallVisible = false;
+                setVisible(false);
                 _shellStateService.IsInteractionEnabled = true;
             }
-        }
-
-        private static void SetRuntimeInstallProgress(ToolsPageViewModel viewModel, string statusText, double progressValue)
-        {
-            viewModel.RuntimeStatusText = statusText ?? string.Empty;
-            viewModel.RuntimeProgressValue = Math.Clamp(progressValue, 0d, 100d);
         }
 
         private static double CalculateRuntimeInstallProgress(int totalInstallers, int completedInstallers, bool installerRunning)

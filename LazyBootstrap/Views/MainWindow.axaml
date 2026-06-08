@@ -2,11 +2,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:generic="clr-namespace:System.Collections.Generic;assembly=System.Collections"
                  xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
-                 xmlns:vm="clr-namespace:LazyBootstrap.ViewModels"
-                 xmlns:conv="clr-namespace:LazyBootstrap.Converters;assembly=LazyBootstrap"
-                 xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                  x:Class="LazyBootstrap.Views.MainWindow"
-                 x:DataType="vm:MainWindowViewModel"
                  Title="SOUND VOLTEX LazyBootstrap"
                  Width="1536" Height="864"
                  MinWidth="960" MinHeight="540"
@@ -14,83 +10,6 @@
                  BackgroundStyle="Gradient"
                  CanResize="True"
                  WindowStartupLocation="CenterScreen">
-    <suki:SukiWindow.Resources>
-        <conv:EnvironmentScanAccentConverter x:Key="EnvScanAccent"/>
-        <DataTemplate x:Key="EnvScanDisplayRowTemplate"
-                      x:DataType="vm:EnvironmentScanDisplayRow">
-            <Border CornerRadius="8"
-                    Margin="0,0,0,2"
-                    Padding="12,10"
-                    BorderThickness="1"
-                    IsVisible="{Binding IsShown}"
-                    Background="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=RowFill}"
-                    BorderBrush="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=RowStroke}">
-                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
-                    <Ellipse Width="8" Height="8"
-                             VerticalAlignment="Center"
-                             Fill="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Fg}"/>
-                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                        <TextBlock FontSize="13"
-                                   LineHeight="18"
-                                   Text="{Binding PrimaryText}"
-                                   TextWrapping="Wrap"/>
-                        <TextBlock FontSize="12"
-                                   IsVisible="{Binding SecondaryVisible}"
-                                   LineHeight="16"
-                                   Opacity="0.65"
-                                   Text="{Binding SecondaryText}"
-                                   TextWrapping="Wrap"/>
-                    </StackPanel>
-                    <Border Grid.Column="2"
-                            CornerRadius="999"
-                            Padding="10,3"
-                            BorderThickness="1"
-                            IsVisible="{Binding ShowStatusBadge}"
-                            Background="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=BadgeBg}"
-                            BorderBrush="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Border}">
-                        <TextBlock FontSize="11.5"
-                                   FontWeight="DemiBold"
-                                   VerticalAlignment="Center"
-                                   Foreground="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Fg}"
-                                   Text="{Binding StatusText}"/>
-                    </Border>
-                </Grid>
-            </Border>
-        </DataTemplate>
-        <DataTemplate x:Key="EnvScanCpuGpuTextRowTemplate"
-                      x:DataType="vm:EnvironmentScanDisplayRow">
-            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,1">
-                <Ellipse Width="6" Height="6"
-                         VerticalAlignment="Center"
-                         Fill="{DynamicResource SukiMuteText}"/>
-                <TextBlock Grid.Column="1"
-                           FontSize="13"
-                           IsVisible="{Binding IsShown}"
-                           LineHeight="18"
-                           Text="{Binding PrimaryText}"
-                           TextWrapping="Wrap"/>
-            </Grid>
-        </DataTemplate>
-        <DataTemplate x:Key="EnvScanLineOutcomeBadge"
-                      x:DataType="vm:EnvironmentScanLineOutcome">
-            <Border Padding="10,3"
-                    CornerRadius="999"
-                    BorderThickness="1"
-                    MinWidth="56"
-                    HorizontalAlignment="Right"
-                    IsVisible="{Binding OutcomeVisible}"
-                    Background="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=BadgeBg}"
-                    BorderBrush="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Border}">
-                <TextBlock FontSize="11.5"
-                           FontWeight="DemiBold"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"
-                           Foreground="{Binding BadgeLevel, Converter={StaticResource EnvScanAccent}, ConverterParameter=Fg}"
-                           Text="{Binding StatusText}"/>
-            </Border>
-        </DataTemplate>
-    </suki:SukiWindow.Resources>
-
     <suki:SukiWindow.Hosts>
         <suki:SukiDialogHost x:Name="DialogHost"/>
         <suki:SukiToastHost x:Name="ToastHost"/>
@@ -145,8 +64,8 @@
                                 <Button x:Name="ToggleLaunchLogButton"
                                         Grid.Column="0"
                                         Classes="Basic"
-                                        Command="{Binding Launch.ToggleLaunchLogCommand}"
-                                        Content="{Binding Launch.ToggleLaunchLogText}"/>
+                                        Click="OnToggleLaunchLogClick"
+                                        Content="显示启动日志"/>
                                 <Grid Grid.Column="1"/>
                             </Grid>
 
@@ -162,7 +81,7 @@
                             </Grid>
 
                             <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Bottom">
-                                <Button x:Name="OpenLogButton" Grid.Column="0" Classes="Basic" HorizontalContentAlignment="Left" Command="{Binding Launch.OpenLogCommand}">
+                                <Button x:Name="OpenLogButton" Grid.Column="0" Classes="Basic" HorizontalContentAlignment="Left" Click="OnOpenLogClick">
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                         <TextBlock Classes="FaIcon" Text="&#xF15C;" FontSize="14"/>
                                         <TextBlock Text="查看log" VerticalAlignment="Center"/>
@@ -172,7 +91,7 @@
                                 <Grid Grid.Column="1"/>
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-                                    <Button x:Name="KillProcessesButton" Classes="Danger" Command="{Binding Launch.KillProcessesCommand}">
+                                    <Button x:Name="KillProcessesButton" Classes="Danger" Click="OnKillProcessesClick">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                             <TextBlock Classes="FaIcon" Text="&#xF00D;" FontSize="14"/>
                                             <TextBlock Text="结束所有进程" VerticalAlignment="Center"/>
@@ -181,8 +100,8 @@
                                     <SplitButton x:Name="StartButton"
                                                  Classes="Flat"
                                                  MinWidth="170"
-                                                 IsEnabled="{Binding Launch.CanStartLaunch}"
-                                                 Command="{Binding Launch.StartCommand}">
+                                                 IsEnabled="True"
+                                                 Click="OnStartClick">
                                         <SplitButton.Content>
                                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                                                 <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14"/>
@@ -193,8 +112,8 @@
                                             <MenuFlyout>
                                                 <MenuItem x:Name="StartAsphyxiaDevMenuItem"
                                                           Header="以调试模式启动氧无"
-                                                          IsEnabled="{Binding Launch.CanStartLaunch}"
-                                                          Command="{Binding Launch.StartAsphyxiaDevCommand}"/>
+                                                          IsEnabled="True"
+                                                          Click="OnStartAsphyxiaDevClick"/>
                                             </MenuFlyout>
                                         </SplitButton.Flyout>
                                     </SplitButton>
@@ -296,7 +215,7 @@
                                             <suki:SettingsLayoutItem.Content>
                                                 <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                     <StackPanel Spacing="12">
-                                                        <Button x:Name="EditConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="编辑 spicecfg" Command="{Binding Settings.EditConfigCommand}"/>
+                                                        <Button x:Name="EditConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="编辑 spicecfg" Click="OnEditConfigClick"/>
                                                         <Grid x:Name="UseSystemSpiceConfigRow" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                             <TextBlock Text="切换为系统配置" VerticalAlignment="Center"/>
                                                             <ToggleSwitch x:Name="UseSystemSpiceConfigToggleSwitch" Grid.Column="1"/>
@@ -341,8 +260,7 @@
                                                                              Padding="0"
                                                                              GroupName="CompatType"
                                                                              Classes="GigaChips"
-                                                                             IsChecked="{Binding Settings.IsGpuCompatLayerDx9on12Selected}"
-                                                                             Command="{Binding Settings.SelectGpuCompatLayerRenderModeCommand}"
+                                                                             Click="OnSelectGpuCompatLayerRenderModeClick"
                                                                              CommandParameter="dx9on12">
                                                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
                                                                         <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
@@ -358,8 +276,7 @@
                                                                              Padding="0"
                                                                              GroupName="CompatType"
                                                                              Classes="GigaChips"
-                                                                             IsChecked="{Binding Settings.IsGpuCompatLayerDx9on12ExternalSelected}"
-                                                                             Command="{Binding Settings.SelectGpuCompatLayerRenderModeCommand}"
+                                                                             Click="OnSelectGpuCompatLayerRenderModeClick"
                                                                              CommandParameter="dx9on12_external">
                                                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
                                                                         <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
@@ -375,8 +292,7 @@
                                                                              Padding="0"
                                                                              GroupName="CompatType"
                                                                              Classes="GigaChips"
-                                                                             IsChecked="{Binding Settings.IsGpuCompatLayerDxvkSelected}"
-                                                                             Command="{Binding Settings.SelectGpuCompatLayerRenderModeCommand}"
+                                                                             Click="OnSelectGpuCompatLayerRenderModeClick"
                                                                              CommandParameter="dxvk">
                                                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
                                                                         <TextBlock Text="VULKAN" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
@@ -403,11 +319,9 @@
                                                                           Grid.Column="0"
                                                                           Width="220"
                                                                           HorizontalAlignment="Left"
-                                                                          ItemsSource="{Binding Settings.ServerPresets}"
-                                                                          SelectedItem="{Binding Settings.SelectedServerPreset, Mode=TwoWay}"
                                                                           SelectionChanged="OnServerPresetSelectionChanged"/>
-                                                                <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.AddServerPresetCommand}"/>
-                                                                <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Command="{Binding Settings.DeleteServerPresetCommand}"/>
+                                                                <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Click="OnAddServerPresetClick"/>
+                                                                <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Click="OnDeleteServerPresetClick"/>
                                                             </Grid>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
@@ -429,7 +343,7 @@
                                                     <StackPanel Spacing="12">
                                                         <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
                                                             <TextBlock Text="从网卡获取参数" VerticalAlignment="Center"/>
-                                                            <Button x:Name="OpenNetworkAdapterPickerButton" Grid.Column="1" Content="选择" Padding="10,4" Classes="Flat" Command="{Binding Settings.OpenNetworkAdapterPickerCommand}"/>
+                                                            <Button x:Name="OpenNetworkAdapterPickerButton" Grid.Column="1" Content="选择" Padding="10,4" Classes="Flat" Click="OnOpenNetworkAdapterPickerClick"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="110,*" ColumnSpacing="8" VerticalAlignment="Center">
                                                             <TextBlock Text="适配器IP" VerticalAlignment="Center"/>
@@ -504,7 +418,7 @@
                                                         <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
                                                             <TextBlock Text="ASIO驱动" VerticalAlignment="Center"/>
                                                             <ComboBox x:Name="AsioDriverComboBox" Grid.Column="1" HorizontalAlignment="Stretch"/>
-                                                            <Button x:Name="OpenAsioControlPanelButton" Grid.Column="2" Classes="Basic" Content="控制面板" MinWidth="96" Command="{Binding Settings.OpenAsioControlPanelCommand}"/>
+                                                            <Button x:Name="OpenAsioControlPanelButton" Grid.Column="2" Classes="Basic" Content="控制面板" MinWidth="96" Click="OnOpenAsioControlPanelClick"/>
                                                         </Grid>
                                                         <TextBlock Text="若声卡ASIO不支持多声道，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-5,0,0"/>
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="低延迟共享音频" VerticalAlignment="Center"/><ToggleSwitch x:Name="LowLatencySharedAudioToggleSwitch" Grid.Column="1"/></Grid>
@@ -530,8 +444,9 @@
                                     </suki:SettingsLayout.Items>
                                 </suki:SettingsLayout>
 
-                                <TextBlock Text="更多功能请前往spicecfg调整"
-                                           IsVisible="{Binding Settings.IsSpiceConfigAvailable}"
+                                <TextBlock x:Name="SettingsMoreFeaturesHintTextBlock"
+                                           Text="更多功能请前往spicecfg调整"
+                                           IsVisible="False"
                                            IsHitTestVisible="False"
                                            Opacity="0.7"
                                            FontSize="12"
@@ -548,7 +463,7 @@
                                             MaxWidth="420"
                                             Margin="24">
                                     <TextBlock x:Name="SettingsEmptyStateTextBlock"
-                                               Text="{Binding Settings.SpiceConfigEmptyStateMessage}"
+                                               Text="未找到任何spice2x配置文件"
                                                HorizontalAlignment="Center"
                                                TextAlignment="Center"
                                                TextWrapping="Wrap"
@@ -559,7 +474,7 @@
                                             HorizontalAlignment="Center"
                                             MinWidth="180"
                                             Content="编辑 spicecfg"
-                                            Command="{Binding Settings.EditConfigCommand}"/>
+                                            Click="OnEditConfigClick"/>
                                 </StackPanel>
                             </Grid>
                         </suki:BusyArea>
@@ -598,8 +513,8 @@
                                                 <Ellipse x:Name="DotSubCore" Canvas.Left="139" Canvas.Top="318" Width="22" Height="22" Fill="White"/>
                                                 <Ellipse x:Name="DotSubSelectedRing" Canvas.Left="127" Canvas.Top="306" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
                                             </Canvas>
-                                            <Button x:Name="SelectMainScreenAreaButton" Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,155,0,0" Background="Transparent" BorderBrush="Transparent" Command="{Binding Display.SelectMainDisplayCommand}"/>
-                                            <Button x:Name="SelectSubScreenAreaButton" Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,301,0,0" Background="Transparent" BorderBrush="Transparent" Command="{Binding Display.SelectSubDisplayCommand}"/>
+                                            <Button x:Name="SelectMainScreenAreaButton" Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,155,0,0" Background="Transparent" BorderBrush="Transparent" Click="OnSelectMainDisplayClick"/>
+                                            <Button x:Name="SelectSubScreenAreaButton" Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,301,0,0" Background="Transparent" BorderBrush="Transparent" Click="OnSelectSubDisplayClick"/>
                                         </Grid>
                                     </suki:BusyArea>
                                 </suki:GlassCard>
@@ -607,7 +522,7 @@
                                 <suki:GlassCard Grid.Row="1">
                                     <StackPanel Margin="14" Spacing="10">
                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="退出游戏后恢复显示器布局" VerticalAlignment="Center"/><ToggleSwitch x:Name="ExitRestoreToggleSwitch" Grid.Column="1" VerticalAlignment="Center" IsChecked="False"/></Grid>
-                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="Windows触控屏设置" VerticalAlignment="Center"/><Button x:Name="TouchPanelButton" Grid.Column="1" Content="打开" MinWidth="86" Command="{Binding Display.OpenTouchPanelCommand}"/></Grid>
+                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="Windows触控屏设置" VerticalAlignment="Center"/><Button x:Name="TouchPanelButton" Grid.Column="1" Content="打开" MinWidth="86" Click="OnOpenTouchPanelClick"/></Grid>
                                     </StackPanel>
                                 </suki:GlassCard>
                             </Grid>
@@ -649,7 +564,7 @@
                                 </Grid>
                             </suki:GlassCard>
 
-                            <Button x:Name="PreviewDisplaySettingsButton" Grid.Row="2" Grid.Column="1" Classes="Flat" HorizontalAlignment="Right" Content="预览" Command="{Binding Display.PreviewDisplaySettingsCommand}"/>
+                            <Button x:Name="PreviewDisplaySettingsButton" Grid.Row="2" Grid.Column="1" Classes="Flat" HorizontalAlignment="Right" Content="预览" Click="OnPreviewDisplaySettingsClick"/>
                         </Grid>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
@@ -670,7 +585,7 @@
                                             <TextBlock Text="清除模组缓存" FontWeight="SemiBold"/>
                                             <TextBlock Text="清除 data_mods 的缓存，更新游戏后必须清除以重建缓存" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="ClearCacheButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Command="{Binding Tools.ClearCacheCommand}"/>
+                                        <Button x:Name="ClearCacheButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnClearCacheClick"/>
                                     </Grid>
                                 </suki:GlassCard>
 
@@ -681,7 +596,7 @@
                                             <TextBlock Text="添加防火墙规则" FontWeight="SemiBold"/>
                                             <TextBlock Text="为游戏主程序放行网络权限，避免连接被系统阻止出现NETWORK ERROR" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="AddFirewallRuleButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Command="{Binding Tools.AddFirewallRuleCommand}"/>
+                                        <Button x:Name="AddFirewallRuleButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnAddFirewallRuleClick"/>
                                     </Grid>
                                 </suki:GlassCard>
 
@@ -692,7 +607,7 @@
                                             <TextBlock Text="打开音频控制面板" FontWeight="SemiBold"/>
                                             <TextBlock Text="快捷打开旧版音频控制面板" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="AudioPanelButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Command="{Binding Tools.OpenAudioPanelCommand}"/>
+                                        <Button x:Name="AudioPanelButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnOpenAudioPanelClick"/>
                                     </Grid>
                                 </suki:GlassCard>
 
@@ -703,7 +618,7 @@
                                             <TextBlock Text="安装运行库" FontWeight="SemiBold"/>
                                             <TextBlock Text="安装必要运行库，例如Direct X、Visual C++ Redist" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
-                                        <Button x:Name="InstallRuntimeButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Command="{Binding Tools.InstallRuntimeCommand}"/>
+                                        <Button x:Name="InstallRuntimeButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnInstallRuntimeClick"/>
                                     </Grid>
                                 </suki:GlassCard>
 
@@ -715,9 +630,9 @@
                                             <TextBlock Text="备份，导入，或从旧目录迁移卡号与存档" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                            <Button x:Name="SavedataBackupButton" Classes="Flat" MinWidth="88" Content="备份" Command="{Binding Tools.BackupSavedataCommand}"/>
-                                            <Button x:Name="SavedataImportButton" Classes="Flat" MinWidth="88" Content="导入" Command="{Binding Tools.ImportSavedataCommand}"/>
-                                            <Button x:Name="SavedataMigrateButton" Classes="Flat" MinWidth="88" Content="迁移" Command="{Binding Tools.MigrateSavedataCommand}"/>
+                                            <Button x:Name="SavedataBackupButton" Classes="Flat" MinWidth="88" Content="备份" Click="OnBackupSavedataClick"/>
+                                            <Button x:Name="SavedataImportButton" Classes="Flat" MinWidth="88" Content="导入" Click="OnImportSavedataClick"/>
+                                            <Button x:Name="SavedataMigrateButton" Classes="Flat" MinWidth="88" Content="迁移" Click="OnMigrateSavedataClick"/>
                                         </StackPanel>
                                     </Grid>
                                 </suki:GlassCard>
@@ -757,9 +672,8 @@
                                             Classes="Flat"
                                             MinWidth="180"
                                             HorizontalAlignment="Center"
-                                            IsEnabled="{Binding Update.CanApplyUpdate}"
                                             Content="选择并应用更新"
-                                            Command="{Binding Update.ApplyUpdateCommand}"/>
+                                            Click="OnApplyUpdateClick"/>
                                 </StackPanel>
                             </Grid>
                         </ScrollViewer>
@@ -781,21 +695,23 @@
                                                        Opacity="0.78"
                                                        Text="机台属性"
                                                        TextWrapping="Wrap"/>
-                                            <TextBox Grid.Column="1"
+                                            <TextBox x:Name="MachinePropertyTextBox"
+                                                     Grid.Column="1"
                                                      Classes="Flat"
                                                      IsReadOnly="True"
-                                                     Text="{Binding Info.MachineProperty}"
+                                                     Text=""
                                                      TextWrapping="Wrap"/>
                                             <TextBlock Grid.Row="1"
                                                        VerticalAlignment="Center"
                                                        Opacity="0.78"
                                                        Text="当前游戏版本"
                                                        TextWrapping="Wrap"/>
-                                            <TextBox Grid.Row="1"
+                                            <TextBox x:Name="GameVersionTextBox"
+                                                     Grid.Row="1"
                                                      Grid.Column="1"
                                                      Classes="Flat"
                                                      IsReadOnly="True"
-                                                     Text="{Binding Info.GameVersion}"
+                                                     Text=""
                                                      TextWrapping="Wrap"/>
                                         </Grid>
                                     </StackPanel>
@@ -815,15 +731,16 @@
                                                 <Button Classes="Flat"
                                                         Padding="14,10"
                                                         MinWidth="118"
-                                                        Command="{Binding Info.RefreshEnvironmentScanCommand}">
+                                                        Click="OnRefreshEnvironmentScanClick">
                                                     <StackPanel Orientation="Horizontal" Spacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="14" Text="&#xF021;" VerticalAlignment="Center"/>
                                                         <TextBlock VerticalAlignment="Center" Text="重新检测"/>
                                                     </StackPanel>
                                                 </Button>
-                                                <TextBlock FontSize="11.5"
+                                                <TextBlock x:Name="EnvironmentScanPendingHintTextBlock"
+                                                           FontSize="11.5"
                                                            HorizontalAlignment="Right"
-                                                           IsVisible="{Binding Info.ScanUiPendingHintVisible}"
+                                                           IsVisible="False"
                                                            Opacity="0.5"
                                                            Text="正在刷新检测结果…"
                                                            TextWrapping="Wrap"/>
@@ -849,10 +766,9 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ContentControl HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    Content="{Binding Info.CpuPrimaryRow}"
-                                                                    ContentTemplate="{StaticResource EnvScanCpuGpuTextRowTemplate}"/>
+                                                    <ContentControl x:Name="CpuPrimaryRowHost"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"/>
                                                 </StackPanel>
                                             </suki:GlassCard>
 
@@ -869,17 +785,9 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ItemsControl HorizontalAlignment="Stretch"
-                                                                  ItemsSource="{Binding Info.GpuAdapterRows}">
-                                                        <ItemsControl.ItemsPanel>
-                                                            <ItemsPanelTemplate>
-                                                                <StackPanel Spacing="2"/>
-                                                            </ItemsPanelTemplate>
-                                                        </ItemsControl.ItemsPanel>
-                                                        <ItemsControl.ItemTemplate>
-                                                            <StaticResource ResourceKey="EnvScanCpuGpuTextRowTemplate"/>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                    <StackPanel x:Name="GpuAdapterRowsHost"
+                                                                HorizontalAlignment="Stretch"
+                                                                Spacing="2"/>
                                                 </StackPanel>
                                             </suki:GlassCard>
 
@@ -896,21 +804,18 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ContentControl HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    Content="{Binding Info.NvidiaSkipNoticeRow}"
-                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
-                                                    <StackPanel Spacing="2" Margin="0,4,0,0"
-                                                                IsVisible="{Binding Info.NvidiaDetailVisible}">
+                                                    <ContentControl x:Name="NvidiaSkipNoticeRowHost"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"/>
+                                                    <StackPanel x:Name="NvidiaDetailPanel"
+                                                                Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
                                                                      Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="System32/nvcuda.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.NvidiaNvcuda}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="NvidiaNvcudaOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -918,9 +823,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="System32/nvcuvid.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.NvidiaNvcuvid}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="NvidiaNvcuvidOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -928,9 +831,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="System32/nvEncodeAPI64.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.NvidiaEncodeApi}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="NvidiaEncodeApiOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -949,10 +850,9 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ContentControl HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    Content="{Binding Info.DirectXRuntimeFaultRow}"
-                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <ContentControl x:Name="DirectXRuntimeFaultRowHost"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"/>
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -960,9 +860,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="d3d9.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.DirectXD3d9}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="DirectXD3d9OutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -970,9 +868,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="d3dx9_43.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.DirectXD3Dx43}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="DirectXD3Dx43OutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -991,10 +887,9 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ContentControl HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    Content="{Binding Info.MediaPackRuntimeFaultRow}"
-                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <ContentControl x:Name="MediaPackRuntimeFaultRowHost"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"/>
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -1002,9 +897,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="MF.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.MediaPackMf}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="MediaPackMfOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -1012,9 +905,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="MFPLAT.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.MediaPackMfplat}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="MediaPackMfplatOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -1022,9 +913,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="WMVCore.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.MediaPackWmvCore}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="MediaPackWmvCoreOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -1043,10 +932,9 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ContentControl HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    Content="{Binding Info.Vc2010X86RuntimeFaultRow}"
-                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <ContentControl x:Name="Vc2010X86RuntimeFaultRowHost"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"/>
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -1054,9 +942,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="SysWOW64/msvcr100.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.Vc2010X86Msvcr}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="Vc2010X86MsvcrOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -1064,9 +950,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="SysWOW64/msvcp100.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.Vc2010X86Msvcp}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="Vc2010X86MsvcpOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -1085,10 +969,9 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ContentControl HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"
-                                                                    Content="{Binding Info.Vc2010X64RuntimeFaultRow}"
-                                                                    ContentTemplate="{StaticResource EnvScanDisplayRowTemplate}"/>
+                                                    <ContentControl x:Name="Vc2010X64RuntimeFaultRowHost"
+                                                                    HorizontalAlignment="Stretch"
+                                                                    HorizontalContentAlignment="Stretch"/>
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -1096,9 +979,7 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="System32/msvcr100.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.Vc2010X64Msvcr}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="Vc2010X64MsvcrOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
@@ -1106,17 +987,16 @@
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
                                                                        Text="System32/msvcp100.dll"/>
-                                                            <ContentControl Grid.Column="2"
-                                                                            Content="{Binding Info.Vc2010X64Msvcp}"
-                                                                            ContentTemplate="{StaticResource EnvScanLineOutcomeBadge}"/>
+                                                            <ContentControl x:Name="Vc2010X64MsvcpOutcomeHost" Grid.Column="2"/>
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
                                             </suki:GlassCard>
 
                                             <!-- Ungrouped scan output -->
-                                            <suki:GlassCard CornerRadius="16"
-                                                            IsVisible="{Binding Info.HasScanRootAlerts}">
+                                            <suki:GlassCard x:Name="ScanRootAlertsCard"
+                                                            CornerRadius="16"
+                                                            IsVisible="False">
                                                 <StackPanel Margin="16,12" Spacing="4">
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
@@ -1128,22 +1008,7 @@
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
                                                             Opacity="0.3"/>
-                                                    <ItemsControl ItemsSource="{Binding Info.ScanRootAlerts}">
-                                                        <ItemsControl.ItemTemplate>
-                                                            <DataTemplate x:DataType="sys:String">
-                                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,1">
-                                                                    <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                             Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
-                                                                    <TextBlock Grid.Column="1"
-                                                                               FontSize="13"
-                                                                               LineHeight="18"
-                                                                               Opacity="0.8"
-                                                                               Text="{Binding}"
-                                                                               TextWrapping="Wrap"/>
-                                                                </Grid>
-                                                            </DataTemplate>
-                                                        </ItemsControl.ItemTemplate>
-                                                    </ItemsControl>
+                                                    <StackPanel x:Name="ScanRootAlertsPanel" Spacing="2"/>
                                                 </StackPanel>
                                             </suki:GlassCard>
 
@@ -1176,7 +1041,8 @@
                                                TextAlignment="Center"
                                                FontSize="20"
                                                FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding Info.LauncherVersion}"
+                                    <TextBlock x:Name="LauncherVersionTextBlock"
+                                               Text=""
                                                HorizontalAlignment="Center"
                                                TextAlignment="Center"
                                                FontSize="15"
@@ -1226,14 +1092,14 @@
                     <StackPanel Width="320" Spacing="10">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14" VerticalAlignment="Center">
                             <TextBlock x:Name="RuntimeStatusText"
-                                       Text="{Binding Tools.RuntimeStatusText}"
+                                       Text=""
                                        VerticalAlignment="Center"
                                        FontSize="14"
                                        FontWeight="SemiBold"
                                        TextWrapping="Wrap"/>
                             <TextBlock x:Name="RuntimeProgressValueText"
                                        Grid.Column="1"
-                                        Text="{Binding Tools.RuntimeProgressDisplayText}"
+                                        Text=""
                                        VerticalAlignment="Center"
                                        FontSize="18"
                                        FontWeight="Bold"/>
@@ -1242,7 +1108,7 @@
                                      Height="14"
                                      Minimum="0"
                                      Maximum="100"
-                                      Value="{Binding Tools.RuntimeProgressValue}"/>
+                                      Value="0"/>
                         <TextBlock Text="请耐心等待，进度条没有卡死"
                                    HorizontalAlignment="Center"
                                    Opacity="0.72"

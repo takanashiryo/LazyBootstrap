@@ -1,3 +1,4 @@
+using LazyBootstrap.Services;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -7,7 +8,7 @@ using Serilog;
 
 namespace LazyBootstrap
 {
-    internal class Program
+    public class Program
     {
         private const string RelaunchedElevatedMessage = "已将启动流程转交给管理员权限的新进程。";
         private const string MissingExecutablePathMessage = "无法获取当前程序路径，不能重新以管理员权限启动。";
@@ -46,7 +47,7 @@ namespace LazyBootstrap
 
             try
             {
-                LazyBootstrapHost.Initialize(args);
+                AppServices.Initialize(args);
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
             }
             catch (Exception ex)
@@ -56,7 +57,7 @@ namespace LazyBootstrap
             }
             finally
             {
-                LazyBootstrapHost.Dispose();
+                AppServices.Dispose();
             }
         }
 

@@ -13,38 +13,8 @@ using SukiUI.Toasts;
 
 namespace LazyBootstrap.Services.UI
 {
-    public interface IUiInteractionService
-    {
-        void AttachWindow(Window window);
 
-        void DetachWindow(Window window);
-
-        void ShowInfoToast(string title, string content);
-
-        void ShowWarningToast(string title, string content);
-
-        void ShowErrorToast(string title, string content);
-
-        Task<bool> ShowDialogAsync(
-            string title,
-            object content,
-            string confirmText,
-            string cancelText,
-            NotificationType type = NotificationType.Information,
-            string confirmButtonClasses = "Flat",
-            string cancelButtonClasses = null,
-            string customIconAssetName = null);
-
-        Task<string> PickFolderAsync(string title);
-
-        Task<string> PickFileAsync(string title, IReadOnlyList<string> patterns);
-
-        void MinimizeAttachedWindow();
-
-        void RestoreAttachedWindow();
-    }
-
-    internal sealed class UiInteractionService : IUiInteractionService
+    public sealed class UiInteractionService
     {
         private readonly ISukiDialogManager _dialogManager;
         private readonly ISukiToastManager _toastManager;

@@ -5,30 +5,24 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using LazyBootstrap.ViewModels;
+
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Environment
 {
-    public interface IEnvironmentScanService
-    {
-        Task InitializeInfoAsync(InfoPageViewModel viewModel);
 
-        Task RunScanAsync(InfoPageViewModel viewModel);
-    }
-
-    internal sealed class EnvironmentScanService : IEnvironmentScanService
+    public sealed class EnvironmentScanService
     {
         private static readonly List<EnvironmentScan.ScanResultItem> EmptyScanBucket = [];
-        private readonly ILauncherPaths _paths;
-        private readonly IShellStateService _shellStateService;
-        private readonly IUiInteractionService _uiInteractionService;
+        private readonly LauncherPaths _paths;
+        private readonly ShellStateService _shellStateService;
+        private readonly UiInteractionService _uiInteractionService;
         private readonly ILogger<EnvironmentScanService> _logger;
 
         public EnvironmentScanService(
-            ILauncherPaths paths,
-            IShellStateService shellStateService,
-            IUiInteractionService uiInteractionService,
+            LauncherPaths paths,
+            ShellStateService shellStateService,
+            UiInteractionService uiInteractionService,
             ILogger<EnvironmentScanService> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
@@ -37,22 +31,22 @@ namespace LazyBootstrap.Services.Environment
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task InitializeInfoAsync(InfoPageViewModel viewModel)
+        public Task InitializeInfoAsync(EnvironmentScanPresentation presentation)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(presentation);
 
-            viewModel.MachineProperty = ResolveMachineProperty();
-            viewModel.GameVersion = ResolveCurrentGameVersion();
-            viewModel.LauncherVersion = ResolveLauncherVersion();
+            presentation.MachineProperty = ResolveMachineProperty();
+            presentation.GameVersion = ResolveCurrentGameVersion();
+            presentation.LauncherVersion = ResolveLauncherVersion();
             return Task.CompletedTask;
         }
 
-        public async Task RunScanAsync(InfoPageViewModel viewModel)
+        public async Task RunScanAsync(EnvironmentScanPresentation presentation)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(presentation);
 
-            viewModel.HasEnvironmentScanErrors = false;
-            ResetScanPresentation(viewModel);
+            presentation.HasEnvironmentScanErrors = false;
+            ResetScanPresentation(presentation);
 
             try
             {
@@ -68,9 +62,9 @@ namespace LazyBootstrap.Services.Environment
                     _paths.GetContentsDirectoryPath(),
                     _paths.GetBundledLibsDirectoryPath());
 
-                viewModel.EnvironmentSummary = summary.ErrorSummary ?? string.Empty;
-                viewModel.HasEnvironmentScanErrors = summary.HadError;
-                PopulateScanSlots(viewModel, summary);
+                presentation.EnvironmentSummary = summary.ErrorSummary ?? string.Empty;
+                presentation.HasEnvironmentScanErrors = summary.HadError;
+                PopulateScanSlots(presentation, summary);
             }
             catch (Exception ex)
             {
@@ -85,7 +79,7 @@ namespace LazyBootstrap.Services.Environment
             }
         }
 
-        private static void ResetScanPresentation(InfoPageViewModel vm)
+        private static void ResetScanPresentation(EnvironmentScanPresentation vm)
         {
             vm.CpuPrimaryRow.ApplyResult(
                 "—",
@@ -119,7 +113,7 @@ namespace LazyBootstrap.Services.Environment
             vm.ScanUiReady = false;
         }
 
-        private static void PopulateScanSlots(InfoPageViewModel vm, EnvironmentScan.ScanSummary summary)
+        private static void PopulateScanSlots(EnvironmentScanPresentation vm, EnvironmentScan.ScanSummary summary)
         {
             PartitionSummaryItems(summary.Items, out var roots, out var grouped);
 
@@ -195,11 +189,11 @@ namespace LazyBootstrap.Services.Environment
             public string NotFoundTitle { get; init; }
             public EnvironmentScanDisplayRow FaultRow { get; init; }
             public (string FileToken, EnvironmentScanLineOutcome Outcome)[] Outcomes { get; init; }
-            public Action<InfoPageViewModel> OnFault { get; init; }
+            public Action<EnvironmentScanPresentation> OnFault { get; init; }
         }
 
         private static void PopulateDllGroup(
-            InfoPageViewModel vm,
+            EnvironmentScanPresentation vm,
             Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped,
             DllGroupSpec spec)
         {
@@ -311,7 +305,7 @@ namespace LazyBootstrap.Services.Environment
             return Rank(a) >= Rank(b) ? a : b;
         }
 
-        private static void ApplyCpuSlots(InfoPageViewModel vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
+        private static void ApplyCpuSlots(EnvironmentScanPresentation vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
         {
             if (!grouped.TryGetValue("CPU", out List<EnvironmentScan.ScanResultItem> bucket) || bucket.Count == 0)
             {
@@ -339,7 +333,7 @@ namespace LazyBootstrap.Services.Environment
                 string.Empty);
         }
 
-        private static void ApplyGpuSlots(InfoPageViewModel vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
+        private static void ApplyGpuSlots(EnvironmentScanPresentation vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
         {
             vm.GpuAdapterRows.Clear();
 

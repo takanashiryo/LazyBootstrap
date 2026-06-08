@@ -8,24 +8,23 @@ using LazyBootstrap.MediaUpdate;
 using LazyBootstrap.Services.Paths;
 using LazyBootstrap.Services.Shell;
 using LazyBootstrap.Services.UI;
-using LazyBootstrap.ViewModels;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Update
 {
-    internal sealed class UpdateWorkflowService : IUpdateWorkflowService
+    public sealed class UpdateWorkflowService
     {
         private static readonly string[] UpdateArchiveFilePatterns = ["*.7z", "*.zip", "*.rar", "*.001"];
 
-        private readonly ILauncherPaths _paths;
-        private readonly IUiInteractionService _uiInteractionService;
-        private readonly IShellStateService _shellStateService;
+        private readonly LauncherPaths _paths;
+        private readonly UiInteractionService _uiInteractionService;
+        private readonly ShellStateService _shellStateService;
         private readonly ILogger<UpdateWorkflowService> _logger;
 
         public UpdateWorkflowService(
-            ILauncherPaths paths,
-            IUiInteractionService uiInteractionService,
-            IShellStateService shellStateService,
+            LauncherPaths paths,
+            UiInteractionService uiInteractionService,
+            ShellStateService shellStateService,
             ILogger<UpdateWorkflowService> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
@@ -34,9 +33,8 @@ namespace LazyBootstrap.Services.Update
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task ApplyUpdateFromUserSelectedArchiveAsync(UpdatePageViewModel viewModel)
+        public async Task ApplyUpdateFromUserSelectedArchiveAsync(Action<bool> setBusy)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
 
             string sevenZip = _paths.ResolveSevenZipExecutablePath();
             if (!File.Exists(sevenZip))
@@ -70,7 +68,7 @@ namespace LazyBootstrap.Services.Update
 
             string staging = _paths.GetUpdateStagingDirectoryPath();
             _shellStateService.IsInteractionEnabled = false;
-            viewModel.IsUpdateBusy = true;
+            setBusy(true);
             bool updateDetached = false;
             try
             {
@@ -116,7 +114,7 @@ namespace LazyBootstrap.Services.Update
                         _logger.LogWarning(ex, "Failed to clear update staging directory.");
                     }
 
-                    viewModel.IsUpdateBusy = false;
+                    setBusy(false);
                     _shellStateService.IsInteractionEnabled = true;
                 }
             }

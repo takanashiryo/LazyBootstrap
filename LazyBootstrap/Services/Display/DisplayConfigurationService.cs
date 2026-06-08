@@ -7,22 +7,8 @@ using System.Runtime.Versioning;
 
 namespace LazyBootstrap.Services.Display
 {
-    internal interface IDisplayConfigurationService
-    {
-        DisplayDiscoveryResult GetDisplays();
 
-        DisplayModeQueryResult GetSupportedModes(string deviceName);
-
-        DisplayStateQueryResult GetCurrentState(string deviceName);
-
-        DisplayConfigurationResult ApplyDisplaySettings(string deviceName, int angle, int width, int height, int refreshRate);
-
-        DisplayConfigurationResult RestoreDisplaySettings(DisplayState state);
-
-        int OrientationToAngle(int orientation);
-    }
-
-    internal sealed class DisplayDiscoveryResult
+    public sealed class DisplayDiscoveryResult
     {
         public DisplayDiscoveryResult(IReadOnlyList<DisplayInfo> displays, string errorMessage = "")
         {
@@ -37,7 +23,7 @@ namespace LazyBootstrap.Services.Display
         public bool Succeeded => string.IsNullOrWhiteSpace(ErrorMessage);
     }
 
-    internal sealed class DisplayModeQueryResult
+    public sealed class DisplayModeQueryResult
     {
         public DisplayModeQueryResult(IReadOnlyList<DisplayMode> modes, string errorMessage = "")
         {
@@ -52,7 +38,7 @@ namespace LazyBootstrap.Services.Display
         public bool Succeeded => string.IsNullOrWhiteSpace(ErrorMessage);
     }
 
-    internal sealed class DisplayStateQueryResult
+    public sealed class DisplayStateQueryResult
     {
         public DisplayStateQueryResult(DisplayState state, string errorMessage = "")
         {
@@ -67,7 +53,7 @@ namespace LazyBootstrap.Services.Display
         public bool Succeeded => State != null && string.IsNullOrWhiteSpace(ErrorMessage);
     }
 
-    internal sealed class DisplayConfigurationResult
+    public sealed class DisplayConfigurationResult
     {
         public DisplayConfigurationResult(bool succeeded, string errorMessage = "")
         {
@@ -99,7 +85,7 @@ namespace LazyBootstrap.Services.Display
         public bool IsPrimary { get; init; }
     }
 
-    internal sealed class DisplayMode
+    public sealed class DisplayMode
     {
         public int Width { get; init; }
 
@@ -121,7 +107,7 @@ namespace LazyBootstrap.Services.Display
         public int RefreshRate { get; init; }
     }
 
-    internal class WindowsDisplayConfigurationService : IDisplayConfigurationService
+    public class WindowsDisplayConfigurationService
     {
         private static readonly (int Width, int Height)[] CommonProbeResolutions =
         {

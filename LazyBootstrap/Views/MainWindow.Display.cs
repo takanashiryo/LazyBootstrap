@@ -1,6 +1,4 @@
 using System;
-using System.Collections.Specialized;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -12,99 +10,33 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private void HookDisplayViewModelState()
+        private void OnSelectMainDisplayClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (_viewModel?.Display == null)
-            {
-                return;
-            }
-
-            _viewModel.Display.PropertyChanged -= OnDisplayViewModelPropertyChanged;
-            _viewModel.Display.PropertyChanged += OnDisplayViewModelPropertyChanged;
-
-            _viewModel.Display.Displays.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.Displays.CollectionChanged += OnDisplayCollectionChanged;
-            _viewModel.Display.Rotations.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.Rotations.CollectionChanged += OnDisplayCollectionChanged;
-            _viewModel.Display.MainResolutions.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.MainResolutions.CollectionChanged += OnDisplayCollectionChanged;
-            _viewModel.Display.SubResolutions.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.SubResolutions.CollectionChanged += OnDisplayCollectionChanged;
-            _viewModel.Display.MainRefreshRates.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.MainRefreshRates.CollectionChanged += OnDisplayCollectionChanged;
-            _viewModel.Display.SubRefreshRates.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.SubRefreshRates.CollectionChanged += OnDisplayCollectionChanged;
+            _displayState.SelectMainDisplay();
+            ApplyDisplayStateToUi();
         }
 
-        private void UnhookDisplayViewModelState()
+        private void OnSelectSubDisplayClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (_viewModel?.Display == null)
-            {
-                return;
-            }
-
-            _viewModel.Display.PropertyChanged -= OnDisplayViewModelPropertyChanged;
-            _viewModel.Display.Displays.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.Rotations.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.MainResolutions.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.SubResolutions.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.MainRefreshRates.CollectionChanged -= OnDisplayCollectionChanged;
-            _viewModel.Display.SubRefreshRates.CollectionChanged -= OnDisplayCollectionChanged;
+            _displayState.SelectSubDisplay();
+            ApplyDisplayStateToUi();
         }
 
-        private void OnDisplayViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        private async void OnOpenTouchPanelClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (_viewModel?.Display == null || _viewModel.Display.IsSuspended)
-            {
-                return;
-            }
-
-            _ = Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                var propertyName = e?.PropertyName;
-                if (string.IsNullOrWhiteSpace(propertyName))
-                {
-                    ApplyDisplayViewModelStateToUi();
-                    return;
-                }
-
-                switch (propertyName)
-                {
-                    case nameof(DisplayConfigurationPageViewModel.SelectedTarget):
-                    case nameof(DisplayConfigurationPageViewModel.ShowNoScreenSelected):
-                    case nameof(DisplayConfigurationPageViewModel.ShowMainScreenConfig):
-                    case nameof(DisplayConfigurationPageViewModel.ShowSubScreenConfig):
-                    case nameof(DisplayConfigurationPageViewModel.IsDisplayConfigurationEnabled):
-                    case nameof(DisplayConfigurationPageViewModel.IsDualDisplay):
-                    case nameof(DisplayConfigurationPageViewModel.ExitRestore):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedMainDisplay):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedSubDisplay):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedMainRotation):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedSubRotation):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedMainResolution):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedSubResolution):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedMainRefreshRate):
-                    case nameof(DisplayConfigurationPageViewModel.SelectedSubRefreshRate):
-                    case nameof(DisplayConfigurationPageViewModel.MainOutputInfo):
-                    case nameof(DisplayConfigurationPageViewModel.SubOutputInfo):
-                    case nameof(DisplayConfigurationPageViewModel.MainStartupInfo):
-                    case nameof(DisplayConfigurationPageViewModel.SubStartupInfo):
-                    case nameof(DisplayConfigurationPageViewModel.MainDiagnosticsTooltip):
-                    case nameof(DisplayConfigurationPageViewModel.SubDiagnosticsTooltip):
-                        ApplyDisplayViewModelStateToUi();
-                        break;
-                }
-            });
+            await _displayWorkflowService.OpenTouchPanelAsync();
         }
 
-        private void OnDisplayCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        private async void OnPreviewDisplaySettingsClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            if (_viewModel?.Display == null || _viewModel.Display.IsSuspended)
-            {
-                return;
-            }
+            await _displayWorkflowService.PreviewDisplaySettingsAsync(_displayState);
+            ApplyDisplayStateToUi();
+        }
 
-            _ = Dispatcher.UIThread.InvokeAsync(ApplyDisplayViewModelStateToUi);
+        private async Task HandleDisplayConfigurationChangedAsync(bool refreshMainOptions, bool refreshSubOptions)
+        {
+            await _displayWorkflowService.HandleConfigurationChangedAsync(_displayState, refreshMainOptions, refreshSubOptions);
+            ApplyDisplayStateToUi();
         }
 
         private void InitializeDisplayLayoutControls()
@@ -121,9 +53,9 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncMainSelectionFromUi();
-                        _viewModel.Display.SelectedMainResolution = string.Empty;
-                        _viewModel.Display.SelectedMainRefreshRate = string.Empty;
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
+                        _displayState.SelectedMainResolution = string.Empty;
+                        _displayState.SelectedMainRefreshRate = string.Empty;
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
                     };
                 }
 
@@ -137,9 +69,9 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncSubSelectionFromUi();
-                        _viewModel.Display.SelectedSubResolution = string.Empty;
-                        _viewModel.Display.SelectedSubRefreshRate = string.Empty;
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
+                        _displayState.SelectedSubResolution = string.Empty;
+                        _displayState.SelectedSubRefreshRate = string.Empty;
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
                     };
                 }
 
@@ -153,7 +85,7 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncMainSelectionFromUi();
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
                     };
                 }
 
@@ -167,7 +99,7 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncSubSelectionFromUi();
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
                     };
                 }
 
@@ -181,7 +113,7 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncMainSelectionFromUi();
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
                     };
                 }
 
@@ -195,7 +127,7 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncSubSelectionFromUi();
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
                     };
                 }
 
@@ -209,7 +141,7 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncMainSelectionFromUi();
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: false);
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: false);
                     };
                 }
 
@@ -223,7 +155,7 @@ namespace LazyBootstrap.Views
                         }
 
                         SyncSubSelectionFromUi();
-                        await _viewModel.Display.HandleConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: false);
+                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: false);
                     };
                 }
 
@@ -236,8 +168,9 @@ namespace LazyBootstrap.Views
                             return;
                         }
 
-                        _viewModel.Display.IsDisplayConfigurationEnabled = DisplayConfigEnabledToggleSwitch.IsChecked == true;
-                        await _viewModel.Display.PersistGeneralSettingsAsync();
+                        _displayState.IsDisplayConfigurationEnabled = DisplayConfigEnabledToggleSwitch.IsChecked == true;
+                        await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
+                        ApplyDisplayStateToUi();
                     };
                 }
 
@@ -251,17 +184,18 @@ namespace LazyBootstrap.Views
                         }
 
                         bool isDualDisplay = DisplayModeComboBox.SelectedIndex == 1;
-                        _viewModel.Display.IsDualDisplay = isDualDisplay;
+                        _displayState.IsDualDisplay = isDualDisplay;
 
-                        if (!isDualDisplay && _viewModel.Display.SelectedTarget == global::LazyBootstrap.Models.DisplaySelectionTarget.Sub)
+                        if (!isDualDisplay && _displayState.SelectedTarget == global::LazyBootstrap.Models.DisplaySelectionTarget.Sub)
                         {
-                            _viewModel.Display.SelectedTarget = global::LazyBootstrap.Models.DisplaySelectionTarget.None;
-                            _viewModel.Display.ShowNoScreenSelected = true;
-                            _viewModel.Display.ShowMainScreenConfig = false;
-                            _viewModel.Display.ShowSubScreenConfig = false;
+                            _displayState.SelectedTarget = global::LazyBootstrap.Models.DisplaySelectionTarget.None;
+                            _displayState.ShowNoScreenSelected = true;
+                            _displayState.ShowMainScreenConfig = false;
+                            _displayState.ShowSubScreenConfig = false;
                         }
 
-                        await _viewModel.Display.PersistGeneralSettingsAsync();
+                        await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
+                        ApplyDisplayStateToUi();
                     };
                 }
 
@@ -269,63 +203,53 @@ namespace LazyBootstrap.Views
                 _isDisplayLayoutInitialized = true;
             }
 
-            ApplyDisplayViewModelStateToUi();
+            ApplyDisplayStateToUi();
         }
 
         private bool ShouldSkipDisplayLayoutInteraction()
         {
-            return _isLoadingSettings || _viewModel?.Display == null;
+            return _isLoadingSettings;
         }
 
         private void SyncMainSelectionFromUi()
         {
-            if (_viewModel?.Display == null)
-            {
-                return;
-            }
-
-            _viewModel.Display.SelectedMainDisplay = GetSelectedDisplayOption(MainScreenComboBox);
-            _viewModel.Display.SelectedMainRotation = GetSelectedRotationOption(RotationComboBox);
-            _viewModel.Display.SelectedMainResolution = GetSelectedComboBoxText(MainResolutionComboBox);
-            _viewModel.Display.SelectedMainRefreshRate = GetSelectedComboBoxText(MainRefreshRateComboBox);
+            _displayState.SelectedMainDisplay = GetSelectedDisplayOption(MainScreenComboBox);
+            _displayState.SelectedMainRotation = GetSelectedRotationOption(RotationComboBox);
+            _displayState.SelectedMainResolution = GetSelectedComboBoxText(MainResolutionComboBox);
+            _displayState.SelectedMainRefreshRate = GetSelectedComboBoxText(MainRefreshRateComboBox);
         }
 
         private void SyncSubSelectionFromUi()
         {
-            if (_viewModel?.Display == null)
-            {
-                return;
-            }
-
-            _viewModel.Display.SelectedSubDisplay = GetSelectedDisplayOption(SubScreenComboBox);
-            _viewModel.Display.SelectedSubRotation = GetSelectedRotationOption(SubRotationComboBox);
-            _viewModel.Display.SelectedSubResolution = GetSelectedComboBoxText(SubResolutionComboBox);
-            _viewModel.Display.SelectedSubRefreshRate = GetSelectedComboBoxText(SubRefreshRateComboBox);
+            _displayState.SelectedSubDisplay = GetSelectedDisplayOption(SubScreenComboBox);
+            _displayState.SelectedSubRotation = GetSelectedRotationOption(SubRotationComboBox);
+            _displayState.SelectedSubResolution = GetSelectedComboBoxText(SubResolutionComboBox);
+            _displayState.SelectedSubRefreshRate = GetSelectedComboBoxText(SubRefreshRateComboBox);
         }
 
         private DisplayChoiceOption GetSelectedDisplayOption(ComboBox comboBox)
         {
-            if (_viewModel?.Display == null || comboBox == null)
+            if (comboBox == null)
             {
                 return null;
             }
 
             int selectedIndex = comboBox.SelectedIndex;
-            return selectedIndex >= 0 && selectedIndex < _viewModel.Display.Displays.Count
-                ? _viewModel.Display.Displays[selectedIndex]
+            return selectedIndex >= 0 && selectedIndex < _displayState.Displays.Count
+                ? _displayState.Displays[selectedIndex]
                 : null;
         }
 
         private RotationOption GetSelectedRotationOption(ComboBox comboBox)
         {
-            if (_viewModel?.Display == null || comboBox == null)
+            if (comboBox == null)
             {
                 return null;
             }
 
             int selectedIndex = comboBox.SelectedIndex;
-            return selectedIndex >= 0 && selectedIndex < _viewModel.Display.Rotations.Count
-                ? _viewModel.Display.Rotations[selectedIndex]
+            return selectedIndex >= 0 && selectedIndex < _displayState.Rotations.Count
+                ? _displayState.Rotations[selectedIndex]
                 : null;
         }
 
@@ -334,78 +258,73 @@ namespace LazyBootstrap.Views
             return comboBox?.SelectedItem?.ToString() ?? string.Empty;
         }
 
-        private void ApplyDisplayViewModelStateToUi()
+        private void ApplyDisplayStateToUi()
         {
-            if (_viewModel?.Display == null)
-            {
-                return;
-            }
-
             bool previousLoadingState = _isLoadingSettings;
             _isLoadingSettings = true;
 
             try
             {
-                ReplaceComboBoxItems(MainScreenComboBox, _viewModel.Display.Displays.Select(option => option.DisplayName));
-                ReplaceComboBoxItems(SubScreenComboBox, _viewModel.Display.Displays.Select(option => option.DisplayName));
-                ReplaceComboBoxItems(RotationComboBox, _viewModel.Display.Rotations.Select(option => option.DisplayName));
-                ReplaceComboBoxItems(SubRotationComboBox, _viewModel.Display.Rotations.Select(option => option.DisplayName));
-                ReplaceComboBoxItems(MainResolutionComboBox, _viewModel.Display.MainResolutions);
-                ReplaceComboBoxItems(SubResolutionComboBox, _viewModel.Display.SubResolutions);
-                ReplaceComboBoxItems(MainRefreshRateComboBox, _viewModel.Display.MainRefreshRates);
-                ReplaceComboBoxItems(SubRefreshRateComboBox, _viewModel.Display.SubRefreshRates);
+                ReplaceComboBoxItems(MainScreenComboBox, _displayState.Displays.Select(option => option.DisplayName));
+                ReplaceComboBoxItems(SubScreenComboBox, _displayState.Displays.Select(option => option.DisplayName));
+                ReplaceComboBoxItems(RotationComboBox, _displayState.Rotations.Select(option => option.DisplayName));
+                ReplaceComboBoxItems(SubRotationComboBox, _displayState.Rotations.Select(option => option.DisplayName));
+                ReplaceComboBoxItems(MainResolutionComboBox, _displayState.MainResolutions);
+                ReplaceComboBoxItems(SubResolutionComboBox, _displayState.SubResolutions);
+                ReplaceComboBoxItems(MainRefreshRateComboBox, _displayState.MainRefreshRates);
+                ReplaceComboBoxItems(SubRefreshRateComboBox, _displayState.SubRefreshRates);
 
                 if (DisplayConfigEnabledToggleSwitch != null)
                 {
-                    DisplayConfigEnabledToggleSwitch.IsChecked = _viewModel.Display.IsDisplayConfigurationEnabled;
+                    DisplayConfigEnabledToggleSwitch.IsChecked = _displayState.IsDisplayConfigurationEnabled;
                 }
 
                 if (DisplayModeComboBox != null)
                 {
-                    DisplayModeComboBox.SelectedIndex = _viewModel.Display.IsDualDisplay ? 1 : 0;
+                    DisplayModeComboBox.SelectedIndex = _displayState.IsDualDisplay ? 1 : 0;
                 }
 
                 if (ExitRestoreToggleSwitch != null)
                 {
-                    ExitRestoreToggleSwitch.IsChecked = _viewModel.Display.ExitRestore;
+                    ExitRestoreToggleSwitch.IsChecked = _displayState.ExitRestore;
                 }
 
-                SelectComboBoxIndex(MainScreenComboBox, GetOptionIndex(_viewModel.Display.Displays, _viewModel.Display.SelectedMainDisplay));
-                SelectComboBoxIndex(SubScreenComboBox, GetOptionIndex(_viewModel.Display.Displays, _viewModel.Display.SelectedSubDisplay));
-                SelectComboBoxIndex(RotationComboBox, GetOptionIndex(_viewModel.Display.Rotations, _viewModel.Display.SelectedMainRotation));
-                SelectComboBoxIndex(SubRotationComboBox, GetOptionIndex(_viewModel.Display.Rotations, _viewModel.Display.SelectedSubRotation));
+                SelectComboBoxIndex(MainScreenComboBox, GetOptionIndex(_displayState.Displays, _displayState.SelectedMainDisplay));
+                SelectComboBoxIndex(SubScreenComboBox, GetOptionIndex(_displayState.Displays, _displayState.SelectedSubDisplay));
+                SelectComboBoxIndex(RotationComboBox, GetOptionIndex(_displayState.Rotations, _displayState.SelectedMainRotation));
+                SelectComboBoxIndex(SubRotationComboBox, GetOptionIndex(_displayState.Rotations, _displayState.SelectedSubRotation));
 
-                SelectComboBoxItem(MainResolutionComboBox, _viewModel.Display.SelectedMainResolution);
-                SelectComboBoxItem(SubResolutionComboBox, _viewModel.Display.SelectedSubResolution);
-                SelectComboBoxItem(MainRefreshRateComboBox, _viewModel.Display.SelectedMainRefreshRate);
-                SelectComboBoxItem(SubRefreshRateComboBox, _viewModel.Display.SelectedSubRefreshRate);
+                SelectComboBoxItem(MainResolutionComboBox, _displayState.SelectedMainResolution);
+                SelectComboBoxItem(SubResolutionComboBox, _displayState.SelectedSubResolution);
+                SelectComboBoxItem(MainRefreshRateComboBox, _displayState.SelectedMainRefreshRate);
+                SelectComboBoxItem(SubRefreshRateComboBox, _displayState.SelectedSubRefreshRate);
 
                 if (MainOutputInfoTextBlock != null)
                 {
-                    MainOutputInfoTextBlock.Text = _viewModel.Display.MainOutputInfo;
+                    MainOutputInfoTextBlock.Text = _displayState.MainOutputInfo;
                 }
 
                 if (SubOutputInfoTextBlock != null)
                 {
-                    SubOutputInfoTextBlock.Text = _viewModel.Display.SubOutputInfo;
+                    SubOutputInfoTextBlock.Text = _displayState.SubOutputInfo;
                 }
 
                 if (MainStartupInfoTextBlock != null)
                 {
-                    MainStartupInfoTextBlock.Text = _viewModel.Display.MainStartupInfo;
+                    MainStartupInfoTextBlock.Text = _displayState.MainStartupInfo;
                 }
 
                 if (SubStartupInfoTextBlock != null)
                 {
-                    SubStartupInfoTextBlock.Text = _viewModel.Display.SubStartupInfo;
+                    SubStartupInfoTextBlock.Text = _displayState.SubStartupInfo;
                 }
 
-                ToolTip.SetTip(MainResolutionComboBox, string.IsNullOrWhiteSpace(_viewModel.Display.MainDiagnosticsTooltip) ? null : _viewModel.Display.MainDiagnosticsTooltip);
-                ToolTip.SetTip(MainRefreshRateComboBox, string.IsNullOrWhiteSpace(_viewModel.Display.MainDiagnosticsTooltip) ? null : _viewModel.Display.MainDiagnosticsTooltip);
-                ToolTip.SetTip(SubResolutionComboBox, string.IsNullOrWhiteSpace(_viewModel.Display.SubDiagnosticsTooltip) ? null : _viewModel.Display.SubDiagnosticsTooltip);
-                ToolTip.SetTip(SubRefreshRateComboBox, string.IsNullOrWhiteSpace(_viewModel.Display.SubDiagnosticsTooltip) ? null : _viewModel.Display.SubDiagnosticsTooltip);
+                ToolTip.SetTip(MainResolutionComboBox, string.IsNullOrWhiteSpace(_displayState.MainDiagnosticsTooltip) ? null : _displayState.MainDiagnosticsTooltip);
+                ToolTip.SetTip(MainRefreshRateComboBox, string.IsNullOrWhiteSpace(_displayState.MainDiagnosticsTooltip) ? null : _displayState.MainDiagnosticsTooltip);
+                ToolTip.SetTip(SubResolutionComboBox, string.IsNullOrWhiteSpace(_displayState.SubDiagnosticsTooltip) ? null : _displayState.SubDiagnosticsTooltip);
+                ToolTip.SetTip(SubRefreshRateComboBox, string.IsNullOrWhiteSpace(_displayState.SubDiagnosticsTooltip) ? null : _displayState.SubDiagnosticsTooltip);
 
-                SelectDisplayTarget(_viewModel.Display.SelectedTarget);
+                SelectDisplayTarget(_displayState.SelectedTarget);
                 UpdateDisplayLayoutControlsEnabled();
             }
             finally
@@ -475,10 +394,10 @@ namespace LazyBootstrap.Views
 
         private void UpdateDisplayLayoutControlsEnabled()
         {
-            bool enabled = _viewModel?.Display?.IsDisplayConfigurationEnabled == true;
-            bool isDualDisplay = _viewModel?.Display?.IsDualDisplay == true;
+            bool enabled = _displayState.IsDisplayConfigurationEnabled;
+            bool isDualDisplay = _displayState.IsDualDisplay;
             bool subEnabled = enabled && isDualDisplay;
-            var selectedTarget = _viewModel?.Display?.SelectedTarget ?? global::LazyBootstrap.Models.DisplaySelectionTarget.None;
+            var selectedTarget = _displayState.SelectedTarget;
 
             if (DisplayConfigDisabledMask != null)
             {
@@ -559,7 +478,7 @@ namespace LazyBootstrap.Views
 
         private void SelectDisplayTarget(DisplaySelectionTarget target)
         {
-            bool isDualDisplay = _viewModel?.Display?.IsDualDisplay == true;
+            bool isDualDisplay = _displayState.IsDualDisplay;
             if (target == DisplaySelectionTarget.Sub && !isDualDisplay)
             {
                 target = DisplaySelectionTarget.None;

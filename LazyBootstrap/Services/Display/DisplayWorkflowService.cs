@@ -11,43 +11,27 @@ using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Display
 {
-    public interface IDisplayWorkflowService
-    {
-        Task WarmDeferredAsync(DisplayConfigurationPageViewModel viewModel);
 
-        Task PersistGeneralSettingsAsync(DisplayConfigurationPageViewModel viewModel);
-
-        Task HandleConfigurationChangedAsync(DisplayConfigurationPageViewModel viewModel, bool refreshMainOptions, bool refreshSubOptions);
-
-        Task PreviewDisplaySettingsAsync(DisplayConfigurationPageViewModel viewModel);
-
-        Task OpenTouchPanelAsync();
-
-        bool TryApplyForLaunch(DisplayConfigurationPageViewModel viewModel, out Dictionary<string, DisplayState> restoreStates, out List<string> messages);
-
-        int RestoreDisplayStates(IReadOnlyDictionary<string, DisplayState> restoreStates, List<string> messages);
-    }
-
-    internal sealed class DisplayWorkflowService : IDisplayWorkflowService
+    public sealed class DisplayWorkflowService
     {
         private const string MainMonitorOptionName = "mainmonitor";
         private const string SubMonitorOptionName = "sdvxsubmonitor";
 
-        private readonly IConfigHandler _configHandler;
-        private readonly ILauncherPaths _paths;
-        private readonly ISpiceConfigFileService _spiceConfigFileService;
-        private readonly IDisplayConfigurationService _displayConfigurationService;
-        private readonly IDisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator;
-        private readonly IUiInteractionService _uiInteractionService;
+        private readonly ConfigHandler _configHandler;
+        private readonly LauncherPaths _paths;
+        private readonly SpiceConfigFileService _spiceConfigFileService;
+        private readonly WindowsDisplayConfigurationService _displayConfigurationService;
+        private readonly DisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator;
+        private readonly UiInteractionService _uiInteractionService;
         private readonly ILogger<DisplayWorkflowService> _logger;
 
         public DisplayWorkflowService(
-            IConfigHandler configHandler,
-            ILauncherPaths paths,
-            ISpiceConfigFileService spiceConfigFileService,
-            IDisplayConfigurationService displayConfigurationService,
-            IDisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
-            IUiInteractionService uiInteractionService,
+            ConfigHandler configHandler,
+            LauncherPaths paths,
+            SpiceConfigFileService spiceConfigFileService,
+            WindowsDisplayConfigurationService displayConfigurationService,
+            DisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
+            UiInteractionService uiInteractionService,
             ILogger<DisplayWorkflowService> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
@@ -59,9 +43,9 @@ namespace LazyBootstrap.Services.Display
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task WarmDeferredAsync(DisplayConfigurationPageViewModel viewModel)
+        public Task WarmDeferredAsync(DisplayConfigurationSnapshot state)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(state);
 
             var discoveryResult = _displayConfigurationService.GetDisplays();
             if (!discoveryResult.Succeeded)
@@ -69,102 +53,102 @@ namespace LazyBootstrap.Services.Display
                 _uiInteractionService.ShowWarningToast("读取显示器列表失败", discoveryResult.ErrorMessage);
             }
 
-            viewModel.RunSilently(() =>
+            state.RunSilently(() =>
             {
-                viewModel.Displays.Clear();
+                state.Displays.Clear();
                 foreach (var display in discoveryResult.Displays)
                 {
-                    viewModel.Displays.Add(new DisplayChoiceOption(display, BuildDisplayLabel(display)));
+                    state.Displays.Add(new DisplayChoiceOption(display, BuildDisplayLabel(display)));
                 }
 
-                EnsureRotationOptions(viewModel);
+                EnsureRotationOptions(state);
 
-                viewModel.IsDisplayConfigurationEnabled = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", false);
-                viewModel.IsDualDisplay = !string.Equals(_configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mode", "single"), "single", StringComparison.OrdinalIgnoreCase);
-                viewModel.ExitRestore = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "exitrestore", true);
+                state.IsDisplayConfigurationEnabled = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", false);
+                state.IsDualDisplay = !string.Equals(_configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mode", "single"), "single", StringComparison.OrdinalIgnoreCase);
+                state.ExitRestore = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "exitrestore", true);
 
                 int mainIndex = ReadInt(AppConfigBootstrapper.DisplaySectionName, "mainscreen", 0);
-                int subIndex = ReadInt(AppConfigBootstrapper.DisplaySectionName, "subscreen", Math.Min(1, Math.Max(0, viewModel.Displays.Count - 1)));
+                int subIndex = ReadInt(AppConfigBootstrapper.DisplaySectionName, "subscreen", Math.Min(1, Math.Max(0, state.Displays.Count - 1)));
                 int mainRotation = NormalizeRotationValue(ReadInt(AppConfigBootstrapper.DisplaySectionName, "mainrotation", 0));
                 int subRotation = NormalizeRotationValue(ReadInt(AppConfigBootstrapper.DisplaySectionName, "subrotation", 0));
 
-                viewModel.SelectedMainDisplay = GetDisplayByIndex(viewModel, mainIndex);
-                viewModel.SelectedSubDisplay = GetDisplayByIndex(viewModel, subIndex);
-                viewModel.SelectedMainRotation = viewModel.Rotations.FirstOrDefault(option => option.Angle == mainRotation) ?? viewModel.Rotations.FirstOrDefault();
-                viewModel.SelectedSubRotation = viewModel.Rotations.FirstOrDefault(option => option.Angle == subRotation) ?? viewModel.Rotations.FirstOrDefault();
-                viewModel.SelectedMainResolution = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mainresolution", string.Empty);
-                viewModel.SelectedSubResolution = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "subresolution", string.Empty);
-                viewModel.SelectedMainRefreshRate = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mainrefresh", string.Empty);
-                viewModel.SelectedSubRefreshRate = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "subrefresh", string.Empty);
-                viewModel.SelectedTarget = DisplaySelectionTarget.None;
-                viewModel.ShowNoScreenSelected = true;
-                viewModel.ShowMainScreenConfig = false;
-                viewModel.ShowSubScreenConfig = false;
+                state.SelectedMainDisplay = GetDisplayByIndex(state, mainIndex);
+                state.SelectedSubDisplay = GetDisplayByIndex(state, subIndex);
+                state.SelectedMainRotation = state.Rotations.FirstOrDefault(option => option.Angle == mainRotation) ?? state.Rotations.FirstOrDefault();
+                state.SelectedSubRotation = state.Rotations.FirstOrDefault(option => option.Angle == subRotation) ?? state.Rotations.FirstOrDefault();
+                state.SelectedMainResolution = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mainresolution", string.Empty);
+                state.SelectedSubResolution = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "subresolution", string.Empty);
+                state.SelectedMainRefreshRate = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mainrefresh", string.Empty);
+                state.SelectedSubRefreshRate = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "subrefresh", string.Empty);
+                state.SelectedTarget = DisplaySelectionTarget.None;
+                state.ShowNoScreenSelected = true;
+                state.ShowMainScreenConfig = false;
+                state.ShowSubScreenConfig = false;
             });
 
-            return HandleConfigurationChangedAsync(viewModel, refreshMainOptions: true, refreshSubOptions: true);
+            return HandleConfigurationChangedAsync(state, refreshMainOptions: true, refreshSubOptions: true);
         }
 
-        public Task PersistGeneralSettingsAsync(DisplayConfigurationPageViewModel viewModel)
+        public Task PersistGeneralSettingsAsync(DisplayConfigurationSnapshot state)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(state);
 
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", viewModel.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mode", viewModel.IsDualDisplay ? "dual" : "single");
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "exitrestore", viewModel.ExitRestore.ToString().ToLowerInvariant());
-            SyncSpiceMonitorOverrides(viewModel);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", state.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mode", state.IsDualDisplay ? "dual" : "single");
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "exitrestore", state.ExitRestore.ToString().ToLowerInvariant());
+            SyncSpiceMonitorOverrides(state);
             return Task.CompletedTask;
         }
 
-        public Task HandleConfigurationChangedAsync(DisplayConfigurationPageViewModel viewModel, bool refreshMainOptions, bool refreshSubOptions)
+        public Task HandleConfigurationChangedAsync(DisplayConfigurationSnapshot state, bool refreshMainOptions, bool refreshSubOptions)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(state);
 
             try
             {
-                viewModel.RunSilently(() =>
+                state.RunSilently(() =>
                 {
                     if (refreshMainOptions)
                     {
                         var mainOptions = RefreshDisplayOptions(
-                            viewModel.SelectedMainDisplay,
-                            viewModel.SelectedMainRotation?.Angle ?? 0,
-                            viewModel.SelectedMainResolution,
-                            viewModel.SelectedMainRefreshRate);
-                        ReplaceCollection(viewModel.MainResolutions, mainOptions.Resolutions);
-                        ReplaceCollection(viewModel.MainRefreshRates, mainOptions.RefreshRates);
-                        viewModel.SelectedMainResolution = mainOptions.SelectedResolution;
-                        viewModel.SelectedMainRefreshRate = mainOptions.SelectedRefreshRate;
-                        viewModel.MainDiagnosticsTooltip = mainOptions.Tooltip;
+                            state.SelectedMainDisplay,
+                            state.SelectedMainRotation?.Angle ?? 0,
+                            state.SelectedMainResolution,
+                            state.SelectedMainRefreshRate);
+                        ReplaceCollection(state.MainResolutions, mainOptions.Resolutions);
+                        ReplaceCollection(state.MainRefreshRates, mainOptions.RefreshRates);
+                        state.SelectedMainResolution = mainOptions.SelectedResolution;
+                        state.SelectedMainRefreshRate = mainOptions.SelectedRefreshRate;
+                        state.MainDiagnosticsTooltip = mainOptions.Tooltip;
                     }
 
                     if (refreshSubOptions)
                     {
                         var subOptions = RefreshDisplayOptions(
-                            viewModel.SelectedSubDisplay,
-                            viewModel.SelectedSubRotation?.Angle ?? 0,
-                            viewModel.SelectedSubResolution,
-                            viewModel.SelectedSubRefreshRate);
-                        ReplaceCollection(viewModel.SubResolutions, subOptions.Resolutions);
-                        ReplaceCollection(viewModel.SubRefreshRates, subOptions.RefreshRates);
-                        viewModel.SelectedSubResolution = subOptions.SelectedResolution;
-                        viewModel.SelectedSubRefreshRate = subOptions.SelectedRefreshRate;
-                        viewModel.SubDiagnosticsTooltip = subOptions.Tooltip;
+                            state.SelectedSubDisplay,
+                            state.SelectedSubRotation?.Angle ?? 0,
+                            state.SelectedSubResolution,
+                            state.SelectedSubRefreshRate);
+                        ReplaceCollection(state.SubResolutions, subOptions.Resolutions);
+                        ReplaceCollection(state.SubRefreshRates, subOptions.RefreshRates);
+                        state.SelectedSubResolution = subOptions.SelectedResolution;
+                        state.SelectedSubRefreshRate = subOptions.SelectedRefreshRate;
+                        state.SubDiagnosticsTooltip = subOptions.Tooltip;
                     }
 
-                    if (!viewModel.IsDualDisplay && viewModel.SelectedTarget == DisplaySelectionTarget.Sub)
+                    if (!state.IsDualDisplay && state.SelectedTarget == DisplaySelectionTarget.Sub)
                     {
-                        viewModel.SelectedTarget = DisplaySelectionTarget.None;
-                        viewModel.ShowNoScreenSelected = true;
-                        viewModel.ShowMainScreenConfig = false;
-                        viewModel.ShowSubScreenConfig = false;
+                        state.SelectedTarget = DisplaySelectionTarget.None;
+                        state.ShowNoScreenSelected = true;
+                        state.ShowMainScreenConfig = false;
+                        state.ShowSubScreenConfig = false;
                     }
 
-                    UpdateDisplayInfo(viewModel, true);
-                    UpdateDisplayInfo(viewModel, false);
+                    UpdateDisplayInfo(state, true);
+                    UpdateDisplayInfo(state, false);
                 });
 
-                PersistSelectionState(viewModel);
+                PersistSelectionState(state);
             }
             catch (Exception ex)
             {
@@ -175,24 +159,24 @@ namespace LazyBootstrap.Services.Display
             return Task.CompletedTask;
         }
 
-        public async Task PreviewDisplaySettingsAsync(DisplayConfigurationPageViewModel viewModel)
+        public async Task PreviewDisplaySettingsAsync(DisplayConfigurationSnapshot state)
         {
-            ArgumentNullException.ThrowIfNull(viewModel);
+            ArgumentNullException.ThrowIfNull(state);
 
-            if (!viewModel.IsDisplayConfigurationEnabled)
+            if (!state.IsDisplayConfigurationEnabled)
             {
                 _uiInteractionService.ShowWarningToast("显示器预览", "显示配置未启用，无法预览。");
                 return;
             }
 
-            if (!TryApplyForLaunch(viewModel, out var restoreStates, out var messages))
+            if (!TryApplyForLaunch(state, out var restoreStates, out var messages))
             {
                 if (messages.Count > 0)
                 {
                     _uiInteractionService.ShowWarningToast("显示器预览", BuildDiagnosticsMessage(messages));
                 }
 
-                await HandleConfigurationChangedAsync(viewModel, refreshMainOptions: false, refreshSubOptions: false);
+                await HandleConfigurationChangedAsync(state, refreshMainOptions: false, refreshSubOptions: false);
                 return;
             }
 
@@ -218,7 +202,7 @@ namespace LazyBootstrap.Services.Display
                     _uiInteractionService.ShowInfoToast("显示器还原", restored > 0 ? $"已还原 {restored} 个显示器设置。" : "未还原任何显示器设置。");
                 }
 
-                await HandleConfigurationChangedAsync(viewModel, refreshMainOptions: false, refreshSubOptions: false);
+                await HandleConfigurationChangedAsync(state, refreshMainOptions: false, refreshSubOptions: false);
                 return;
             }
 
@@ -239,23 +223,23 @@ namespace LazyBootstrap.Services.Display
             return Task.CompletedTask;
         }
 
-        public bool TryApplyForLaunch(DisplayConfigurationPageViewModel viewModel, out Dictionary<string, DisplayState> restoreStates, out List<string> messages)
+        public bool TryApplyForLaunch(DisplayConfigurationSnapshot state, out Dictionary<string, DisplayState> restoreStates, out List<string> messages)
         {
             restoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
             messages = new List<string>();
 
-            if (!viewModel.IsDisplayConfigurationEnabled)
+            if (!state.IsDisplayConfigurationEnabled)
             {
                 return true;
             }
 
             var requests = new List<DisplaySettingsRequest>();
             bool allValid = true;
-            allValid &= TryBuildRequest(viewModel.SelectedMainDisplay, viewModel.SelectedMainRotation?.Angle ?? 0, viewModel.SelectedMainResolution, viewModel.SelectedMainRefreshRate, "主显示器", requests, messages);
+            allValid &= TryBuildRequest(state.SelectedMainDisplay, state.SelectedMainRotation?.Angle ?? 0, state.SelectedMainResolution, state.SelectedMainRefreshRate, "主显示器", requests, messages);
 
-            if (viewModel.IsDualDisplay)
+            if (state.IsDualDisplay)
             {
-                allValid &= TryBuildRequest(viewModel.SelectedSubDisplay, viewModel.SelectedSubRotation?.Angle ?? 0, viewModel.SelectedSubResolution, viewModel.SelectedSubRefreshRate, "副显示器", requests, messages);
+                allValid &= TryBuildRequest(state.SelectedSubDisplay, state.SelectedSubRotation?.Angle ?? 0, state.SelectedSubResolution, state.SelectedSubRefreshRate, "副显示器", requests, messages);
             }
 
             if (!allValid)
@@ -371,24 +355,24 @@ namespace LazyBootstrap.Services.Display
             target.Add(resolution);
         }
 
-        private void UpdateDisplayInfo(DisplayConfigurationPageViewModel viewModel, bool isMainTarget)
+        private void UpdateDisplayInfo(DisplayConfigurationSnapshot state, bool isMainTarget)
         {
-            var selectedDisplay = isMainTarget ? viewModel.SelectedMainDisplay : viewModel.SelectedSubDisplay;
-            var rotation = isMainTarget ? viewModel.SelectedMainRotation?.Angle ?? 0 : viewModel.SelectedSubRotation?.Angle ?? 0;
-            var resolution = isMainTarget ? viewModel.SelectedMainResolution : viewModel.SelectedSubResolution;
-            var refreshRate = isMainTarget ? viewModel.SelectedMainRefreshRate : viewModel.SelectedSubRefreshRate;
+            var selectedDisplay = isMainTarget ? state.SelectedMainDisplay : state.SelectedSubDisplay;
+            var rotation = isMainTarget ? state.SelectedMainRotation?.Angle ?? 0 : state.SelectedSubRotation?.Angle ?? 0;
+            var resolution = isMainTarget ? state.SelectedMainResolution : state.SelectedSubResolution;
+            var refreshRate = isMainTarget ? state.SelectedMainRefreshRate : state.SelectedSubRefreshRate;
 
             if (selectedDisplay?.Info == null)
             {
                 if (isMainTarget)
                 {
-                    viewModel.MainOutputInfo = "未知";
-                    viewModel.MainStartupInfo = "未设置";
+                    state.MainOutputInfo = "未知";
+                    state.MainStartupInfo = "未设置";
                 }
                 else
                 {
-                    viewModel.SubOutputInfo = "未知";
-                    viewModel.SubStartupInfo = "未设置";
+                    state.SubOutputInfo = "未知";
+                    state.SubStartupInfo = "未设置";
                 }
                 return;
             }
@@ -401,30 +385,30 @@ namespace LazyBootstrap.Services.Display
 
             if (isMainTarget)
             {
-                viewModel.MainOutputInfo = outputInfo;
-                viewModel.MainStartupInfo = startupInfo;
+                state.MainOutputInfo = outputInfo;
+                state.MainStartupInfo = startupInfo;
             }
             else
             {
-                viewModel.SubOutputInfo = outputInfo;
-                viewModel.SubStartupInfo = startupInfo;
+                state.SubOutputInfo = outputInfo;
+                state.SubStartupInfo = startupInfo;
             }
         }
 
-        private void PersistSelectionState(DisplayConfigurationPageViewModel viewModel)
+        private void PersistSelectionState(DisplayConfigurationSnapshot state)
         {
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", viewModel.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mode", viewModel.IsDualDisplay ? "dual" : "single");
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "exitrestore", viewModel.ExitRestore.ToString().ToLowerInvariant());
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainscreen", GetIndex(viewModel.Displays, viewModel.SelectedMainDisplay).ToString());
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subscreen", GetIndex(viewModel.Displays, viewModel.SelectedSubDisplay).ToString());
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainrotation", (viewModel.SelectedMainRotation?.Angle ?? 0).ToString());
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subrotation", (viewModel.SelectedSubRotation?.Angle ?? 0).ToString());
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainresolution", viewModel.SelectedMainResolution ?? string.Empty);
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subresolution", viewModel.SelectedSubResolution ?? string.Empty);
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainrefresh", viewModel.SelectedMainRefreshRate ?? string.Empty);
-            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subrefresh", viewModel.SelectedSubRefreshRate ?? string.Empty);
-            SyncSpiceMonitorOverrides(viewModel);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", state.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mode", state.IsDualDisplay ? "dual" : "single");
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "exitrestore", state.ExitRestore.ToString().ToLowerInvariant());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainscreen", GetIndex(state.Displays, state.SelectedMainDisplay).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subscreen", GetIndex(state.Displays, state.SelectedSubDisplay).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainrotation", (state.SelectedMainRotation?.Angle ?? 0).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subrotation", (state.SelectedSubRotation?.Angle ?? 0).ToString());
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainresolution", state.SelectedMainResolution ?? string.Empty);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subresolution", state.SelectedSubResolution ?? string.Empty);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "mainrefresh", state.SelectedMainRefreshRate ?? string.Empty);
+            _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "subrefresh", state.SelectedSubRefreshRate ?? string.Empty);
+            SyncSpiceMonitorOverrides(state);
         }
 
         private string GetActiveSpiceXmlPathForMonitorSync()
@@ -436,16 +420,16 @@ namespace LazyBootstrap.Services.Display
             return _paths.ResolveSpiceXmlPath(useSystem);
         }
 
-        private void SyncSpiceMonitorOverrides(DisplayConfigurationPageViewModel viewModel)
+        private void SyncSpiceMonitorOverrides(DisplayConfigurationSnapshot state)
         {
             string mainMonitorValue = string.Empty;
             string subMonitorValue = string.Empty;
 
-            if (viewModel.IsDisplayConfigurationEnabled)
+            if (state.IsDisplayConfigurationEnabled)
             {
-                mainMonitorValue = viewModel.SelectedMainDisplay?.Info?.DeviceName ?? string.Empty;
-                subMonitorValue = viewModel.IsDualDisplay
-                    ? viewModel.SelectedSubDisplay?.Info?.DeviceName ?? string.Empty
+                mainMonitorValue = state.SelectedMainDisplay?.Info?.DeviceName ?? string.Empty;
+                subMonitorValue = state.IsDualDisplay
+                    ? state.SelectedSubDisplay?.Info?.DeviceName ?? string.Empty
                     : string.Empty;
             }
 
@@ -503,32 +487,32 @@ namespace LazyBootstrap.Services.Display
             }
         }
 
-        private static void EnsureRotationOptions(DisplayConfigurationPageViewModel viewModel)
+        private static void EnsureRotationOptions(DisplayConfigurationSnapshot state)
         {
-            if (viewModel.Rotations.Count > 0)
+            if (state.Rotations.Count > 0)
             {
                 return;
             }
 
-            viewModel.Rotations.Add(new RotationOption(0));
-            viewModel.Rotations.Add(new RotationOption(90));
-            viewModel.Rotations.Add(new RotationOption(180));
-            viewModel.Rotations.Add(new RotationOption(270));
+            state.Rotations.Add(new RotationOption(0));
+            state.Rotations.Add(new RotationOption(90));
+            state.Rotations.Add(new RotationOption(180));
+            state.Rotations.Add(new RotationOption(270));
         }
 
-        private static DisplayChoiceOption GetDisplayByIndex(DisplayConfigurationPageViewModel viewModel, int index)
+        private static DisplayChoiceOption GetDisplayByIndex(DisplayConfigurationSnapshot state, int index)
         {
-            if (viewModel.Displays.Count == 0)
+            if (state.Displays.Count == 0)
             {
                 return null;
             }
 
-            if (index < 0 || index >= viewModel.Displays.Count)
+            if (index < 0 || index >= state.Displays.Count)
             {
                 index = 0;
             }
 
-            return viewModel.Displays[index];
+            return state.Displays[index];
         }
 
         private static int GetIndex(System.Collections.ObjectModel.ObservableCollection<DisplayChoiceOption> options, DisplayChoiceOption selected)
