@@ -1,5 +1,53 @@
 namespace LazyBootstrap.Models
 {
+    public enum ShellPage
+    {
+        Launch = 0,
+        Settings = 1,
+        Display = 2,
+        Tools = 3,
+        Update = 4,
+        Info = 5,
+        About = 6
+    }
+
+    internal sealed record LauncherRuntimeContext(
+        string BaseDirectoryPath,
+        string ApplicationDirectoryPath,
+        string ConfigFilePath);
+
+    public sealed class ServerPresetItem
+    {
+        public string Name { get; set; } = string.Empty;
+
+        public string ServerUrl { get; set; } = string.Empty;
+
+        public string PcbId { get; set; } = string.Empty;
+
+        public override string ToString() => Name;
+    }
+
+    internal enum WindowsDefenderExclusionStatus
+    {
+        Added,
+        AlreadyExcluded,
+        Skipped,
+        Failed
+    }
+
+    internal sealed class WindowsDefenderExclusionResult
+    {
+        public WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus status, string message)
+        {
+            Status = status;
+            Message = message ?? string.Empty;
+        }
+
+        public WindowsDefenderExclusionStatus Status { get; }
+
+        public string Message { get; }
+    }
+
     public enum DisplaySelectionTarget
     {
         None,
@@ -19,10 +67,7 @@ namespace LazyBootstrap.Models
 
         public string Value { get; }
 
-        public override string ToString()
-        {
-            return DisplayName;
-        }
+        public override string ToString() => DisplayName;
     }
 
     public sealed class NetworkAdapterOption
@@ -40,10 +85,7 @@ namespace LazyBootstrap.Models
 
         public string SubnetMask { get; }
 
-        public override string ToString()
-        {
-            return DisplayName;
-        }
+        public override string ToString() => DisplayName;
     }
 
     public sealed class DisplayChoiceOption
@@ -58,10 +100,7 @@ namespace LazyBootstrap.Models
 
         public string DisplayName { get; }
 
-        public override string ToString()
-        {
-            return DisplayName;
-        }
+        public override string ToString() => DisplayName;
     }
 
     public sealed class RotationOption
@@ -89,9 +128,6 @@ namespace LazyBootstrap.Models
             };
         }
 
-        public override string ToString()
-        {
-            return DisplayName;
-        }
+        public override string ToString() => DisplayName;
     }
 }
