@@ -94,8 +94,8 @@ namespace LazyBootstrap.Views
 
                     case nameof(SettingsPageViewModel.NoAsphyxia):
                     case nameof(SettingsPageViewModel.UseSystemSpiceConfig):
-                    case nameof(SettingsPageViewModel.CompatibilityLayerEnabled):
-                    case nameof(SettingsPageViewModel.CompatibilityRenderMode):
+                    case nameof(SettingsPageViewModel.GpuCompatLayerEnabled):
+                    case nameof(SettingsPageViewModel.GpuCompatLayerRenderMode):
                         ApplyStartupSettingsViewModelStateToUi();
                         break;
 
@@ -188,7 +188,7 @@ namespace LazyBootstrap.Views
                     UseSystemSpiceConfigToggleSwitch.IsChecked = _viewModel.Settings.UseSystemSpiceConfig;
                 }
 
-                ApplyCompatibilityStateFromViewModel();
+                UpdateGpuCompatLayerStatus();
                 ApplyServerPresetViewModelStateToUi();
                 ApplySettingsAvailabilityStateToUi();
             }
@@ -217,7 +217,7 @@ namespace LazyBootstrap.Views
                 ApplyAsioDriverChoicesFromViewModel();
                 ApplyNetworkAdapterStateFromViewModel();
                 ApplyServerPresetViewModelStateToUi();
-                ApplyCompatibilityStateFromViewModel();
+                UpdateGpuCompatLayerStatus();
             }
             finally
             {
@@ -411,18 +411,18 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private async void OnCompatLayerToggleChanged(object sender, RoutedEventArgs e)
+        private async void OnGpuCompatLayerToggleChanged(object sender, RoutedEventArgs e)
         {
             try
             {
-                if (_isLoadingSettings || _isUpdatingCompatUi)
+                if (_isLoadingSettings || _isUpdatingGpuCompatLayerUi)
                 {
                     return;
                 }
 
-                _viewModel.Settings.CompatibilityLayerEnabled = CompatLayerToggleSwitch?.IsChecked == true;
-                await _settingsWorkflowService.PersistCompatibilityToggleAsync(_viewModel.Settings);
-                ApplyCompatibilityStateFromViewModel();
+                _viewModel.Settings.GpuCompatLayerEnabled = GpuCompatLayerToggleSwitch?.IsChecked == true;
+                await _settingsWorkflowService.PersistGpuCompatLayerToggleAsync(_viewModel.Settings);
+                UpdateGpuCompatLayerStatus();
             }
             catch (Exception ex)
             {
@@ -430,67 +430,48 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private void UpdateCompatLayerStatus()
+        private void UpdateGpuCompatLayerStatus()
         {
-            bool modulesDirectoryExists = HasCompatModulesDirectory();
-            bool compatibilityEnabled = _viewModel.Settings.CompatibilityLayerEnabled;
-            UpdateCompatRenderModeBusyState(compatibilityEnabled);
+            bool modulesDirectoryExists = _settingsWorkflowService.HasGpuCompatLayerModulesDirectory();
+            bool gpuCompatLayerEnabled = _viewModel.Settings.GpuCompatLayerEnabled;
 
-            if (CompatStatusTextBlock != null)
+            if (GpuCompatLayerRenderModeBusyArea != null)
             {
-                if (!modulesDirectoryExists && !compatibilityEnabled)
+                GpuCompatLayerRenderModeBusyArea.IsBusy = gpuCompatLayerEnabled;
+            }
+
+            if (GpuCompatLayerStatusTextBlock != null)
+            {
+                if (!modulesDirectoryExists && !gpuCompatLayerEnabled)
                 {
-                    CompatStatusTextBlock.Text = "未找到modules目录，无法启用显卡兼容层。";
-                    CompatStatusTextBlock.IsVisible = true;
+                    GpuCompatLayerStatusTextBlock.Text = "未找到modules目录，无法启用显卡兼容层。";
+                    GpuCompatLayerStatusTextBlock.IsVisible = true;
                 }
                 else
                 {
-                    CompatStatusTextBlock.Text = string.Empty;
-                    CompatStatusTextBlock.IsVisible = false;
+                    GpuCompatLayerStatusTextBlock.Text = string.Empty;
+                    GpuCompatLayerStatusTextBlock.IsVisible = false;
                 }
             }
 
-            _isUpdatingCompatUi = true;
+            _isUpdatingGpuCompatLayerUi = true;
             try
             {
-                if (CompatLayerToggleSwitch != null)
+                if (GpuCompatLayerToggleSwitch != null)
                 {
-                    CompatLayerToggleSwitch.IsChecked = compatibilityEnabled;
-                    CompatLayerToggleSwitch.IsEnabled = compatibilityEnabled || modulesDirectoryExists;
+                    GpuCompatLayerToggleSwitch.IsChecked = gpuCompatLayerEnabled;
+                    GpuCompatLayerToggleSwitch.IsEnabled = gpuCompatLayerEnabled || modulesDirectoryExists;
                 }
 
-                bool chipsEnabled = !compatibilityEnabled && modulesDirectoryExists;
-                if (CompatDx9on12RadioButton != null) CompatDx9on12RadioButton.IsEnabled = chipsEnabled;
-                if (CompatDx9on12ExternalRadioButton != null) CompatDx9on12ExternalRadioButton.IsEnabled = chipsEnabled;
-                if (CompatDxvkRadioButton != null) CompatDxvkRadioButton.IsEnabled = chipsEnabled;
+                bool chipsEnabled = !gpuCompatLayerEnabled && modulesDirectoryExists;
+                if (GpuCompatLayerDx9on12RadioButton != null) GpuCompatLayerDx9on12RadioButton.IsEnabled = chipsEnabled;
+                if (GpuCompatLayerDx9on12ExternalRadioButton != null) GpuCompatLayerDx9on12ExternalRadioButton.IsEnabled = chipsEnabled;
+                if (GpuCompatLayerDxvkRadioButton != null) GpuCompatLayerDxvkRadioButton.IsEnabled = chipsEnabled;
             }
             finally
             {
-                _isUpdatingCompatUi = false;
+                _isUpdatingGpuCompatLayerUi = false;
             }
-        }
-
-        private void UpdateCompatRenderModeBusyState(bool isBusy)
-        {
-            if (CompatRenderModeBusyArea != null)
-            {
-                CompatRenderModeBusyArea.IsBusy = isBusy;
-            }
-        }
-
-        private void ApplyCompatibilityStateFromViewModel()
-        {
-            UpdateCompatLayerStatus();
-        }
-
-        private string GetCompatModulesDirectoryPath()
-        {
-            return Path.Combine(GetContentsDirectoryPath(), "modules");
-        }
-
-        private bool HasCompatModulesDirectory()
-        {
-            return Directory.Exists(GetCompatModulesDirectoryPath());
         }
 
         private async void OnServerPresetSelectionChanged(object sender, SelectionChangedEventArgs e)

@@ -40,7 +40,7 @@ namespace LazyBootstrap.Views
 
         private bool _isSettingsBusy;
         private bool _isSyncingModel;
-        private bool _isUpdatingCompatUi;
+        private bool _isUpdatingGpuCompatLayerUi;
         private bool _isUpdatingServerPresetUi;
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
@@ -428,7 +428,7 @@ namespace LazyBootstrap.Views
 
         private void InitializeCustomComponents()
         {
-            InitializeCompatibilityControls();
+            InitializeGpuCompatLayerControls();
             InitializeNetworkBindings();
             InitializeStartupSettingsBindings();
             InitializeSpiceSettingsBindings();
@@ -437,12 +437,12 @@ namespace LazyBootstrap.Views
             FinalizeInitialViewState();
         }
 
-        private void InitializeCompatibilityControls()
+        private void InitializeGpuCompatLayerControls()
         {
-            if (CompatLayerToggleSwitch != null)
+            if (GpuCompatLayerToggleSwitch != null)
             {
-                CompatLayerToggleSwitch.IsCheckedChanged -= OnCompatLayerToggleChanged;
-                CompatLayerToggleSwitch.IsCheckedChanged += OnCompatLayerToggleChanged;
+                GpuCompatLayerToggleSwitch.IsCheckedChanged -= OnGpuCompatLayerToggleChanged;
+                GpuCompatLayerToggleSwitch.IsCheckedChanged += OnGpuCompatLayerToggleChanged;
             }
         }
 
@@ -631,7 +631,7 @@ namespace LazyBootstrap.Views
             UpdateStatusProgress(false);
 
             Closing += OnWindowClosing;
-            UpdateCompatLayerStatus();
+            UpdateGpuCompatLayerStatus();
         }
 
         private string GetContentsDirectoryPath()

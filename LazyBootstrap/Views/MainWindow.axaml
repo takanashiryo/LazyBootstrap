@@ -316,10 +316,10 @@
                                                     <StackPanel Spacing="8">
                                                         <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                             <TextBlock Text="启用显卡兼容层" VerticalAlignment="Center"/>
-                                                            <ToggleSwitch x:Name="CompatLayerToggleSwitch" Grid.Column="1"/>
+                                                            <ToggleSwitch x:Name="GpuCompatLayerToggleSwitch" Grid.Column="1"/>
                                                         </Grid>
                                                         <TextBlock Text="启用后会导入相关补丁并设置 spice2x" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-18,0,0"/>
-                                                        <suki:BusyArea x:Name="CompatRenderModeBusyArea" BusyText="兼容层已启动，请关闭以修改设置">
+                                                        <suki:BusyArea x:Name="GpuCompatLayerRenderModeBusyArea" BusyText="兼容层已启动，请关闭以修改设置">
                                                             <suki:BusyArea.Styles>
                                                                 <Style Selector="suki|BusyArea[IsBusy=False] /template/ DockPanel#LoadingBusyArea">
                                                                     <Setter Property="IsHitTestVisible" Value="False"/>
@@ -333,7 +333,7 @@
                                                                   Margin="0,2,0,0"
                                                                   ColumnDefinitions="*,*,*"
                                                                   ColumnSpacing="12">
-                                                                <RadioButton x:Name="CompatDx9on12RadioButton"
+                                                                <RadioButton x:Name="GpuCompatLayerDx9on12RadioButton"
                                                                              Grid.Column="0"
                                                                              HorizontalAlignment="Stretch"
                                                                              MinWidth="0"
@@ -341,8 +341,8 @@
                                                                              Padding="0"
                                                                              GroupName="CompatType"
                                                                              Classes="GigaChips"
-                                                                             IsChecked="{Binding Settings.IsCompatibilityDx9on12Selected}"
-                                                                             Command="{Binding Settings.SelectCompatibilityRenderModeCommand}"
+                                                                             IsChecked="{Binding Settings.IsGpuCompatLayerDx9on12Selected}"
+                                                                             Command="{Binding Settings.SelectGpuCompatLayerRenderModeCommand}"
                                                                              CommandParameter="dx9on12">
                                                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
                                                                         <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
@@ -350,7 +350,7 @@
                                                                         <TextBlock Text="最常用的模式" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
                                                                     </StackPanel>
                                                                 </RadioButton>
-                                                                <RadioButton x:Name="CompatDx9on12ExternalRadioButton"
+                                                                <RadioButton x:Name="GpuCompatLayerDx9on12ExternalRadioButton"
                                                                              Grid.Column="1"
                                                                              HorizontalAlignment="Stretch"
                                                                              MinWidth="0"
@@ -358,8 +358,8 @@
                                                                              Padding="0"
                                                                              GroupName="CompatType"
                                                                              Classes="GigaChips"
-                                                                             IsChecked="{Binding Settings.IsCompatibilityDx9on12ExternalSelected}"
-                                                                             Command="{Binding Settings.SelectCompatibilityRenderModeCommand}"
+                                                                             IsChecked="{Binding Settings.IsGpuCompatLayerDx9on12ExternalSelected}"
+                                                                             Command="{Binding Settings.SelectGpuCompatLayerRenderModeCommand}"
                                                                              CommandParameter="dx9on12_external">
                                                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
                                                                         <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
@@ -367,7 +367,7 @@
                                                                         <TextBlock Text="可能比内置的好" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
                                                                     </StackPanel>
                                                                 </RadioButton>
-                                                                <RadioButton x:Name="CompatDxvkRadioButton"
+                                                                <RadioButton x:Name="GpuCompatLayerDxvkRadioButton"
                                                                              Grid.Column="2"
                                                                              HorizontalAlignment="Stretch"
                                                                              MinWidth="0"
@@ -375,8 +375,8 @@
                                                                              Padding="0"
                                                                              GroupName="CompatType"
                                                                              Classes="GigaChips"
-                                                                             IsChecked="{Binding Settings.IsCompatibilityDxvkSelected}"
-                                                                             Command="{Binding Settings.SelectCompatibilityRenderModeCommand}"
+                                                                             IsChecked="{Binding Settings.IsGpuCompatLayerDxvkSelected}"
+                                                                             Command="{Binding Settings.SelectGpuCompatLayerRenderModeCommand}"
                                                                              CommandParameter="dxvk">
                                                                     <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
                                                                         <TextBlock Text="VULKAN" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
@@ -386,7 +386,7 @@
                                                                 </RadioButton>
                                                             </Grid>
                                                         </suki:BusyArea>
-                                                        <TextBlock x:Name="CompatStatusTextBlock" Text="" Opacity="0.75" Margin="0,2,0,0" IsVisible="False"/>
+                                                        <TextBlock x:Name="GpuCompatLayerStatusTextBlock" Text="" Opacity="0.75" Margin="0,2,0,0" IsVisible="False"/>
                                                     </StackPanel>
                                                 </suki:GlassCard>
                                             </suki:SettingsLayoutItem.Content>

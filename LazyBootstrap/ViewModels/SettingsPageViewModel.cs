@@ -33,7 +33,7 @@ namespace LazyBootstrap.ViewModels
         private bool useSystemSpiceConfig;
 
         [ObservableProperty]
-        private bool compatibilityLayerEnabled;
+        private bool gpuCompatLayerEnabled;
 
         [ObservableProperty]
         private bool exitRestore = true;
@@ -69,7 +69,7 @@ namespace LazyBootstrap.ViewModels
         private NetworkAdapterOption selectedNetworkAdapter;
 
         [ObservableProperty]
-        private string compatibilityRenderMode = "dx9on12";
+        private string gpuCompatLayerRenderMode = "dx9on12";
 
         [ObservableProperty]
         private bool windowed;
@@ -139,47 +139,47 @@ namespace LazyBootstrap.ViewModels
             set => AsioDriverValue = value ?? string.Empty;
         }
 
-        public bool IsCompatibilityDx9on12Selected
+        public bool IsGpuCompatLayerDx9on12Selected
         {
             get => string.Equals(
-                CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                GpuCompatLayerService.NormalizeRenderMode(GpuCompatLayerRenderMode),
                 "dx9on12",
                 StringComparison.OrdinalIgnoreCase);
             set
             {
                 if (value)
                 {
-                    CompatibilityRenderMode = "dx9on12";
+                    GpuCompatLayerRenderMode = "dx9on12";
                 }
             }
         }
 
-        public bool IsCompatibilityDx9on12ExternalSelected
+        public bool IsGpuCompatLayerDx9on12ExternalSelected
         {
             get => string.Equals(
-                CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                GpuCompatLayerService.NormalizeRenderMode(GpuCompatLayerRenderMode),
                 "dx9on12_external",
                 StringComparison.OrdinalIgnoreCase);
             set
             {
                 if (value)
                 {
-                    CompatibilityRenderMode = "dx9on12_external";
+                    GpuCompatLayerRenderMode = "dx9on12_external";
                 }
             }
         }
 
-        public bool IsCompatibilityDxvkSelected
+        public bool IsGpuCompatLayerDxvkSelected
         {
             get => string.Equals(
-                CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                GpuCompatLayerService.NormalizeRenderMode(GpuCompatLayerRenderMode),
                 "dxvk",
                 StringComparison.OrdinalIgnoreCase);
             set
             {
                 if (value)
                 {
-                    CompatibilityRenderMode = "dxvk";
+                    GpuCompatLayerRenderMode = "dxvk";
                 }
             }
         }
@@ -237,63 +237,63 @@ namespace LazyBootstrap.ViewModels
             return _workflowService?.PersistSpiceSettingsAsync(this) ?? Task.CompletedTask;
         }
 
-        public Task PersistCompatibilityToggleAsync()
+        public Task PersistGpuCompatLayerToggleAsync()
         {
-            return _workflowService?.PersistCompatibilityToggleAsync(this) ?? Task.CompletedTask;
+            return _workflowService?.PersistGpuCompatLayerToggleAsync(this) ?? Task.CompletedTask;
         }
 
-        public Task PersistCompatibilityRenderModeAsync()
+        public Task PersistGpuCompatLayerRenderModeAsync()
         {
-            return _workflowService?.PersistCompatibilityRenderModeAsync(this) ?? Task.CompletedTask;
+            return _workflowService?.PersistGpuCompatLayerRenderModeAsync(this) ?? Task.CompletedTask;
         }
 
-        partial void OnCompatibilityRenderModeChanged(string value)
+        partial void OnGpuCompatLayerRenderModeChanged(string value)
         {
-            OnPropertyChanged(nameof(IsCompatibilityDx9on12Selected));
-            OnPropertyChanged(nameof(IsCompatibilityDx9on12ExternalSelected));
-            OnPropertyChanged(nameof(IsCompatibilityDxvkSelected));
+            OnPropertyChanged(nameof(IsGpuCompatLayerDx9on12Selected));
+            OnPropertyChanged(nameof(IsGpuCompatLayerDx9on12ExternalSelected));
+            OnPropertyChanged(nameof(IsGpuCompatLayerDxvkSelected));
         }
 
         [RelayCommand]
         private Task EditConfigAsync() => _workflowService?.EditConfigAsync(this) ?? Task.CompletedTask;
 
         [RelayCommand]
-        private async Task EnableCompatibilityLayerAsync()
+        private async Task EnableGpuCompatLayerAsync()
         {
-            CompatibilityLayerEnabled = true;
+            GpuCompatLayerEnabled = true;
             if (_workflowService != null)
             {
-                await PersistCompatibilityToggleAsync();
+                await PersistGpuCompatLayerToggleAsync();
             }
         }
 
         [RelayCommand]
-        private async Task DisableCompatibilityLayerAsync()
+        private async Task DisableGpuCompatLayerAsync()
         {
-            CompatibilityLayerEnabled = false;
+            GpuCompatLayerEnabled = false;
             if (_workflowService != null)
             {
-                await PersistCompatibilityToggleAsync();
+                await PersistGpuCompatLayerToggleAsync();
             }
         }
 
         [RelayCommand]
-        private async Task SelectCompatibilityRenderModeAsync(string renderMode)
+        private async Task SelectGpuCompatLayerRenderModeAsync(string renderMode)
         {
-            var normalizedRenderMode = CompatibilitySettingsService.NormalizeRenderMode(renderMode);
+            var normalizedRenderMode = GpuCompatLayerService.NormalizeRenderMode(renderMode);
             if (string.Equals(
-                    CompatibilitySettingsService.NormalizeRenderMode(CompatibilityRenderMode),
+                    GpuCompatLayerService.NormalizeRenderMode(GpuCompatLayerRenderMode),
                     normalizedRenderMode,
                     StringComparison.OrdinalIgnoreCase))
             {
-                CompatibilityRenderMode = normalizedRenderMode;
+                GpuCompatLayerRenderMode = normalizedRenderMode;
                 return;
             }
 
-            CompatibilityRenderMode = normalizedRenderMode;
+            GpuCompatLayerRenderMode = normalizedRenderMode;
             if (_workflowService != null)
             {
-                await PersistCompatibilityRenderModeAsync();
+                await PersistGpuCompatLayerRenderModeAsync();
             }
         }
 

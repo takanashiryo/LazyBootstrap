@@ -78,7 +78,7 @@ namespace LazyBootstrap.Services.Bootstrap
             services.AddSingleton<IWindowsDefenderExclusionService, WindowsDefenderExclusionService>();
             services.AddSingleton<IDisplayConfigurationService, WindowsDisplayConfigurationService>();
             services.AddSingleton<IDisplaySettingsTransactionCoordinator, DisplaySettingsTransactionCoordinator>();
-            services.AddSingleton<ICompatibilitySettingsService, CompatibilitySettingsService>();
+            services.AddSingleton<IGpuCompatLayerService, GpuCompatLayerService>();
             services.AddSingleton<ISukiDialogManager>(_ => new SukiDialogManager());
             services.AddSingleton<ISukiToastManager>(_ => new SukiToastManager());
             services.AddSingleton<IShellStateService, ShellStateService>();

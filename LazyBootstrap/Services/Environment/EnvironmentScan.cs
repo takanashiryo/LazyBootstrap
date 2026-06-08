@@ -135,20 +135,6 @@ namespace LazyBootstrap.Services.Environment
                 return set.ToList();
             }
 
-            CompatibilityLayerRuntimeState GetCompatLayerState()
-            {
-                try
-                {
-                    return CompatibilitySettingsService.DetectRuntimeState(
-                        contentsDirectoryPath,
-                        bundledLibsDirectoryPath);
-                }
-                catch
-                {
-                    return new CompatibilityLayerRuntimeState(false, string.Empty, false);
-                }
-            }
-
             void CheckDlls(string groupName, string dllDirectory, string[] dllNames, string faultLabel = "运行时检测")
             {
                 try
@@ -191,11 +177,16 @@ namespace LazyBootstrap.Services.Environment
 
             void LogNvidia()
             {
-                if (GetCompatLayerState().IsFullyApplied)
+                try
                 {
-                    AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", ScanResultLevel.Success);
-                    return;
+                    if (GpuCompatLayerService.DetectRuntimeState(contentsDirectoryPath, bundledLibsDirectoryPath).IsFullyApplied)
+                    {
+                        AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", ScanResultLevel.Success);
+                        return;
+                    }
                 }
+                catch { }
+
                 CheckDlls("NVIDIA API", sysDir, ["nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll"], "系统库检测");
             }
 

@@ -75,7 +75,7 @@ namespace LazyBootstrap.Views
 
             if (enabled)
             {
-                UpdateCompatLayerStatus();
+                UpdateGpuCompatLayerStatus();
                 UpdateDisplayLayoutControlsEnabled();
             }
         }
@@ -93,10 +93,10 @@ namespace LazyBootstrap.Views
             ServerPresetComboBox!,
             AddServerPresetButton!,
             DeleteServerPresetButton!,
-            CompatLayerToggleSwitch!,
-            CompatDx9on12RadioButton!,
-            CompatDx9on12ExternalRadioButton!,
-            CompatDxvkRadioButton!,
+            GpuCompatLayerToggleSwitch!,
+            GpuCompatLayerDx9on12RadioButton!,
+            GpuCompatLayerDx9on12ExternalRadioButton!,
+            GpuCompatLayerDxvkRadioButton!,
             OpenLogButton!,
             TouchPanelButton!,
             NetDumpToggleSwitch!,

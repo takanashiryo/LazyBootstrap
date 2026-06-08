@@ -23,10 +23,11 @@ namespace LazyBootstrap.Services.Settings
         Task OpenNetworkAdapterPickerAsync(SettingsPageViewModel viewModel);
         Task PersistNetworkSettingsAsync(SettingsPageViewModel viewModel);
         Task PersistSpiceSettingsAsync(SettingsPageViewModel viewModel);
-        Task PersistCompatibilityToggleAsync(SettingsPageViewModel viewModel);
-        Task PersistCompatibilityRenderModeAsync(SettingsPageViewModel viewModel);
+        Task PersistGpuCompatLayerToggleAsync(SettingsPageViewModel viewModel);
+        Task PersistGpuCompatLayerRenderModeAsync(SettingsPageViewModel viewModel);
         Task EditConfigAsync(SettingsPageViewModel viewModel);
         Task PersistUseSystemSpiceConfigAsync(SettingsPageViewModel viewModel);
+        bool HasGpuCompatLayerModulesDirectory();
         Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel);
         Task AddServerPresetAsync(SettingsPageViewModel viewModel);
         Task DeleteServerPresetAsync(SettingsPageViewModel viewModel);
@@ -43,7 +44,7 @@ namespace LazyBootstrap.Services.Settings
         private readonly IConfigHandler _configHandler;
         private readonly ILauncherPaths _paths;
         private readonly ISpiceConfigFileService _spiceConfigFileService;
-        private readonly ICompatibilitySettingsService _compatibilitySettingsService;
+        private readonly IGpuCompatLayerService _gpuCompatLayerService;
         private readonly IUiInteractionService _uiInteractionService;
         private readonly ILogger<SettingsWorkflowService> _logger;
 
@@ -124,14 +125,14 @@ namespace LazyBootstrap.Services.Settings
             IConfigHandler configHandler,
             ILauncherPaths paths,
             ISpiceConfigFileService spiceConfigFileService,
-            ICompatibilitySettingsService compatibilitySettingsService,
+            IGpuCompatLayerService gpuCompatLayerService,
             IUiInteractionService uiInteractionService,
             ILogger<SettingsWorkflowService> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
-            _compatibilitySettingsService = compatibilitySettingsService ?? throw new ArgumentNullException(nameof(compatibilitySettingsService));
+            _gpuCompatLayerService = gpuCompatLayerService ?? throw new ArgumentNullException(nameof(gpuCompatLayerService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -142,11 +143,11 @@ namespace LazyBootstrap.Services.Settings
             {
                 viewModel.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
                 viewModel.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
-                viewModel.CompatibilityRenderMode = CompatibilitySettingsService.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
+                viewModel.GpuCompatLayerRenderMode = GpuCompatLayerService.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
                 viewModel.IsSpiceConfigAvailable = IsSpiceConfigAvailable(viewModel.UseSystemSpiceConfig);
                 viewModel.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
-            RefreshCompatibilityState(viewModel);
+            RefreshGpuCompatLayerState(viewModel);
 
             LoadServerPresets(viewModel);
             return Task.CompletedTask;
@@ -348,53 +349,53 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public Task PersistCompatibilityToggleAsync(SettingsPageViewModel viewModel)
+        public Task PersistGpuCompatLayerToggleAsync(SettingsPageViewModel viewModel)
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            if (viewModel.CompatibilityLayerEnabled && !IsCompatLayerEffectivelyEnabled())
+            if (viewModel.GpuCompatLayerEnabled && !GetGpuCompatLayerRuntimeState().IsFullyApplied)
             {
-                return ConfirmAndEnableCompatibilityLayerAsync(viewModel);
+                return ConfirmAndEnableGpuCompatLayerAsync(viewModel);
             }
 
-            var renderMode = CompatibilitySettingsService.NormalizeRenderMode(viewModel.CompatibilityRenderMode);
+            var renderMode = GpuCompatLayerService.NormalizeRenderMode(viewModel.GpuCompatLayerRenderMode);
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
-            if (_compatibilitySettingsService.TryToggleCompatLayer(
-                    viewModel.CompatibilityLayerEnabled,
+            if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
+                    viewModel.GpuCompatLayerEnabled,
                     renderMode,
                     spiceXmlPath,
                     out var error))
             {
-                viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
-                RefreshCompatibilityState(viewModel);
+                viewModel.RunSilently(() => viewModel.GpuCompatLayerRenderMode = renderMode);
+                RefreshGpuCompatLayerState(viewModel);
                 return Task.CompletedTask;
             }
 
             _uiInteractionService.ShowErrorToast("兼容层切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            RefreshCompatibilityState(viewModel);
+            RefreshGpuCompatLayerState(viewModel);
             return Task.CompletedTask;
         }
 
-        public Task PersistCompatibilityRenderModeAsync(SettingsPageViewModel viewModel)
+        public Task PersistGpuCompatLayerRenderModeAsync(SettingsPageViewModel viewModel)
         {
             ArgumentNullException.ThrowIfNull(viewModel);
 
-            var renderMode = CompatibilitySettingsService.NormalizeRenderMode(viewModel.CompatibilityRenderMode);
+            var renderMode = GpuCompatLayerService.NormalizeRenderMode(viewModel.GpuCompatLayerRenderMode);
 
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
-            if (_compatibilitySettingsService.TryPersistRenderMode(
+            if (_gpuCompatLayerService.TryPersistGpuCompatLayerRenderMode(
                     renderMode,
-                    viewModel.CompatibilityLayerEnabled,
+                    viewModel.GpuCompatLayerEnabled,
                     spiceXmlPath,
                     out var error))
             {
-                viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
-                RefreshCompatibilityState(viewModel);
+                viewModel.RunSilently(() => viewModel.GpuCompatLayerRenderMode = renderMode);
+                RefreshGpuCompatLayerState(viewModel);
                 return Task.CompletedTask;
             }
 
             _uiInteractionService.ShowErrorToast("兼容模式切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            RefreshCompatibilityState(viewModel);
+            RefreshGpuCompatLayerState(viewModel);
             return Task.CompletedTask;
         }
 
@@ -472,7 +473,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        private async Task ConfirmAndEnableCompatibilityLayerAsync(SettingsPageViewModel viewModel)
+        private async Task ConfirmAndEnableGpuCompatLayerAsync(SettingsPageViewModel viewModel)
         {
             var confirmed = await _uiInteractionService.ShowDialogAsync(
                 "启用显卡兼容层",
@@ -483,25 +484,30 @@ namespace LazyBootstrap.Services.Settings
 
             if (!confirmed)
             {
-                viewModel.RunSilently(() => viewModel.CompatibilityLayerEnabled = false);
+                viewModel.RunSilently(() => viewModel.GpuCompatLayerEnabled = false);
                 return;
             }
 
-            var renderMode = CompatibilitySettingsService.NormalizeRenderMode(viewModel.CompatibilityRenderMode);
+            var renderMode = GpuCompatLayerService.NormalizeRenderMode(viewModel.GpuCompatLayerRenderMode);
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(viewModel.UseSystemSpiceConfig);
-            if (_compatibilitySettingsService.TryToggleCompatLayer(
+            if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
                     true,
                     renderMode,
                     spiceXmlPath,
                     out var error))
             {
-                viewModel.RunSilently(() => viewModel.CompatibilityRenderMode = renderMode);
-                RefreshCompatibilityState(viewModel);
+                viewModel.RunSilently(() => viewModel.GpuCompatLayerRenderMode = renderMode);
+                RefreshGpuCompatLayerState(viewModel);
                 return;
             }
 
             _uiInteractionService.ShowErrorToast("兼容层切换失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
-            RefreshCompatibilityState(viewModel);
+            RefreshGpuCompatLayerState(viewModel);
+        }
+
+        public bool HasGpuCompatLayerModulesDirectory()
+        {
+            return Directory.Exists(Path.Combine(_paths.GetContentsDirectoryPath(), "modules"));
         }
 
         public Task OpenAsioControlPanelAsync(SettingsPageViewModel viewModel)
@@ -699,23 +705,23 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            RefreshCompatibilityState(viewModel);
+            RefreshGpuCompatLayerState(viewModel);
             LoadSpiceSettings(viewModel);
             RefreshAsioDrivers(viewModel, viewModel.AsioDriverValue);
             RefreshNetworkAdapters(viewModel, viewModel.NetworkAdapterIp, viewModel.NetworkAdapterSubnet);
         }
 
-        private void RefreshCompatibilityState(SettingsPageViewModel viewModel)
+        private void RefreshGpuCompatLayerState(SettingsPageViewModel viewModel)
         {
-            var runtimeState = GetCompatibilityLayerRuntimeState();
-            var configuredRenderMode = SyncCompatibilityConfigToRuntimeState(runtimeState);
+            var runtimeState = GetGpuCompatLayerRuntimeState();
+            var configuredRenderMode = SyncGpuCompatLayerConfigToRuntimeState(runtimeState);
 
             viewModel.RunSilently(() =>
             {
-                viewModel.CompatibilityRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
+                viewModel.GpuCompatLayerRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
                     ? configuredRenderMode
                     : runtimeState.DetectedRenderMode;
-                viewModel.CompatibilityLayerEnabled = runtimeState.IsFullyApplied;
+                viewModel.GpuCompatLayerEnabled = runtimeState.IsFullyApplied;
             });
         }
 
@@ -908,23 +914,18 @@ namespace LazyBootstrap.Services.Settings
             return choices;
         }
 
-        private bool IsCompatLayerEffectivelyEnabled()
-        {
-            return GetCompatibilityLayerRuntimeState().IsFullyApplied;
-        }
-
-        private CompatibilityLayerRuntimeState GetCompatibilityLayerRuntimeState()
+        private GpuCompatLayerRuntimeState GetGpuCompatLayerRuntimeState()
         {
             try
             {
-                return CompatibilitySettingsService.DetectRuntimeState(
+                return GpuCompatLayerService.DetectRuntimeState(
                     _paths.GetContentsDirectoryPath(),
                     _paths.GetBundledLibsDirectoryPath());
             }
             catch (Exception ex)
             {
                 _logger.LogDebug(ex, "Failed to detect compatibility layer runtime state.");
-                return new CompatibilityLayerRuntimeState(false, string.Empty, false);
+                return new GpuCompatLayerRuntimeState(false, string.Empty, false);
             }
         }
 
@@ -962,18 +963,13 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
-        private string ReadConfiguredCompatibilityRenderMode()
+        private string SyncGpuCompatLayerConfigToRuntimeState(GpuCompatLayerRuntimeState runtimeState)
         {
-            return CompatibilitySettingsService.NormalizeRenderMode(
+            var configuredRenderMode = GpuCompatLayerService.NormalizeRenderMode(
                 _configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
-        }
-
-        private string SyncCompatibilityConfigToRuntimeState(CompatibilityLayerRuntimeState runtimeState)
-        {
-            var configuredRenderMode = ReadConfiguredCompatibilityRenderMode();
             var detectedRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
                 ? string.Empty
-                : CompatibilitySettingsService.NormalizeRenderMode(runtimeState.DetectedRenderMode);
+                : GpuCompatLayerService.NormalizeRenderMode(runtimeState.DetectedRenderMode);
             var targetCompatEnabled = runtimeState.IsFullyApplied;
 
             try

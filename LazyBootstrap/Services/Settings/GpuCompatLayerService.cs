@@ -6,28 +6,28 @@ using LazyBootstrap.Services.Config;
 
 namespace LazyBootstrap.Services.Settings
 {
-    internal interface ICompatibilitySettingsService
+    internal interface IGpuCompatLayerService
     {
-        bool TryToggleCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error);
+        bool TryToggleGpuCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error);
 
-        bool TryPersistRenderMode(string renderMode, bool compatLayerEnabled, string spiceXmlPath, out string error);
+        bool TryPersistGpuCompatLayerRenderMode(string renderMode, bool gpuCompatLayerEnabled, string spiceXmlPath, out string error);
     }
 
-    internal readonly record struct CompatibilityLayerRuntimeState(
+    internal readonly record struct GpuCompatLayerRuntimeState(
         bool IsFullyApplied,
         string DetectedRenderMode,
         bool HasInconsistentFiles);
 
-    internal sealed class CompatibilitySettingsService : ICompatibilitySettingsService
+    internal sealed class GpuCompatLayerService : IGpuCompatLayerService
     {
-        private static readonly string[] BaseCompatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
-        private static readonly string[] ManagedCompatFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
+        private static readonly string[] BaseGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
+        private static readonly string[] ManagedGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
 
         private readonly IConfigHandler _configFile;
         private readonly ILauncherPaths _paths;
         private readonly ISpiceConfigFileService _spiceConfigFileService;
 
-        public CompatibilitySettingsService(IConfigHandler configFile, ILauncherPaths paths, ISpiceConfigFileService spiceConfigFileService)
+        public GpuCompatLayerService(IConfigHandler configFile, ILauncherPaths paths, ISpiceConfigFileService spiceConfigFileService)
         {
             ArgumentNullException.ThrowIfNull(configFile);
             ArgumentNullException.ThrowIfNull(paths);
@@ -38,29 +38,29 @@ namespace LazyBootstrap.Services.Settings
             _spiceConfigFileService = spiceConfigFileService;
         }
 
-        private sealed record CompatSnapshots(
+        private sealed record GpuCompatLayerSnapshots(
             FileStateSnapshot Config,
             List<FileStateSnapshot> Modules,
             FileStateSnapshot SpiceXml);
 
-        public bool TryToggleCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error)
+        public bool TryToggleGpuCompatLayer(bool enable, string renderMode, string spiceXmlPath, out string error)
         {
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
 
-            var snapshots = CaptureAllSnapshots(spiceXmlPath);
+            var snapshots = CaptureAllGpuCompatLayerSnapshots(spiceXmlPath);
 
             try
             {
                 if (enable)
                 {
-                    if (!ApplyCompatLayerFiles(renderMode, out error))
+                    if (!ApplyGpuCompatLayerFiles(renderMode, out error))
                     {
                         error = CombineErrors(error, RestoreSnapshots(snapshots));
                         return false;
                     }
                 }
-                else if (!RemoveCompatLayerFilesFromModules(out error))
+                else if (!RemoveGpuCompatLayerFiles(out error))
                 {
                     error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
@@ -84,22 +84,22 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
-        public bool TryPersistRenderMode(string renderMode, bool compatLayerEnabled, string spiceXmlPath, out string error)
+        public bool TryPersistGpuCompatLayerRenderMode(string renderMode, bool gpuCompatLayerEnabled, string spiceXmlPath, out string error)
         {
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
-            var snapshots = CaptureAllSnapshots(spiceXmlPath);
+            var snapshots = CaptureAllGpuCompatLayerSnapshots(spiceXmlPath);
 
             try
             {
                 _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
 
-                if (!compatLayerEnabled)
+                if (!gpuCompatLayerEnabled)
                 {
                     return true;
                 }
 
-                if (!ApplyCompatLayerFiles(renderMode, out error))
+                if (!ApplyGpuCompatLayerFiles(renderMode, out error))
                 {
                     error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
@@ -135,9 +135,9 @@ namespace LazyBootstrap.Services.Settings
             return "dx9on12";
         }
 
-        public static string ResolveDxModeValue(bool compatLayerEnabled, string renderMode)
+        public static string ResolveDxModeValue(bool gpuCompatLayerEnabled, string renderMode)
         {
-            if (!compatLayerEnabled)
+            if (!gpuCompatLayerEnabled)
             {
                 return string.Empty;
             }
@@ -147,22 +147,22 @@ namespace LazyBootstrap.Services.Settings
                 : "0";
         }
 
-        internal static CompatibilityLayerRuntimeState DetectRuntimeState(string contentsDirectoryPath, string bundledLibsDirectoryPath)
+        internal static GpuCompatLayerRuntimeState DetectRuntimeState(string contentsDirectoryPath, string bundledLibsDirectoryPath)
         {
             if (string.IsNullOrWhiteSpace(contentsDirectoryPath))
             {
-                return new CompatibilityLayerRuntimeState(false, string.Empty, false);
+                return new GpuCompatLayerRuntimeState(false, string.Empty, false);
             }
 
             string modulesDirectoryPath = Path.Combine(contentsDirectoryPath, "modules");
             if (!Directory.Exists(modulesDirectoryPath))
             {
-                return new CompatibilityLayerRuntimeState(false, string.Empty, false);
+                return new GpuCompatLayerRuntimeState(false, string.Empty, false);
             }
 
-            int presentBaseFileCount = BaseCompatFiles.Count(fileName =>
+            int presentBaseFileCount = BaseGpuCompatLayerFiles.Count(fileName =>
                 File.Exists(Path.Combine(modulesDirectoryPath, fileName)));
-            bool hasAllBaseFiles = presentBaseFileCount == BaseCompatFiles.Length;
+            bool hasAllBaseFiles = presentBaseFileCount == BaseGpuCompatLayerFiles.Length;
             bool hasPartialBaseFiles = presentBaseFileCount > 0 && !hasAllBaseFiles;
 
             string detectedRenderMode = string.Empty;
@@ -199,17 +199,17 @@ namespace LazyBootstrap.Services.Settings
                 || (File.Exists(d3d9Path) && !hasAllBaseFiles)
                 || hasUnknownD3d9State;
 
-            return new CompatibilityLayerRuntimeState(
+            return new GpuCompatLayerRuntimeState(
                 isFullyApplied,
                 detectedRenderMode,
                 hasInconsistentFiles);
         }
 
-        private List<FileStateSnapshot> CaptureCompatModuleSnapshots()
+        private List<FileStateSnapshot> CaptureGpuCompatLayerModuleSnapshots()
         {
-            var modulesDirectoryPath = GetCompatModulesDirectoryPath();
-            var snapshots = new List<FileStateSnapshot>(ManagedCompatFiles.Length);
-            foreach (var fileName in ManagedCompatFiles)
+            var modulesDirectoryPath = GetGpuCompatLayerModulesDirectoryPath();
+            var snapshots = new List<FileStateSnapshot>(ManagedGpuCompatLayerFiles.Length);
+            foreach (var fileName in ManagedGpuCompatLayerFiles)
             {
                 snapshots.Add(FileStateSnapshot.Capture(Path.Combine(modulesDirectoryPath, fileName)));
             }
@@ -217,11 +217,11 @@ namespace LazyBootstrap.Services.Settings
             return snapshots;
         }
 
-        private bool ApplyCompatLayerFiles(string renderMode, out string error)
+        private bool ApplyGpuCompatLayerFiles(string renderMode, out string error)
         {
             error = string.Empty;
             string stubsDir = _paths.GetBundledLibsDirectoryPath();
-            string modulesDir = GetCompatModulesDirectoryPath();
+            string modulesDir = GetGpuCompatLayerModulesDirectoryPath();
             if (!Directory.Exists(stubsDir))
             {
                 error = $"未找到兼容层资源目录: {stubsDir}";
@@ -236,7 +236,7 @@ namespace LazyBootstrap.Services.Settings
 
             try
             {
-                foreach (var fileName in BaseCompatFiles)
+                foreach (var fileName in BaseGpuCompatLayerFiles)
                 {
                     string sourcePath = Path.Combine(stubsDir, fileName);
                     if (!File.Exists(sourcePath))
@@ -277,10 +277,10 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
-        private bool RemoveCompatLayerFilesFromModules(out string error)
+        private bool RemoveGpuCompatLayerFiles(out string error)
         {
             error = string.Empty;
-            string modulesDir = GetCompatModulesDirectoryPath();
+            string modulesDir = GetGpuCompatLayerModulesDirectoryPath();
             if (!Directory.Exists(modulesDir))
             {
                 return true;
@@ -288,7 +288,7 @@ namespace LazyBootstrap.Services.Settings
 
             try
             {
-                foreach (var fileName in ManagedCompatFiles)
+                foreach (var fileName in ManagedGpuCompatLayerFiles)
                 {
                     string path = Path.Combine(modulesDir, fileName);
                     if (File.Exists(path))
@@ -306,7 +306,7 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
-        private string GetCompatModulesDirectoryPath()
+        private string GetGpuCompatLayerModulesDirectoryPath()
         {
             return Path.Combine(_paths.GetContentsDirectoryPath(), "modules");
         }
@@ -353,24 +353,24 @@ namespace LazyBootstrap.Services.Settings
             return rightStream.ReadByte() == -1;
         }
 
-        private CompatSnapshots CaptureAllSnapshots(string spiceXmlPath)
+        private GpuCompatLayerSnapshots CaptureAllGpuCompatLayerSnapshots(string spiceXmlPath)
         {
-            return new CompatSnapshots(
+            return new GpuCompatLayerSnapshots(
                 FileStateSnapshot.Capture(_paths.ConfigFilePath),
-                CaptureCompatModuleSnapshots(),
+                CaptureGpuCompatLayerModuleSnapshots(),
                 FileStateSnapshot.Capture(spiceXmlPath));
         }
 
-        private static SpiceOptionUpdate[] BuildDxModeUpdates(bool compatLayerEnabled, string renderMode)
+        private static SpiceOptionUpdate[] BuildDxModeUpdates(bool gpuCompatLayerEnabled, string renderMode)
         {
-            string dxModeValue = ResolveDxModeValue(compatLayerEnabled, renderMode);
+            string dxModeValue = ResolveDxModeValue(gpuCompatLayerEnabled, renderMode);
             return
             [
                 new SpiceOptionUpdate("sp2x-dx9on12", dxModeValue, string.IsNullOrEmpty(dxModeValue))
             ];
         }
 
-        private static string RestoreSnapshots(CompatSnapshots snapshots)
+        private static string RestoreSnapshots(GpuCompatLayerSnapshots snapshots)
         {
             return RestoreSnapshots(snapshots.Config, snapshots.Modules, snapshots.SpiceXml);
         }
