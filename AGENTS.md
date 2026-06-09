@@ -3,27 +3,21 @@ LazyBootstrap是一个适用于街机游戏SOUND VOLTEX的辅助启动器，其�
 启动器大量依赖spice2x的功能，仅有小部分为独立功能
 
 ## 项目框架
-项目基于C#语言开发，使用了Avalonia UI框架，采用实用型MVVM+部分code-behind设计模式，使用SukiUI主题库。虽然使用跨平台框架，但是仅Windows平台可用  
+项目基于C#语言开发，使用了SukiUI主题库（其基于Avalonia UI搭建） ，项目虽然使用跨平台框架，但是本应用仅Windows平台可用  
 主项目使用自分发，包含runtime，其他的分支项目使用Native AOT编译
 
 ## 项目结构
-以MVVM框架整理  
-SukiUI通过本地引入，不要进行任何修改
+使用code-behind编写，SukiUI通过nuget引入
 
 ## 库
 - NAudio.Asio
-- CommunityToolkit.Mvvm
-- Microsoft.Extensions.DependencyInjection
 - Serilog
 
 ## 指南
-AvaloniaUI Docs：https://docs.avaloniaui.net/
-- 界面部分交给SukiUI管理，Avalinia文档仅作为规划和开发的参考，请勿直接使用AvaloniaUI的控件和样式
-- 不用接入官方Dev Tools，因为不兼容
-SukiUI Docs：https://kikipoulet.github.io/SukiUI/
-- 可随时在SukiUI目录下查看源代码并纳入开发
+SukiUI：https://github.com/kikipoulet/SukiUI
+- 可随时查看源代码学习框架
 - 由于SukiUI的文档较为简陋，新特性跟进很慢，建议直接查看源代码进行开发
-- SukiUI本身为单页面项目，不适合进行拆分，故UI需保持单axaml开发，逻辑可拆分
+- SukiUI本身为单页面项目，不适合进行拆分，故UI需保持单axaml开发，页面逻辑按照页面分离，避免过长单文件
 - SukiUI自己本身管理一套系统，请避免使用AvaloniaUI的系统，以免导致冲突。
 
 ## 规则
