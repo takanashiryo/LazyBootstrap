@@ -25,6 +25,7 @@ namespace LazyBootstrap.Services
     {
         private static bool _initialized;
         private static ILoggerFactory _loggerFactory;
+        private const string LogOutputTemplate = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
 
         public static LauncherRuntimeContext RuntimeContext { get; private set; }
         public static ConfigHandler Config { get; private set; }
@@ -60,7 +61,7 @@ namespace LazyBootstrap.Services
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
-                .WriteTo.File(logFilePath, shared: true)
+                .WriteTo.File(logFilePath, outputTemplate: LogOutputTemplate, shared: true)
                 .CreateLogger();
 
             _loggerFactory = LoggerFactory.Create(builder =>
