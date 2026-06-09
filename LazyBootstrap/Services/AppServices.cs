@@ -49,21 +49,14 @@ namespace LazyBootstrap.Services
 
         public static ILogger<T> CreateLogger<T>() => _loggerFactory?.CreateLogger<T>();
 
-        public static void Initialize(string[] args)
+        public static void InitializeSerilog(string[] args)
         {
-            if (_initialized) return;
+            if (_loggerFactory != null) return;
 
-            string baseDirectoryPath = AppPathResolver.ResolveBaseDir(
-                args,
-                SystemEnvironment.GetEnvironmentVariable("LAZYBOOTSTRAP_BASEDIR"),
-                AppDomain.CurrentDomain.BaseDirectory);
-            string applicationDirectoryPath = AppDomain.CurrentDomain.BaseDirectory;
-            string configFilePath = System.IO.Path.Combine(baseDirectoryPath, "config.toml");
+            EnsureRuntimeContext(args);
 
-            RuntimeContext = new LauncherRuntimeContext(baseDirectoryPath, applicationDirectoryPath, configFilePath);
-
-            System.IO.Directory.CreateDirectory(RuntimeContext.ApplicationDirectoryPath);
-            string logFilePath = System.IO.Path.Combine(RuntimeContext.ApplicationDirectoryPath, "LazyBootstrap.log");
+            Directory.CreateDirectory(RuntimeContext.ApplicationDirectoryPath);
+            string logFilePath = Path.Combine(RuntimeContext.ApplicationDirectoryPath, "LazyBootstrap.log");
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -75,6 +68,14 @@ namespace LazyBootstrap.Services
                 builder.ClearProviders();
                 builder.AddSerilog(Log.Logger, dispose: false);
             });
+        }
+
+        public static void Initialize(string[] args)
+        {
+            if (_initialized) return;
+
+            InitializeSerilog(args);
+            EnsureRuntimeContext(args);
 
             Config = new ConfigHandler(RuntimeContext.ConfigFilePath);
             AppConfigBootstrapper.InitializeAndMigrate(RuntimeContext.ConfigFilePath, Config);
@@ -100,6 +101,20 @@ namespace LazyBootstrap.Services
             _initialized = true;
         }
 
+        private static void EnsureRuntimeContext(string[] args)
+        {
+            if (RuntimeContext != null) return;
+
+            string baseDirectoryPath = AppPathResolver.ResolveBaseDir(
+                args,
+                SystemEnvironment.GetEnvironmentVariable("LAZYBOOTSTRAP_BASEDIR"),
+                AppDomain.CurrentDomain.BaseDirectory);
+            string applicationDirectoryPath = AppDomain.CurrentDomain.BaseDirectory;
+            string configFilePath = System.IO.Path.Combine(baseDirectoryPath, "config.toml");
+
+            RuntimeContext = new LauncherRuntimeContext(baseDirectoryPath, applicationDirectoryPath, configFilePath);
+        }
+
         /// <summary>
         /// Initializes SukiUI-dependent services. Must be called from App.Initialize()
         /// after SukiTheme.Load() to avoid rendering issues.
@@ -123,6 +138,7 @@ namespace LazyBootstrap.Services
         public static void Dispose()
         {
             _loggerFactory?.Dispose();
+            _loggerFactory = null;
             Log.CloseAndFlush();
             _initialized = false;
         }
