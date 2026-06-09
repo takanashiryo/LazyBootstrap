@@ -422,20 +422,11 @@ namespace LazyBootstrap.Views
             {
                 if (ServerPresetComboBox != null)
                 {
-                    ServerPresetComboBox.Items.Clear();
-                    foreach (var preset in _settingsState.ServerPresets)
+                    ReplaceComboBoxItems(ServerPresetComboBox, _settingsState.ServerPresets);
+                    var selectedPreset = FindServerPreset(_settingsState.SelectedServerPreset);
+                    if (selectedPreset != null && !ReferenceEquals(ServerPresetComboBox.SelectedItem, selectedPreset))
                     {
-                        ServerPresetComboBox.Items.Add(preset);
-                    }
-
-                    int index = FindServerPresetIndex(_settingsState.SelectedServerPreset);
-                    if (index >= 0
-                        && (ServerPresetComboBox.SelectedIndex != index
-                            || !ReferenceEquals(
-                                ServerPresetComboBox.SelectedItem,
-                                _settingsState.ServerPresets[index])))
-                    {
-                        ServerPresetComboBox.SelectedIndex = index;
+                        ServerPresetComboBox.SelectedItem = selectedPreset;
                     }
                 }
 
@@ -449,11 +440,11 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private int FindServerPresetIndex(ServerPresetItem selected)
+        private ServerPresetItem FindServerPreset(ServerPresetItem selected)
         {
             if (selected == null)
             {
-                return -1;
+                return null;
             }
 
             var presets = _settingsState.ServerPresets;
@@ -461,7 +452,7 @@ namespace LazyBootstrap.Views
             {
                 if (ReferenceEquals(presets[i], selected))
                 {
-                    return i;
+                    return presets[i];
                 }
             }
 
@@ -469,11 +460,11 @@ namespace LazyBootstrap.Views
             {
                 if (string.Equals(presets[i].Name, selected.Name, StringComparison.OrdinalIgnoreCase))
                 {
-                    return i;
+                    return presets[i];
                 }
             }
 
-            return -1;
+            return null;
         }
 
         private static void SetTextBoxTextIfNeeded(TextBox textBox, string value)

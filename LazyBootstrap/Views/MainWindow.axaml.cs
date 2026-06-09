@@ -51,6 +51,7 @@ namespace LazyBootstrap.Views
         private bool _isLaunchLogAppendAnimationPending;
         private bool _isUpdatingAsioDriverUi;
         private bool _isUpdatingNetworkUi;
+        private bool _isUpdatingDisplayLayoutUi;
         private bool _startupSequenceStarted;
         private bool _isDisplayLayoutInitialized;
         private bool _isWindowCloseAnimationRunning;

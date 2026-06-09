@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia;
@@ -47,15 +48,12 @@ namespace LazyBootstrap.Views
                 {
                     MainScreenComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
+                        await HandleDisplaySelectionChangedAsync(() =>
                         {
-                            return;
-                        }
-
-                        SyncMainSelectionFromUi();
-                        _displayState.SelectedMainResolution = string.Empty;
-                        _displayState.SelectedMainRefreshRate = string.Empty;
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
+                            SyncMainSelectionFromUi();
+                            _displayState.SelectedMainResolution = string.Empty;
+                            _displayState.SelectedMainRefreshRate = string.Empty;
+                        }, refreshMainOptions: true, refreshSubOptions: false);
                     };
                 }
 
@@ -63,15 +61,12 @@ namespace LazyBootstrap.Views
                 {
                     SubScreenComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
+                        await HandleDisplaySelectionChangedAsync(() =>
                         {
-                            return;
-                        }
-
-                        SyncSubSelectionFromUi();
-                        _displayState.SelectedSubResolution = string.Empty;
-                        _displayState.SelectedSubRefreshRate = string.Empty;
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
+                            SyncSubSelectionFromUi();
+                            _displayState.SelectedSubResolution = string.Empty;
+                            _displayState.SelectedSubRefreshRate = string.Empty;
+                        }, refreshMainOptions: false, refreshSubOptions: true);
                     };
                 }
 
@@ -79,13 +74,10 @@ namespace LazyBootstrap.Views
                 {
                     RotationComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
-                        {
-                            return;
-                        }
-
-                        SyncMainSelectionFromUi();
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
+                        await HandleDisplaySelectionChangedAsync(
+                            SyncMainSelectionFromUi,
+                            refreshMainOptions: true,
+                            refreshSubOptions: false);
                     };
                 }
 
@@ -93,13 +85,10 @@ namespace LazyBootstrap.Views
                 {
                     SubRotationComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
-                        {
-                            return;
-                        }
-
-                        SyncSubSelectionFromUi();
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
+                        await HandleDisplaySelectionChangedAsync(
+                            SyncSubSelectionFromUi,
+                            refreshMainOptions: false,
+                            refreshSubOptions: true);
                     };
                 }
 
@@ -107,13 +96,10 @@ namespace LazyBootstrap.Views
                 {
                     MainResolutionComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
-                        {
-                            return;
-                        }
-
-                        SyncMainSelectionFromUi();
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: true, refreshSubOptions: false);
+                        await HandleDisplaySelectionChangedAsync(
+                            SyncMainSelectionFromUi,
+                            refreshMainOptions: true,
+                            refreshSubOptions: false);
                     };
                 }
 
@@ -121,13 +107,10 @@ namespace LazyBootstrap.Views
                 {
                     SubResolutionComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
-                        {
-                            return;
-                        }
-
-                        SyncSubSelectionFromUi();
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: true);
+                        await HandleDisplaySelectionChangedAsync(
+                            SyncSubSelectionFromUi,
+                            refreshMainOptions: false,
+                            refreshSubOptions: true);
                     };
                 }
 
@@ -135,13 +118,10 @@ namespace LazyBootstrap.Views
                 {
                     MainRefreshRateComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
-                        {
-                            return;
-                        }
-
-                        SyncMainSelectionFromUi();
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: false);
+                        await HandleDisplaySelectionChangedAsync(
+                            SyncMainSelectionFromUi,
+                            refreshMainOptions: false,
+                            refreshSubOptions: false);
                     };
                 }
 
@@ -149,13 +129,10 @@ namespace LazyBootstrap.Views
                 {
                     SubRefreshRateComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
-                        {
-                            return;
-                        }
-
-                        SyncSubSelectionFromUi();
-                        await HandleDisplayConfigurationChangedAsync(refreshMainOptions: false, refreshSubOptions: false);
+                        await HandleDisplaySelectionChangedAsync(
+                            SyncSubSelectionFromUi,
+                            refreshMainOptions: false,
+                            refreshSubOptions: false);
                     };
                 }
 
@@ -163,14 +140,8 @@ namespace LazyBootstrap.Views
                 {
                     DisplayConfigEnabledToggleSwitch.IsCheckedChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
-                        {
-                            return;
-                        }
-
-                        _displayState.IsDisplayConfigurationEnabled = DisplayConfigEnabledToggleSwitch.IsChecked == true;
-                        await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
-                        ApplyDisplayStateToUi();
+                        await HandleDisplayGeneralSettingChangedAsync(() =>
+                            _displayState.IsDisplayConfigurationEnabled = DisplayConfigEnabledToggleSwitch.IsChecked == true);
                     };
                 }
 
@@ -178,24 +149,19 @@ namespace LazyBootstrap.Views
                 {
                     DisplayModeComboBox.SelectionChanged += async (s, e) =>
                     {
-                        if (ShouldSkipDisplayLayoutInteraction())
+                        await HandleDisplayGeneralSettingChangedAsync(() =>
                         {
-                            return;
-                        }
+                            bool isDualDisplay = DisplayModeComboBox.SelectedIndex == 1;
+                            _displayState.IsDualDisplay = isDualDisplay;
 
-                        bool isDualDisplay = DisplayModeComboBox.SelectedIndex == 1;
-                        _displayState.IsDualDisplay = isDualDisplay;
-
-                        if (!isDualDisplay && _displayState.SelectedTarget == global::LazyBootstrap.Models.DisplaySelectionTarget.Sub)
-                        {
-                            _displayState.SelectedTarget = global::LazyBootstrap.Models.DisplaySelectionTarget.None;
-                            _displayState.ShowNoScreenSelected = true;
-                            _displayState.ShowMainScreenConfig = false;
-                            _displayState.ShowSubScreenConfig = false;
-                        }
-
-                        await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
-                        ApplyDisplayStateToUi();
+                            if (!isDualDisplay && _displayState.SelectedTarget == global::LazyBootstrap.Models.DisplaySelectionTarget.Sub)
+                            {
+                                _displayState.SelectedTarget = global::LazyBootstrap.Models.DisplaySelectionTarget.None;
+                                _displayState.ShowNoScreenSelected = true;
+                                _displayState.ShowMainScreenConfig = false;
+                                _displayState.ShowSubScreenConfig = false;
+                            }
+                        });
                     };
                 }
 
@@ -208,7 +174,48 @@ namespace LazyBootstrap.Views
 
         private bool ShouldSkipDisplayLayoutInteraction()
         {
-            return _isLoadingSettings;
+            return _isLoadingSettings || _isUpdatingDisplayLayoutUi;
+        }
+
+        private async Task HandleDisplaySelectionChangedAsync(Action updateState, bool refreshMainOptions, bool refreshSubOptions)
+        {
+            if (ShouldSkipDisplayLayoutInteraction())
+            {
+                return;
+            }
+
+            try
+            {
+                updateState?.Invoke();
+                await HandleDisplayConfigurationChangedAsync(refreshMainOptions, refreshSubOptions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Display configuration selection failed.");
+                _uiInteractionService.ShowErrorToast("显示器配置失败", ex.Message);
+                ApplyDisplayStateToUi();
+            }
+        }
+
+        private async Task HandleDisplayGeneralSettingChangedAsync(Action updateState)
+        {
+            if (ShouldSkipDisplayLayoutInteraction())
+            {
+                return;
+            }
+
+            try
+            {
+                updateState?.Invoke();
+                await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
+                ApplyDisplayStateToUi();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Persist display configuration option failed.");
+                _uiInteractionService.ShowErrorToast("显示器配置失败", ex.Message);
+                ApplyDisplayStateToUi();
+            }
         }
 
         private void SyncMainSelectionFromUi()
@@ -234,6 +241,12 @@ namespace LazyBootstrap.Views
                 return null;
             }
 
+            if (comboBox.SelectedItem is DisplayChoiceOption selectedDisplay
+                && _displayState.Displays.Contains(selectedDisplay))
+            {
+                return selectedDisplay;
+            }
+
             int selectedIndex = comboBox.SelectedIndex;
             return selectedIndex >= 0 && selectedIndex < _displayState.Displays.Count
                 ? _displayState.Displays[selectedIndex]
@@ -245,6 +258,12 @@ namespace LazyBootstrap.Views
             if (comboBox == null)
             {
                 return null;
+            }
+
+            if (comboBox.SelectedItem is RotationOption selectedRotation
+                && _displayState.Rotations.Contains(selectedRotation))
+            {
+                return selectedRotation;
             }
 
             int selectedIndex = comboBox.SelectedIndex;
@@ -261,14 +280,16 @@ namespace LazyBootstrap.Views
         private void ApplyDisplayStateToUi()
         {
             bool previousLoadingState = _isLoadingSettings;
+            bool previousDisplayUpdateState = _isUpdatingDisplayLayoutUi;
             _isLoadingSettings = true;
+            _isUpdatingDisplayLayoutUi = true;
 
             try
             {
-                ReplaceComboBoxItems(MainScreenComboBox, _displayState.Displays.Select(option => option.DisplayName));
-                ReplaceComboBoxItems(SubScreenComboBox, _displayState.Displays.Select(option => option.DisplayName));
-                ReplaceComboBoxItems(RotationComboBox, _displayState.Rotations.Select(option => option.DisplayName));
-                ReplaceComboBoxItems(SubRotationComboBox, _displayState.Rotations.Select(option => option.DisplayName));
+                ReplaceComboBoxItems(MainScreenComboBox, _displayState.Displays);
+                ReplaceComboBoxItems(SubScreenComboBox, _displayState.Displays);
+                ReplaceComboBoxItems(RotationComboBox, _displayState.Rotations);
+                ReplaceComboBoxItems(SubRotationComboBox, _displayState.Rotations);
                 ReplaceComboBoxItems(MainResolutionComboBox, _displayState.MainResolutions);
                 ReplaceComboBoxItems(SubResolutionComboBox, _displayState.SubResolutions);
                 ReplaceComboBoxItems(MainRefreshRateComboBox, _displayState.MainRefreshRates);
@@ -289,10 +310,10 @@ namespace LazyBootstrap.Views
                     ExitRestoreToggleSwitch.IsChecked = _displayState.ExitRestore;
                 }
 
-                SelectComboBoxIndex(MainScreenComboBox, GetOptionIndex(_displayState.Displays, _displayState.SelectedMainDisplay));
-                SelectComboBoxIndex(SubScreenComboBox, GetOptionIndex(_displayState.Displays, _displayState.SelectedSubDisplay));
-                SelectComboBoxIndex(RotationComboBox, GetOptionIndex(_displayState.Rotations, _displayState.SelectedMainRotation));
-                SelectComboBoxIndex(SubRotationComboBox, GetOptionIndex(_displayState.Rotations, _displayState.SelectedSubRotation));
+                SelectComboBoxItem(MainScreenComboBox, _displayState.SelectedMainDisplay);
+                SelectComboBoxItem(SubScreenComboBox, _displayState.SelectedSubDisplay);
+                SelectComboBoxItem(RotationComboBox, _displayState.SelectedMainRotation);
+                SelectComboBoxItem(SubRotationComboBox, _displayState.SelectedSubRotation);
 
                 SelectComboBoxItem(MainResolutionComboBox, _displayState.SelectedMainResolution);
                 SelectComboBoxItem(SubResolutionComboBox, _displayState.SelectedSubResolution);
@@ -330,20 +351,69 @@ namespace LazyBootstrap.Views
             finally
             {
                 _isLoadingSettings = previousLoadingState;
+                _isUpdatingDisplayLayoutUi = previousDisplayUpdateState;
             }
         }
 
-        private static void ReplaceComboBoxItems(ComboBox comboBox, System.Collections.Generic.IEnumerable<string> items)
+        private static void ReplaceComboBoxItems<T>(ComboBox comboBox, System.Collections.Generic.IEnumerable<T> items)
         {
             if (comboBox == null)
             {
                 return;
             }
 
+            var desiredItems = (items ?? Enumerable.Empty<T>()).Cast<object>().ToList();
+            if (HasSameComboBoxItems(comboBox, desiredItems))
+            {
+                return;
+            }
+
+            ClearComboBoxSelection(comboBox);
             comboBox.Items.Clear();
-            foreach (var item in items ?? Enumerable.Empty<string>())
+            foreach (var item in desiredItems)
             {
                 comboBox.Items.Add(item);
+            }
+        }
+
+        private static bool HasSameComboBoxItems(ComboBox comboBox, IReadOnlyList<object> desiredItems)
+        {
+            if (comboBox.Items.Count != desiredItems.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < desiredItems.Count; i++)
+            {
+                var currentItem = comboBox.Items[i];
+                var desiredItem = desiredItems[i];
+                if (ReferenceEquals(currentItem, desiredItem) || Equals(currentItem, desiredItem))
+                {
+                    continue;
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void ClearComboBoxSelection(ComboBox comboBox)
+        {
+            try
+            {
+                comboBox.SelectedIndex = -1;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+            }
+
+            try
+            {
+                comboBox.SelectedItem = null;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
             }
         }
 
@@ -359,7 +429,7 @@ namespace LazyBootstrap.Views
                 : Math.Clamp(index, -1, comboBox.Items.Count - 1);
         }
 
-        private static void SelectComboBoxItem(ComboBox comboBox, string value)
+        private static void SelectComboBoxItem(ComboBox comboBox, object value)
         {
             if (comboBox == null)
             {
@@ -372,11 +442,16 @@ namespace LazyBootstrap.Views
                 return;
             }
 
-            var selectedValue = value ?? string.Empty;
-            if (comboBox.Items.Cast<object>().Any(item => string.Equals(item?.ToString(), selectedValue, StringComparison.OrdinalIgnoreCase)))
+            var selectedText = value?.ToString() ?? string.Empty;
+            foreach (var item in comboBox.Items.Cast<object>())
             {
-                comboBox.SelectedItem = selectedValue;
-                return;
+                if (ReferenceEquals(item, value)
+                    || Equals(item, value)
+                    || string.Equals(item?.ToString(), selectedText, StringComparison.OrdinalIgnoreCase))
+                {
+                    comboBox.SelectedItem = item;
+                    return;
+                }
             }
 
             comboBox.SelectedIndex = 0;
