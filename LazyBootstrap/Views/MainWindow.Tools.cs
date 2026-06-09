@@ -98,6 +98,8 @@ namespace LazyBootstrap.Views
             SubForceRenderToggleSwitch!,
             NativeTouchToggleSwitch!,
             AsioDriverComboBox!,
+            Asio2ChToggleSwitch!,
+            VolumeBoostComboBox!,
             LowLatencySharedAudioToggleSwitch!,
             CardIoToggleSwitch!,
             HidSmartCardToggleSwitch!,

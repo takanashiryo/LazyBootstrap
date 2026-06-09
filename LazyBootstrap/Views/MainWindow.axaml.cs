@@ -647,6 +647,15 @@ namespace LazyBootstrap.Views
                 };
             }
             BindToggleSwitch(Asio2ChToggleSwitch, v => _settingsState.Asio2Ch = v, PersistSpice);
+            if (VolumeBoostComboBox != null)
+            {
+                VolumeBoostComboBox.SelectionChanged += async (_, _) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _settingsState.VolumeBoostIndex = VolumeBoostComboBox.SelectedIndex < 0 ? 0 : VolumeBoostComboBox.SelectedIndex;
+                    await PersistSpice();
+                };
+            }
             BindToggleSwitch(LowLatencySharedAudioToggleSwitch, v => _settingsState.LowLatencySharedAudio = v, PersistSpice);
         }
 

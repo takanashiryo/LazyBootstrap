@@ -224,6 +224,11 @@ namespace LazyBootstrap.Views
                 Asio2ChToggleSwitch.IsChecked = _settingsState.Asio2Ch;
             }
 
+            if (VolumeBoostComboBox != null)
+            {
+                VolumeBoostComboBox.SelectedIndex = Math.Clamp(_settingsState.VolumeBoostIndex, 0, Math.Max(0, VolumeBoostComboBox.ItemCount - 1));
+            }
+
             if (LowLatencySharedAudioToggleSwitch != null)
             {
                 LowLatencySharedAudioToggleSwitch.IsChecked = _settingsState.LowLatencySharedAudio;

@@ -568,6 +568,22 @@
                                                             </Grid>
                                                             <TextBlock Text="若声卡ASIO不支持8ch，请开启此选项，否则ASIO音频会出现异常"
                                                                        Opacity="0.7" FontSize="12" Margin="0,-20,0,0" />
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="音量增益" VerticalAlignment="Center" />
+                                                                <ComboBox x:Name="VolumeBoostComboBox" Grid.Column="1"
+                                                                          SelectedIndex="0">
+                                                                    <ComboBoxItem Content="默认" />
+                                                                    <ComboBoxItem Content="+3 dB" />
+                                                                    <ComboBoxItem Content="+6 dB" />
+                                                                    <ComboBoxItem Content="+9 dB" />
+                                                                    <ComboBoxItem Content="+12 dB" />
+                                                                    <ComboBoxItem Content="+15 dB" />
+                                                                    <ComboBoxItem Content="+20 dB" />
+                                                                    <ComboBoxItem Content="+25 dB" />
+                                                                    <ComboBoxItem Content="+30 dB" />
+                                                                </ComboBox>
+                                                            </Grid>
                                                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                                 <TextBlock Text="低延迟共享音频" VerticalAlignment="Center" />
                                                                 <ToggleSwitch

@@ -68,6 +68,31 @@ namespace LazyBootstrap.Services.Settings
                 vm => vm.SelectedAsioDriver?.Value ?? vm.AsioDriverValue ?? "",
                 (vm, v) => vm.AsioDriverValue = v ?? ""),
             B("sdvxasio2ch", vm => vm.Asio2Ch, (vm, v) => vm.Asio2Ch = v, "/ENABLED"),
+            new("volumeboost",
+                vm => vm.VolumeBoostIndex switch
+                {
+                    1 => "3",
+                    2 => "6",
+                    3 => "9",
+                    4 => "12",
+                    5 => "15",
+                    6 => "20",
+                    7 => "25",
+                    8 => "30",
+                    _ => ""
+                },
+                (vm, v) => vm.VolumeBoostIndex = v switch
+                {
+                    "3" => 1,
+                    "6" => 2,
+                    "9" => 3,
+                    "12" => 4,
+                    "15" => 5,
+                    "20" => 6,
+                    "25" => 7,
+                    "30" => 8,
+                    _ => 0
+                }),
             B("sp2x-lowlatencysharedaudio", vm => vm.LowLatencySharedAudio, (vm, v) => vm.LowLatencySharedAudio = v, "/ENABLED"),
             B("cardio", vm => vm.CardIo, (vm, v) => vm.CardIo = v, "/ENABLED"),
             B("scard", vm => vm.HidSmartCard, (vm, v) => vm.HidSmartCard = v, "/ENABLED"),
