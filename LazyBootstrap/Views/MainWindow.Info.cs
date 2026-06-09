@@ -1,57 +1,76 @@
 using System;
-using System.Collections.Specialized;
-using System.ComponentModel;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
+using Avalonia.Controls.Shapes;
+using Avalonia.Layout;
 using Avalonia.Media;
-using Avalonia.Threading;
 using SukiUI.Controls;
 
 namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
-        private void AttachEnvironmentScanCollections()
+        private async void OnRefreshEnvironmentScanClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            _viewModel.Info.GpuAdapterRows.CollectionChanged += OnEnvironmentScanSurfaceChanged;
-            _viewModel.Info.ScanRootAlerts.CollectionChanged += OnEnvironmentScanSurfaceChanged;
+            await _environmentScanService.RunScanAsync(_infoState);
+            ApplyInfoStateToUi();
         }
 
-        private void DetachEnvironmentScanCollections()
+        private void ApplyInfoStateToUi()
         {
-            _viewModel.Info.GpuAdapterRows.CollectionChanged -= OnEnvironmentScanSurfaceChanged;
-            _viewModel.Info.ScanRootAlerts.CollectionChanged -= OnEnvironmentScanSurfaceChanged;
-        }
+            SetTextBoxTextIfNeeded(MachinePropertyTextBox, _infoState.MachineProperty);
+            SetTextBoxTextIfNeeded(GameVersionTextBox, _infoState.GameVersion);
 
-        private void HookInfoViewModelState()
-        {
-            _viewModel.Info.PropertyChanged += OnInfoViewModelPropertyChanged;
-            AttachEnvironmentScanCollections();
-        }
-
-        private void UnhookInfoViewModelState()
-        {
-            _viewModel.Info.PropertyChanged -= OnInfoViewModelPropertyChanged;
-            DetachEnvironmentScanCollections();
-        }
-
-        private void OnEnvironmentScanSurfaceChanged(object sender, NotifyCollectionChangedEventArgs e)
-        {
-            Dispatcher.UIThread.Post(RefreshEnvironmentOverviewChrome, DispatcherPriority.Background);
-        }
-
-        private void OnInfoViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            var propertyName = e.PropertyName;
-
-            if (string.IsNullOrEmpty(propertyName)
-                || propertyName.Equals(nameof(InfoPageViewModel.EnvironmentSummary), StringComparison.Ordinal)
-                || propertyName.Equals(nameof(InfoPageViewModel.HasEnvironmentScanErrors), StringComparison.Ordinal)
-                || propertyName.Equals(nameof(InfoPageViewModel.EnvironmentScanPresentationRevision), StringComparison.Ordinal))
+            if (LauncherVersionTextBlock != null)
             {
-                Dispatcher.UIThread.Post(RefreshEnvironmentOverviewChrome, DispatcherPriority.Background);
+                LauncherVersionTextBlock.Text = _infoState.LauncherVersion;
             }
+
+            if (EnvironmentScanPendingHintTextBlock != null)
+            {
+                EnvironmentScanPendingHintTextBlock.IsVisible = _infoState.ScanUiPendingHintVisible;
+            }
+
+            SetContent(CpuPrimaryRowHost, CreateCpuGpuTextRow(_infoState.CpuPrimaryRow));
+            ReplacePanelChildren(GpuAdapterRowsHost, _infoState.GpuAdapterRows.Select(CreateCpuGpuTextRow));
+            SetContent(NvidiaSkipNoticeRowHost, CreateEnvironmentScanDisplayRow(_infoState.NvidiaSkipNoticeRow));
+            SetContent(NvidiaNvcudaOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.NvidiaNvcuda));
+            SetContent(NvidiaNvcuvidOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.NvidiaNvcuvid));
+            SetContent(NvidiaEncodeApiOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.NvidiaEncodeApi));
+
+            if (NvidiaDetailPanel != null)
+            {
+                NvidiaDetailPanel.IsVisible = _infoState.NvidiaDetailVisible;
+            }
+
+            SetContent(DirectXRuntimeFaultRowHost, CreateEnvironmentScanDisplayRow(_infoState.DirectXRuntimeFaultRow));
+            SetContent(DirectXD3d9OutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.DirectXD3d9));
+            SetContent(DirectXD3Dx43OutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.DirectXD3Dx43));
+
+            SetContent(MediaPackRuntimeFaultRowHost, CreateEnvironmentScanDisplayRow(_infoState.MediaPackRuntimeFaultRow));
+            SetContent(MediaPackMfOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.MediaPackMf));
+            SetContent(MediaPackMfplatOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.MediaPackMfplat));
+            SetContent(MediaPackWmvCoreOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.MediaPackWmvCore));
+
+            SetContent(Vc2010X86RuntimeFaultRowHost, CreateEnvironmentScanDisplayRow(_infoState.Vc2010X86RuntimeFaultRow));
+            SetContent(Vc2010X86MsvcrOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.Vc2010X86Msvcr));
+            SetContent(Vc2010X86MsvcpOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.Vc2010X86Msvcp));
+
+            SetContent(Vc2010X64RuntimeFaultRowHost, CreateEnvironmentScanDisplayRow(_infoState.Vc2010X64RuntimeFaultRow));
+            SetContent(Vc2010X64MsvcrOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.Vc2010X64Msvcr));
+            SetContent(Vc2010X64MsvcpOutcomeHost, CreateEnvironmentScanOutcomeBadge(_infoState.Vc2010X64Msvcp));
+
+            if (ScanRootAlertsCard != null)
+            {
+                ScanRootAlertsCard.IsVisible = _infoState.HasScanRootAlerts;
+            }
+
+            ReplacePanelChildren(ScanRootAlertsPanel, _infoState.ScanRootAlerts.Select(CreateRootAlertRow));
+            RefreshEnvironmentOverviewChrome();
         }
 
         private async Task ShowEnvironmentScanErrorDialogAsync()
@@ -90,15 +109,11 @@ namespace LazyBootstrap.Views
                     return;
                 }
 
-                // Must match the "信息" SukiSideMenuItem Header in MainWindow.axaml (order: 启动,设定,显示器,工具,更新,信息,关于).
                 var target = MainSideMenu.Items?
                     .OfType<SukiSideMenuItem>()
                     .FirstOrDefault(item => string.Equals(item.Header?.ToString(), "信息", StringComparison.Ordinal));
 
-                if (target == null)
-                {
-                    target = MainSideMenu.Items?.OfType<SukiSideMenuItem>().ElementAtOrDefault(5);
-                }
+                target ??= MainSideMenu.Items?.OfType<SukiSideMenuItem>().ElementAtOrDefault(5);
 
                 if (target != null)
                 {
@@ -112,26 +127,24 @@ namespace LazyBootstrap.Views
 
         internal void RefreshEnvironmentOverviewChrome()
         {
-            if (EnvironmentOverviewInfoBar == null || _viewModel?.Info == null)
+            if (EnvironmentOverviewInfoBar == null)
             {
                 return;
             }
-
-            var info = _viewModel.Info;
 
             EnvironmentOverviewInfoBar.MessageTextAlignment = TextAlignment.Left;
             EnvironmentOverviewInfoBar.IsClosable = false;
             EnvironmentOverviewInfoBar.IsVisible = true;
 
-            if (info.HasEnvironmentScanErrors)
+            if (_infoState.HasEnvironmentScanErrors)
             {
                 EnvironmentOverviewInfoBar.Severity = NotificationType.Error;
                 EnvironmentOverviewInfoBar.Title = "存在未通过的检查项";
-                EnvironmentOverviewInfoBar.Message = string.IsNullOrWhiteSpace(info.EnvironmentSummary)
+                EnvironmentOverviewInfoBar.Message = string.IsNullOrWhiteSpace(_infoState.EnvironmentSummary)
                     ? "请对照下方固定检测项查看未通过条目。"
-                    : info.EnvironmentSummary.Trim();
+                    : _infoState.EnvironmentSummary.Trim();
             }
-            else if (info.HasAnyEnvironmentScanWarning())
+            else if (_infoState.HasAnyEnvironmentScanWarning())
             {
                 EnvironmentOverviewInfoBar.Severity = NotificationType.Warning;
                 EnvironmentOverviewInfoBar.Title = "存在警告";
@@ -143,6 +156,217 @@ namespace LazyBootstrap.Views
                 EnvironmentOverviewInfoBar.Title = "检测通过";
                 EnvironmentOverviewInfoBar.Message = string.Empty;
             }
+        }
+
+        private static void SetContent(ContentControl host, Control content)
+        {
+            if (host != null)
+            {
+                host.Content = content;
+            }
+        }
+
+        private static void ReplacePanelChildren(Panel panel, IEnumerable<Control> controls)
+        {
+            if (panel == null)
+            {
+                return;
+            }
+
+            panel.Children.Clear();
+            foreach (var control in controls ?? Enumerable.Empty<Control>())
+            {
+                panel.Children.Add(control);
+            }
+        }
+
+        private static Control CreateCpuGpuTextRow(EnvironmentScanDisplayRow row)
+        {
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+                ColumnSpacing = 8,
+                Margin = new Thickness(0, 1),
+                IsVisible = row?.IsShown == true
+            };
+
+            grid.Children.Add(new Ellipse
+            {
+                Width = 6,
+                Height = 6,
+                VerticalAlignment = VerticalAlignment.Center,
+                Fill = new SolidColorBrush(Color.FromRgb(150, 150, 150))
+            });
+
+            var text = new TextBlock
+            {
+                FontSize = 13,
+                LineHeight = 18,
+                Text = row?.PrimaryText ?? string.Empty,
+                TextWrapping = TextWrapping.Wrap
+            };
+            Grid.SetColumn(text, 1);
+            grid.Children.Add(text);
+
+            return grid;
+        }
+
+        private static Control CreateEnvironmentScanDisplayRow(EnvironmentScanDisplayRow row)
+        {
+            if (row == null || !row.IsShown)
+            {
+                return new Border { IsVisible = false };
+            }
+
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
+                ColumnSpacing = 10
+            };
+
+            grid.Children.Add(new Ellipse
+            {
+                Width = 8,
+                Height = 8,
+                VerticalAlignment = VerticalAlignment.Center,
+                Fill = GetEnvironmentScanBrush(row.BadgeLevel, EnvironmentScanBrushRole.Foreground)
+            });
+
+            var textStack = new StackPanel
+            {
+                Spacing = 2,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            Grid.SetColumn(textStack, 1);
+            textStack.Children.Add(new TextBlock
+            {
+                FontSize = 13,
+                LineHeight = 18,
+                Text = row.PrimaryText,
+                TextWrapping = TextWrapping.Wrap
+            });
+            textStack.Children.Add(new TextBlock
+            {
+                FontSize = 12,
+                IsVisible = row.SecondaryVisible,
+                LineHeight = 16,
+                Opacity = 0.65,
+                Text = row.SecondaryText,
+                TextWrapping = TextWrapping.Wrap
+            });
+            grid.Children.Add(textStack);
+
+            var badge = CreateBadge(row.BadgeLevel, row.StatusText, row.ShowStatusBadge);
+            Grid.SetColumn(badge, 2);
+            grid.Children.Add(badge);
+
+            return new Border
+            {
+                CornerRadius = new CornerRadius(8),
+                Margin = new Thickness(0, 0, 0, 2),
+                Padding = new Thickness(12, 10),
+                BorderThickness = new Thickness(1),
+                Background = GetEnvironmentScanBrush(row.BadgeLevel, EnvironmentScanBrushRole.RowFill),
+                BorderBrush = GetEnvironmentScanBrush(row.BadgeLevel, EnvironmentScanBrushRole.RowStroke),
+                Child = grid
+            };
+        }
+
+        private static Control CreateEnvironmentScanOutcomeBadge(EnvironmentScanLineOutcome outcome)
+        {
+            if (outcome == null || !outcome.OutcomeVisible)
+            {
+                return new Border { IsVisible = false };
+            }
+
+            return CreateBadge(outcome.BadgeLevel, outcome.StatusText, true);
+        }
+
+        private static Control CreateRootAlertRow(string text)
+        {
+            var grid = new Grid
+            {
+                ColumnDefinitions = new ColumnDefinitions("Auto,*"),
+                ColumnSpacing = 8,
+                Margin = new Thickness(0, 1)
+            };
+
+            grid.Children.Add(new Ellipse
+            {
+                Width = 6,
+                Height = 6,
+                VerticalAlignment = VerticalAlignment.Center,
+                Opacity = 0.5,
+                Fill = new SolidColorBrush(Color.FromRgb(150, 150, 150))
+            });
+
+            var textBlock = new TextBlock
+            {
+                FontSize = 13,
+                LineHeight = 18,
+                Opacity = 0.8,
+                Text = text ?? string.Empty,
+                TextWrapping = TextWrapping.Wrap
+            };
+            Grid.SetColumn(textBlock, 1);
+            grid.Children.Add(textBlock);
+
+            return grid;
+        }
+
+        private static Border CreateBadge(EnvironmentScan.ScanResultLevel level, string text, bool isVisible)
+        {
+            return new Border
+            {
+                Padding = new Thickness(10, 3),
+                CornerRadius = new CornerRadius(999),
+                BorderThickness = new Thickness(1),
+                MinWidth = 56,
+                HorizontalAlignment = HorizontalAlignment.Right,
+                IsVisible = isVisible,
+                Background = GetEnvironmentScanBrush(level, EnvironmentScanBrushRole.BadgeBackground),
+                BorderBrush = GetEnvironmentScanBrush(level, EnvironmentScanBrushRole.Border),
+                Child = new TextBlock
+                {
+                    FontSize = 11.5,
+                    FontWeight = FontWeight.DemiBold,
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    Foreground = GetEnvironmentScanBrush(level, EnvironmentScanBrushRole.Foreground),
+                    Text = text ?? string.Empty
+                }
+            };
+        }
+
+        private static IBrush GetEnvironmentScanBrush(EnvironmentScan.ScanResultLevel level, EnvironmentScanBrushRole role)
+        {
+            Color accent = level switch
+            {
+                EnvironmentScan.ScanResultLevel.Success => Color.FromRgb(82, 196, 26),
+                EnvironmentScan.ScanResultLevel.Warning => Color.FromRgb(250, 140, 22),
+                _ => Color.FromRgb(245, 34, 45)
+            };
+
+            byte alpha = role switch
+            {
+                EnvironmentScanBrushRole.Foreground => 255,
+                EnvironmentScanBrushRole.Border => 200,
+                EnvironmentScanBrushRole.RowFill => 24,
+                EnvironmentScanBrushRole.RowStroke => 96,
+                EnvironmentScanBrushRole.BadgeBackground => level == EnvironmentScan.ScanResultLevel.Success ? (byte)28 : level == EnvironmentScan.ScanResultLevel.Warning ? (byte)26 : (byte)30,
+                _ => 0
+            };
+
+            return new SolidColorBrush(Color.FromArgb(alpha, accent.R, accent.G, accent.B));
+        }
+
+        private enum EnvironmentScanBrushRole
+        {
+            Foreground,
+            Border,
+            RowFill,
+            RowStroke,
+            BadgeBackground
         }
     }
 }

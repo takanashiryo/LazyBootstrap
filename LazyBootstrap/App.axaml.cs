@@ -1,13 +1,15 @@
 using System;
+using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
-using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SukiUI;
 using SukiUI.Models;
+using LazyBootstrap.Services;
+using LazyBootstrap.Views;
 
 namespace LazyBootstrap
 {
@@ -24,19 +26,29 @@ namespace LazyBootstrap
             var sukiTheme = SukiTheme.GetInstance(this);
             sukiTheme.AddColorTheme(LazyGreenTheme);
             sukiTheme.ChangeColorTheme(LazyGreenTheme);
+
+            // SukiUI managers must be created AFTER SukiTheme is loaded.
+            AppServices.InitSukiManagers();
         }
 
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
-                if (LazyBootstrapHost.Services == null)
-                {
-                    throw new InvalidOperationException("应用服务尚未初始化。");
-                }
-
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-                var mainWindow = LazyBootstrapHost.Services.GetRequiredService<MainWindow>();
+
+                var mainWindow = new MainWindow(
+                    AppServices.ShellState,
+                    AppServices.Paths,
+                    AppServices.LaunchWorkflow,
+                    AppServices.DisplayWorkflow,
+                    AppServices.EnvironmentScan,
+                    AppServices.SettingsWorkflow,
+                    AppServices.DialogManager,
+                    AppServices.ToastManager,
+                    AppServices.UI,
+                    AppServices.CreateLogger<MainWindow>());
+
                 ShowPreparedMainWindowAsync(desktop, mainWindow);
             }
 

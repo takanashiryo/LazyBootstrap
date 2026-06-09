@@ -1,6 +1,6 @@
-// written by Arkito aka Takanashi Ryo, only release in SDVX Lazy Pack.
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -20,33 +20,38 @@ using Avalonia;
 
 namespace LazyBootstrap.Views
 {
-    public partial class MainWindow : SukiWindow
+    public partial class MainWindow : SukiWindow, ILaunchWorkflowObserver
     {
-        private readonly MainWindowViewModel _viewModel = null!;
-        private readonly IConfigHandler _configFile = null!;
-        private bool _isLoadingSettings = false; // 标记是否正在加载设置
+        private readonly ShellStateService _shellStateService = null!;
+        private readonly LaunchWorkflowService _launchWorkflowService = null!;
+        private readonly DisplayWorkflowService _displayWorkflowService = null!;
+        private readonly EnvironmentScanService _environmentScanService = null!;
+        private readonly SettingsConfigurationSnapshot _settingsState = new();
+        private readonly DisplayConfigurationSnapshot _displayState = new();
+        private readonly LaunchState _launchState = new();
+        private readonly EnvironmentScanPresentation _infoState = new();
+        private bool _isLoadingSettings;
 
-        // 统一路径前缀
-        private readonly ILauncherPaths _paths = null!;
-        private readonly IDisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator = null!;
-        private readonly ISettingsWorkflowService _settingsWorkflowService = null!;
+        private readonly LauncherPaths _paths = null!;
+        private readonly SettingsWorkflowService _settingsWorkflowService = null!;
 
         private DispatcherTimer _displayPulseTimer;
         private double _displayPulsePhase = 0d;
         private readonly ISukiDialogManager _dialogManager = null!;
         private readonly ISukiToastManager _toastManager = null!;
-        private readonly IUiInteractionService _uiInteractionService = null!;
+        private readonly UiInteractionService _uiInteractionService = null!;
         private readonly ILogger<MainWindow> _logger = null!;
 
         private bool _isSettingsBusy;
         private bool _isSyncingModel;
-        private bool _isUpdatingCompatUi;
+        private bool _isUpdatingGpuCompatLayerUi;
         private bool _isUpdatingServerPresetUi;
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
         private bool _isUpdatingAsioDriverUi;
         private bool _isUpdatingNetworkUi;
+        private bool _isUpdatingDisplayLayoutUi;
         private bool _startupSequenceStarted;
         private bool _isDisplayLayoutInitialized;
         private bool _isWindowCloseAnimationRunning;
@@ -78,39 +83,36 @@ namespace LazyBootstrap.Views
         {
             InitializeComponent();
 
-            _viewModel = new MainWindowViewModel();
-            DataContext = _viewModel;
-
             if (!Design.IsDesignMode)
             {
-                throw new InvalidOperationException("请通过依赖注入创建 MainWindow。");
+                throw new InvalidOperationException("MainWindow must be created from the application composition root.");
             }
         }
 
         internal MainWindow(
-            MainWindowViewModel viewModel,
-            IConfigHandler configFile,
-            ILauncherPaths paths,
-            IDisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
-            ISettingsWorkflowService settingsWorkflowService,
+            ShellStateService shellStateService,
+            LauncherPaths paths,
+            LaunchWorkflowService launchWorkflowService,
+            DisplayWorkflowService displayWorkflowService,
+            EnvironmentScanService environmentScanService,
+            SettingsWorkflowService settingsWorkflowService,
             ISukiDialogManager dialogManager,
             ISukiToastManager toastManager,
-            IUiInteractionService uiInteractionService,
+            UiInteractionService uiInteractionService,
             ILogger<MainWindow> logger)
         {
             InitializeComponent();
 
-            _viewModel = viewModel ?? throw new ArgumentNullException(nameof(viewModel));
-            _configFile = configFile ?? throw new ArgumentNullException(nameof(configFile));
+            _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _displaySettingsTransactionCoordinator = displaySettingsTransactionCoordinator ?? throw new ArgumentNullException(nameof(displaySettingsTransactionCoordinator));
+            _launchWorkflowService = launchWorkflowService ?? throw new ArgumentNullException(nameof(launchWorkflowService));
+            _displayWorkflowService = displayWorkflowService ?? throw new ArgumentNullException(nameof(displayWorkflowService));
+            _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
             _settingsWorkflowService = settingsWorkflowService ?? throw new ArgumentNullException(nameof(settingsWorkflowService));
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
             _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-            DataContext = _viewModel;
 
             if (DialogHost != null)
             {
@@ -124,34 +126,31 @@ namespace LazyBootstrap.Views
             _uiInteractionService.AttachWindow(this);
             Opened += OnWindowOpened;
             Closed += OnWindowClosed;
+            _shellStateService.PropertyChanged += OnShellStatePropertyChanged;
 
             _isLoadingSettings = true;
             InitializeCustomComponents();
             HideLaunchLogArea(true);
-            HookLaunchViewModelState();
-            HookSettingsViewModelState();
-            HookDisplayViewModelState();
-            HookToolsViewModelState();
-            HookInfoViewModelState();
+            InitializeLaunchControls();
             _isLoadingSettings = false;
             _logger.LogInformation("Main window initialized for base directory {BaseDirectory}.", _paths.BaseDir);
         }
 
         private void UpdateStatusText(string statusText)
         {
-            _viewModel.StatusText = statusText ?? string.Empty;
-            _viewModel.Launch.StateText = _viewModel.StatusText;
+            _shellStateService.StatusText = statusText ?? string.Empty;
+            _launchState.StateText = _shellStateService.StatusText;
 
             if (StatusLabel != null)
             {
-                StatusLabel.Text = _viewModel.StatusText;
+                StatusLabel.Text = _shellStateService.StatusText;
             }
         }
 
         private void UpdateStatusProgress(bool isVisible, double value = 0d)
         {
-            _viewModel.IsStatusProgressVisible = isVisible;
-            _viewModel.StatusProgressValue = value;
+            _shellStateService.IsStatusProgressVisible = isVisible;
+            _shellStateService.StatusProgressValue = value;
 
             if (StatusProgress != null)
             {
@@ -163,12 +162,51 @@ namespace LazyBootstrap.Views
         private void OnWindowClosed(object sender, EventArgs e)
         {
             Opened -= OnWindowOpened;
-            UnhookLaunchViewModelState();
-            UnhookSettingsViewModelState();
-            UnhookDisplayViewModelState();
-            UnhookToolsViewModelState();
-            UnhookInfoViewModelState();
+            ReleaseLaunchControls();
+            _shellStateService.PropertyChanged -= OnShellStatePropertyChanged;
             _uiInteractionService.DetachWindow(this);
+        }
+
+        private void OnShellStatePropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (!Dispatcher.UIThread.CheckAccess())
+            {
+                Dispatcher.UIThread.Post(() => OnShellStatePropertyChanged(sender, e));
+                return;
+            }
+
+            string propertyName = e?.PropertyName ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(propertyName)
+                || string.Equals(propertyName, nameof(ShellStateService.StatusText), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(ShellStateService.StatusProgressValue), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(ShellStateService.IsStatusProgressVisible), StringComparison.Ordinal))
+            {
+                if (StatusLabel != null)
+                {
+                    StatusLabel.Text = _shellStateService.StatusText;
+                }
+
+                if (StatusProgress != null)
+                {
+                    StatusProgress.IsVisible = _shellStateService.IsStatusProgressVisible;
+                    StatusProgress.Value = _shellStateService.StatusProgressValue;
+                }
+            }
+
+            if (string.IsNullOrWhiteSpace(propertyName)
+                || string.Equals(propertyName, nameof(ShellStateService.IsInteractionEnabled), StringComparison.Ordinal))
+            {
+                SetControlsEnabled(_shellStateService.IsInteractionEnabled);
+            }
+
+            if (string.IsNullOrWhiteSpace(propertyName)
+                || string.Equals(propertyName, nameof(ShellStateService.SelectedPage), StringComparison.Ordinal))
+            {
+                if (_shellStateService.SelectedPage == ShellPage.Settings)
+                {
+                    ApplyServerPresetStateToUi();
+                }
+            }
         }
 
         private async void OnWindowOpened(object sender, EventArgs e)
@@ -203,16 +241,20 @@ namespace LazyBootstrap.Views
             try
             {
                 UpdateStatusText("正在读取启动配置...");
-                await _viewModel.InitializeStartupAsync();
-                ApplyStartupSettingsViewModelStateToUi();
+                await _settingsWorkflowService.InitializeStartupAsync(_settingsState);
+                await _launchWorkflowService.InitializeStartupAsync(_launchState, _displayState, this);
+                ApplyStartupSettingsStateToUi();
 
                 UpdateStatusText("正在预热页面内容...");
-                await _viewModel.WarmSecondaryPagesAsync();
-                ApplyDeferredSettingsViewModelStateToUi();
-                ApplyInfoViewModelStateToUi();
+                await _settingsWorkflowService.WarmDeferredAsync(_settingsState);
+                await _displayWorkflowService.WarmDeferredAsync(_displayState);
+                await _environmentScanService.InitializeInfoAsync(_infoState);
+                await _environmentScanService.RunScanAsync(_infoState);
+                ApplyDeferredSettingsStateToUi();
+                ApplyInfoStateToUi();
                 InitializeDisplayLayoutControls();
                 RefreshEnvironmentOverviewChrome();
-                _pendingEnvironmentScanErrorDialog = _viewModel.Info.HasEnvironmentScanErrors;
+                _pendingEnvironmentScanErrorDialog = _infoState.HasEnvironmentScanErrors;
             }
             catch (Exception ex)
             {
@@ -383,15 +425,15 @@ namespace LazyBootstrap.Views
                 return;
             }
 
-            var selectedDriverValue = _viewModel.Settings.SelectedAsioDriver?.Value
-                ?? _viewModel.Settings.AsioDriverValue
+            var selectedDriverValue = _settingsState.SelectedAsioDriver?.Value
+                ?? _settingsState.AsioDriverValue
                 ?? string.Empty;
 
             OpenAsioControlPanelButton.IsEnabled = OperatingSystem.IsWindows()
                 && !string.IsNullOrWhiteSpace(selectedDriverValue);
         }
 
-        private Task PersistSpice() => _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+        private Task PersistSpice() => _settingsWorkflowService.PersistSpiceSettingsAsync(_settingsState);
 
         private void BindToggleSwitch(ToggleSwitch toggle, Action<bool> setValue, Func<Task> persist)
         {
@@ -428,7 +470,7 @@ namespace LazyBootstrap.Views
 
         private void InitializeCustomComponents()
         {
-            InitializeCompatibilityControls();
+            InitializeGpuCompatLayerControls();
             InitializeNetworkBindings();
             InitializeStartupSettingsBindings();
             InitializeSpiceSettingsBindings();
@@ -437,12 +479,12 @@ namespace LazyBootstrap.Views
             FinalizeInitialViewState();
         }
 
-        private void InitializeCompatibilityControls()
+        private void InitializeGpuCompatLayerControls()
         {
-            if (CompatLayerToggleSwitch != null)
+            if (GpuCompatLayerToggleSwitch != null)
             {
-                CompatLayerToggleSwitch.IsCheckedChanged -= OnCompatLayerToggleChanged;
-                CompatLayerToggleSwitch.IsCheckedChanged += OnCompatLayerToggleChanged;
+                GpuCompatLayerToggleSwitch.IsCheckedChanged -= OnGpuCompatLayerToggleChanged;
+                GpuCompatLayerToggleSwitch.IsCheckedChanged += OnGpuCompatLayerToggleChanged;
             }
         }
 
@@ -462,9 +504,10 @@ namespace LazyBootstrap.Views
                 NetworkAdapterIpTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingNetworkUi) return;
-                    _viewModel.Settings.NetworkAdapterIp = NetworkAdapterIpTextBox.Text ?? string.Empty;
-                    _viewModel.Settings.NetworkAdapterSubnet = NetworkAdapterSubnetTextBox?.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistNetworkSettingsAsync(_viewModel.Settings);
+                    _settingsState.NetworkAdapterIp = NetworkAdapterIpTextBox.Text ?? string.Empty;
+                    _settingsState.NetworkAdapterSubnet = NetworkAdapterSubnetTextBox?.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistNetworkSettingsAsync(_settingsState);
+                    ApplyNetworkAdapterStateFromState();
                 };
             }
             if (NetworkAdapterSubnetTextBox != null)
@@ -473,9 +516,10 @@ namespace LazyBootstrap.Views
                 NetworkAdapterSubnetTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingNetworkUi) return;
-                    _viewModel.Settings.NetworkAdapterIp = NetworkAdapterIpTextBox?.Text ?? string.Empty;
-                    _viewModel.Settings.NetworkAdapterSubnet = NetworkAdapterSubnetTextBox.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistNetworkSettingsAsync(_viewModel.Settings);
+                    _settingsState.NetworkAdapterIp = NetworkAdapterIpTextBox?.Text ?? string.Empty;
+                    _settingsState.NetworkAdapterSubnet = NetworkAdapterSubnetTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistNetworkSettingsAsync(_settingsState);
+                    ApplyNetworkAdapterStateFromState();
                 };
             }
 
@@ -490,15 +534,16 @@ namespace LazyBootstrap.Views
         private void InitializeStartupSettingsBindings()
         {
             BindToggleSwitch(WindowedToggleSwitch,
-                v => _viewModel.Settings.Windowed = v,
-                () => _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings));
+                v => _settingsState.Windowed = v,
+                () => _settingsWorkflowService.PersistSpiceSettingsAsync(_settingsState));
 
             if (NoAsphyxiaToggleSwitch != null)
             {
                 NoAsphyxiaToggleSwitch.IsCheckedChanged += async (_, _) =>
                 {
-                    _viewModel.Settings.NoAsphyxia = NoAsphyxiaToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistLauncherSettingsAsync(_viewModel.Settings);
+                    if (_isLoadingSettings) return;
+                    _settingsState.NoAsphyxia = NoAsphyxiaToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistLauncherSettingsAsync(_settingsState);
                 };
             }
 
@@ -507,8 +552,10 @@ namespace LazyBootstrap.Views
                 UseSystemSpiceConfigToggleSwitch.IsCheckedChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
-                    _viewModel.Settings.UseSystemSpiceConfig = UseSystemSpiceConfigToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistUseSystemSpiceConfigAsync(_viewModel.Settings);
+                    _settingsState.UseSystemSpiceConfig = UseSystemSpiceConfigToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistUseSystemSpiceConfigAsync(_settingsState);
+                    ApplyStartupSettingsStateToUi();
+                    ApplyDeferredSettingsStateToUi();
                 };
             }
 
@@ -518,9 +565,9 @@ namespace LazyBootstrap.Views
                 {
                     if (_isLoadingSettings) return;
                     bool enabled = ExitRestoreToggleSwitch.IsChecked == true;
-                    _viewModel.Display.ExitRestore = enabled;
-                    _viewModel.Settings.ExitRestore = enabled;
-                    await _viewModel.Display.PersistGeneralSettingsAsync();
+                    _displayState.ExitRestore = enabled;
+                    _settingsState.ExitRestore = enabled;
+                    await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
                 };
             }
         }
@@ -533,52 +580,52 @@ namespace LazyBootstrap.Views
                 DllInjectionTextBox.TextChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
-                    _viewModel.Settings.DllInjection = DllInjectionTextBox.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_viewModel.Settings);
+                    _settingsState.DllInjection = DllInjectionTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistSpiceSettingsAsync(_settingsState);
                 };
             }
 
-            BindToggleSwitch(NetDumpToggleSwitch, v => _viewModel.Settings.NetDump = v, PersistSpice);
-            BindToggleSwitch(DisableSubDisplayToggleSwitch, v => _viewModel.Settings.DisableSubDisplay = v, PersistSpice);
+            BindToggleSwitch(NetDumpToggleSwitch, v => _settingsState.NetDump = v, PersistSpice);
+            BindToggleSwitch(DisableSubDisplayToggleSwitch, v => _settingsState.DisableSubDisplay = v, PersistSpice);
 
             if (WindowModeComboBox != null)
             {
                 WindowModeComboBox.SelectionChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
-                    _viewModel.Settings.WindowModeIndex = WindowModeComboBox.SelectedIndex < 0 ? 0 : WindowModeComboBox.SelectedIndex;
+                    _settingsState.WindowModeIndex = WindowModeComboBox.SelectedIndex < 0 ? 0 : WindowModeComboBox.SelectedIndex;
                     await PersistSpice();
                 };
             }
 
-            BindToggleSwitch(PCoreOptimizationToggleSwitch, v => _viewModel.Settings.PCoreOptimization = v, PersistSpice);
-            BindToggleSwitch(SubBorderlessToggleSwitch, v => _viewModel.Settings.SubBorderless = v, PersistSpice);
-            BindToggleSwitch(ShowCursorTouchSimToggleSwitch, v => _viewModel.Settings.ShowCursorTouchSim = v, PersistSpice);
-            BindToggleSwitch(WindowTopMostToggleSwitch, v => _viewModel.Settings.WindowTopMost = v, PersistSpice);
-            BindToggleSwitch(SingleAdapterToggleSwitch, v => _viewModel.Settings.SingleAdapter = v, PersistSpice);
-            BindToggleSwitch(NvidiaPerformanceProfileToggleSwitch, v => _viewModel.Settings.NvidiaPerformanceProfile = v, PersistSpice);
-            BindToggleSwitch(SubWindowTopMostToggleSwitch, v => _viewModel.Settings.SubWindowTopMost = v, PersistSpice);
-            BindToggleSwitch(SubForceRenderToggleSwitch, v => _viewModel.Settings.SubForceRender = v, PersistSpice);
-            BindToggleSwitch(NativeTouchToggleSwitch, v => _viewModel.Settings.NativeTouch = v, PersistSpice);
-            BindToggleSwitch(CardIoToggleSwitch, v => _viewModel.Settings.CardIo = v, PersistSpice);
-            BindToggleSwitch(HidSmartCardToggleSwitch, v => _viewModel.Settings.HidSmartCard = v, PersistSpice);
+            BindToggleSwitch(PCoreOptimizationToggleSwitch, v => _settingsState.PCoreOptimization = v, PersistSpice);
+            BindToggleSwitch(SubBorderlessToggleSwitch, v => _settingsState.SubBorderless = v, PersistSpice);
+            BindToggleSwitch(ShowCursorTouchSimToggleSwitch, v => _settingsState.ShowCursorTouchSim = v, PersistSpice);
+            BindToggleSwitch(WindowTopMostToggleSwitch, v => _settingsState.WindowTopMost = v, PersistSpice);
+            BindToggleSwitch(SingleAdapterToggleSwitch, v => _settingsState.SingleAdapter = v, PersistSpice);
+            BindToggleSwitch(NvidiaPerformanceProfileToggleSwitch, v => _settingsState.NvidiaPerformanceProfile = v, PersistSpice);
+            BindToggleSwitch(SubWindowTopMostToggleSwitch, v => _settingsState.SubWindowTopMost = v, PersistSpice);
+            BindToggleSwitch(SubForceRenderToggleSwitch, v => _settingsState.SubForceRender = v, PersistSpice);
+            BindToggleSwitch(NativeTouchToggleSwitch, v => _settingsState.NativeTouch = v, PersistSpice);
+            BindToggleSwitch(CardIoToggleSwitch, v => _settingsState.CardIo = v, PersistSpice);
+            BindToggleSwitch(HidSmartCardToggleSwitch, v => _settingsState.HidSmartCard = v, PersistSpice);
 
             if (WindowSizeTextBox != null)
             {
                 WindowSizeTextBox.TextChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
-                    _viewModel.Settings.WindowSize = WindowSizeTextBox.Text ?? string.Empty;
+                    _settingsState.WindowSize = WindowSizeTextBox.Text ?? string.Empty;
                     await PersistSpice();
                 };
             }
             if (AsioDriverComboBox != null)
             {
-                ApplyAsioDriverChoicesFromViewModel();
+                ApplyAsioDriverChoicesFromState();
 
                 AsioDriverComboBox.DropDownOpened += (s, e) =>
                 {
-                    ApplyAsioDriverChoicesFromViewModel();
+                    ApplyAsioDriverChoicesFromState();
                 };
 
                 AsioDriverComboBox.SelectionChanged += async (_, _) =>
@@ -586,19 +633,20 @@ namespace LazyBootstrap.Views
                     if (_isLoadingSettings || _isUpdatingAsioDriverUi) return;
                     if (AsioDriverComboBox.SelectedItem is AsioDriverOption choice)
                     {
-                        _viewModel.Settings.SelectedAsioDriver = choice;
-                        _viewModel.Settings.AsioDriverValue = choice.Value;
+                        _settingsState.SelectedAsioDriver = choice;
+                        _settingsState.AsioDriverValue = choice.Value;
                     }
                     else
                     {
-                        _viewModel.Settings.SelectedAsioDriver = null;
-                        _viewModel.Settings.AsioDriverValue = string.Empty;
+                        _settingsState.SelectedAsioDriver = null;
+                        _settingsState.AsioDriverValue = string.Empty;
                     }
 
                     await PersistSpice();
+                    UpdateAsioControlPanelButtonState();
                 };
             }
-            BindToggleSwitch(LowLatencySharedAudioToggleSwitch, v => _viewModel.Settings.LowLatencySharedAudio = v, PersistSpice);
+            BindToggleSwitch(LowLatencySharedAudioToggleSwitch, v => _settingsState.LowLatencySharedAudio = v, PersistSpice);
         }
 
         private void InitializeServerPresetBindings()
@@ -608,9 +656,10 @@ namespace LazyBootstrap.Views
                 ServerAddressTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isSyncingModel) return;
-                    _viewModel.Settings.ServerAddress = ServerAddressTextBox.Text ?? string.Empty;
-                    _viewModel.Settings.PcbId = PcbIdTextBox?.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistServerEndpointAsync(_viewModel.Settings);
+                    _settingsState.ServerAddress = ServerAddressTextBox.Text ?? string.Empty;
+                    _settingsState.PcbId = PcbIdTextBox?.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistServerEndpointAsync(_settingsState);
+                    ApplyServerPresetStateToUi();
                 };
             }
             if (PcbIdTextBox != null)
@@ -618,9 +667,10 @@ namespace LazyBootstrap.Views
                 PcbIdTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isSyncingModel) return;
-                    _viewModel.Settings.ServerAddress = ServerAddressTextBox?.Text ?? string.Empty;
-                    _viewModel.Settings.PcbId = PcbIdTextBox.Text ?? string.Empty;
-                    await _settingsWorkflowService.PersistServerEndpointAsync(_viewModel.Settings);
+                    _settingsState.ServerAddress = ServerAddressTextBox?.Text ?? string.Empty;
+                    _settingsState.PcbId = PcbIdTextBox.Text ?? string.Empty;
+                    await _settingsWorkflowService.PersistServerEndpointAsync(_settingsState);
+                    ApplyServerPresetStateToUi();
                 };
             }
         }
@@ -631,7 +681,7 @@ namespace LazyBootstrap.Views
             UpdateStatusProgress(false);
 
             Closing += OnWindowClosing;
-            UpdateCompatLayerStatus();
+            UpdateGpuCompatLayerStatus();
         }
 
         private string GetContentsDirectoryPath()

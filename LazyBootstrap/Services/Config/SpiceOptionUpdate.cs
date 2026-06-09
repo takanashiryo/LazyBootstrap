@@ -2,7 +2,7 @@ using System;
 
 namespace LazyBootstrap.Services.Config
 {
-    internal sealed class SpiceOptionUpdate
+    public sealed class SpiceOptionUpdate
     {
         public SpiceOptionUpdate(string name, string value, bool removeWhenEmpty = false)
         {

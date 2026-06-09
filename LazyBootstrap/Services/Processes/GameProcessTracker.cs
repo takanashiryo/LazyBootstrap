@@ -5,24 +5,8 @@ using System.IO;
 
 namespace LazyBootstrap.Services.Processes
 {
-    internal interface IGameProcessTracker
-    {
-        void PrepareTrackedSpiceSession(string spicePath);
 
-        void RegisterTrackedSpiceProcess(Process process);
-
-        Process TryFindRestartedSpiceProcess(DateTime exitedAtUtc);
-
-        void TrackManagedAsphyxiaProcess(Process process);
-
-        bool HasManagedAsphyxiaProcess();
-
-        bool TryStopManagedAsphyxiaProcess(out string errorMessage);
-
-        void ResetManagedAsphyxiaTracking();
-    }
-
-    internal sealed class GameProcessTracker : IGameProcessTracker
+    public sealed class GameProcessTracker
     {
         private static readonly TimeSpan RestartStartTimeSkewTolerance = TimeSpan.FromSeconds(2);
 

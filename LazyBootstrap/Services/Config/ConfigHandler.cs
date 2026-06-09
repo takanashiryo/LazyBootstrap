@@ -4,24 +4,85 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
-public interface IConfigHandler
+internal static class TomlTextShared
 {
-    void WriteString(string section, string key, string value);
+    public static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
 
-    void RenameSection(string sourceSection, string targetSection);
+    public static string EscapeTomlString(string value)
+    {
+        return (value ?? string.Empty)
+            .Replace("\\", "\\\\")
+            .Replace("\"", "\\\"")
+            .Replace("\r", "\\r")
+            .Replace("\n", "\\n")
+            .Replace("\t", "\\t");
+    }
 
-    void MoveKey(string sourceSection, string targetSection, string key);
+    public static void NormalizeBlankLines(List<string> lines, bool preserveSectionSeparator)
+    {
+        if (lines == null || lines.Count == 0)
+        {
+            return;
+        }
 
-    void DeleteKey(string section, string key);
+        for (int i = lines.Count - 1; i >= 0; i--)
+        {
+            if (!string.IsNullOrWhiteSpace(lines[i]))
+            {
+                break;
+            }
 
-    string ReadString(string section, string key, string defaultValue = "");
+            lines.RemoveAt(i);
+        }
 
-    (List<ServerPresetItem> Presets, string ActivePreset, bool Mutated) LoadServerPresets(string nonePresetName, string asphyxiaPresetName, string asphyxiaDefaultUrl);
+        for (int i = lines.Count - 1; i > 0; i--)
+        {
+            if (!string.IsNullOrWhiteSpace(lines[i]) || !string.IsNullOrWhiteSpace(lines[i - 1]))
+            {
+                continue;
+            }
 
-    void SaveServerPresets(IEnumerable<ServerPresetItem> presets, string activePreset, string nonePresetName);
+            if (preserveSectionSeparator)
+            {
+                string prevNonBlank = string.Empty;
+                string nextNonBlank = string.Empty;
+
+                for (int p = i - 1; p >= 0; p--)
+                {
+                    if (!string.IsNullOrWhiteSpace(lines[p]))
+                    {
+                        prevNonBlank = lines[p].Trim();
+                        break;
+                    }
+                }
+
+                for (int n = i + 1; n < lines.Count; n++)
+                {
+                    if (!string.IsNullOrWhiteSpace(lines[n]))
+                    {
+                        nextNonBlank = lines[n].Trim();
+                        break;
+                    }
+                }
+
+                bool keepAsSectionSeparator = !string.IsNullOrWhiteSpace(prevNonBlank)
+                    && !string.IsNullOrWhiteSpace(nextNonBlank)
+                    && !prevNonBlank.StartsWith("[", StringComparison.Ordinal)
+                    && nextNonBlank.StartsWith("[", StringComparison.Ordinal);
+
+                if (keepAsSectionSeparator)
+                {
+                    continue;
+                }
+            }
+
+            lines.RemoveAt(i);
+        }
+    }
 }
 
-public class ConfigHandler : IConfigHandler
+
+public class ConfigHandler
 {
     private readonly string _path;
     private readonly object _sync = new object();

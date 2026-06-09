@@ -1,38 +1,58 @@
-using System;
-using CommunityToolkit.Mvvm.ComponentModel;
+using System.ComponentModel;
+using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace LazyBootstrap.Services.Shell
 {
-    public interface IShellStateService
+    public sealed class ShellStateService : INotifyPropertyChanged
     {
-        string StatusText { get; set; }
+        private string _statusText = "就绪";
+        private double _statusProgressValue;
+        private bool _isStatusProgressVisible;
+        private bool _isInteractionEnabled = true;
+        private ShellPage _selectedPage = ShellPage.Launch;
 
-        double StatusProgressValue { get; set; }
+        public event PropertyChangedEventHandler PropertyChanged;
 
-        bool IsStatusProgressVisible { get; set; }
+        public string StatusText
+        {
+            get => _statusText;
+            set => SetField(ref _statusText, value ?? string.Empty);
+        }
 
-        bool IsInteractionEnabled { get; set; }
+        public double StatusProgressValue
+        {
+            get => _statusProgressValue;
+            set => SetField(ref _statusProgressValue, value);
+        }
 
-        ShellPage SelectedPage { get; set; }
+        public bool IsStatusProgressVisible
+        {
+            get => _isStatusProgressVisible;
+            set => SetField(ref _isStatusProgressVisible, value);
+        }
 
-        event System.ComponentModel.PropertyChangedEventHandler PropertyChanged;
-    }
+        public bool IsInteractionEnabled
+        {
+            get => _isInteractionEnabled;
+            set => SetField(ref _isInteractionEnabled, value);
+        }
 
-    internal sealed partial class ShellStateService : ObservableObject, IShellStateService
-    {
-        [ObservableProperty]
-        private string statusText = "就绪";
+        public ShellPage SelectedPage
+        {
+            get => _selectedPage;
+            set => SetField(ref _selectedPage, value);
+        }
 
-        [ObservableProperty]
-        private double statusProgressValue;
+        private void SetField<T>(ref T field, T value, [CallerMemberName] string propertyName = null)
+        {
+            if (EqualityComparer<T>.Default.Equals(field, value))
+            {
+                return;
+            }
 
-        [ObservableProperty]
-        private bool isStatusProgressVisible;
-
-        [ObservableProperty]
-        private bool isInteractionEnabled = true;
-
-        [ObservableProperty]
-        private ShellPage selectedPage = ShellPage.Launch;
+            field = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 }

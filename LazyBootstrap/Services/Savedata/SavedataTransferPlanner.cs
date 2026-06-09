@@ -5,22 +5,12 @@ using System.Linq;
 
 namespace LazyBootstrap.Services.Savedata
 {
-    internal interface ISavedataTransferPlanner
+
+    public sealed class SavedataTransferPlanner
     {
-        List<SavedataTransferEntry> GetCurrentSavedataEntries();
+        private readonly LauncherPaths _paths;
 
-        List<SavedataTransferEntry> GetCurrentSavedataTargets();
-
-        List<SavedataTransferEntry> BuildArchiveEntriesFromDirectory(string extractionDirectory);
-
-        List<SavedataTransferEntry> BuildMigrationEntries(string sourceGameDirectory, string sourceAsphyxiaDirectory);
-    }
-
-    internal sealed class SavedataTransferPlanner : ISavedataTransferPlanner
-    {
-        private readonly ILauncherPaths _paths;
-
-        public SavedataTransferPlanner(ILauncherPaths paths)
+        public SavedataTransferPlanner(LauncherPaths paths)
         {
             ArgumentNullException.ThrowIfNull(paths);
             _paths = paths;
@@ -171,7 +161,7 @@ namespace LazyBootstrap.Services.Savedata
         }
     }
 
-    internal sealed class SavedataTransferEntry
+    public sealed class SavedataTransferEntry
     {
         public SavedataTransferEntry(string id, string displayName, string sourcePath, string destinationPath, string archiveRelativePath, bool isDirectory)
         {

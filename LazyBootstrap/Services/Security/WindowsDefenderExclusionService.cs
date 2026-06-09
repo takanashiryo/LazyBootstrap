@@ -6,12 +6,8 @@ using System.Threading.Tasks;
 
 namespace LazyBootstrap.Services.Security
 {
-    internal interface IWindowsDefenderExclusionService
-    {
-        Task<WindowsDefenderExclusionResult> EnsureDirectoryExcludedAsync(string directoryPath);
-    }
 
-    internal sealed class WindowsDefenderExclusionService : IWindowsDefenderExclusionService
+    public sealed class WindowsDefenderExclusionService
     {
         public async Task<WindowsDefenderExclusionResult> EnsureDirectoryExcludedAsync(string directoryPath)
         {

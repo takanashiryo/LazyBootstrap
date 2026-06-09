@@ -1,5 +1,4 @@
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Avalonia;
@@ -13,6 +12,34 @@ namespace LazyBootstrap.Views
 {
     public partial class MainWindow
     {
+        private void OnToggleLaunchLogClick(object sender, RoutedEventArgs e)
+            => _ = _launchWorkflowService.ToggleLaunchLogAsync(_launchState, this);
+
+        private void OnOpenLogClick(object sender, RoutedEventArgs e)
+            => _ = _launchWorkflowService.OpenLogAsync();
+
+        private void OnKillProcessesClick(object sender, RoutedEventArgs e)
+            => _ = _launchWorkflowService.KillProcessesAsync();
+
+        private void OnStartClick(object sender, RoutedEventArgs e)
+            => _ = StartLaunchAsync(false);
+
+        private void OnStartAsphyxiaDevClick(object sender, RoutedEventArgs e)
+            => _ = StartLaunchAsync(true);
+
+        private Task StartLaunchAsync(bool asphyxiaDevOnly)
+        {
+            if (!_launchState.CanStartLaunch)
+            {
+                return Task.CompletedTask;
+            }
+
+            return _launchWorkflowService.StartAsync(
+                _launchState,
+                new LaunchRequest(_settingsState, _displayState, asphyxiaDevOnly),
+                this);
+        }
+
         private static readonly Color LaunchMessageErrorStartColor = Color.Parse("#FFFF0000");
         private static readonly Color LaunchMessageWarningStartColor = Color.Parse("#FFFFD200");
         private static readonly Color LaunchMessageBorderEndColor = Color.Parse("#FFFFFFFF");
@@ -23,56 +50,54 @@ namespace LazyBootstrap.Views
         private Stopwatch _launchMessageOverlayAnimationStopwatch;
         private Color _launchMessageOverlayStartColor = LaunchMessageErrorStartColor;
 
-        private void HookLaunchViewModelState()
+        private void InitializeLaunchControls()
         {
-            if (_viewModel?.Launch == null)
-            {
-                return;
-            }
-
             RemoveHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed);
             AddHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
-            _viewModel.Launch.PropertyChanged -= OnLaunchViewModelPropertyChanged;
-            _viewModel.Launch.PropertyChanged += OnLaunchViewModelPropertyChanged;
+            ApplyLaunchStateToUi();
             _ = ApplyLaunchLogVisibilityAsync();
             _ = ApplyLaunchLogTextAsync();
             _ = ApplyLaunchMessageOverlayAsync();
         }
 
-        private void UnhookLaunchViewModelState()
+        private void ReleaseLaunchControls()
         {
-            if (_viewModel?.Launch == null)
-            {
-                return;
-            }
-
             RemoveHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed);
-            _viewModel.Launch.PropertyChanged -= OnLaunchViewModelPropertyChanged;
             StopLaunchMessageOverlayAnimation();
         }
 
-        private void OnLaunchViewModelPropertyChanged(object sender, PropertyChangedEventArgs e)
+        public void OnLaunchStateChanged(LaunchState state)
         {
-            if (string.IsNullOrWhiteSpace(e?.PropertyName)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.IsLaunchLogVisible), StringComparison.Ordinal))
+            Dispatcher.UIThread.Post(ApplyLaunchStateToUi);
+        }
+
+        public void OnLaunchLogVisibilityChanged(LaunchState state)
+        {
+            Dispatcher.UIThread.Post(() => _ = ApplyLaunchLogVisibilityAsync());
+        }
+
+        public void OnLaunchLogChanged(LaunchState state)
+        {
+            Dispatcher.UIThread.Post(() => _ = ApplyLaunchLogTextAsync());
+        }
+
+        public void OnLaunchMessageChanged(LaunchMessage message)
+        {
+            Dispatcher.UIThread.Post(() => _ = ApplyLaunchMessageOverlayAsync());
+        }
+
+        private void ApplyLaunchStateToUi()
+        {
+            bool canStart = _launchState.CanStartLaunch;
+
+            if (StartButton != null)
             {
-                _ = ApplyLaunchLogVisibilityAsync();
+                StartButton.IsEnabled = canStart;
             }
 
-            if (string.IsNullOrWhiteSpace(e?.PropertyName)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.LaunchLogText), StringComparison.Ordinal))
+            if (StartAsphyxiaDevMenuItem != null)
             {
-                _ = ApplyLaunchLogTextAsync();
-            }
-
-            if (string.IsNullOrWhiteSpace(e?.PropertyName)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.IsMessageVisible), StringComparison.Ordinal)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageType), StringComparison.Ordinal)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageTitle), StringComparison.Ordinal)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageAccentText), StringComparison.Ordinal)
-                || string.Equals(e.PropertyName, nameof(LaunchPageViewModel.MessageBodyText), StringComparison.Ordinal))
-            {
-                _ = ApplyLaunchMessageOverlayAsync();
+                StartAsphyxiaDevMenuItem.IsEnabled = canStart;
             }
         }
 
@@ -84,13 +109,13 @@ namespace LazyBootstrap.Views
                 return;
             }
 
-            if (_viewModel.Launch.IsLaunchLogVisible)
+            if (_launchState.IsLaunchLogVisible)
             {
-                await ShowLaunchLogAreaWithAnimationAsync(syncViewModel: false);
+                await ShowLaunchLogAreaWithAnimationAsync(syncState: false);
                 return;
             }
 
-            HideLaunchLogArea(syncViewModel: false);
+            HideLaunchLogArea(syncState: false);
         }
 
         private async Task ApplyLaunchLogTextAsync()
@@ -106,7 +131,7 @@ namespace LazyBootstrap.Views
                 return;
             }
 
-            LogOutputTextBlock.Text = _viewModel.Launch.LaunchLogText ?? string.Empty;
+            LogOutputTextBlock.Text = _launchState.LaunchLogText ?? string.Empty;
 
             if (LaunchLogScrollViewer != null)
             {
@@ -174,7 +199,7 @@ namespace LazyBootstrap.Views
             }
         }
 
-        private async Task ShowLaunchLogAreaWithAnimationAsync(bool syncViewModel = true)
+        private async Task ShowLaunchLogAreaWithAnimationAsync(bool syncState = true)
         {
             if (LaunchLogContainer == null)
             {
@@ -187,9 +212,15 @@ namespace LazyBootstrap.Views
             }
 
             _isLaunchLogVisible = true;
-            if (syncViewModel)
+            if (syncState)
             {
-                _viewModel.Launch.IsLaunchLogVisible = true;
+                _launchState.IsLaunchLogVisible = true;
+                _launchState.ToggleLaunchLogText = "隐藏启动日志";
+            }
+
+            if (ToggleLaunchLogButton != null)
+            {
+                ToggleLaunchLogButton.Content = _launchState.ToggleLaunchLogText;
             }
 
             LaunchLogContainer.IsVisible = true;
@@ -223,12 +254,18 @@ namespace LazyBootstrap.Views
             scale.ScaleY = 1;
         }
 
-        private void HideLaunchLogArea(bool clearOutput = false, bool syncViewModel = true)
+        private void HideLaunchLogArea(bool clearOutput = false, bool syncState = true)
         {
             _isLaunchLogVisible = false;
-            if (syncViewModel)
+            if (syncState)
             {
-                _viewModel.Launch.IsLaunchLogVisible = false;
+                _launchState.IsLaunchLogVisible = false;
+                _launchState.ToggleLaunchLogText = "显示启动日志";
+            }
+
+            if (ToggleLaunchLogButton != null)
+            {
+                ToggleLaunchLogButton.Content = _launchState.ToggleLaunchLogText;
             }
 
             if (LaunchLogContainer == null)
@@ -243,20 +280,20 @@ namespace LazyBootstrap.Views
 
             if (clearOutput)
             {
-                ClearLaunchOutput(syncViewModel);
+                ClearLaunchOutput(syncState);
             }
         }
 
-        private void ClearLaunchOutput(bool syncViewModel = true)
+        private void ClearLaunchOutput(bool syncState = true)
         {
-            if (syncViewModel)
+            if (syncState)
             {
-                _viewModel.Launch.LaunchLogText = string.Empty;
+                _launchState.LaunchLogText = string.Empty;
             }
 
             if (LogOutputTextBlock != null)
             {
-                LogOutputTextBlock.Text = _viewModel.Launch.LaunchLogText ?? string.Empty;
+                LogOutputTextBlock.Text = _launchState.LaunchLogText ?? string.Empty;
             }
         }
 
@@ -270,13 +307,7 @@ namespace LazyBootstrap.Views
 
             UpdateLaunchMessageContent();
 
-            if (_viewModel?.Launch == null)
-            {
-                HideLaunchMessageOverlay();
-                return;
-            }
-
-            if (_viewModel.Launch.IsMessageVisible)
+            if (_launchState.IsMessageVisible)
             {
                 ShowLaunchMessageOverlay();
                 return;
@@ -287,26 +318,21 @@ namespace LazyBootstrap.Views
 
         private void UpdateLaunchMessageContent()
         {
-            if (_viewModel?.Launch == null)
-            {
-                return;
-            }
-
             if (LaunchMessageTitleTextBlock != null)
             {
-                LaunchMessageTitleTextBlock.Text = _viewModel.Launch.MessageTitle ?? string.Empty;
+                LaunchMessageTitleTextBlock.Text = _launchState.MessageTitle ?? string.Empty;
             }
 
             if (LaunchMessageAccentTextBlock != null)
             {
-                string accentText = _viewModel.Launch.MessageAccentText ?? string.Empty;
+                string accentText = _launchState.MessageAccentText ?? string.Empty;
                 LaunchMessageAccentTextBlock.Text = accentText;
                 LaunchMessageAccentTextBlock.IsVisible = !string.IsNullOrWhiteSpace(accentText);
             }
 
             if (LaunchMessageBodyTextBlock != null)
             {
-                LaunchMessageBodyTextBlock.Text = _viewModel.Launch.MessageBodyText ?? string.Empty;
+                LaunchMessageBodyTextBlock.Text = _launchState.MessageBodyText ?? string.Empty;
             }
         }
 
@@ -317,7 +343,7 @@ namespace LazyBootstrap.Views
                 return;
             }
 
-            _launchMessageOverlayStartColor = ResolveLaunchMessageStartColor(_viewModel?.Launch?.MessageType ?? NotificationType.Error);
+            _launchMessageOverlayStartColor = ResolveLaunchMessageStartColor(_launchState.MessageType);
 
             if (LaunchMessageBorder != null && !ReferenceEquals(LaunchMessageBorder.BorderBrush, _launchMessageOverlayBorderBrush))
             {
@@ -332,12 +358,12 @@ namespace LazyBootstrap.Views
 
         private void DismissLaunchMessageOverlay()
         {
-            if (_viewModel?.Launch == null || !_viewModel.Launch.IsMessageVisible)
+            if (!_launchState.IsMessageVisible)
             {
                 return;
             }
 
-            _viewModel.Launch.IsMessageVisible = false;
+            _launchState.IsMessageVisible = false;
             HideLaunchMessageOverlay();
         }
 
@@ -400,7 +426,7 @@ namespace LazyBootstrap.Views
 
         private void OnLaunchMessageOverlayPointerPressed(object sender, PointerPressedEventArgs e)
         {
-            if (_viewModel?.Launch == null || !_viewModel.Launch.IsMessageVisible)
+            if (!_launchState.IsMessageVisible)
             {
                 return;
             }

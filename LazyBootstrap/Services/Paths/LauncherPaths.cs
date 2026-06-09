@@ -4,44 +4,8 @@ using System.IO;
 
 namespace LazyBootstrap.Services.Paths
 {
-    internal interface ILauncherPaths
-    {
-        string BaseDir { get; }
 
-        string ApplicationDirectoryPath { get; }
-
-        string ConfigFilePath { get; }
-
-        string GetContentsDirectoryPath();
-
-        string GetAsphyxiaDirectoryPath();
-
-        string GetSpicePath();
-
-        string GetAsphyxiaPath();
-
-        string GetSpiceXmlPath();
-
-        string GetLazySpiceXmlPath();
-
-        string ResolveSpiceXmlPath(bool useSystemSpiceConfig);
-
-        string GetBundledLibsDirectoryPath();
-
-        string GetBundledSevenZipExecutablePath();
-
-        string GetLauncherExecutablePath();
-
-        string GetRuntimeDirectoryPath();
-
-        string GetSavedataBackupDirectoryPath();
-
-        string GetUpdateStagingDirectoryPath();
-
-        string ResolveSevenZipExecutablePath();
-    }
-
-    internal sealed class LauncherPaths : ILauncherPaths
+    public sealed class LauncherPaths
     {
         private readonly string _defaultContentsDirectoryPath;
         private readonly string _defaultAsphyxiaDirectoryPath;
