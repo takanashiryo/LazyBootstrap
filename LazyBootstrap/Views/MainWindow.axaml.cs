@@ -646,6 +646,7 @@ namespace LazyBootstrap.Views
                     UpdateAsioControlPanelButtonState();
                 };
             }
+            BindToggleSwitch(Asio2ChToggleSwitch, v => _settingsState.Asio2Ch = v, PersistSpice);
             BindToggleSwitch(LowLatencySharedAudioToggleSwitch, v => _settingsState.LowLatencySharedAudio = v, PersistSpice);
         }
 

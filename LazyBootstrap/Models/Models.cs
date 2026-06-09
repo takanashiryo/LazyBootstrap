@@ -212,6 +212,8 @@ namespace LazyBootstrap.Models
 
         public AsioDriverOption SelectedAsioDriver { get; set; }
 
+        public bool Asio2Ch { get; set; }
+
         public bool LowLatencySharedAudio { get; set; }
 
         public bool CardIo { get; set; }

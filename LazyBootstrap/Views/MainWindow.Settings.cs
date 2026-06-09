@@ -219,6 +219,11 @@ namespace LazyBootstrap.Views
                 NativeTouchToggleSwitch.IsChecked = _settingsState.NativeTouch;
             }
 
+            if (Asio2ChToggleSwitch != null)
+            {
+                Asio2ChToggleSwitch.IsChecked = _settingsState.Asio2Ch;
+            }
+
             if (LowLatencySharedAudioToggleSwitch != null)
             {
                 LowLatencySharedAudioToggleSwitch.IsChecked = _settingsState.LowLatencySharedAudio;

@@ -11,37 +11,37 @@
                  CanResize="True"
                  WindowStartupLocation="CenterScreen">
     <suki:SukiWindow.Hosts>
-        <suki:SukiDialogHost x:Name="DialogHost"/>
-        <suki:SukiToastHost x:Name="ToastHost"/>
+        <suki:SukiDialogHost x:Name="DialogHost" />
+        <suki:SukiToastHost x:Name="ToastHost" />
     </suki:SukiWindow.Hosts>
 
     <suki:SukiWindow.Styles>
         <Style Selector="suki|SukiSideMenu Button">
-            <Setter Property="MinHeight" Value="36"/>
-            <Setter Property="Padding" Value="14,8"/>
-            <Setter Property="HorizontalContentAlignment" Value="Center"/>
-            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Padding" Value="14,8" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="TextBlock.FaIcon">
-            <Setter Property="FontFamily" Value="{DynamicResource FontAwesomeSolidFamily}"/>
-            <Setter Property="VerticalAlignment" Value="Center"/>
-            <Setter Property="TextAlignment" Value="Center"/>
-            <Setter Property="ClipToBounds" Value="False"/>
-            <Setter Property="Padding" Value="0,1,0,1"/>
-            <Setter Property="LineHeight" Value="20"/>
+            <Setter Property="FontFamily" Value="{DynamicResource FontAwesomeSolidFamily}" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="TextAlignment" Value="Center" />
+            <Setter Property="ClipToBounds" Value="False" />
+            <Setter Property="Padding" Value="0,1,0,1" />
+            <Setter Property="LineHeight" Value="20" />
         </Style>
 
 
         <Style Selector="suki|SukiWindow /template/ suki|GlassCard#PART_TitleBarBackground">
-            <Setter Property="Background" Value="#33000000"/>
+            <Setter Property="Background" Value="#33000000" />
         </Style>
 
         <Style Selector="suki|SukiSideMenu /template/ suki|GlassCard#Glass">
-            <Setter Property="Background" Value="#33000000"/>
+            <Setter Property="Background" Value="#33000000" />
         </Style>
 
         <Style Selector="suki|SukiSideMenu /template/ Border#ContentBorder">
-            <Setter Property="Background" Value="#22000000"/>
+            <Setter Property="Background" Value="#22000000" />
         </Style>
 
     </suki:SukiWindow.Styles>
@@ -50,13 +50,13 @@
         <Image Source="avares://LazyBootstrap/Assets/Images/background.jpg"
                Stretch="UniformToFill"
                Opacity="0.05"
-               IsHitTestVisible="False"/>
+               IsHitTestVisible="False" />
 
         <suki:SukiSideMenu x:Name="MainSideMenu" IsSearchEnabled="False">
             <suki:SukiSideMenu.Items>
                 <suki:SukiSideMenuItem Header="启动">
                     <suki:SukiSideMenuItem.Icon>
-                        <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
                         <Grid x:Name="LaunchPageView" Margin="14" RowDefinitions="Auto,*,Auto" RowSpacing="12">
@@ -65,8 +65,8 @@
                                         Grid.Column="0"
                                         Classes="Basic"
                                         Click="OnToggleLaunchLogClick"
-                                        Content="显示启动日志"/>
-                                <Grid Grid.Column="1"/>
+                                        Content="显示启动日志" />
+                                <Grid Grid.Column="1" />
                             </Grid>
 
                             <Grid x:Name="LaunchLogContainer" Grid.Row="1" IsVisible="False" Opacity="0">
@@ -76,25 +76,27 @@
                                     <TextBlock x:Name="LogOutputTextBlock"
                                                FontSize="18"
                                                TextWrapping="Wrap"
-                                               Opacity="1"/>
+                                               Opacity="1" />
                                 </ScrollViewer>
                             </Grid>
 
-                            <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" VerticalAlignment="Bottom">
-                                <Button x:Name="OpenLogButton" Grid.Column="0" Classes="Basic" HorizontalContentAlignment="Left" Click="OnOpenLogClick">
+                            <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"
+                                  VerticalAlignment="Bottom">
+                                <Button x:Name="OpenLogButton" Grid.Column="0" Classes="Basic"
+                                        HorizontalContentAlignment="Left" Click="OnOpenLogClick">
                                     <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <TextBlock Classes="FaIcon" Text="&#xF15C;" FontSize="14"/>
-                                        <TextBlock Text="查看log" VerticalAlignment="Center"/>
+                                        <TextBlock Classes="FaIcon" Text="&#xF15C;" FontSize="14" />
+                                        <TextBlock Text="查看log" VerticalAlignment="Center" />
                                     </StackPanel>
                                 </Button>
 
-                                <Grid Grid.Column="1"/>
+                                <Grid Grid.Column="1" />
 
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
                                     <Button x:Name="KillProcessesButton" Classes="Danger" Click="OnKillProcessesClick">
                                         <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                            <TextBlock Classes="FaIcon" Text="&#xF00D;" FontSize="14"/>
-                                            <TextBlock Text="结束所有进程" VerticalAlignment="Center"/>
+                                            <TextBlock Classes="FaIcon" Text="&#xF00D;" FontSize="14" />
+                                            <TextBlock Text="结束所有进程" VerticalAlignment="Center" />
                                         </StackPanel>
                                     </Button>
                                     <SplitButton x:Name="StartButton"
@@ -104,8 +106,8 @@
                                                  Click="OnStartClick">
                                         <SplitButton.Content>
                                             <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                                                <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14"/>
-                                                <TextBlock Text="启动" VerticalAlignment="Center"/>
+                                                <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14" />
+                                                <TextBlock Text="启动" VerticalAlignment="Center" />
                                             </StackPanel>
                                         </SplitButton.Content>
                                         <SplitButton.Flyout>
@@ -113,7 +115,7 @@
                                                 <MenuItem x:Name="StartAsphyxiaDevMenuItem"
                                                           Header="以调试模式启动氧无"
                                                           IsEnabled="True"
-                                                          Click="OnStartAsphyxiaDevClick"/>
+                                                          Click="OnStartAsphyxiaDevClick" />
                                             </MenuFlyout>
                                         </SplitButton.Flyout>
                                     </SplitButton>
@@ -150,11 +152,11 @@
                                                     <DrawingImage.Drawing>
                                                         <DrawingGroup>
                                                             <GeometryDrawing Brush="#000000"
-                                                                             Geometry="M2.5,85l43-74.41h0a22.59,22.59,0,0,1,8-8.35,15.72,15.72,0,0,1,16,0,22.52,22.52,0,0,1,7.93,8.38l.23.44,42.08,73.07a20.91,20.91,0,0,1,3,10.84A16.44,16.44,0,0,1,121,102.4a15.45,15.45,0,0,1-5.74,6,21,21,0,0,1-11.35,2.78v0H17.7c-.21,0-.43,0-.64,0a19,19,0,0,1-7.83-1.74,15.83,15.83,0,0,1-6.65-5.72A16.26,16.26,0,0,1,0,95.18a21.66,21.66,0,0,1,2.2-9.62c.1-.2.2-.4.31-.59Z"/>
+                                                                             Geometry="M2.5,85l43-74.41h0a22.59,22.59,0,0,1,8-8.35,15.72,15.72,0,0,1,16,0,22.52,22.52,0,0,1,7.93,8.38l.23.44,42.08,73.07a20.91,20.91,0,0,1,3,10.84A16.44,16.44,0,0,1,121,102.4a15.45,15.45,0,0,1-5.74,6,21,21,0,0,1-11.35,2.78v0H17.7c-.21,0-.43,0-.64,0a19,19,0,0,1-7.83-1.74,15.83,15.83,0,0,1-6.65-5.72A16.26,16.26,0,0,1,0,95.18a21.66,21.66,0,0,1,2.2-9.62c.1-.2.2-.4.31-.59Z" />
                                                             <GeometryDrawing Brush="#FEC901"
-                                                                             Geometry="M9.09,88.78l43-74.38c5.22-8.94,13.49-9.2,18.81,0l42.32,73.49c4.12,6.79,2.41,15.9-9.31,15.72H17.7C9.78,103.79,5,97.44,9.09,88.78Z"/>
+                                                                             Geometry="M9.09,88.78l43-74.38c5.22-8.94,13.49-9.2,18.81,0l42.32,73.49c4.12,6.79,2.41,15.9-9.31,15.72H17.7C9.78,103.79,5,97.44,9.09,88.78Z" />
                                                             <GeometryDrawing Brush="#010101"
-                                                                             Geometry="M57.55,83.15a5.47,5.47,0,0,1,5.85-1.22,5.65,5.65,0,0,1,2,1.3A5.49,5.49,0,0,1,67,86.77a5.12,5.12,0,0,1-.08,1.4,5.22,5.22,0,0,1-.42,1.34,5.51,5.51,0,0,1-5.2,3.25,5.63,5.63,0,0,1-2.26-.53,5.51,5.51,0,0,1-2.81-2.92A6,6,0,0,1,55.9,88a5.28,5.28,0,0,1,0-1.31h0a6,6,0,0,1,.56-2,4.6,4.6,0,0,1,1.14-1.56Zm8.12-10.21c-.19,4.78-8.28,4.78-8.46,0-.82-8.19-2.92-27.63-2.85-35.32.07-2.37,2-3.78,4.55-4.31a11.65,11.65,0,0,1,2.48-.25,12.54,12.54,0,0,1,2.5.25c2.59.56,4.63,2,4.63,4.43V38l-2.84,35Z"/>
+                                                                             Geometry="M57.55,83.15a5.47,5.47,0,0,1,5.85-1.22,5.65,5.65,0,0,1,2,1.3A5.49,5.49,0,0,1,67,86.77a5.12,5.12,0,0,1-.08,1.4,5.22,5.22,0,0,1-.42,1.34,5.51,5.51,0,0,1-5.2,3.25,5.63,5.63,0,0,1-2.26-.53,5.51,5.51,0,0,1-2.81-2.92A6,6,0,0,1,55.9,88a5.28,5.28,0,0,1,0-1.31h0a6,6,0,0,1,.56-2,4.6,4.6,0,0,1,1.14-1.56Zm8.12-10.21c-.19,4.78-8.28,4.78-8.46,0-.82-8.19-2.92-27.63-2.85-35.32.07-2.37,2-3.78,4.55-4.31a11.65,11.65,0,0,1,2.48-.25,12.54,12.54,0,0,1,2.5.25c2.59.56,4.63,2,4.63,4.43V38l-2.84,35Z" />
                                                         </DrawingGroup>
                                                     </DrawingImage.Drawing>
                                                 </DrawingImage>
@@ -168,21 +170,21 @@
                                                        VerticalAlignment="Center"
                                                        Foreground="White"
                                                        FontSize="19"
-                                                       FontWeight="SemiBold"/>
+                                                       FontWeight="SemiBold" />
                                             <TextBlock x:Name="LaunchMessageAccentTextBlock"
                                                        Grid.Column="1"
                                                        VerticalAlignment="Center"
                                                        Foreground="#FFFF3B30"
                                                        FontSize="10"
                                                        FontWeight="Bold"
-                                                       IsVisible="False"/>
+                                                       IsVisible="False" />
                                         </Grid>
                                         <Border x:Name="LaunchMessageDivider"
                                                 Grid.Row="1" Grid.Column="1"
                                                 Height="1"
                                                 Margin="0,14,0,0"
                                                 Background="#F2FFFFFF"
-                                                HorizontalAlignment="Stretch"/>
+                                                HorizontalAlignment="Stretch" />
                                         <TextBlock x:Name="LaunchMessageBodyTextBlock"
                                                    Grid.Row="2" Grid.ColumnSpan="2"
                                                    Margin="0,14,0,0"
@@ -190,7 +192,7 @@
                                                    FontSize="15"
                                                    FontWeight="SemiBold"
                                                    TextWrapping="Wrap"
-                                                   LineHeight="27"/>
+                                                   LineHeight="27" />
                                     </Grid>
                                 </Border>
                             </Grid>
@@ -200,10 +202,11 @@
 
                 <suki:SukiSideMenuItem Header="设定">
                     <suki:SukiSideMenuItem.Icon>
-                        <TextBlock Classes="FaIcon" Text="&#xF013;" FontSize="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF013;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <suki:BusyArea x:Name="SettingsBusyArea" Margin="20,14" BusyText="spicecfg 运行中..." HorizontalAlignment="Center" MaxWidth="1240">
+                        <suki:BusyArea x:Name="SettingsBusyArea" Margin="20,14" BusyText="spicecfg 运行中..."
+                                       HorizontalAlignment="Center" MaxWidth="1240">
                             <Grid>
                                 <suki:SettingsLayout x:Name="GameSettingsLayout"
                                                      Margin="0,6,0,0"
@@ -211,234 +214,395 @@
                                                      MinWidthWhetherStackSummaryShow="1020">
                                     <suki:SettingsLayout.Items>
                                         <generic:List x:TypeArguments="suki:SettingsLayoutItem">
-                                        <suki:SettingsLayoutItem Header="基础">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Button x:Name="EditConfigButton" Classes="Flat" HorizontalAlignment="Stretch" Content="编辑 spicecfg" Click="OnEditConfigClick"/>
-                                                        <Grid x:Name="UseSystemSpiceConfigRow" ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                                                            <TextBlock Text="切换为系统配置" VerticalAlignment="Center"/>
-                                                            <ToggleSwitch x:Name="UseSystemSpiceConfigToggleSwitch" Grid.Column="1"/>
-                                                        </Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                                                            <TextBlock Text="不启动氧无" VerticalAlignment="Center"/>
-                                                            <ToggleSwitch x:Name="NoAsphyxiaToggleSwitch" Grid.Column="1"/>
-                                                        </Grid>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
-
-                                        <suki:SettingsLayoutItem Header="AMD/Intel显卡兼容层">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="14">
-                                                    <StackPanel Spacing="8">
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
-                                                            <TextBlock Text="启用显卡兼容层" VerticalAlignment="Center"/>
-                                                            <ToggleSwitch x:Name="GpuCompatLayerToggleSwitch" Grid.Column="1"/>
-                                                        </Grid>
-                                                        <TextBlock Text="启用后会导入相关补丁并设置 spice2x" Opacity="0.7" FontSize="12" VerticalAlignment="Center" Margin="0,-18,0,0"/>
-                                                        <suki:BusyArea x:Name="GpuCompatLayerRenderModeBusyArea" BusyText="兼容层已启动，请关闭以修改设置">
-                                                            <suki:BusyArea.Styles>
-                                                                <Style Selector="suki|BusyArea[IsBusy=False] /template/ DockPanel#LoadingBusyArea">
-                                                                    <Setter Property="IsHitTestVisible" Value="False"/>
-                                                                </Style>
-                                                                <Style Selector="suki|BusyArea[IsBusy=True] /template/ DockPanel#LoadingBusyArea">
-                                                                    <Setter Property="IsHitTestVisible" Value="True"/>
-                                                                </Style>
-                                                            </suki:BusyArea.Styles>
-                                                            <Grid HorizontalAlignment="Center"
-                                                                  MaxWidth="684"
-                                                                  Margin="0,2,0,0"
-                                                                  ColumnDefinitions="*,*,*"
-                                                                  ColumnSpacing="12">
-                                                                <RadioButton x:Name="GpuCompatLayerDx9on12RadioButton"
-                                                                             Grid.Column="0"
-                                                                             HorizontalAlignment="Stretch"
-                                                                             MinWidth="0"
-                                                                             MinHeight="82"
-                                                                             Padding="0"
-                                                                             GroupName="CompatType"
-                                                                             Classes="GigaChips"
-                                                                             Click="OnSelectGpuCompatLayerRenderModeClick"
-                                                                             CommandParameter="dx9on12">
-                                                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
-                                                                        <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
-                                                                        <TextBlock Text="dx9on12" FontSize="16" FontWeight="DemiBold" TextWrapping="Wrap"/>
-                                                                        <TextBlock Text="最常用的模式" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
-                                                                    </StackPanel>
-                                                                </RadioButton>
-                                                                <RadioButton x:Name="GpuCompatLayerDx9on12ExternalRadioButton"
-                                                                             Grid.Column="1"
-                                                                             HorizontalAlignment="Stretch"
-                                                                             MinWidth="0"
-                                                                             MinHeight="82"
-                                                                             Padding="0"
-                                                                             GroupName="CompatType"
-                                                                             Classes="GigaChips"
-                                                                             Click="OnSelectGpuCompatLayerRenderModeClick"
-                                                                             CommandParameter="dx9on12_external">
-                                                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
-                                                                        <TextBlock Text="DIRECTX 12" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
-                                                                        <TextBlock Text="dx9on12（外置）" FontSize="16" FontWeight="DemiBold"/>
-                                                                        <TextBlock Text="可能比内置的好" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
-                                                                    </StackPanel>
-                                                                </RadioButton>
-                                                                <RadioButton x:Name="GpuCompatLayerDxvkRadioButton"
-                                                                             Grid.Column="2"
-                                                                             HorizontalAlignment="Stretch"
-                                                                             MinWidth="0"
-                                                                             MinHeight="82"
-                                                                             Padding="0"
-                                                                             GroupName="CompatType"
-                                                                             Classes="GigaChips"
-                                                                             Click="OnSelectGpuCompatLayerRenderModeClick"
-                                                                             CommandParameter="dxvk">
-                                                                    <StackPanel HorizontalAlignment="Left" VerticalAlignment="Top" Spacing="0" Margin="0,0,28,0">
-                                                                        <TextBlock Text="VULKAN" FontSize="10" FontWeight="DemiBold" Foreground="{DynamicResource SukiLowText}"/>
-                                                                        <TextBlock Text="dxvk" FontSize="16" FontWeight="DemiBold"/>
-                                                                        <TextBlock Text="Vulkan 转译模式" FontSize="12" Foreground="{DynamicResource SukiLowText}" TextWrapping="Wrap"/>
-                                                                    </StackPanel>
-                                                                </RadioButton>
+                                            <suki:SettingsLayoutItem Header="基础">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Button x:Name="EditConfigButton" Classes="Flat"
+                                                                    HorizontalAlignment="Stretch" Content="编辑 spicecfg"
+                                                                    Click="OnEditConfigClick" />
+                                                            <Grid x:Name="UseSystemSpiceConfigRow"
+                                                                  ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="切换为系统配置" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="UseSystemSpiceConfigToggleSwitch"
+                                                                              Grid.Column="1" />
                                                             </Grid>
-                                                        </suki:BusyArea>
-                                                        <TextBlock x:Name="GpuCompatLayerStatusTextBlock" Text="" Opacity="0.75" Margin="0,2,0,0" IsVisible="False"/>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
-
-                                        <suki:SettingsLayoutItem Header="服务器设置">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="预设" VerticalAlignment="Center"/>
-                                                            <Grid Grid.Column="1" ColumnDefinitions="220,Auto,Auto,*" ColumnSpacing="6" VerticalAlignment="Center">
-                                                                <ComboBox x:Name="ServerPresetComboBox"
-                                                                          Grid.Column="0"
-                                                                          Width="220"
-                                                                          HorizontalAlignment="Left"
-                                                                          SelectionChanged="OnServerPresetSelectionChanged"/>
-                                                                <Button x:Name="AddServerPresetButton" Grid.Column="1" Content="新建" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Click="OnAddServerPresetClick"/>
-                                                                <Button x:Name="DeleteServerPresetButton" Grid.Column="2" Content="删除" Padding="10,4" Classes="Basic" VerticalAlignment="Center" Click="OnDeleteServerPresetClick"/>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="不启动氧无" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="NoAsphyxiaToggleSwitch"
+                                                                              Grid.Column="1" />
                                                             </Grid>
-                                                        </Grid>
-                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="服务器地址" VerticalAlignment="Center"/>
-                                                            <TextBox x:Name="ServerAddressTextBox" Grid.Column="1"/>
-                                                        </Grid>
-                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="PCBID" VerticalAlignment="Center"/>
-                                                            <TextBox x:Name="PcbIdTextBox" Grid.Column="1"/>
-                                                        </Grid>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
 
-                                        <suki:SettingsLayoutItem Header="联机">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="从网卡获取参数" VerticalAlignment="Center"/>
-                                                            <Button x:Name="OpenNetworkAdapterPickerButton" Grid.Column="1" Content="选择" Padding="10,4" Classes="Flat" Click="OnOpenNetworkAdapterPickerClick"/>
-                                                        </Grid>
-                                                        <Grid ColumnDefinitions="110,*" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="适配器IP" VerticalAlignment="Center"/>
-                                                            <TextBox x:Name="NetworkAdapterIpTextBox" Grid.Column="1"/>
-                                                        </Grid>
-                                                        <Grid ColumnDefinitions="110,*" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="适配器子网掩码" VerticalAlignment="Center"/>
-                                                            <TextBox x:Name="NetworkAdapterSubnetTextBox" Grid.Column="1"/>
-                                                        </Grid>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
+                                            <suki:SettingsLayoutItem Header="AMD/Intel显卡兼容层">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="14">
+                                                        <StackPanel Spacing="8">
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="启用显卡兼容层" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="GpuCompatLayerToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="启用后会导入相关补丁并设置 spice2x" Opacity="0.7"
+                                                                       FontSize="12" VerticalAlignment="Center"
+                                                                       Margin="0,-18,0,0" />
+                                                            <suki:BusyArea x:Name="GpuCompatLayerRenderModeBusyArea"
+                                                                           BusyText="兼容层已启动，请关闭以修改设置">
+                                                                <suki:BusyArea.Styles>
+                                                                    <Style
+                                                                        Selector="suki|BusyArea[IsBusy=False] /template/ DockPanel#LoadingBusyArea">
+                                                                        <Setter Property="IsHitTestVisible"
+                                                                                Value="False" />
+                                                                    </Style>
+                                                                    <Style
+                                                                        Selector="suki|BusyArea[IsBusy=True] /template/ DockPanel#LoadingBusyArea">
+                                                                        <Setter Property="IsHitTestVisible"
+                                                                                Value="True" />
+                                                                    </Style>
+                                                                </suki:BusyArea.Styles>
+                                                                <Grid HorizontalAlignment="Center"
+                                                                      MaxWidth="684"
+                                                                      Margin="0,2,0,0"
+                                                                      ColumnDefinitions="*,*,*"
+                                                                      ColumnSpacing="12">
+                                                                    <RadioButton
+                                                                        x:Name="GpuCompatLayerDx9on12RadioButton"
+                                                                        Grid.Column="0"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        MinWidth="0"
+                                                                        MinHeight="82"
+                                                                        Padding="0"
+                                                                        GroupName="CompatType"
+                                                                        Classes="GigaChips"
+                                                                        Click="OnSelectGpuCompatLayerRenderModeClick"
+                                                                        CommandParameter="dx9on12">
+                                                                        <StackPanel HorizontalAlignment="Left"
+                                                                                VerticalAlignment="Top" Spacing="0"
+                                                                                Margin="0,0,28,0">
+                                                                            <TextBlock Text="DIRECTX 12" FontSize="10"
+                                                                                    FontWeight="DemiBold"
+                                                                                    Foreground="{DynamicResource SukiLowText}" />
+                                                                            <TextBlock Text="dx9on12" FontSize="16"
+                                                                                    FontWeight="DemiBold"
+                                                                                    TextWrapping="Wrap" />
+                                                                            <TextBlock Text="最常用的模式" FontSize="12"
+                                                                                    Foreground="{DynamicResource SukiLowText}"
+                                                                                    TextWrapping="Wrap" />
+                                                                        </StackPanel>
+                                                                    </RadioButton>
+                                                                    <RadioButton
+                                                                        x:Name="GpuCompatLayerDx9on12ExternalRadioButton"
+                                                                        Grid.Column="1"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        MinWidth="0"
+                                                                        MinHeight="82"
+                                                                        Padding="0"
+                                                                        GroupName="CompatType"
+                                                                        Classes="GigaChips"
+                                                                        Click="OnSelectGpuCompatLayerRenderModeClick"
+                                                                        CommandParameter="dx9on12_external">
+                                                                        <StackPanel HorizontalAlignment="Left"
+                                                                                VerticalAlignment="Top" Spacing="0"
+                                                                                Margin="0,0,28,0">
+                                                                            <TextBlock Text="DIRECTX 12" FontSize="10"
+                                                                                    FontWeight="DemiBold"
+                                                                                    Foreground="{DynamicResource SukiLowText}" />
+                                                                            <TextBlock Text="dx9on12（外置）" FontSize="16"
+                                                                                    FontWeight="DemiBold" />
+                                                                            <TextBlock Text="可能比内置的好" FontSize="12"
+                                                                                    Foreground="{DynamicResource SukiLowText}"
+                                                                                    TextWrapping="Wrap" />
+                                                                        </StackPanel>
+                                                                    </RadioButton>
+                                                                    <RadioButton x:Name="GpuCompatLayerDxvkRadioButton"
+                                                                            Grid.Column="2"
+                                                                            HorizontalAlignment="Stretch"
+                                                                            MinWidth="0"
+                                                                            MinHeight="82"
+                                                                            Padding="0"
+                                                                            GroupName="CompatType"
+                                                                            Classes="GigaChips"
+                                                                            Click="OnSelectGpuCompatLayerRenderModeClick"
+                                                                            CommandParameter="dxvk">
+                                                                        <StackPanel HorizontalAlignment="Left"
+                                                                                VerticalAlignment="Top" Spacing="0"
+                                                                                Margin="0,0,28,0">
+                                                                            <TextBlock Text="VULKAN" FontSize="10"
+                                                                                    FontWeight="DemiBold"
+                                                                                    Foreground="{DynamicResource SukiLowText}" />
+                                                                            <TextBlock Text="dxvk" FontSize="16"
+                                                                                    FontWeight="DemiBold" />
+                                                                            <TextBlock Text="Vulkan 转译模式" FontSize="12"
+                                                                                    Foreground="{DynamicResource SukiLowText}"
+                                                                                    TextWrapping="Wrap" />
+                                                                        </StackPanel>
+                                                                    </RadioButton>
+                                                                </Grid>
+                                                            </suki:BusyArea>
+                                                            <TextBlock x:Name="GpuCompatLayerStatusTextBlock" Text=""
+                                                                       Opacity="0.75" Margin="0,2,0,0"
+                                                                       IsVisible="False" />
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
 
-                                        <suki:SettingsLayoutItem Header="游戏设定">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="DLL注入" VerticalAlignment="Center"/>
-                                                            <TextBox x:Name="DllInjectionTextBox" Grid.Column="1"/>
-                                                        </Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="禁用副屏" VerticalAlignment="Center"/><ToggleSwitch x:Name="DisableSubDisplayToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="网络抓包（NetDump）" VerticalAlignment="Center"/><ToggleSwitch x:Name="NetDumpToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="大小核优化" VerticalAlignment="Center"/><ToggleSwitch x:Name="PCoreOptimizationToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="针对 Intel 第12代酷睿及之后的处理器" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="启用光标显示与触控模拟" VerticalAlignment="Center"/><ToggleSwitch x:Name="ShowCursorTouchSimToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="当使用真实副屏时请勿开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
+                                            <suki:SettingsLayoutItem Header="服务器设置">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="预设" VerticalAlignment="Center" />
+                                                                <Grid Grid.Column="1"
+                                                                      ColumnDefinitions="220,Auto,Auto,*"
+                                                                      ColumnSpacing="6" VerticalAlignment="Center">
+                                                                    <ComboBox x:Name="ServerPresetComboBox"
+                                                                              Grid.Column="0"
+                                                                              Width="220"
+                                                                              HorizontalAlignment="Left"
+                                                                              SelectionChanged="OnServerPresetSelectionChanged" />
+                                                                    <Button x:Name="AddServerPresetButton"
+                                                                            Grid.Column="1" Content="新建" Padding="10,4"
+                                                                            Classes="Basic" VerticalAlignment="Center"
+                                                                            Click="OnAddServerPresetClick" />
+                                                                    <Button x:Name="DeleteServerPresetButton"
+                                                                            Grid.Column="2" Content="删除" Padding="10,4"
+                                                                            Classes="Basic" VerticalAlignment="Center"
+                                                                            Click="OnDeleteServerPresetClick" />
+                                                                </Grid>
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="服务器地址" VerticalAlignment="Center" />
+                                                                <TextBox x:Name="ServerAddressTextBox" Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="PCBID" VerticalAlignment="Center" />
+                                                                <TextBox x:Name="PcbIdTextBox" Grid.Column="1" />
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
 
-                                        <suki:SettingsLayoutItem Header="图形设定">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口化启动" VerticalAlignment="Center"/><ToggleSwitch x:Name="WindowedToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="开启时副屏也会窗口化" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口模式" VerticalAlignment="Center"/><ComboBox x:Name="WindowModeComboBox" Grid.Column="1" SelectedIndex="0"><ComboBoxItem Content="默认"/><ComboBoxItem Content="无边框"/><ComboBoxItem Content="可变窗口"/></ComboBox></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="WindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <Grid ColumnDefinitions="96,*" ColumnSpacing="8" VerticalAlignment="Center"><TextBlock Text="窗口大小" VerticalAlignment="Center"/><TextBox x:Name="WindowSizeTextBox" Grid.Column="1" Watermark="1080,1920"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="只使用主屏" VerticalAlignment="Center"/><ToggleSwitch x:Name="SingleAdapterToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="强制多显示器下仅通过主屏输出，释放其他显示器" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                        <TextBlock Text="开启后可能会导致不同步或者掉帧，对笔记本等混合输出设备有奇效" Opacity="0.7" FontSize="12" Margin="0,-15,0,0"/>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="NVIDIA性能优化配置" VerticalAlignment="Center"/><ToggleSwitch x:Name="NvidiaPerformanceProfileToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="尝试禁用/调整部分影响帧率与性能的NVIDIA控制面板配置，获得更稳定的帧率" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
+                                            <suki:SettingsLayoutItem Header="联机">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="从网卡获取参数" VerticalAlignment="Center" />
+                                                                <Button x:Name="OpenNetworkAdapterPickerButton"
+                                                                        Grid.Column="1" Content="选择" Padding="10,4"
+                                                                        Classes="Flat"
+                                                                        Click="OnOpenNetworkAdapterPickerClick" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="110,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="适配器IP" VerticalAlignment="Center" />
+                                                                <TextBox x:Name="NetworkAdapterIpTextBox"
+                                                                         Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="110,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="适配器子网掩码" VerticalAlignment="Center" />
+                                                                <TextBox x:Name="NetworkAdapterSubnetTextBox"
+                                                                         Grid.Column="1" />
+                                                            </Grid>
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
 
-                                        <suki:SettingsLayoutItem Header="图形（副屏）">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="窗口置顶" VerticalAlignment="Center"/><ToggleSwitch x:Name="SubWindowTopMostToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="副屏无边框" VerticalAlignment="Center"/><ToggleSwitch x:Name="SubBorderlessToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="强制进行渲染" VerticalAlignment="Center"/><ToggleSwitch x:Name="SubForceRenderToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="若副屏黑屏/闪烁/一帧一帧显示，可尝试开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="原生触控输入" VerticalAlignment="Center"/><ToggleSwitch x:Name="NativeTouchToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="使用Windows原生触控API，若出现触摸双击可开启" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
+                                            <suki:SettingsLayoutItem Header="游戏设定">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="DLL注入" VerticalAlignment="Center" />
+                                                                <TextBox x:Name="DllInjectionTextBox" Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="禁用副屏" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="DisableSubDisplayToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="网络抓包（NetDump）"
+                                                                           VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="NetDumpToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="大小核优化" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="PCoreOptimizationToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="针对 Intel 第12代酷睿及之后的处理器" Opacity="0.7"
+                                                                       FontSize="12" Margin="0,-20,0,0" />
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="启用光标显示与触控模拟"
+                                                                           VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="ShowCursorTouchSimToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="当使用真实副屏时请勿开启" Opacity="0.7" FontSize="12"
+                                                                       Margin="0,-20,0,0" />
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
 
-                                        <suki:SettingsLayoutItem Header="音频">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="8" VerticalAlignment="Center">
-                                                            <TextBlock Text="ASIO驱动" VerticalAlignment="Center"/>
-                                                            <ComboBox x:Name="AsioDriverComboBox" Grid.Column="1" HorizontalAlignment="Stretch"/>
-                                                            <Button x:Name="OpenAsioControlPanelButton" Grid.Column="2" Classes="Basic" Content="控制面板" MinWidth="96" Click="OnOpenAsioControlPanelClick"/>
-                                                        </Grid>
-                                                        <TextBlock Text="若声卡ASIO不支持多声道，请记得打2ch的Patch，否则会没有声音" Opacity="0.7" FontSize="12" Margin="0,-5,0,0"/>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="低延迟共享音频" VerticalAlignment="Center"/><ToggleSwitch x:Name="LowLatencySharedAudioToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="开启共享音频时有效，独占音频与ASIO无效" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
+                                            <suki:SettingsLayoutItem Header="图形设定">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="窗口化启动" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="WindowedToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="开启时副屏也会窗口化" Opacity="0.7" FontSize="12"
+                                                                       Margin="0,-20,0,0" />
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="窗口模式" VerticalAlignment="Center" />
+                                                                <ComboBox x:Name="WindowModeComboBox" Grid.Column="1"
+                                                                          SelectedIndex="0">
+                                                                    <ComboBoxItem Content="默认" />
+                                                                    <ComboBoxItem Content="无边框" />
+                                                                    <ComboBoxItem Content="可变窗口" />
+                                                                </ComboBox>
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="窗口置顶" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="WindowTopMostToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="窗口大小" VerticalAlignment="Center" />
+                                                                <TextBox x:Name="WindowSizeTextBox" Grid.Column="1"
+                                                                         Watermark="1080,1920" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="只使用主屏" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="SingleAdapterToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="强制多显示器下仅通过主屏输出，释放其他显示器" Opacity="0.7"
+                                                                       FontSize="12" Margin="0,-20,0,0" />
+                                                            <TextBlock Text="开启后可能会导致不同步或者掉帧，对笔记本等混合输出设备有奇效"
+                                                                       Opacity="0.7" FontSize="12" Margin="0,-15,0,0" />
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="NVIDIA性能优化配置"
+                                                                           VerticalAlignment="Center" />
+                                                                <ToggleSwitch
+                                                                    x:Name="NvidiaPerformanceProfileToggleSwitch"
+                                                                    Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="尝试禁用/调整部分影响帧率与性能的NVIDIA控制面板配置，获得更稳定的帧率"
+                                                                       Opacity="0.7" FontSize="12" Margin="0,-20,0,0" />
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
 
-                                        <suki:SettingsLayoutItem Header="读卡器">
-                                            <suki:SettingsLayoutItem.Content>
-                                                <suki:GlassCard Margin="0,18,0,0" Padding="18">
-                                                    <StackPanel Spacing="12">
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="CardIO HID Reader" VerticalAlignment="Center"/><ToggleSwitch x:Name="CardIoToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="HID SmartCard" VerticalAlignment="Center"/><ToggleSwitch x:Name="HidSmartCardToggleSwitch" Grid.Column="1"/></Grid>
-                                                        <TextBlock Text="仅限ACR122U芯片组，请优先使用CardIO" Opacity="0.7" FontSize="12" Margin="0,-20,0,0"/>
-                                                    </StackPanel>
-                                                </suki:GlassCard>
-                                            </suki:SettingsLayoutItem.Content>
-                                        </suki:SettingsLayoutItem>
+                                            <suki:SettingsLayoutItem Header="图形（副屏）">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="窗口置顶" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="SubWindowTopMostToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="副屏无边框" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="SubBorderlessToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="强制进行渲染" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="SubForceRenderToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="若副屏黑屏/闪烁/一帧一帧显示，可尝试开启" Opacity="0.7"
+                                                                       FontSize="12" Margin="0,-20,0,0" />
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="原生触控输入" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="NativeTouchToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="使用Windows原生触控API，若出现触摸双击可开启" Opacity="0.7"
+                                                                       FontSize="12" Margin="0,-20,0,0" />
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
+
+                                            <suki:SettingsLayoutItem Header="音频">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="ASIO驱动" VerticalAlignment="Center" />
+                                                                <ComboBox x:Name="AsioDriverComboBox" Grid.Column="1"
+                                                                          HorizontalAlignment="Stretch" />
+                                                                <Button x:Name="OpenAsioControlPanelButton"
+                                                                        Grid.Column="2" Classes="Basic" Content="控制面板"
+                                                                        MinWidth="96"
+                                                                        Click="OnOpenAsioControlPanelClick" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="ASIO 2ch" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="Asio2ChToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="若声卡ASIO不支持8ch，请开启此选项，否则ASIO音频会出现异常"
+                                                                       Opacity="0.7" FontSize="12" Margin="0,-20,0,0" />
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="低延迟共享音频" VerticalAlignment="Center" />
+                                                                <ToggleSwitch
+                                                                    x:Name="LowLatencySharedAudioToggleSwitch"
+                                                                    Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="开启共享音频时有效，独占音频与ASIO无效" Opacity="0.7"
+                                                                       FontSize="12" Margin="0,-20,0,0" />
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
+
+                                            <suki:SettingsLayoutItem Header="读卡器">
+                                                <suki:SettingsLayoutItem.Content>
+                                                    <suki:GlassCard Margin="0,18,0,0" Padding="18">
+                                                        <StackPanel Spacing="12">
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="CardIO HID Reader"
+                                                                           VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="CardIoToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="HID SmartCard"
+                                                                           VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="HidSmartCardToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
+                                                            <TextBlock Text="仅限ACR122U芯片组，请优先使用CardIO" Opacity="0.7"
+                                                                       FontSize="12" Margin="0,-20,0,0" />
+                                                        </StackPanel>
+                                                    </suki:GlassCard>
+                                                </suki:SettingsLayoutItem.Content>
+                                            </suki:SettingsLayoutItem>
 
                                         </generic:List>
                                     </suki:SettingsLayout.Items>
@@ -453,7 +617,7 @@
                                            Margin="24,0,24,10"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Bottom"
-                                           TextAlignment="Center"/>
+                                           TextAlignment="Center" />
 
                                 <StackPanel x:Name="SettingsEmptyStatePanel"
                                             IsVisible="False"
@@ -468,13 +632,13 @@
                                                TextAlignment="Center"
                                                TextWrapping="Wrap"
                                                FontSize="24"
-                                               FontWeight="SemiBold"/>
+                                               FontWeight="SemiBold" />
                                     <Button x:Name="EmptyStateEditConfigButton"
                                             Classes="Flat"
                                             HorizontalAlignment="Center"
                                             MinWidth="180"
                                             Content="编辑 spicecfg"
-                                            Click="OnEditConfigClick"/>
+                                            Click="OnEditConfigClick" />
                                 </StackPanel>
                             </Grid>
                         </suki:BusyArea>
@@ -483,156 +647,236 @@
 
                 <suki:SukiSideMenuItem Header="显示器配置">
                     <suki:SukiSideMenuItem.Icon>
-                        <TextBlock Classes="FaIcon" Text="&#xF390;" FontSize="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF390;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <Grid x:Name="DisplayPageView" Margin="14" RowDefinitions="Auto,*,Auto" ColumnDefinitions="360,*" ColumnSpacing="14" RowSpacing="10">
-                            <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10" Margin="0,0,0,10">
+                        <Grid x:Name="DisplayPageView" Margin="14" RowDefinitions="Auto,*,Auto"
+                              ColumnDefinitions="360,*" ColumnSpacing="14" RowSpacing="10">
+                            <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10"
+                                  Margin="0,0,0,10">
                                 <StackPanel Spacing="2">
-                                    <TextBlock Text="显示器配置" FontSize="22" FontWeight="SemiBold" VerticalAlignment="Center"/>
-                                    <TextBlock Text="点击开关启用自动显示器配置" Opacity="0.7"/>
+                                    <TextBlock Text="显示器配置" FontSize="22" FontWeight="SemiBold"
+                                               VerticalAlignment="Center" />
+                                    <TextBlock Text="点击开关启用自动显示器配置" Opacity="0.7" />
                                 </StackPanel>
-                                <Grid Grid.Column="1"/>
-                                <ToggleSwitch x:Name="DisplayConfigEnabledToggleSwitch" Grid.Column="2" VerticalAlignment="Center" IsChecked="False"/>
+                                <Grid Grid.Column="1" />
+                                <ToggleSwitch x:Name="DisplayConfigEnabledToggleSwitch" Grid.Column="2"
+                                              VerticalAlignment="Center" IsChecked="False" />
                                 <ComboBox x:Name="DisplayModeComboBox" Grid.Column="3" Width="120">
-                                    <ComboBoxItem Content="单屏"/>
-                                    <ComboBoxItem Content="双屏"/>
+                                    <ComboBoxItem Content="单屏" />
+                                    <ComboBoxItem Content="双屏" />
                                 </ComboBox>
                             </Grid>
 
                             <Grid Grid.Row="1" Grid.Column="0" RowDefinitions="*,Auto" RowSpacing="12">
                                 <suki:GlassCard>
                                     <suki:BusyArea x:Name="DisplayConfigDisabledMask" IsBusy="True" BusyText="显示器配置未启用">
-                                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="300" Height="540">
-                                            <Image Source="avares://LazyBootstrap/Assets/Images/cabinet.png" Stretch="Uniform" Width="240"/>
+                                        <Grid HorizontalAlignment="Center" VerticalAlignment="Center" Width="300"
+                                              Height="540">
+                                            <Image Source="avares://LazyBootstrap/Assets/Images/cabinet.png"
+                                                   Stretch="Uniform" Width="240" />
                                             <Canvas Width="300" Height="540" IsHitTestVisible="False">
-                                                <Ellipse x:Name="DotMainGlow" Canvas.Left="124" Canvas.Top="157" Width="52" Height="52" Fill="#35FFFFFF"/>
-                                                <Ellipse x:Name="DotMainCore" Canvas.Left="139" Canvas.Top="172" Width="22" Height="22" Fill="White"/>
-                                                <Ellipse x:Name="DotMainSelectedRing" Canvas.Left="127" Canvas.Top="160" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
-                                                <Ellipse x:Name="DotSubGlow" Canvas.Left="124" Canvas.Top="303" Width="52" Height="52" Fill="#35FFFFFF"/>
-                                                <Ellipse x:Name="DotSubCore" Canvas.Left="139" Canvas.Top="318" Width="22" Height="22" Fill="White"/>
-                                                <Ellipse x:Name="DotSubSelectedRing" Canvas.Left="127" Canvas.Top="306" Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2" IsVisible="False"/>
+                                                <Ellipse x:Name="DotMainGlow" Canvas.Left="124" Canvas.Top="157"
+                                                         Width="52" Height="52" Fill="#35FFFFFF" />
+                                                <Ellipse x:Name="DotMainCore" Canvas.Left="139" Canvas.Top="172"
+                                                         Width="22" Height="22" Fill="White" />
+                                                <Ellipse x:Name="DotMainSelectedRing" Canvas.Left="127"
+                                                         Canvas.Top="160" Width="46" Height="46" Stroke="#AAFFFFFF"
+                                                         StrokeThickness="2" IsVisible="False" />
+                                                <Ellipse x:Name="DotSubGlow" Canvas.Left="124" Canvas.Top="303"
+                                                         Width="52" Height="52" Fill="#35FFFFFF" />
+                                                <Ellipse x:Name="DotSubCore" Canvas.Left="139" Canvas.Top="318"
+                                                         Width="22" Height="22" Fill="White" />
+                                                <Ellipse x:Name="DotSubSelectedRing" Canvas.Left="127" Canvas.Top="306"
+                                                         Width="46" Height="46" Stroke="#AAFFFFFF" StrokeThickness="2"
+                                                         IsVisible="False" />
                                             </Canvas>
-                                            <Button x:Name="SelectMainScreenAreaButton" Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,155,0,0" Background="Transparent" BorderBrush="Transparent" Click="OnSelectMainDisplayClick"/>
-                                            <Button x:Name="SelectSubScreenAreaButton" Width="54" Height="54" HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,301,0,0" Background="Transparent" BorderBrush="Transparent" Click="OnSelectSubDisplayClick"/>
+                                            <Button x:Name="SelectMainScreenAreaButton" Width="54" Height="54"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                    Margin="0,155,0,0" Background="Transparent"
+                                                    BorderBrush="Transparent" Click="OnSelectMainDisplayClick" />
+                                            <Button x:Name="SelectSubScreenAreaButton" Width="54" Height="54"
+                                                    HorizontalAlignment="Center" VerticalAlignment="Top"
+                                                    Margin="0,301,0,0" Background="Transparent"
+                                                    BorderBrush="Transparent" Click="OnSelectSubDisplayClick" />
                                         </Grid>
                                     </suki:BusyArea>
                                 </suki:GlassCard>
 
                                 <suki:GlassCard Grid.Row="1">
                                     <StackPanel Margin="14" Spacing="10">
-                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="退出游戏后恢复显示器布局" VerticalAlignment="Center"/><ToggleSwitch x:Name="ExitRestoreToggleSwitch" Grid.Column="1" VerticalAlignment="Center" IsChecked="False"/></Grid>
-                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center"><TextBlock Text="Windows触控屏设置" VerticalAlignment="Center"/><Button x:Name="TouchPanelButton" Grid.Column="1" Content="打开" MinWidth="86" Click="OnOpenTouchPanelClick"/></Grid>
+                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                            <TextBlock Text="退出游戏后恢复显示器布局" VerticalAlignment="Center" />
+                                            <ToggleSwitch x:Name="ExitRestoreToggleSwitch" Grid.Column="1"
+                                                          VerticalAlignment="Center" IsChecked="False" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                            <TextBlock Text="Windows触控屏设置" VerticalAlignment="Center" />
+                                            <Button x:Name="TouchPanelButton" Grid.Column="1" Content="打开"
+                                                    MinWidth="86" Click="OnOpenTouchPanelClick" />
+                                        </Grid>
                                     </StackPanel>
                                 </suki:GlassCard>
                             </Grid>
 
                             <suki:GlassCard Grid.Row="1" Grid.Column="1">
                                 <Grid Margin="14">
-                                    <StackPanel x:Name="PanelNoScreenSelected" VerticalAlignment="Center" HorizontalAlignment="Center"><TextBlock Text="请选择屏幕" FontSize="18" Opacity="0.75"/></StackPanel>
+                                    <StackPanel x:Name="PanelNoScreenSelected" VerticalAlignment="Center"
+                                                HorizontalAlignment="Center">
+                                        <TextBlock Text="请选择屏幕" FontSize="18" Opacity="0.75" />
+                                    </StackPanel>
                                     <StackPanel x:Name="PanelMainScreenConfig" Spacing="12" IsVisible="False">
-                                        <StackPanel><TextBlock Text="主屏设置" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="设置主屏启动时参数" Opacity="0.7"/></StackPanel>
-                                        <suki:GlassCard><StackPanel Margin="12" Spacing="6"><TextBlock Text="当前输出信息" FontWeight="SemiBold"/><TextBlock x:Name="MainOutputInfoTextBlock" Text="未知" TextWrapping="Wrap"/></StackPanel></suki:GlassCard>
-                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="12" RowSpacing="10">
-                                            <TextBlock Text="显示器" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="MainScreenComboBox" Grid.Column="1"/>
-                                            <TextBlock Grid.Row="1" Text="旋转" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="RotationComboBox" Grid.Row="1" Grid.Column="1"/>
-                                            <TextBlock Grid.Row="2" Text="分辨率" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="MainResolutionComboBox" Grid.Row="2" Grid.Column="1"/>
-                                            <TextBlock Grid.Row="3" Text="刷新率" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="MainRefreshRateComboBox" Grid.Row="3" Grid.Column="1"/>
+                                        <StackPanel>
+                                            <TextBlock Text="主屏设置" FontSize="16" FontWeight="SemiBold" />
+                                            <TextBlock Text="设置主屏启动时参数" Opacity="0.7" />
+                                        </StackPanel>
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="当前输出信息" FontWeight="SemiBold" />
+                                                <TextBlock x:Name="MainOutputInfoTextBlock" Text="未知"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </suki:GlassCard>
+                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*"
+                                              ColumnSpacing="12" RowSpacing="10">
+                                            <TextBlock Text="显示器" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="MainScreenComboBox" Grid.Column="1" />
+                                            <TextBlock Grid.Row="1" Text="旋转" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="RotationComboBox" Grid.Row="1" Grid.Column="1" />
+                                            <TextBlock Grid.Row="2" Text="分辨率" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="MainResolutionComboBox" Grid.Row="2" Grid.Column="1" />
+                                            <TextBlock Grid.Row="3" Text="刷新率" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="MainRefreshRateComboBox" Grid.Row="3" Grid.Column="1" />
                                         </Grid>
-                                        <suki:GlassCard><StackPanel Margin="12" Spacing="6"><TextBlock Text="启动应用参数" FontWeight="SemiBold"/><TextBlock x:Name="MainStartupInfoTextBlock" Text="未配置" TextWrapping="Wrap"/></StackPanel></suki:GlassCard>
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="启动应用参数" FontWeight="SemiBold" />
+                                                <TextBlock x:Name="MainStartupInfoTextBlock" Text="未配置"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </suki:GlassCard>
                                     </StackPanel>
 
                                     <StackPanel x:Name="PanelSubScreenConfig" Spacing="12" IsVisible="False">
-                                        <StackPanel><TextBlock Text="副屏设置" FontSize="16" FontWeight="SemiBold"/><TextBlock Text="设置副屏启动时参数" Opacity="0.7"/></StackPanel>
-                                        <suki:GlassCard><StackPanel Margin="12" Spacing="6"><TextBlock Text="当前输出信息" FontWeight="SemiBold"/><TextBlock x:Name="SubOutputInfoTextBlock" Text="未知" TextWrapping="Wrap"/></StackPanel></suki:GlassCard>
-                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*" ColumnSpacing="12" RowSpacing="10">
-                                            <TextBlock Text="显示器" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="SubScreenComboBox" Grid.Column="1"/>
-                                            <TextBlock Grid.Row="1" Text="旋转" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="SubRotationComboBox" Grid.Row="1" Grid.Column="1"/>
-                                            <TextBlock Grid.Row="2" Text="分辨率" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="SubResolutionComboBox" Grid.Row="2" Grid.Column="1"/>
-                                            <TextBlock Grid.Row="3" Text="刷新率" VerticalAlignment="Center"/>
-                                            <ComboBox x:Name="SubRefreshRateComboBox" Grid.Row="3" Grid.Column="1"/>
+                                        <StackPanel>
+                                            <TextBlock Text="副屏设置" FontSize="16" FontWeight="SemiBold" />
+                                            <TextBlock Text="设置副屏启动时参数" Opacity="0.7" />
+                                        </StackPanel>
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="当前输出信息" FontWeight="SemiBold" />
+                                                <TextBlock x:Name="SubOutputInfoTextBlock" Text="未知"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </suki:GlassCard>
+                                        <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="Auto,*"
+                                              ColumnSpacing="12" RowSpacing="10">
+                                            <TextBlock Text="显示器" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="SubScreenComboBox" Grid.Column="1" />
+                                            <TextBlock Grid.Row="1" Text="旋转" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="SubRotationComboBox" Grid.Row="1" Grid.Column="1" />
+                                            <TextBlock Grid.Row="2" Text="分辨率" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="SubResolutionComboBox" Grid.Row="2" Grid.Column="1" />
+                                            <TextBlock Grid.Row="3" Text="刷新率" VerticalAlignment="Center" />
+                                            <ComboBox x:Name="SubRefreshRateComboBox" Grid.Row="3" Grid.Column="1" />
                                         </Grid>
-                                        <suki:GlassCard><StackPanel Margin="12" Spacing="6"><TextBlock Text="启动应用参数" FontWeight="SemiBold"/><TextBlock x:Name="SubStartupInfoTextBlock" Text="未配置" TextWrapping="Wrap"/></StackPanel></suki:GlassCard>
+                                        <suki:GlassCard>
+                                            <StackPanel Margin="12" Spacing="6">
+                                                <TextBlock Text="启动应用参数" FontWeight="SemiBold" />
+                                                <TextBlock x:Name="SubStartupInfoTextBlock" Text="未配置"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                        </suki:GlassCard>
                                     </StackPanel>
                                 </Grid>
                             </suki:GlassCard>
 
-                            <Button x:Name="PreviewDisplaySettingsButton" Grid.Row="2" Grid.Column="1" Classes="Flat" HorizontalAlignment="Right" Content="预览" Click="OnPreviewDisplaySettingsClick"/>
+                            <Button x:Name="PreviewDisplaySettingsButton" Grid.Row="2" Grid.Column="1" Classes="Flat"
+                                    HorizontalAlignment="Right" Content="预览" Click="OnPreviewDisplaySettingsClick" />
                         </Grid>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
 
                 <suki:SukiSideMenuItem Header="工具">
                     <suki:SukiSideMenuItem.Icon>
-                        <TextBlock Classes="FaIcon" Text="&#xF552;" FontSize="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF552;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <ScrollViewer x:Name="ToolsPageView" Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer x:Name="ToolsPageView" Margin="14" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Spacing="10">
-                                <TextBlock Text="常用工具" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6"/>
+                                <TextBlock Text="常用工具" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
 
                                 <suki:GlassCard>
-                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
-                                        <TextBlock Classes="FaIcon" Text="&#xF51A;" FontSize="18"/>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                          VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF51A;" FontSize="18" />
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="清除模组缓存" FontWeight="SemiBold"/>
-                                            <TextBlock Text="清除 data_mods 下的模组缓存，更新游戏后必须清除以重建缓存（*使用“更新”功能时会自动清除）" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="清除模组缓存" FontWeight="SemiBold" />
+                                            <TextBlock Text="清除 data_mods 下的模组缓存，更新游戏后必须清除以重建缓存（*使用“更新”功能时会自动清除）"
+                                                       Opacity="0.72" TextWrapping="Wrap" />
                                         </StackPanel>
-                                        <Button x:Name="ClearCacheButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnClearCacheClick"/>
+                                        <Button x:Name="ClearCacheButton" Grid.Column="2" Classes="Flat" MinWidth="88"
+                                                Content="执行" Click="OnClearCacheClick" />
                                     </Grid>
                                 </suki:GlassCard>
 
                                 <suki:GlassCard>
-                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
-                                        <TextBlock Classes="FaIcon" Text="&#xF3ED;" FontSize="18"/>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                          VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF3ED;" FontSize="18" />
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="添加防火墙规则" FontWeight="SemiBold"/>
-                                            <TextBlock Text="为游戏主程序放行网络权限，避免连接被系统阻止出现NETWORK ERROR" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="添加防火墙规则" FontWeight="SemiBold" />
+                                            <TextBlock Text="为游戏主程序放行网络权限，避免连接被系统阻止出现NETWORK ERROR" Opacity="0.72"
+                                                       TextWrapping="Wrap" />
                                         </StackPanel>
-                                        <Button x:Name="AddFirewallRuleButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnAddFirewallRuleClick"/>
+                                        <Button x:Name="AddFirewallRuleButton" Grid.Column="2" Classes="Flat"
+                                                MinWidth="88" Content="执行" Click="OnAddFirewallRuleClick" />
                                     </Grid>
                                 </suki:GlassCard>
 
                                 <suki:GlassCard>
-                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
-                                        <TextBlock Classes="FaIcon" Text="&#xF028;" FontSize="18"/>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                          VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF028;" FontSize="18" />
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="打开音频控制面板" FontWeight="SemiBold"/>
-                                            <TextBlock Text="快捷打开旧版音频控制面板" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="打开音频控制面板" FontWeight="SemiBold" />
+                                            <TextBlock Text="快捷打开旧版音频控制面板" Opacity="0.72" TextWrapping="Wrap" />
                                         </StackPanel>
-                                        <Button x:Name="AudioPanelButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnOpenAudioPanelClick"/>
+                                        <Button x:Name="AudioPanelButton" Grid.Column="2" Classes="Flat" MinWidth="88"
+                                                Content="执行" Click="OnOpenAudioPanelClick" />
                                     </Grid>
                                 </suki:GlassCard>
 
                                 <suki:GlassCard>
-                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
-                                        <TextBlock Classes="FaIcon" Text="&#xF019;" FontSize="18"/>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                          VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF019;" FontSize="18" />
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="安装运行库" FontWeight="SemiBold"/>
-                                            <TextBlock Text="安装必要运行库，例如Direct X、Visual C++ Redist" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="安装运行库" FontWeight="SemiBold" />
+                                            <TextBlock Text="安装必要运行库，例如Direct X、Visual C++ Redist" Opacity="0.72"
+                                                       TextWrapping="Wrap" />
                                         </StackPanel>
-                                        <Button x:Name="InstallRuntimeButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnInstallRuntimeClick"/>
+                                        <Button x:Name="InstallRuntimeButton" Grid.Column="2" Classes="Flat"
+                                                MinWidth="88" Content="执行" Click="OnInstallRuntimeClick" />
                                     </Grid>
                                 </suki:GlassCard>
 
                                 <suki:GlassCard>
-                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" VerticalAlignment="Center">
-                                        <TextBlock Classes="FaIcon" Text="&#xF0C7;" FontSize="18"/>
+                                    <Grid Margin="14" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12"
+                                          VerticalAlignment="Center">
+                                        <TextBlock Classes="FaIcon" Text="&#xF0C7;" FontSize="18" />
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
-                                            <TextBlock Text="氧无存档备份与导入" FontWeight="SemiBold"/>
-                                            <TextBlock Text="备份，导入，或从旧目录迁移卡号与存档" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="氧无存档备份与导入" FontWeight="SemiBold" />
+                                            <TextBlock Text="备份，导入，或从旧目录迁移卡号与存档" Opacity="0.72" TextWrapping="Wrap" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                            <Button x:Name="SavedataBackupButton" Classes="Flat" MinWidth="88" Content="备份" Click="OnBackupSavedataClick"/>
-                                            <Button x:Name="SavedataImportButton" Classes="Flat" MinWidth="88" Content="导入" Click="OnImportSavedataClick"/>
-                                            <Button x:Name="SavedataMigrateButton" Classes="Flat" MinWidth="88" Content="迁移" Click="OnMigrateSavedataClick"/>
+                                            <Button x:Name="SavedataBackupButton" Classes="Flat" MinWidth="88"
+                                                    Content="备份" Click="OnBackupSavedataClick" />
+                                            <Button x:Name="SavedataImportButton" Classes="Flat" MinWidth="88"
+                                                    Content="导入" Click="OnImportSavedataClick" />
+                                            <Button x:Name="SavedataMigrateButton" Classes="Flat" MinWidth="88"
+                                                    Content="迁移" Click="OnMigrateSavedataClick" />
                                         </StackPanel>
                                     </Grid>
                                 </suki:GlassCard>
@@ -643,10 +887,11 @@
 
                 <suki:SukiSideMenuItem Header="更新">
                     <suki:SukiSideMenuItem.Icon>
-                        <TextBlock Classes="FaIcon" Text="&#xF2F1;" FontSize="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF2F1;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <ScrollViewer x:Name="UpdatePageView" Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer x:Name="UpdatePageView" Margin="14" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
                             <Grid MinHeight="520" VerticalAlignment="Center">
                                 <StackPanel HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
@@ -659,21 +904,21 @@
                                                    TextAlignment="Center"
                                                    TextWrapping="Wrap"
                                                    FontSize="24"
-                                                   FontWeight="SemiBold"/>
+                                                   FontWeight="SemiBold" />
                                         <TextBlock Text="*不支持纯净更新文件！"
                                                    HorizontalAlignment="Center"
                                                    TextAlignment="Center"
                                                    TextWrapping="Wrap"
                                                    Opacity="0.75"
                                                    FontSize="14"
-                                                   LineHeight="24"/>
+                                                   LineHeight="24" />
                                     </StackPanel>
                                     <Button x:Name="SelectUpdatePackageButton"
                                             Classes="Flat"
                                             MinWidth="180"
                                             HorizontalAlignment="Center"
                                             Content="选择并应用更新"
-                                            Click="OnApplyUpdateClick"/>
+                                            Click="OnApplyUpdateClick" />
                                 </StackPanel>
                             </Grid>
                         </ScrollViewer>
@@ -682,37 +927,39 @@
 
                 <suki:SukiSideMenuItem Header="信息">
                     <suki:SukiSideMenuItem.Icon>
-                        <TextBlock Classes="FaIcon" Text="&#xF05A;" FontSize="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF05A;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <ScrollViewer x:Name="InfoPageView" Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer x:Name="InfoPageView" Margin="14" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
                             <StackPanel Spacing="12">
                                 <suki:GlassCard IsAnimated="False">
                                     <StackPanel Margin="16,14" Spacing="10">
-                                        <TextBlock Text="系统与版本" FontSize="15" FontWeight="SemiBold"/>
-                                        <Grid ColumnDefinitions="108,*" ColumnSpacing="12" RowDefinitions="Auto,Auto" RowSpacing="8">
+                                        <TextBlock Text="系统与版本" FontSize="15" FontWeight="SemiBold" />
+                                        <Grid ColumnDefinitions="108,*" ColumnSpacing="12" RowDefinitions="Auto,Auto"
+                                              RowSpacing="8">
                                             <TextBlock VerticalAlignment="Center"
                                                        Opacity="0.78"
                                                        Text="机台属性"
-                                                       TextWrapping="Wrap"/>
+                                                       TextWrapping="Wrap" />
                                             <TextBox x:Name="MachinePropertyTextBox"
                                                      Grid.Column="1"
                                                      Classes="Flat"
                                                      IsReadOnly="True"
                                                      Text=""
-                                                     TextWrapping="Wrap"/>
+                                                     TextWrapping="Wrap" />
                                             <TextBlock Grid.Row="1"
                                                        VerticalAlignment="Center"
                                                        Opacity="0.78"
                                                        Text="当前游戏版本"
-                                                       TextWrapping="Wrap"/>
+                                                       TextWrapping="Wrap" />
                                             <TextBox x:Name="GameVersionTextBox"
                                                      Grid.Row="1"
                                                      Grid.Column="1"
                                                      Classes="Flat"
                                                      IsReadOnly="True"
                                                      Text=""
-                                                     TextWrapping="Wrap"/>
+                                                     TextWrapping="Wrap" />
                                         </Grid>
                                     </StackPanel>
                                 </suki:GlassCard>
@@ -721,20 +968,22 @@
                                     <StackPanel Margin="16,14" Spacing="12">
                                         <Grid ColumnDefinitions="*,Auto">
                                             <StackPanel Spacing="2">
-                                                <TextBlock Text="环境诊断" FontSize="16" FontWeight="SemiBold"/>
+                                                <TextBlock Text="环境诊断" FontSize="16" FontWeight="SemiBold" />
                                                 <TextBlock FontSize="12"
                                                            Opacity="0.6"
                                                            TextWrapping="Wrap"
-                                                           Text="检测系统运行环境"/>
+                                                           Text="检测系统运行环境" />
                                             </StackPanel>
-                                            <StackPanel Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right" Spacing="6">
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Top"
+                                                        HorizontalAlignment="Right" Spacing="6">
                                                 <Button Classes="Flat"
                                                         Padding="14,10"
                                                         MinWidth="118"
                                                         Click="OnRefreshEnvironmentScanClick">
                                                     <StackPanel Orientation="Horizontal" Spacing="10">
-                                                        <TextBlock Classes="FaIcon" FontSize="14" Text="&#xF021;" VerticalAlignment="Center"/>
-                                                        <TextBlock VerticalAlignment="Center" Text="重新检测"/>
+                                                        <TextBlock Classes="FaIcon" FontSize="14" Text="&#xF021;"
+                                                                   VerticalAlignment="Center" />
+                                                        <TextBlock VerticalAlignment="Center" Text="重新检测" />
                                                     </StackPanel>
                                                 </Button>
                                                 <TextBlock x:Name="EnvironmentScanPendingHintTextBlock"
@@ -743,14 +992,14 @@
                                                            IsVisible="False"
                                                            Opacity="0.5"
                                                            Text="正在刷新检测结果…"
-                                                           TextWrapping="Wrap"/>
+                                                           TextWrapping="Wrap" />
                                             </StackPanel>
                                         </Grid>
                                         <suki:InfoBar x:Name="EnvironmentOverviewInfoBar"
                                                       IsClosable="False"
                                                       IsOpen="True"
                                                       MessageTextAlignment="Left"
-                                                      IsVisible="False"/>
+                                                      IsVisible="False" />
                                         <StackPanel Spacing="8">
 
                                             <!-- CPU -->
@@ -759,16 +1008,17 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF2DB;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="CPU"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" Text="CPU" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
+                                                            Opacity="0.3" />
                                                     <ContentControl x:Name="CpuPrimaryRowHost"
                                                                     HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"/>
+                                                                    HorizontalContentAlignment="Stretch" />
                                                 </StackPanel>
                                             </suki:GlassCard>
 
@@ -778,16 +1028,17 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF26C;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="GPU"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" Text="GPU" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
+                                                            Opacity="0.3" />
                                                     <StackPanel x:Name="GpuAdapterRowsHost"
                                                                 HorizontalAlignment="Stretch"
-                                                                Spacing="2"/>
+                                                                Spacing="2" />
                                                 </StackPanel>
                                             </suki:GlassCard>
 
@@ -797,41 +1048,48 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF121;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="NVIDIA API"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" Text="NVIDIA API" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
+                                                            Opacity="0.3" />
                                                     <ContentControl x:Name="NvidiaSkipNoticeRowHost"
                                                                     HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"/>
+                                                                    HorizontalContentAlignment="Stretch" />
                                                     <StackPanel x:Name="NvidiaDetailPanel"
                                                                 Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="System32/nvcuda.dll"/>
-                                                            <ContentControl x:Name="NvidiaNvcudaOutcomeHost" Grid.Column="2"/>
+                                                                       Text="System32/nvcuda.dll" />
+                                                            <ContentControl x:Name="NvidiaNvcudaOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="System32/nvcuvid.dll"/>
-                                                            <ContentControl x:Name="NvidiaNvcuvidOutcomeHost" Grid.Column="2"/>
+                                                                       Text="System32/nvcuvid.dll" />
+                                                            <ContentControl x:Name="NvidiaNvcuvidOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="System32/nvEncodeAPI64.dll"/>
-                                                            <ContentControl x:Name="NvidiaEncodeApiOutcomeHost" Grid.Column="2"/>
+                                                                       Text="System32/nvEncodeAPI64.dll" />
+                                                            <ContentControl x:Name="NvidiaEncodeApiOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -843,32 +1101,37 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF06E;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="DirectX 9"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" Text="DirectX 9" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
+                                                            Opacity="0.3" />
                                                     <ContentControl x:Name="DirectXRuntimeFaultRowHost"
                                                                     HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"/>
+                                                                    HorizontalContentAlignment="Stretch" />
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="d3d9.dll"/>
-                                                            <ContentControl x:Name="DirectXD3d9OutcomeHost" Grid.Column="2"/>
+                                                                       Text="d3d9.dll" />
+                                                            <ContentControl x:Name="DirectXD3d9OutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="d3dx9_43.dll"/>
-                                                            <ContentControl x:Name="DirectXD3Dx43OutcomeHost" Grid.Column="2"/>
+                                                                       Text="d3dx9_43.dll" />
+                                                            <ContentControl x:Name="DirectXD3Dx43OutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -880,40 +1143,47 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF03D;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="系统媒体功能包"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" Text="系统媒体功能包" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
+                                                            Opacity="0.3" />
                                                     <ContentControl x:Name="MediaPackRuntimeFaultRowHost"
                                                                     HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"/>
+                                                                    HorizontalContentAlignment="Stretch" />
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="MF.dll"/>
-                                                            <ContentControl x:Name="MediaPackMfOutcomeHost" Grid.Column="2"/>
+                                                                       Text="MF.dll" />
+                                                            <ContentControl x:Name="MediaPackMfOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="MFPLAT.dll"/>
-                                                            <ContentControl x:Name="MediaPackMfplatOutcomeHost" Grid.Column="2"/>
+                                                                       Text="MFPLAT.dll" />
+                                                            <ContentControl x:Name="MediaPackMfplatOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="WMVCore.dll"/>
-                                                            <ContentControl x:Name="MediaPackWmvCoreOutcomeHost" Grid.Column="2"/>
+                                                                       Text="WMVCore.dll" />
+                                                            <ContentControl x:Name="MediaPackWmvCoreOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -925,32 +1195,38 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF121;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="Visual C++ 2010 (x86)"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center"
+                                                                   Text="Visual C++ 2010 (x86)" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
+                                                            Opacity="0.3" />
                                                     <ContentControl x:Name="Vc2010X86RuntimeFaultRowHost"
                                                                     HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"/>
+                                                                    HorizontalContentAlignment="Stretch" />
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="SysWOW64/msvcr100.dll"/>
-                                                            <ContentControl x:Name="Vc2010X86MsvcrOutcomeHost" Grid.Column="2"/>
+                                                                       Text="SysWOW64/msvcr100.dll" />
+                                                            <ContentControl x:Name="Vc2010X86MsvcrOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="SysWOW64/msvcp100.dll"/>
-                                                            <ContentControl x:Name="Vc2010X86MsvcpOutcomeHost" Grid.Column="2"/>
+                                                                       Text="SysWOW64/msvcp100.dll" />
+                                                            <ContentControl x:Name="Vc2010X86MsvcpOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -962,32 +1238,38 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF121;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="Visual C++ 2010 (x64)"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center"
+                                                                   Text="Visual C++ 2010 (x64)" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
+                                                            Opacity="0.3" />
                                                     <ContentControl x:Name="Vc2010X64RuntimeFaultRowHost"
                                                                     HorizontalAlignment="Stretch"
-                                                                    HorizontalContentAlignment="Stretch"/>
+                                                                    HorizontalContentAlignment="Stretch" />
                                                     <StackPanel Spacing="2" Margin="0,4,0,0">
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="System32/msvcr100.dll"/>
-                                                            <ContentControl x:Name="Vc2010X64MsvcrOutcomeHost" Grid.Column="2"/>
+                                                                       Text="System32/msvcr100.dll" />
+                                                            <ContentControl x:Name="Vc2010X64MsvcrOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                                             <Ellipse Width="6" Height="6" VerticalAlignment="Center"
-                                                                     Fill="{DynamicResource SukiMuteText}" Opacity="0.5"/>
+                                                                     Fill="{DynamicResource SukiMuteText}"
+                                                                     Opacity="0.5" />
                                                             <TextBlock Grid.Column="1" VerticalAlignment="Center"
                                                                        FontSize="13" LineHeight="18"
-                                                                       Text="System32/msvcp100.dll"/>
-                                                            <ContentControl x:Name="Vc2010X64MsvcpOutcomeHost" Grid.Column="2"/>
+                                                                       Text="System32/msvcp100.dll" />
+                                                            <ContentControl x:Name="Vc2010X64MsvcpOutcomeHost"
+                                                                            Grid.Column="2" />
                                                         </Grid>
                                                     </StackPanel>
                                                 </StackPanel>
@@ -1001,14 +1283,15 @@
                                                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                                                         <TextBlock Classes="FaIcon" FontSize="15"
                                                                    Text="&#xF06A;" VerticalAlignment="Center"
-                                                                   Opacity="0.7"/>
-                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold" VerticalAlignment="Center" Text="未分组扫描输出"/>
+                                                                   Opacity="0.7" />
+                                                        <TextBlock Grid.Column="1" FontSize="14" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Center" Text="未分组扫描输出" />
                                                     </Grid>
                                                     <Border Height="1" Margin="0,2"
                                                             HorizontalAlignment="Stretch"
                                                             Background="{DynamicResource SukiControlBorderBrush}"
-                                                            Opacity="0.3"/>
-                                                    <StackPanel x:Name="ScanRootAlertsPanel" Spacing="2"/>
+                                                            Opacity="0.3" />
+                                                    <StackPanel x:Name="ScanRootAlertsPanel" Spacing="2" />
                                                 </StackPanel>
                                             </suki:GlassCard>
 
@@ -1022,10 +1305,11 @@
 
                 <suki:SukiSideMenuItem Header="关于">
                     <suki:SukiSideMenuItem.Icon>
-                        <TextBlock Classes="FaIcon" Text="&#xF128;" FontSize="14"/>
+                        <TextBlock Classes="FaIcon" Text="&#xF128;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                        <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto"
+                                      HorizontalScrollBarVisibility="Disabled">
                             <Grid MinHeight="520" VerticalAlignment="Center">
                                 <StackPanel x:Name="AboutPageContentStack"
                                             MaxWidth="720"
@@ -1035,30 +1319,30 @@
                                     <Image Height="120"
                                            HorizontalAlignment="Center"
                                            Stretch="Uniform"
-                                           Source="avares://LazyBootstrap/Assets/Images/about.png"/>
+                                           Source="avares://LazyBootstrap/Assets/Images/about.png" />
                                     <TextBlock Text="SOUND VOLTEX LazyBootstrap"
                                                HorizontalAlignment="Center"
                                                TextAlignment="Center"
                                                FontSize="20"
-                                               FontWeight="SemiBold"/>
+                                               FontWeight="SemiBold" />
                                     <TextBlock x:Name="LauncherVersionTextBlock"
                                                Text=""
                                                HorizontalAlignment="Center"
                                                TextAlignment="Center"
                                                FontSize="15"
-                                               Opacity="0.9"/>
+                                               Opacity="0.9" />
                                     <TextBlock TextWrapping="Wrap"
                                                TextAlignment="Center"
                                                FontSize="14"
                                                LineHeight="24"
                                                Opacity="0.88"
-                                               Text="此启动器的目的是为了让原本比较繁琐的步骤彻底懒人化，而非替代spice2x；包体仅供学习使用，请于下载后24小时内删除，如果你是付费获取的，那你就被骗了"/>
+                                               Text="此启动器的目的是为了让原本比较繁琐的步骤彻底懒人化，而非替代spice2x；包体仅供学习使用，请于下载后24小时内删除，如果你是付费获取的，那你就被骗了" />
                                     <TextBlock TextWrapping="Wrap"
                                                TextAlignment="Center"
                                                FontSize="14"
                                                LineHeight="24"
                                                Opacity="0.88"
-                                               Text="Launcher Copyright © Takanashi Ryo. All Rights Reserved."/>
+                                               Text="Launcher Copyright © Takanashi Ryo. All Rights Reserved." />
                                 </StackPanel>
                             </Grid>
                         </ScrollViewer>
@@ -1068,17 +1352,17 @@
         </suki:SukiSideMenu>
 
         <Canvas IsVisible="False" IsHitTestVisible="False">
-            <TextBlock x:Name="StatusLabel" Text="就绪"/>
-            <ProgressBar x:Name="StatusProgress" Width="200" Height="14" Minimum="0" Maximum="100"/>
+            <TextBlock x:Name="StatusLabel" Text="就绪" />
+            <ProgressBar x:Name="StatusProgress" Width="200" Height="14" Minimum="0" Maximum="100" />
         </Canvas>
 
         <Grid x:Name="RuntimeInstallOverlay" IsVisible="False" Opacity="1" ZIndex="100">
             <Grid.Transitions>
                 <Transitions>
-                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseInOut"/>
+                    <DoubleTransition Property="Opacity" Duration="0:0:0.3" Easing="CubicEaseInOut" />
                 </Transitions>
             </Grid.Transitions>
-            <Border Background="{DynamicResource SukiPopupBackground}" Opacity="0.72"/>
+            <Border Background="{DynamicResource SukiPopupBackground}" Opacity="0.72" />
             <suki:GlassCard HorizontalAlignment="Center"
                             VerticalAlignment="Center"
                             Padding="26"
@@ -1088,7 +1372,7 @@
                     <TextBlock Text="运行库安装进度"
                                HorizontalAlignment="Center"
                                FontSize="18"
-                               FontWeight="SemiBold"/>
+                               FontWeight="SemiBold" />
                     <StackPanel Width="320" Spacing="10">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14" VerticalAlignment="Center">
                             <TextBlock x:Name="RuntimeStatusText"
@@ -1096,23 +1380,23 @@
                                        VerticalAlignment="Center"
                                        FontSize="14"
                                        FontWeight="SemiBold"
-                                       TextWrapping="Wrap"/>
+                                       TextWrapping="Wrap" />
                             <TextBlock x:Name="RuntimeProgressValueText"
                                        Grid.Column="1"
-                                        Text=""
+                                       Text=""
                                        VerticalAlignment="Center"
                                        FontSize="18"
-                                       FontWeight="Bold"/>
+                                       FontWeight="Bold" />
                         </Grid>
                         <ProgressBar x:Name="RuntimeProgressBar"
                                      Height="14"
                                      Minimum="0"
                                      Maximum="100"
-                                      Value="0"/>
+                                     Value="0" />
                         <TextBlock Text="请耐心等待，进度条没有卡死"
                                    HorizontalAlignment="Center"
                                    Opacity="0.72"
-                                   FontSize="12"/>
+                                   FontSize="12" />
                     </StackPanel>
                 </StackPanel>
             </suki:GlassCard>
