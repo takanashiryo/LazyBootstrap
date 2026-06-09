@@ -583,7 +583,7 @@
                                         <TextBlock Classes="FaIcon" Text="&#xF51A;" FontSize="18"/>
                                         <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
                                             <TextBlock Text="清除模组缓存" FontWeight="SemiBold"/>
-                                            <TextBlock Text="清除 data_mods 的缓存，更新游戏后必须清除以重建缓存" Opacity="0.72" TextWrapping="Wrap"/>
+                                            <TextBlock Text="清除 data_mods 下的模组缓存，更新游戏后必须清除以重建缓存（*使用“更新”功能时会自动清除）" Opacity="0.72" TextWrapping="Wrap"/>
                                         </StackPanel>
                                         <Button x:Name="ClearCacheButton" Grid.Column="2" Classes="Flat" MinWidth="88" Content="执行" Click="OnClearCacheClick"/>
                                     </Grid>
