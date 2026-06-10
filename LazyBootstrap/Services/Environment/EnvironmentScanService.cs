@@ -34,16 +34,20 @@ namespace LazyBootstrap.Services.Environment
         public Task InitializeInfoAsync(EnvironmentScanPresentation presentation)
         {
             ArgumentNullException.ThrowIfNull(presentation);
+            _logger.LogInformation("Environment information initialization started.");
 
             presentation.MachineProperty = ResolveMachineProperty();
             presentation.GameVersion = ResolveCurrentGameVersion();
             presentation.LauncherVersion = ResolveLauncherVersion();
+            _logger.LogInformation("Environment information initialization completed.");
             return Task.CompletedTask;
         }
 
         public async Task RunScanAsync(EnvironmentScanPresentation presentation)
         {
             ArgumentNullException.ThrowIfNull(presentation);
+            _logger.LogInformation("Environment scan started.");
+            var stopwatch = Stopwatch.StartNew();
 
             presentation.HasEnvironmentScanErrors = false;
             ResetScanPresentation(presentation);
@@ -65,9 +69,20 @@ namespace LazyBootstrap.Services.Environment
                 presentation.EnvironmentSummary = summary.ErrorSummary ?? string.Empty;
                 presentation.HasEnvironmentScanErrors = summary.HadError;
                 PopulateScanSlots(presentation, summary);
+                stopwatch.Stop();
+                _logger.LogInformation(
+                    "Environment scan completed. HadError={HadError}, ItemCount={ItemCount}, ElapsedMs={ElapsedMs}",
+                    summary.HadError,
+                    summary.Items.Count,
+                    stopwatch.ElapsedMilliseconds);
+                if (summary.HadError)
+                {
+                    _logger.LogWarning("Environment scan reported errors.");
+                }
             }
             catch (Exception ex)
             {
+                stopwatch.Stop();
                 _logger.LogError(ex, "Environment scan failed.");
                 _uiInteractionService.ShowErrorToast("环境检查失败", ex.Message);
             }

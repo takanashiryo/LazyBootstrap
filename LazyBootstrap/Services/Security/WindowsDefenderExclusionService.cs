@@ -3,21 +3,31 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Security
 {
 
     public sealed class WindowsDefenderExclusionService
     {
+        private readonly ILogger<WindowsDefenderExclusionService> _logger;
+
+        public WindowsDefenderExclusionService(ILogger<WindowsDefenderExclusionService> logger)
+        {
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+        }
+
         public async Task<WindowsDefenderExclusionResult> EnsureDirectoryExcludedAsync(string directoryPath)
         {
             if (string.IsNullOrWhiteSpace(directoryPath))
             {
+                _logger.LogWarning("Windows Defender exclusion skipped because no directory was provided.");
                 return new WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus.Failed, "未提供需要添加排除项的目录。");
             }
 
             if (!OperatingSystem.IsWindows())
             {
+                _logger.LogInformation("Windows Defender exclusion skipped because the current OS is not Windows.");
                 return new WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus.Skipped, "当前系统不是 Windows，已跳过 Defender 排除项处理。");
             }
 
@@ -25,14 +35,17 @@ namespace LazyBootstrap.Services.Security
             try
             {
                 fullPath = Path.GetFullPath(directoryPath);
+                _logger.LogInformation("Ensuring Windows Defender exclusion for directory: {Directory}", fullPath);
             }
             catch (Exception ex)
             {
+                _logger.LogWarning(ex, "Failed to resolve Windows Defender exclusion directory.");
                 return new WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus.Failed, $"解析目录路径失败：{ex.Message}");
             }
 
             if (!Directory.Exists(fullPath))
             {
+                _logger.LogWarning("Windows Defender exclusion skipped because the directory does not exist: {Directory}", fullPath);
                 return new WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus.Skipped, $"目录不存在：{fullPath}");
             }
 
@@ -108,6 +121,7 @@ Write-Output 'ADDED'
                 using var process = new Process { StartInfo = startInfo };
                 if (!process.Start())
                 {
+                    _logger.LogWarning("Failed to start PowerShell for Windows Defender exclusion.");
                     return new WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus.Failed, "无法启动 PowerShell 以处理 Defender 排除项。");
                 }
 
@@ -122,15 +136,19 @@ Write-Output 'ADDED'
                 if (process.ExitCode != 0)
                 {
                     var failureMessage = !string.IsNullOrWhiteSpace(standardError) ? standardError : standardOutput;
+                    _logger.LogWarning("Windows Defender exclusion command failed. ExitCode={ExitCode}", process.ExitCode);
                     return new WindowsDefenderExclusionResult(
                         WindowsDefenderExclusionStatus.Failed,
                         string.IsNullOrWhiteSpace(failureMessage) ? "添加 Windows Defender 排除项失败。" : failureMessage);
                 }
 
-                return ParseResult(standardOutput);
+                var result = ParseResult(standardOutput);
+                _logger.LogInformation("Windows Defender exclusion command completed. Status={Status}", result.Status);
+                return result;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Windows Defender exclusion workflow failed.");
                 return new WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus.Failed, $"处理 Windows Defender 排除项时发生错误：{ex.Message}");
             }
         }
