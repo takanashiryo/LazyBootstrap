@@ -972,6 +972,11 @@ namespace LazyBootstrap.Services.Settings
 
         private bool IsSpiceConfigAvailable(bool useSystemSpiceConfig)
         {
+            if (!useSystemSpiceConfig)
+            {
+                return true;
+            }
+
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(useSystemSpiceConfig);
 
             try
@@ -986,7 +991,7 @@ namespace LazyBootstrap.Services.Settings
             }
             catch (Exception ex)
             {
-                _logger.LogDebug(ex, "AppData spice config validation failed for {SpiceXmlPath}.", spiceXmlPath);
+                _logger.LogDebug(ex, "System spice config validation failed for {SpiceXmlPath}.", spiceXmlPath);
                 return false;
             }
         }
