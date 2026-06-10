@@ -601,7 +601,12 @@
                                                             <TextBlock Text="若你的音频输出设备不支持44100 Hz，请在此更改为你兼容的格式，否则游戏无法启动"
                                                                        Opacity="0.7" FontSize="12" Margin="0,-5,0,0" />
                                                             <TextBlock Text="*仅WASAPI独占模式可用"
-                                                                       Opacity="0.7" FontSize="12" Margin="0,-5,0,0" />
+                                                                       Opacity="0.7" FontSize="12" Margin="0,-10,0,0" />
+                                                            <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
+                                                                <TextBlock Text="WASAPI共享音频" VerticalAlignment="Center" />
+                                                                <ToggleSwitch x:Name="WasapiSharedToggleSwitch"
+                                                                              Grid.Column="1" />
+                                                            </Grid>
                                                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                                 <TextBlock Text="低延迟共享音频" VerticalAlignment="Center" />
                                                                 <ToggleSwitch

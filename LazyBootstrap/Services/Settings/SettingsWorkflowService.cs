@@ -114,6 +114,7 @@ namespace LazyBootstrap.Services.Settings
                     "192000" => 6,
                     _ => 0
                 }),
+            B("wasapishared", vm => vm.WasapiShared, (vm, v) => vm.WasapiShared = v, "/ENABLED"),
             B("sp2x-lowlatencysharedaudio", vm => vm.LowLatencySharedAudio, (vm, v) => vm.LowLatencySharedAudio = v, "/ENABLED"),
             B("cardio", vm => vm.CardIo, (vm, v) => vm.CardIo = v, "/ENABLED"),
             B("scard", vm => vm.HidSmartCard, (vm, v) => vm.HidSmartCard = v, "/ENABLED"),

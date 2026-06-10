@@ -665,6 +665,7 @@ namespace LazyBootstrap.Views
                     await PersistSpice();
                 };
             }
+            BindToggleSwitch(WasapiSharedToggleSwitch, v => _settingsState.WasapiShared = v, PersistSpice);
             BindToggleSwitch(LowLatencySharedAudioToggleSwitch, v => _settingsState.LowLatencySharedAudio = v, PersistSpice);
         }
 

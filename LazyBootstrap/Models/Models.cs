@@ -218,6 +218,8 @@ namespace LazyBootstrap.Models
 
         public int ResampleIndex { get; set; }
 
+        public bool WasapiShared { get; set; }
+
         public bool LowLatencySharedAudio { get; set; }
 
         public bool CardIo { get; set; }
