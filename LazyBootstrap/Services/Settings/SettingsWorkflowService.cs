@@ -93,6 +93,27 @@ namespace LazyBootstrap.Services.Settings
                     "30" => 8,
                     _ => 0
                 }),
+            new("resample",
+                vm => vm.ResampleIndex switch
+                {
+                    1 => "44100",
+                    2 => "48000",
+                    3 => "88200",
+                    4 => "96000",
+                    5 => "176400",
+                    6 => "192000",
+                    _ => ""
+                },
+                (vm, v) => vm.ResampleIndex = v switch
+                {
+                    "44100" => 1,
+                    "48000" => 2,
+                    "88200" => 3,
+                    "96000" => 4,
+                    "176400" => 5,
+                    "192000" => 6,
+                    _ => 0
+                }),
             B("sp2x-lowlatencysharedaudio", vm => vm.LowLatencySharedAudio, (vm, v) => vm.LowLatencySharedAudio = v, "/ENABLED"),
             B("cardio", vm => vm.CardIo, (vm, v) => vm.CardIo = v, "/ENABLED"),
             B("scard", vm => vm.HidSmartCard, (vm, v) => vm.HidSmartCard = v, "/ENABLED"),

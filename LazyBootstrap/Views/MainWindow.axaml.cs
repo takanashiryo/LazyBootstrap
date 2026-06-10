@@ -656,6 +656,15 @@ namespace LazyBootstrap.Views
                     await PersistSpice();
                 };
             }
+            if (ResampleComboBox != null)
+            {
+                ResampleComboBox.SelectionChanged += async (_, _) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _settingsState.ResampleIndex = ResampleComboBox.SelectedIndex < 0 ? 0 : ResampleComboBox.SelectedIndex;
+                    await PersistSpice();
+                };
+            }
             BindToggleSwitch(LowLatencySharedAudioToggleSwitch, v => _settingsState.LowLatencySharedAudio = v, PersistSpice);
         }
 

@@ -216,6 +216,8 @@ namespace LazyBootstrap.Models
 
         public int VolumeBoostIndex { get; set; }
 
+        public int ResampleIndex { get; set; }
+
         public bool LowLatencySharedAudio { get; set; }
 
         public bool CardIo { get; set; }

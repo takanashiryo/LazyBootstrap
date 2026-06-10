@@ -584,6 +584,24 @@
                                                                     <ComboBoxItem Content="+30 dB" />
                                                                 </ComboBox>
                                                             </Grid>
+                                                            <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
+                                                                  VerticalAlignment="Center">
+                                                                <TextBlock Text="音频重采样" VerticalAlignment="Center" />
+                                                                <ComboBox x:Name="ResampleComboBox" Grid.Column="1"
+                                                                          SelectedIndex="0">
+                                                                    <ComboBoxItem Content="默认" />
+                                                                    <ComboBoxItem Content="44100 Hz" />
+                                                                    <ComboBoxItem Content="48000 Hz" />
+                                                                    <ComboBoxItem Content="88200 Hz" />
+                                                                    <ComboBoxItem Content="96000 Hz" />
+                                                                    <ComboBoxItem Content="176400 Hz" />
+                                                                    <ComboBoxItem Content="192000 Hz" />
+                                                                </ComboBox>
+                                                            </Grid>
+                                                            <TextBlock Text="若你的音频输出设备不支持44100 Hz，请在此更改为你兼容的格式，否则游戏无法启动"
+                                                                       Opacity="0.7" FontSize="12" Margin="0,-5,0,0" />
+                                                            <TextBlock Text="*仅WASAPI独占模式可用"
+                                                                       Opacity="0.7" FontSize="12" Margin="0,-5,0,0" />
                                                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                                 <TextBlock Text="低延迟共享音频" VerticalAlignment="Center" />
                                                                 <ToggleSwitch

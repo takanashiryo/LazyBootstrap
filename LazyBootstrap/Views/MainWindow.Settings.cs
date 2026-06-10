@@ -229,6 +229,11 @@ namespace LazyBootstrap.Views
                 VolumeBoostComboBox.SelectedIndex = Math.Clamp(_settingsState.VolumeBoostIndex, 0, Math.Max(0, VolumeBoostComboBox.ItemCount - 1));
             }
 
+            if (ResampleComboBox != null)
+            {
+                ResampleComboBox.SelectedIndex = Math.Clamp(_settingsState.ResampleIndex, 0, Math.Max(0, ResampleComboBox.ItemCount - 1));
+            }
+
             if (LowLatencySharedAudioToggleSwitch != null)
             {
                 LowLatencySharedAudioToggleSwitch.IsChecked = _settingsState.LowLatencySharedAudio;

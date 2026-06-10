@@ -100,6 +100,7 @@ namespace LazyBootstrap.Views
             AsioDriverComboBox!,
             Asio2ChToggleSwitch!,
             VolumeBoostComboBox!,
+            ResampleComboBox!,
             LowLatencySharedAudioToggleSwitch!,
             CardIoToggleSwitch!,
             HidSmartCardToggleSwitch!,
