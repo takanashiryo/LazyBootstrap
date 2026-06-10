@@ -8,6 +8,7 @@
     <AssemblyName>LazyBootstrap</AssemblyName>
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
+    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
