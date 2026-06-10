@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LazyBootstrap.Services.Config;
+using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Settings
 {
@@ -20,16 +21,23 @@ namespace LazyBootstrap.Services.Settings
         private readonly ConfigHandler _configFile;
         private readonly LauncherPaths _paths;
         private readonly SpiceConfigFileService _spiceConfigFileService;
+        private readonly ILogger<GpuCompatLayerService> _logger;
 
-        public GpuCompatLayerService(ConfigHandler configFile, LauncherPaths paths, SpiceConfigFileService spiceConfigFileService)
+        public GpuCompatLayerService(
+            ConfigHandler configFile,
+            LauncherPaths paths,
+            SpiceConfigFileService spiceConfigFileService,
+            ILogger<GpuCompatLayerService> logger)
         {
             ArgumentNullException.ThrowIfNull(configFile);
             ArgumentNullException.ThrowIfNull(paths);
             ArgumentNullException.ThrowIfNull(spiceConfigFileService);
+            ArgumentNullException.ThrowIfNull(logger);
 
             _configFile = configFile;
             _paths = paths;
             _spiceConfigFileService = spiceConfigFileService;
+            _logger = logger;
         }
 
         private sealed record GpuCompatLayerSnapshots(
@@ -41,6 +49,7 @@ namespace LazyBootstrap.Services.Settings
         {
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
+            _logger.LogInformation("GPU compatibility layer toggle started. Enable={Enable}", enable);
 
             var snapshots = CaptureAllGpuCompatLayerSnapshots(spiceXmlPath);
 
@@ -50,12 +59,14 @@ namespace LazyBootstrap.Services.Settings
                 {
                     if (!ApplyGpuCompatLayerFiles(renderMode, out error))
                     {
+                        _logger.LogWarning("GPU compatibility layer file application failed. Rolling back.");
                         error = CombineErrors(error, RestoreSnapshots(snapshots));
                         return false;
                     }
                 }
                 else if (!RemoveGpuCompatLayerFiles(out error))
                 {
+                    _logger.LogWarning("GPU compatibility layer file removal failed. Rolling back.");
                     error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
                 }
@@ -65,14 +76,17 @@ namespace LazyBootstrap.Services.Settings
 
                 if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(enable, renderMode), out var spiceError))
                 {
+                    _logger.LogWarning("GPU compatibility layer XML update failed. Rolling back.");
                     error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));
                     return false;
                 }
 
+                _logger.LogInformation("GPU compatibility layer toggle completed.");
                 return true;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "GPU compatibility layer toggle failed. Rolling back.");
                 error = CombineErrors(ex.Message, RestoreSnapshots(snapshots));
                 return false;
             }
@@ -82,6 +96,7 @@ namespace LazyBootstrap.Services.Settings
         {
             error = string.Empty;
             renderMode = NormalizeRenderMode(renderMode);
+            _logger.LogInformation("GPU compatibility layer render mode persistence started. LayerEnabled={LayerEnabled}", gpuCompatLayerEnabled);
             var snapshots = CaptureAllGpuCompatLayerSnapshots(spiceXmlPath);
 
             try
@@ -90,25 +105,30 @@ namespace LazyBootstrap.Services.Settings
 
                 if (!gpuCompatLayerEnabled)
                 {
+                    _logger.LogInformation("GPU compatibility layer render mode persisted while layer is disabled.");
                     return true;
                 }
 
                 if (!ApplyGpuCompatLayerFiles(renderMode, out error))
                 {
+                    _logger.LogWarning("GPU compatibility layer file refresh failed. Rolling back.");
                     error = CombineErrors(error, RestoreSnapshots(snapshots));
                     return false;
                 }
 
                 if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(true, renderMode), out var spiceError))
                 {
+                    _logger.LogWarning("GPU compatibility layer XML refresh failed. Rolling back.");
                     error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));
                     return false;
                 }
 
+                _logger.LogInformation("GPU compatibility layer render mode persistence completed.");
                 return true;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "GPU compatibility layer render mode persistence failed. Rolling back.");
                 error = CombineErrors(ex.Message, RestoreSnapshots(snapshots));
                 return false;
             }
@@ -216,15 +236,18 @@ namespace LazyBootstrap.Services.Settings
             error = string.Empty;
             string stubsDir = _paths.GetBundledLibsDirectoryPath();
             string modulesDir = GetGpuCompatLayerModulesDirectoryPath();
+            _logger.LogDebug("Applying GPU compatibility layer files.");
             if (!Directory.Exists(stubsDir))
             {
                 error = $"未找到兼容层资源目录: {stubsDir}";
+                _logger.LogWarning("GPU compatibility layer resource directory is missing: {Directory}", stubsDir);
                 return false;
             }
 
             if (!Directory.Exists(modulesDir))
             {
                 error = $"未找到兼容层目标目录: {modulesDir}";
+                _logger.LogWarning("GPU compatibility layer modules directory is missing: {Directory}", modulesDir);
                 return false;
             }
 
@@ -236,6 +259,7 @@ namespace LazyBootstrap.Services.Settings
                     if (!File.Exists(sourcePath))
                     {
                         error = $"缺少文件: {fileName}";
+                        _logger.LogWarning("GPU compatibility layer resource file is missing: {FileName}", fileName);
                         return false;
                     }
 
@@ -258,14 +282,17 @@ namespace LazyBootstrap.Services.Settings
                 if (!File.Exists(stubPath))
                 {
                     error = $"缺少文件: {stubName}";
+                    _logger.LogWarning("GPU compatibility layer d3d9 resource file is missing.");
                     return false;
                 }
 
                 File.Copy(stubPath, d3d9Path, true);
+                _logger.LogDebug("GPU compatibility layer files applied.");
                 return true;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to apply GPU compatibility layer files.");
                 error = ex.Message;
                 return false;
             }
@@ -277,24 +304,29 @@ namespace LazyBootstrap.Services.Settings
             string modulesDir = GetGpuCompatLayerModulesDirectoryPath();
             if (!Directory.Exists(modulesDir))
             {
+                _logger.LogDebug("GPU compatibility layer modules directory does not exist. Removal skipped.");
                 return true;
             }
 
             try
             {
+                int deleted = 0;
                 foreach (var fileName in ManagedGpuCompatLayerFiles)
                 {
                     string path = Path.Combine(modulesDir, fileName);
                     if (File.Exists(path))
                     {
                         File.Delete(path);
+                        deleted++;
                     }
                 }
 
+                _logger.LogInformation("GPU compatibility layer managed files removed. DeletedCount={DeletedCount}", deleted);
                 return true;
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to remove GPU compatibility layer files.");
                 error = ex.Message;
                 return false;
             }

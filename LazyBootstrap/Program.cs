@@ -16,13 +16,16 @@ namespace LazyBootstrap
             try
             {
                 AppServices.InitializeSerilog(args);
+                Log.Information("LazyBootstrap process started.");
                 if (!EnsureElevated(args))
                 {
+                    Log.Information("Startup stopped before Avalonia initialization.");
                     return;
                 }
 
                 AppServices.Initialize(args);
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+                Log.Information("Avalonia lifetime ended.");
             }
             catch (Exception ex)
             {
@@ -52,6 +55,7 @@ namespace LazyBootstrap
         {
             if (!OperatingSystem.IsWindows())
             {
+                Log.Information("Privilege elevation skipped because the current OS is not Windows.");
                 return true;
             }
 
@@ -61,9 +65,11 @@ namespace LazyBootstrap
                 var principal = new WindowsPrincipal(identity);
                 if (principal.IsInRole(WindowsBuiltInRole.Administrator))
                 {
+                    Log.Information("Administrator privilege confirmed.");
                     return true;
                 }
 
+                Log.Information("Administrator privilege required. Starting elevated process.");
                 var exePath = Environment.ProcessPath;
                 if (string.IsNullOrWhiteSpace(exePath))
                 {

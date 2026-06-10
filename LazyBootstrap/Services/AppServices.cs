@@ -1,6 +1,9 @@
 using System;
 using SystemEnvironment = System.Environment;
+using System.Diagnostics;
 using System.IO;
+using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using LazyBootstrap.Models;
@@ -24,8 +27,9 @@ namespace LazyBootstrap.Services
     public static class AppServices
     {
         private static bool _initialized;
+        private static bool _globalExceptionLoggingRegistered;
         private static ILoggerFactory _loggerFactory;
-        private const string LogOutputTemplate = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] {Message:lj}{NewLine}{Exception}";
+        private const string LogOutputTemplate = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{ProcessId}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
 
         public static LauncherRuntimeContext RuntimeContext { get; private set; }
         public static ConfigHandler Config { get; private set; }
@@ -58,17 +62,36 @@ namespace LazyBootstrap.Services
 
             Directory.CreateDirectory(RuntimeContext.ApplicationDirectoryPath);
             string logFilePath = Path.Combine(RuntimeContext.ApplicationDirectoryPath, "LazyBootstrap.log");
+            string applicationVersion = ResolveApplicationVersion();
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .Enrich.WithProperty("Application", "LazyBootstrap")
+                .Enrich.WithProperty("ApplicationVersion", applicationVersion)
+                .Enrich.WithProperty("ProcessId", SystemEnvironment.ProcessId)
+                .Enrich.WithProperty("BaseDirectory", RuntimeContext.BaseDirectoryPath)
+                .Enrich.WithProperty("ApplicationDirectory", RuntimeContext.ApplicationDirectoryPath)
+                .Enrich.WithProperty("ConfigPath", RuntimeContext.ConfigFilePath)
                 .WriteTo.File(logFilePath, outputTemplate: LogOutputTemplate, shared: true)
                 .CreateLogger();
+
+            RegisterGlobalExceptionLogging();
 
             _loggerFactory = LoggerFactory.Create(builder =>
             {
                 builder.ClearProviders();
                 builder.AddSerilog(Log.Logger, dispose: false);
             });
+
+            Log.Information(
+                "Serilog initialized. Version={Version}, ProcessId={ProcessId}, BaseDir={BaseDirectory}, ApplicationDir={ApplicationDirectory}, ConfigPath={ConfigPath}, LogPath={LogPath}",
+                applicationVersion,
+                SystemEnvironment.ProcessId,
+                RuntimeContext.BaseDirectoryPath,
+                RuntimeContext.ApplicationDirectoryPath,
+                RuntimeContext.ConfigFilePath,
+                logFilePath);
         }
 
         public static void Initialize(string[] args)
@@ -78,14 +101,16 @@ namespace LazyBootstrap.Services
             InitializeSerilog(args);
             EnsureRuntimeContext(args);
 
+            Log.Information("Initializing core services.");
             Config = new ConfigHandler(RuntimeContext.ConfigFilePath);
             AppConfigBootstrapper.InitializeAndMigrate(RuntimeContext.ConfigFilePath, Config);
+            Log.Information("Configuration initialized and migrated.");
 
             Paths = new LauncherPaths(RuntimeContext.BaseDirectoryPath, RuntimeContext.ApplicationDirectoryPath, RuntimeContext.ConfigFilePath);
 
             SpiceConfig = new SpiceConfigFileService();
             DisplayConfig = new WindowsDisplayConfigurationService();
-            DefenderExclusion = new WindowsDefenderExclusionService();
+            DefenderExclusion = new WindowsDefenderExclusionService(CreateLogger<WindowsDefenderExclusionService>());
             GameProcess = new GameProcessTracker();
             ShellState = new ShellStateService();
             // Suki managers must be created AFTER SukiTheme is loaded.
@@ -94,12 +119,13 @@ namespace LazyBootstrap.Services
             Savedata = new SavedataTransferPlanner(Paths);
             DisplayTransaction = new DisplaySettingsTransactionCoordinator(DisplayConfig);
 
-            GpuCompat = new GpuCompatLayerService(Config, Paths, SpiceConfig);
+            GpuCompat = new GpuCompatLayerService(Config, Paths, SpiceConfig, CreateLogger<GpuCompatLayerService>());
 
             // Services that depend on SukiUI (DialogManager/ToastManager) are deferred
             // to InitSukiManagers() which must be called AFTER SukiTheme is loaded.
 
             _initialized = true;
+            Log.Information("Core services initialized.");
         }
 
         private static void EnsureRuntimeContext(string[] args)
@@ -124,6 +150,7 @@ namespace LazyBootstrap.Services
         {
             if (DialogManager != null) return;
 
+            Log.Information("Initializing SukiUI-dependent services.");
             DialogManager = new SukiDialogManager();
             ToastManager = new SukiToastManager();
             UI = new UiInteractionService(DialogManager, ToastManager);
@@ -134,14 +161,54 @@ namespace LazyBootstrap.Services
             ToolsWorkflow = new ToolsWorkflowService(Paths, Savedata, UI, ShellState, CreateLogger<ToolsWorkflowService>());
             UpdateWorkflow = new UpdateWorkflowService(Paths, UI, ShellState, CreateLogger<UpdateWorkflowService>());
             EnvironmentScan = new EnvironmentScanService(Paths, ShellState, UI, CreateLogger<EnvironmentScanService>());
+            Log.Information("SukiUI-dependent services initialized.");
         }
 
         public static void Dispose()
         {
+            Log.Information("LazyBootstrap services are shutting down.");
             _loggerFactory?.Dispose();
             _loggerFactory = null;
             Log.CloseAndFlush();
             _initialized = false;
+        }
+
+        private static void RegisterGlobalExceptionLogging()
+        {
+            if (_globalExceptionLoggingRegistered)
+            {
+                return;
+            }
+
+            AppDomain.CurrentDomain.UnhandledException += (_, e) =>
+            {
+                if (e.ExceptionObject is Exception ex)
+                {
+                    Log.Fatal(ex, "Unhandled AppDomain exception. IsTerminating={IsTerminating}", e.IsTerminating);
+                    return;
+                }
+
+                Log.Fatal("Unhandled AppDomain exception object: {ExceptionObject}. IsTerminating={IsTerminating}", e.ExceptionObject, e.IsTerminating);
+            };
+
+            TaskScheduler.UnobservedTaskException += (_, e) =>
+            {
+                Log.Error(e.Exception, "Unobserved task exception.");
+            };
+
+            _globalExceptionLoggingRegistered = true;
+        }
+
+        private static string ResolveApplicationVersion()
+        {
+            try
+            {
+                return Assembly.GetEntryAssembly()?.GetName().Version?.ToString() ?? "unknown";
+            }
+            catch
+            {
+                return "unknown";
+            }
         }
     }
 }
