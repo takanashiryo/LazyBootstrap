@@ -22,6 +22,7 @@ namespace LazyBootstrap
 
         public override void Initialize()
         {
+            Log.Information("Avalonia application initialization started.");
             AvaloniaXamlLoader.Load(this);
             var sukiTheme = SukiTheme.GetInstance(this);
             sukiTheme.AddColorTheme(LazyGreenTheme);
@@ -29,12 +30,14 @@ namespace LazyBootstrap
 
             // SukiUI managers must be created AFTER SukiTheme is loaded.
             AppServices.InitSukiManagers();
+            Log.Information("Avalonia application initialization completed.");
         }
 
         public override void OnFrameworkInitializationCompleted()
         {
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
+                Log.Information("Framework initialization completed. Preparing main window.");
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
                 var mainWindow = new MainWindow(
@@ -63,6 +66,7 @@ namespace LazyBootstrap
                 desktop.MainWindow = mainWindow;
                 desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
                 mainWindow.Show();
+                Log.Information("Main window prepared and shown.");
             }
             catch (Exception ex)
             {

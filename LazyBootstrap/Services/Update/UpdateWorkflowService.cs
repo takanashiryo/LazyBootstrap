@@ -35,16 +35,19 @@ namespace LazyBootstrap.Services.Update
 
         public async Task ApplyUpdateFromUserSelectedArchiveAsync(Action<bool> setBusy)
         {
+            _logger.LogInformation("KFC update workflow requested.");
 
             string sevenZip = _paths.ResolveSevenZipExecutablePath();
             if (!File.Exists(sevenZip))
             {
+                _logger.LogWarning("KFC update aborted because 7za was not found: {SevenZipPath}", sevenZip);
                 _uiInteractionService.ShowErrorToast("更新失败", $"未找到 7za：{sevenZip}");
                 return;
             }
 
             if (!MediaUpdatePaths.IsValidGameRoot(_paths.BaseDir))
             {
+                _logger.LogWarning("KFC update aborted because the base directory is not a valid game root: {BaseDir}", _paths.BaseDir);
                 _uiInteractionService.ShowErrorToast(
                     "无法更新",
                     "当前游戏目录下未找到 contents 或 asphyxia，请从正确的游戏根目录启动启动器。");
@@ -54,6 +57,7 @@ namespace LazyBootstrap.Services.Update
             string mediaUpdater = Path.Combine(_paths.ApplicationDirectoryPath, KfcUpdateEnvironment.MediaUpdaterExecutableFileName);
             if (!File.Exists(mediaUpdater))
             {
+                _logger.LogWarning("KFC update aborted because MediaUpdater was not found: {MediaUpdaterPath}", mediaUpdater);
                 _uiInteractionService.ShowErrorToast(
                     "更新失败",
                     $"未找到 {KfcUpdateEnvironment.MediaUpdaterExecutableFileName}。请与 LazyBootstrap 一并部署。");
@@ -63,8 +67,10 @@ namespace LazyBootstrap.Services.Update
             string archivePath = await _uiInteractionService.PickFileAsync("选择更新压缩包", UpdateArchiveFilePatterns).ConfigureAwait(true);
             if (string.IsNullOrWhiteSpace(archivePath) || !File.Exists(archivePath))
             {
+                _logger.LogInformation("KFC update cancelled before archive selection.");
                 return;
             }
+            _logger.LogInformation("KFC update archive selected: {ArchivePath}", archivePath);
 
             string staging = _paths.GetUpdateStagingDirectoryPath();
             _shellStateService.IsInteractionEnabled = false;
@@ -72,26 +78,31 @@ namespace LazyBootstrap.Services.Update
             bool updateDetached = false;
             try
             {
+                _logger.LogInformation("Clearing update staging directory: {StagingDirectory}", staging);
                 ClearStagingDirectory(staging);
 
                 if (!await RunSevenZipExtractAsync(sevenZip, archivePath, staging).ConfigureAwait(true))
                 {
+                    _logger.LogWarning("KFC update aborted because archive extraction failed.");
                     return;
                 }
 
                 if (string.IsNullOrEmpty(MediaUpdatePaths.FindShallowestFile(staging, MediaUpdateConstants.SyncBatchFileName)))
                 {
+                    _logger.LogWarning("KFC update aborted because sync batch was not found in staging.");
                     _uiInteractionService.ShowErrorToast("更新失败", $"压缩包中未找到 {MediaUpdateConstants.SyncBatchFileName}。");
                     return;
                 }
 
                 if (!TryStartMediaUpdater(mediaUpdater, _paths.BaseDir, staging, _paths.ApplicationDirectoryPath))
                 {
+                    _logger.LogWarning("KFC update failed because MediaUpdater could not be started.");
                     _uiInteractionService.ShowErrorToast("更新失败", "无法启动 MediaUpdater。");
                     return;
                 }
 
                 updateDetached = true;
+                _logger.LogInformation("MediaUpdater started successfully. Main application will exit.");
                 _uiInteractionService.ShowInfoToast(
                     "开始更新",
                     "本程序将立即退出。请在弹出的更新窗口中完成操作；结束后可通过 启动.exe 继续。");
@@ -145,9 +156,11 @@ namespace LazyBootstrap.Services.Update
             try
             {
                 Directory.CreateDirectory(outputDir);
+                _logger.LogInformation("Update extraction directory prepared: {OutputDirectory}", outputDir);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to create update extraction directory.");
                 _uiInteractionService.ShowErrorToast("更新失败", $"无法创建临时目录: {ex.Message}");
                 return false;
             }
@@ -169,17 +182,21 @@ namespace LazyBootstrap.Services.Update
             {
                 if (!process.Start())
                 {
+                    _logger.LogWarning("Update extraction failed because 7za process start returned false.");
                     _uiInteractionService.ShowErrorToast("更新失败", "无法启动 7za。");
                     return false;
                 }
+                _logger.LogInformation("Update extraction process started. ProcessId={ProcessId}", process.Id);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to start update extraction process.");
                 _uiInteractionService.ShowErrorToast("更新失败", $"无法启动 7za: {ex.Message}");
                 return false;
             }
 
             await process.WaitForExitAsync().ConfigureAwait(true);
+            _logger.LogInformation("Update extraction process exited. ExitCode={ExitCode}", process.ExitCode);
             if (process.ExitCode != 0)
             {
                 _logger.LogWarning("7za exited with code {Code}.", process.ExitCode);

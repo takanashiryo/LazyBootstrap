@@ -96,8 +96,10 @@ namespace LazyBootstrap.Services.Launch
             try
             {
                 string logPath = Path.Combine(_paths.GetContentsDirectoryPath(), "log.txt");
+                _logger.LogInformation("Opening spice2x log viewer.");
                 if (!File.Exists(logPath))
                 {
+                    _logger.LogWarning("spice2x log file was not found: {LogPath}", logPath);
                     _uiInteractionService.ShowErrorToast("查看日志失败", $"未找到日志文件: {logPath}");
                     return;
                 }
@@ -137,19 +139,23 @@ namespace LazyBootstrap.Services.Launch
 
                 if (result is SukiMessageBoxResult.Yes)
                 {
+                    _logger.LogInformation("Opening spice2x log folder from log viewer.");
                     ProcessExecutionHelper.OpenLogFolderAndSelectFile(logPath);
                 }
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to open spice2x log viewer.");
                 _uiInteractionService.ShowErrorToast("查看日志失败", ex.Message);
             }
         }
 
         public Task KillProcessesAsync()
         {
+            _logger.LogInformation("Manual process termination requested.");
             int killedSpice = KillProcessesByName("spice64");
             int killedAsphyxia = KillProcessesByName("asphyxia-core-x64");
+            _logger.LogInformation("Manual process termination completed. SpiceKilled={SpiceKilled}, AsphyxiaKilled={AsphyxiaKilled}", killedSpice, killedAsphyxia);
             _uiInteractionService.ShowInfoToast("操作完成", $"结束完成：spice64 {killedSpice} 个，asphyxia-core-x64 {killedAsphyxia} 个");
             return Task.CompletedTask;
         }
@@ -157,6 +163,12 @@ namespace LazyBootstrap.Services.Launch
         public async Task StartAsync(LaunchState launchState, LaunchRequest request, ILaunchWorkflowObserver observer)
         {
             ArgumentNullException.ThrowIfNull(request);
+
+            string launchSessionId = Guid.NewGuid().ToString("N");
+            using var launchScope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["LaunchSessionId"] = launchSessionId
+            });
 
             var settings = request.Settings;
             var display = request.Display;
@@ -181,6 +193,7 @@ namespace LazyBootstrap.Services.Launch
             NotifyLaunchLogVisibilityChanged(launchState);
             ClearLaunchLog(launchState);
             AppendLaunchOutput(launchState, "开始启动...");
+            _logger.LogInformation("Game launch workflow started. LaunchSessionId={LaunchSessionId}, AsphyxiaDevOnly={AsphyxiaDevOnly}", launchSessionId, asphyxiaDevOnly);
 
             bool handoffToGameSession = false;
 
@@ -189,9 +202,18 @@ namespace LazyBootstrap.Services.Launch
                 string spicePath = _paths.GetSpicePath();
                 string asphyxiaPath = _paths.GetAsphyxiaPath();
                 string serverAddress = (settings?.ServerAddress ?? string.Empty).Trim();
+                bool useSystemSpice = settings?.UseSystemSpiceConfig ?? false;
+                bool displayConfigurationEnabled = display?.IsDisplayConfigurationEnabled == true;
+                _logger.LogInformation(
+                    "Launch prerequisites resolved. SpiceExists={SpiceExists}, AsphyxiaExists={AsphyxiaExists}, DisplayConfigurationEnabled={DisplayConfigurationEnabled}, UseSystemSpiceConfig={UseSystemSpiceConfig}",
+                    File.Exists(spicePath),
+                    File.Exists(asphyxiaPath),
+                    displayConfigurationEnabled,
+                    useSystemSpice);
 
                 if (!asphyxiaDevOnly && string.IsNullOrWhiteSpace(serverAddress))
                 {
+                    _logger.LogWarning("Launch aborted because no server address is configured.");
                     WarnLaunchAndAbort(
                         launchState,
                         "服务器地址异常",
@@ -201,6 +223,7 @@ namespace LazyBootstrap.Services.Launch
 
                 if (!asphyxiaDevOnly && !File.Exists(spicePath))
                 {
+                    _logger.LogWarning("Launch aborted because spice64.exe was not found: {SpicePath}", spicePath);
                     FailLaunch(launchState, $"未找到 spice64.exe: {spicePath}", "未找到spice64.exe");
                     return;
                 }
@@ -208,9 +231,11 @@ namespace LazyBootstrap.Services.Launch
                 bool startAsphyxia = asphyxiaDevOnly || !settings.NoAsphyxia;
                 int existingAsphyxiaCount = 0;
                 bool isAsphyxiaCoreAlreadyRunning = startAsphyxia && IsAsphyxiaCoreRunning(out existingAsphyxiaCount);
+                _logger.LogInformation("Asphyxia launch decision resolved. StartAsphyxia={StartAsphyxia}, ExistingProcessCount={ExistingProcessCount}", startAsphyxia, existingAsphyxiaCount);
 
                 if (startAsphyxia && !isAsphyxiaCoreAlreadyRunning && !File.Exists(asphyxiaPath))
                 {
+                    _logger.LogWarning("Launch aborted because asphyxia-core-x64.exe was not found: {AsphyxiaPath}", asphyxiaPath);
                     FailLaunch(launchState, $"未找到 asphyxia-core-x64.exe: {asphyxiaPath}", "未找到asphyxia-core-x64.exe");
                     return;
                 }
@@ -219,6 +244,7 @@ namespace LazyBootstrap.Services.Launch
                 {
                     AppendLaunchOutput(launchState, "正在检查 Windows Defender 排除项...");
                     var defenderResult = await _windowsDefenderExclusionService.EnsureDirectoryExcludedAsync(_paths.GetContentsDirectoryPath());
+                    _logger.LogInformation("Windows Defender exclusion check completed. Status={Status}", defenderResult.Status);
                     AppendLaunchOutput(launchState, defenderResult.Message, defenderResult.Status == WindowsDefenderExclusionStatus.Failed ? NotificationType.Warning : NotificationType.Information);
                 }
 
@@ -232,6 +258,11 @@ namespace LazyBootstrap.Services.Launch
 
                     AppendLaunchOutput(launchState, "正在应用显示器配置...");
                     bool applySucceeded = _displayWorkflowService.TryApplyForLaunch(display, out var restoreStates, out var displayMessages);
+                    _logger.LogInformation(
+                        "Display configuration apply for launch completed. Succeeded={Succeeded}, RestoreStateCount={RestoreStateCount}, MessageCount={MessageCount}",
+                        applySucceeded,
+                        restoreStates.Count,
+                        displayMessages.Count);
                     _displayRestoreStates = restoreStates;
                     foreach (var displayMessage in displayMessages)
                     {
@@ -283,6 +314,7 @@ namespace LazyBootstrap.Services.Launch
                         var asphyxiaProcess = Process.Start(asphyxiaStartInfo);
                         if (asphyxiaProcess == null)
                         {
+                            _logger.LogWarning("Asphyxia Core process creation returned null.");
                             FailLaunch(launchState, "Asphyxia 启动失败，进程未成功创建。");
                             return;
                         }
@@ -292,6 +324,7 @@ namespace LazyBootstrap.Services.Launch
                             _gameProcessTracker.TrackManagedAsphyxiaProcess(asphyxiaProcess);
                         }
 
+                        _logger.LogInformation("Asphyxia Core process started. ProcessId={ProcessId}, DevOnly={DevOnly}", asphyxiaProcess.Id, asphyxiaDevOnly);
                         AppendLaunchOutput(launchState, "Asphyxia Core 启动成功");
                     }
                 }
@@ -314,7 +347,6 @@ namespace LazyBootstrap.Services.Launch
                 }
 
                 var argumentsBuilder = new StringBuilder();
-                bool useSystemSpice = settings?.UseSystemSpiceConfig ?? false;
                 string spiceArgLine = Spice64CommandLine.BuildGameLaunchArguments(useSystemSpice);
                 if (!string.IsNullOrWhiteSpace(spiceArgLine))
                 {
@@ -341,6 +373,7 @@ namespace LazyBootstrap.Services.Launch
 
                 if (!_gameProcess.Start())
                 {
+                    _logger.LogWarning("spice64 process start returned false.");
                     FailLaunch(launchState, "spice64 启动失败，进程未成功创建。");
                     _gameProcess.Dispose();
                     _gameProcess = null;
@@ -349,6 +382,7 @@ namespace LazyBootstrap.Services.Launch
 
                 _gameProcessTracker.RegisterTrackedSpiceProcess(_gameProcess);
                 handoffToGameSession = true;
+                _logger.LogInformation("spice64 process started. ProcessId={ProcessId}", _gameProcess.Id);
 
                 launchState.IsLaunching = false;
                 launchState.IsGameRunning = true;
@@ -369,12 +403,14 @@ namespace LazyBootstrap.Services.Launch
             {
                 if (!handoffToGameSession && _gameProcessTracker.HasManagedAsphyxiaProcess())
                 {
+                    _logger.LogInformation("Launch did not hand off to game session. Stopping managed Asphyxia Core process.");
                     if (_gameProcessTracker.TryStopManagedAsphyxiaProcess(out var stopErrorMessage))
                     {
                         AppendLaunchOutput(launchState, "已回收本次启动的 Asphyxia Core。", NotificationType.Warning);
                     }
                     else
                     {
+                        _logger.LogWarning("Failed to stop managed Asphyxia Core process after launch abort.");
                         _uiInteractionService.ShowWarningToast("Asphyxia 关闭提示", stopErrorMessage);
                     }
                 }
@@ -387,6 +423,7 @@ namespace LazyBootstrap.Services.Launch
                     AppendLaunchOutput(launchState, "启动未完成，正在恢复显示器设置...");
                     var restoreMessages = new List<string>();
                     int restored = _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+                    _logger.LogInformation("Display settings restored after incomplete launch. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
                     AppendLaunchOutput(launchState, restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。", restored > 0 ? NotificationType.Information : NotificationType.Warning);
                     foreach (var restoreMessage in restoreMessages)
                     {
@@ -396,6 +433,7 @@ namespace LazyBootstrap.Services.Launch
 
                 if (!handoffToGameSession)
                 {
+                    _logger.LogInformation("Game launch workflow ended without handoff.");
                     _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
                     if (_gameProcess != null)
                     {
@@ -408,6 +446,7 @@ namespace LazyBootstrap.Services.Launch
 
         public Task HandleClosingAsync(DisplayConfigurationSnapshot display)
         {
+            _logger.LogInformation("Launcher closing cleanup started.");
             CancelGameProcessMonitoring(suppressExitHandling: true);
             ClearLaunchMessage(_launchState);
 
@@ -433,15 +472,19 @@ namespace LazyBootstrap.Services.Launch
 
             if (_gameProcessTracker.HasManagedAsphyxiaProcess())
             {
+                _logger.LogInformation("Stopping managed Asphyxia Core process during window close.");
                 _gameProcessTracker.TryStopManagedAsphyxiaProcess(out _);
             }
 
             if (display?.ExitRestore == true && _displayRestoreStates.Count > 0)
             {
-                _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, new List<string>());
+                var restoreMessages = new List<string>();
+                int restored = _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+                _logger.LogInformation("Display settings restored during window close. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
             }
 
             _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+            _logger.LogInformation("Launcher closing cleanup completed.");
             return Task.CompletedTask;
         }
 
@@ -556,13 +599,15 @@ namespace LazyBootstrap.Services.Launch
                             restartedProcess.EnableRaisingEvents = true;
                             _gameProcess = restartedProcess;
                             _gameProcessTracker.RegisterTrackedSpiceProcess(restartedProcess);
+                            _logger.LogInformation("Detected restarted spice64 process. ProcessId={ProcessId}", restartedProcess.Id);
                             AppendLaunchOutput(_launchState, "检测到 spice64 重新启动，继续监控中...");
                             currentProcess.Dispose();
                             continue;
                         }
                     }
-                    catch
+                    catch (Exception ex)
                     {
+                        _logger.LogDebug(ex, "Failed to probe restarted spice64 process.");
                     }
 
                     await CompleteGameProcessLifecycleAsync(currentProcess, exitCode, abnormalExit, cancellationToken);
@@ -591,6 +636,7 @@ namespace LazyBootstrap.Services.Launch
         {
             try
             {
+                _logger.LogInformation("spice64 process exited. ExitCode={ExitCode}, AbnormalExit={AbnormalExit}", exitCode, abnormalExit);
                 AppendLaunchOutput(_launchState, abnormalExit ? $"游戏进程异常退出（ExitCode: {exitCode}）。" : "游戏进程已正常退出。", abnormalExit ? NotificationType.Warning : NotificationType.Information);
 
                 if (abnormalExit && !cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
@@ -625,10 +671,12 @@ namespace LazyBootstrap.Services.Launch
                     AppendLaunchOutput(_launchState, "正在关闭 Asphyxia Core...");
                     if (_gameProcessTracker.TryStopManagedAsphyxiaProcess(out var stopErrorMessage))
                     {
+                        _logger.LogInformation("Managed Asphyxia Core process stopped after game exit.");
                         AppendLaunchOutput(_launchState, "Asphyxia Core 已关闭");
                     }
                     else
                     {
+                        _logger.LogWarning("Failed to stop managed Asphyxia Core process after game exit.");
                         _uiInteractionService.ShowWarningToast("Asphyxia 关闭提示", stopErrorMessage);
                     }
                 }
@@ -639,6 +687,7 @@ namespace LazyBootstrap.Services.Launch
                 {
                     var restoreMessages = new List<string>();
                     int restored = _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+                    _logger.LogInformation("Display settings restored after game exit. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
                     AppendLaunchOutput(_launchState, restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。");
                     foreach (var restoreMessage in restoreMessages)
                     {
@@ -654,6 +703,7 @@ namespace LazyBootstrap.Services.Launch
             {
                 if (!cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
                 {
+                    _logger.LogInformation("Game process lifecycle cleanup completed.");
                     _shellStateService.IsInteractionEnabled = true;
                     _shellStateService.StatusText = "就绪";
 
@@ -851,9 +901,11 @@ namespace LazyBootstrap.Services.Launch
             try
             {
                 processes = Process.GetProcessesByName(processName);
+                _logger.LogInformation("Found processes for termination. ProcessName={ProcessName}, Count={Count}", processName, processes.Length);
             }
             catch (Exception ex)
             {
+                _logger.LogError(ex, "Failed to enumerate processes for termination. ProcessName={ProcessName}", processName);
                 _uiInteractionService.ShowErrorToast("结束进程失败", $"获取进程列表 {processName} 时出错：{ex.Message}");
                 return 0;
             }
@@ -863,10 +915,12 @@ namespace LazyBootstrap.Services.Launch
                 try
                 {
                     int pid = process.Id;
+                    _logger.LogInformation("Killing process. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
                     process.Kill();
 
                     if (!process.WaitForExit(3000))
                     {
+                        _logger.LogWarning("Process did not exit after Kill. Falling back to taskkill. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
                         _uiInteractionService.ShowWarningToast("进程未响应", $"{processName}.exe (PID: {pid}) 未响应，正在尝试强制终止。");
                         using var taskKillProcess = Process.Start(new ProcessStartInfo
                         {
@@ -883,10 +937,12 @@ namespace LazyBootstrap.Services.Launch
                     process.Refresh();
                     if (!process.HasExited)
                     {
+                        _logger.LogWarning("Process is still running after termination attempt. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
                         _uiInteractionService.ShowWarningToast("结束进程未完成", $"{processName}.exe (PID: {pid}) 仍在运行。");
                         continue;
                     }
 
+                    _logger.LogInformation("Process terminated. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
                     count++;
                 }
                 catch (InvalidOperationException)
@@ -894,10 +950,12 @@ namespace LazyBootstrap.Services.Launch
                 }
                 catch (System.ComponentModel.Win32Exception ex)
                 {
+                    _logger.LogWarning(ex, "Permission denied while terminating process. ProcessName={ProcessName}", processName);
                     _uiInteractionService.ShowErrorToast("结束进程权限不足", ex.Message);
                 }
                 catch (Exception ex)
                 {
+                    _logger.LogError(ex, "Failed to terminate process. ProcessName={ProcessName}", processName);
                     _uiInteractionService.ShowErrorToast("结束进程失败", ex.Message);
                 }
                 finally
@@ -919,6 +977,7 @@ namespace LazyBootstrap.Services.Launch
                 try
                 {
                     processCount = processes.Length;
+                    _logger.LogDebug("Asphyxia Core process inspection completed. Count={Count}", processCount);
                     return processCount > 0;
                 }
                 finally
