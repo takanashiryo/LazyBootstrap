@@ -28,6 +28,12 @@ namespace LazyBootstrap
             sukiTheme.AddColorTheme(LazyGreenTheme);
             sukiTheme.ChangeColorTheme(LazyGreenTheme);
 
+            if (Design.IsDesignMode)
+            {
+                Log.Information("Avalonia application initialized in design mode.");
+                return;
+            }
+
             // SukiUI managers must be created AFTER SukiTheme is loaded.
             AppServices.InitSukiManagers();
             Log.Information("Avalonia application initialization completed.");
@@ -35,6 +41,12 @@ namespace LazyBootstrap
 
         public override void OnFrameworkInitializationCompleted()
         {
+            if (Design.IsDesignMode)
+            {
+                base.OnFrameworkInitializationCompleted();
+                return;
+            }
+
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
                 Log.Information("Framework initialization completed. Preparing main window.");
