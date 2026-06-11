@@ -39,6 +39,7 @@ namespace LazyBootstrap.Services.Launch
         private LaunchState _launchState;
         private DisplayConfigurationSnapshot _display;
         private ILaunchWorkflowObserver _observer;
+        private ShellStateService.ShellBusyLease _launchNavigationLock;
         private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
         public LaunchWorkflowService(
@@ -160,6 +161,18 @@ namespace LazyBootstrap.Services.Launch
             return Task.CompletedTask;
         }
 
+        private void BeginLaunchNavigationLock()
+        {
+            EndLaunchNavigationLock();
+            _launchNavigationLock = _shellStateService.BeginBusy(ShellBusyPresentation.NavigationLock);
+        }
+
+        private void EndLaunchNavigationLock()
+        {
+            _launchNavigationLock?.Dispose();
+            _launchNavigationLock = null;
+        }
+
         public async Task StartAsync(LaunchState launchState, LaunchRequest request, ILaunchWorkflowObserver observer)
         {
             ArgumentNullException.ThrowIfNull(request);
@@ -183,7 +196,7 @@ namespace LazyBootstrap.Services.Launch
 
             ClearLaunchMessage(launchState);
             _gameProcessTracker.ResetManagedAsphyxiaTracking();
-            _shellStateService.IsInteractionEnabled = false;
+            BeginLaunchNavigationLock();
             _shellStateService.StatusText = "启动中...";
             launchState.StateText = _shellStateService.StatusText;
             launchState.IsLaunching = true;
@@ -338,7 +351,7 @@ namespace LazyBootstrap.Services.Launch
                     launchState.IsLaunching = false;
                     launchState.IsGameRunning = false;
                     ClearLaunchMessage(launchState);
-                    _shellStateService.IsInteractionEnabled = true;
+                    EndLaunchNavigationLock();
                     _shellStateService.StatusText = "调试模式就绪";
                     launchState.StateText = _shellStateService.StatusText;
                     NotifyLaunchStateChanged(launchState);
@@ -448,6 +461,7 @@ namespace LazyBootstrap.Services.Launch
         {
             _logger.LogInformation("Launcher closing cleanup started.");
             CancelGameProcessMonitoring(suppressExitHandling: true);
+            EndLaunchNavigationLock();
             ClearLaunchMessage(_launchState);
 
             try
@@ -704,7 +718,7 @@ namespace LazyBootstrap.Services.Launch
                 if (!cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
                 {
                     _logger.LogInformation("Game process lifecycle cleanup completed.");
-                    _shellStateService.IsInteractionEnabled = true;
+                    EndLaunchNavigationLock();
                     _shellStateService.StatusText = "就绪";
 
                     if (_launchState != null)
@@ -789,7 +803,7 @@ namespace LazyBootstrap.Services.Launch
             AppendLaunchOutput(launchState, logMessage, messageType);
             launchState.IsLaunching = false;
             launchState.IsGameRunning = false;
-            _shellStateService.IsInteractionEnabled = true;
+            EndLaunchNavigationLock();
             _shellStateService.StatusText = statusText;
             launchState.StateText = _shellStateService.StatusText;
             NotifyLaunchStateChanged(launchState);

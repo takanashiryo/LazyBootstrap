@@ -142,7 +142,7 @@ namespace LazyBootstrap.Services.Tools
             return Task.CompletedTask;
         }
 
-        public async Task InstallRuntimeAsync(Action<bool> setVisible, Action<string, double> setProgress)
+        public async Task InstallRuntimeAsync()
         {
             string runtimePath = _paths.GetRuntimeDirectoryPath();
             string dxSetupPath = Path.Combine(runtimePath, "directx", "DXSETUP.exe");
@@ -162,15 +162,17 @@ namespace LazyBootstrap.Services.Tools
 
             // Track the most recent progress value so cancellation messages keep the current bar position.
             double lastProgress = 5d;
+            using var busy = _shellStateService.BeginBusy(
+                ShellBusyPresentation.RuntimeProgress,
+                "正在准备安装运行库...",
+                lastProgress);
             void Report(string text, double value)
             {
                 lastProgress = value;
-                setProgress(text, value);
+                busy.UpdateProgress(text, value);
             }
 
-            setVisible(true);
             Report("正在准备安装运行库...", 5d);
-            _shellStateService.IsInteractionEnabled = false;
 
             try
             {
@@ -233,11 +235,6 @@ namespace LazyBootstrap.Services.Tools
             {
                 _logger.LogError(ex, "Runtime installation failed.");
                 _uiInteractionService.ShowErrorToast("安装运行库失败", ex.Message);
-            }
-            finally
-            {
-                setVisible(false);
-                _shellStateService.IsInteractionEnabled = true;
             }
         }
 

@@ -42,7 +42,6 @@ namespace LazyBootstrap.Views
         private readonly UiInteractionService _uiInteractionService = null!;
         private readonly ILogger<MainWindow> _logger = null!;
 
-        private bool _isSettingsBusy;
         private bool _isSyncingModel;
         private bool _isUpdatingGpuCompatLayerUi;
         private bool _isUpdatingServerPresetUi;
@@ -57,6 +56,8 @@ namespace LazyBootstrap.Views
         private bool _isWindowCloseAnimationRunning;
         private bool _allowImmediateWindowClose;
         private bool _pendingEnvironmentScanErrorDialog;
+        private bool _isRestoringSideMenuSelection;
+        private SukiSideMenuItem _lastUnlockedSideMenuItem;
         private const int WindowFadeDurationMs = 480;
         private const int WindowFadeFrameDelayMs = 8;
         private const int ExStyleIndex = -20;
@@ -127,6 +128,10 @@ namespace LazyBootstrap.Views
             Opened += OnWindowOpened;
             Closed += OnWindowClosed;
             _shellStateService.PropertyChanged += OnShellStatePropertyChanged;
+            if (MainSideMenu != null)
+            {
+                MainSideMenu.SelectionChanged += OnMainSideMenuSelectionChanged;
+            }
 
             _isLoadingSettings = true;
             InitializeCustomComponents();
@@ -140,23 +145,6 @@ namespace LazyBootstrap.Views
         {
             _shellStateService.StatusText = statusText ?? string.Empty;
             _launchState.StateText = _shellStateService.StatusText;
-
-            if (StatusLabel != null)
-            {
-                StatusLabel.Text = _shellStateService.StatusText;
-            }
-        }
-
-        private void UpdateStatusProgress(bool isVisible, double value = 0d)
-        {
-            _shellStateService.IsStatusProgressVisible = isVisible;
-            _shellStateService.StatusProgressValue = value;
-
-            if (StatusProgress != null)
-            {
-                StatusProgress.IsVisible = isVisible;
-                StatusProgress.Value = value;
-            }
         }
 
         private void OnWindowClosed(object sender, EventArgs e)
@@ -164,6 +152,10 @@ namespace LazyBootstrap.Views
             Opened -= OnWindowOpened;
             ReleaseLaunchControls();
             _shellStateService.PropertyChanged -= OnShellStatePropertyChanged;
+            if (MainSideMenu != null)
+            {
+                MainSideMenu.SelectionChanged -= OnMainSideMenuSelectionChanged;
+            }
             _uiInteractionService.DetachWindow(this);
         }
 
@@ -177,26 +169,30 @@ namespace LazyBootstrap.Views
 
             string propertyName = e?.PropertyName ?? string.Empty;
             if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(ShellStateService.StatusText), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(ShellStateService.StatusProgressValue), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(ShellStateService.IsStatusProgressVisible), StringComparison.Ordinal))
+                || string.Equals(propertyName, nameof(ShellStateService.StatusText), StringComparison.Ordinal))
             {
-                if (StatusLabel != null)
-                {
-                    StatusLabel.Text = _shellStateService.StatusText;
-                }
-
-                if (StatusProgress != null)
-                {
-                    StatusProgress.IsVisible = _shellStateService.IsStatusProgressVisible;
-                    StatusProgress.Value = _shellStateService.StatusProgressValue;
-                }
+                _launchState.StateText = _shellStateService.StatusText;
             }
 
             if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(ShellStateService.IsInteractionEnabled), StringComparison.Ordinal))
+                || string.Equals(propertyName, nameof(ShellStateService.IsGlobalBusy), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(ShellStateService.GlobalBusyText), StringComparison.Ordinal))
             {
-                SetControlsEnabled(_shellStateService.IsInteractionEnabled);
+                ApplyGlobalBusyStateToUi();
+            }
+
+            if (string.IsNullOrWhiteSpace(propertyName)
+                || string.Equals(propertyName, nameof(ShellStateService.IsRuntimeProgressBusy), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(ShellStateService.RuntimeProgressText), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(ShellStateService.RuntimeProgressValue), StringComparison.Ordinal))
+            {
+                ApplyRuntimeProgressStateToUi();
+            }
+
+            if (string.IsNullOrWhiteSpace(propertyName)
+                || string.Equals(propertyName, nameof(ShellStateService.IsNavigationLocked), StringComparison.Ordinal))
+            {
+                ApplySideMenuNavigationLock();
             }
 
             if (string.IsNullOrWhiteSpace(propertyName)
@@ -207,6 +203,142 @@ namespace LazyBootstrap.Views
                     ApplyServerPresetStateToUi();
                 }
             }
+        }
+
+        private void ApplyGlobalBusyStateToUi()
+        {
+            if (GlobalBusyArea == null)
+            {
+                return;
+            }
+
+            GlobalBusyArea.IsBusy = _shellStateService.IsGlobalBusy;
+            GlobalBusyArea.BusyText = _shellStateService.GlobalBusyText;
+        }
+
+        private void ApplyRuntimeProgressStateToUi()
+        {
+            bool visible = _shellStateService.IsRuntimeProgressBusy;
+            if (RuntimeInstallOverlay != null)
+            {
+                RuntimeInstallOverlay.IsVisible = visible;
+                RuntimeInstallOverlay.Opacity = visible ? 1 : 0;
+            }
+
+            SetRuntimeInstallProgress(
+                _shellStateService.RuntimeProgressText,
+                _shellStateService.RuntimeProgressValue);
+        }
+
+        private void OnMainSideMenuSelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_isRestoringSideMenuSelection || MainSideMenu == null)
+            {
+                return;
+            }
+
+            if (MainSideMenu.SelectedItem is not SukiSideMenuItem selectedItem)
+            {
+                return;
+            }
+
+            if (_shellStateService.IsNavigationLocked)
+            {
+                RestoreLockedSideMenuSelection();
+                return;
+            }
+
+            _lastUnlockedSideMenuItem = selectedItem;
+            _shellStateService.SelectedPage = ResolveShellPage(selectedItem);
+        }
+
+        private void ApplySideMenuNavigationLock()
+        {
+            if (MainSideMenu == null)
+            {
+                return;
+            }
+
+            var items = MainSideMenu.Items?
+                .OfType<SukiSideMenuItem>()
+                .ToList() ?? new List<SukiSideMenuItem>();
+
+            if (!_shellStateService.IsNavigationLocked)
+            {
+                foreach (var item in items)
+                {
+                    item.IsEnabled = true;
+                }
+
+                if (MainSideMenu.SelectedItem is SukiSideMenuItem selectedItem)
+                {
+                    _lastUnlockedSideMenuItem = selectedItem;
+                    _shellStateService.SelectedPage = ResolveShellPage(selectedItem);
+                }
+
+                return;
+            }
+
+            if (_lastUnlockedSideMenuItem == null)
+            {
+                _lastUnlockedSideMenuItem = MainSideMenu.SelectedItem as SukiSideMenuItem
+                    ?? items.FirstOrDefault();
+            }
+
+            foreach (var item in items)
+            {
+                item.IsEnabled = ReferenceEquals(item, _lastUnlockedSideMenuItem);
+            }
+
+            RestoreLockedSideMenuSelection();
+        }
+
+        private void RestoreLockedSideMenuSelection()
+        {
+            if (MainSideMenu == null || _lastUnlockedSideMenuItem == null)
+            {
+                return;
+            }
+
+            if (ReferenceEquals(MainSideMenu.SelectedItem, _lastUnlockedSideMenuItem))
+            {
+                return;
+            }
+
+            try
+            {
+                _isRestoringSideMenuSelection = true;
+                MainSideMenu.SelectedItem = _lastUnlockedSideMenuItem;
+            }
+            finally
+            {
+                _isRestoringSideMenuSelection = false;
+            }
+        }
+
+        private ShellPage ResolveShellPage(SukiSideMenuItem selectedItem)
+        {
+            if (MainSideMenu == null || selectedItem == null)
+            {
+                return _shellStateService.SelectedPage;
+            }
+
+            var items = MainSideMenu.Items?
+                .OfType<SukiSideMenuItem>()
+                .ToList() ?? new List<SukiSideMenuItem>();
+            int index = items.IndexOf(selectedItem);
+
+            return index switch
+            {
+                0 => ShellPage.Launch,
+                1 => ShellPage.Settings,
+                2 => ShellPage.Display,
+                3 => ShellPage.Tools,
+                4 => ShellPage.Update,
+                5 => ShellPage.Info,
+                6 => ShellPage.About,
+                _ => _shellStateService.SelectedPage
+            };
         }
 
         private async void OnWindowOpened(object sender, EventArgs e)
@@ -698,7 +830,9 @@ namespace LazyBootstrap.Views
         private void FinalizeInitialViewState()
         {
             UpdateStatusText("就绪");
-            UpdateStatusProgress(false);
+            ApplyGlobalBusyStateToUi();
+            ApplyRuntimeProgressStateToUi();
+            ApplySideMenuNavigationLock();
 
             Closing += OnWindowClosing;
             UpdateGpuCompatLayerStatus();
@@ -707,21 +841,6 @@ namespace LazyBootstrap.Views
         private string GetContentsDirectoryPath()
         {
             return _paths.GetContentsDirectoryPath();
-        }
-
-        private void SetSettingsBusy(bool isBusy)
-        {
-            _isSettingsBusy = isBusy;
-            if (SettingsBusyArea != null)
-            {
-                SettingsBusyArea.IsBusy = isBusy;
-            }
-
-            if (EditConfigButton != null)
-            {
-                EditConfigButton.IsEnabled = !isBusy;
-                EditConfigButton.Content = isBusy ? "编辑 spicecfg（运行中...）" : "编辑 spicecfg";
-            }
         }
     }
 }

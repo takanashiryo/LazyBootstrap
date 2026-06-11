@@ -47,12 +47,14 @@
     </suki:SukiWindow.Styles>
 
     <Grid>
-        <Image Source="avares://LazyBootstrap/Assets/Images/background.jpg"
-               Stretch="UniformToFill"
-               Opacity="0.05"
-               IsHitTestVisible="False" />
+        <suki:BusyArea x:Name="GlobalBusyArea" BusyText="">
+            <Grid>
+                <Image Source="avares://LazyBootstrap/Assets/Images/background.jpg"
+                       Stretch="UniformToFill"
+                       Opacity="0.05"
+                       IsHitTestVisible="False" />
 
-        <suki:SukiSideMenu x:Name="MainSideMenu" IsSearchEnabled="False">
+                <suki:SukiSideMenu x:Name="MainSideMenu" IsSearchEnabled="False">
             <suki:SukiSideMenu.Items>
                 <suki:SukiSideMenuItem Header="启动">
                     <suki:SukiSideMenuItem.Icon>
@@ -205,9 +207,7 @@
                         <TextBlock Classes="FaIcon" Text="&#xF013;" FontSize="14" />
                     </suki:SukiSideMenuItem.Icon>
                     <suki:SukiSideMenuItem.PageContent>
-                        <suki:BusyArea x:Name="SettingsBusyArea" Margin="20,14" BusyText="spicecfg 运行中..."
-                                       HorizontalAlignment="Center" MaxWidth="1240">
-                            <Grid>
+                        <Grid Margin="20,14" HorizontalAlignment="Center" MaxWidth="1240">
                                 <suki:SettingsLayout x:Name="GameSettingsLayout"
                                                      Margin="0,6,0,0"
                                                      StackSummaryWidth="320"
@@ -684,7 +684,6 @@
                                             Click="OnEditConfigClick" />
                                 </StackPanel>
                             </Grid>
-                        </suki:BusyArea>
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
 
@@ -1392,12 +1391,9 @@
                     </suki:SukiSideMenuItem.PageContent>
                 </suki:SukiSideMenuItem>
             </suki:SukiSideMenu.Items>
-        </suki:SukiSideMenu>
-
-        <Canvas IsVisible="False" IsHitTestVisible="False">
-            <TextBlock x:Name="StatusLabel" Text="就绪" />
-            <ProgressBar x:Name="StatusProgress" Width="200" Height="14" Minimum="0" Maximum="100" />
-        </Canvas>
+                </suki:SukiSideMenu>
+            </Grid>
+        </suki:BusyArea>
 
         <Grid x:Name="RuntimeInstallOverlay" IsVisible="False" Opacity="1" ZIndex="100">
             <Grid.Transitions>
