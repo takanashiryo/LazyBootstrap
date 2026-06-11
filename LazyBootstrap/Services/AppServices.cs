@@ -157,7 +157,7 @@ namespace LazyBootstrap.Services
 
             DisplayWorkflow = new DisplayWorkflowService(Config, Paths, SpiceConfig, DisplayConfig, DisplayTransaction, UI, CreateLogger<DisplayWorkflowService>());
             LaunchWorkflow = new LaunchWorkflowService(Paths, GameProcess, DisplayWorkflow, DefenderExclusion, UI, ShellState, CreateLogger<LaunchWorkflowService>());
-            SettingsWorkflow = new SettingsWorkflowService(Config, Paths, SpiceConfig, GpuCompat, UI, CreateLogger<SettingsWorkflowService>());
+            SettingsWorkflow = new SettingsWorkflowService(Config, Paths, SpiceConfig, GpuCompat, UI, ShellState, CreateLogger<SettingsWorkflowService>());
             ToolsWorkflow = new ToolsWorkflowService(Paths, Savedata, UI, ShellState, CreateLogger<ToolsWorkflowService>());
             UpdateWorkflow = new UpdateWorkflowService(Paths, UI, ShellState, CreateLogger<UpdateWorkflowService>());
             EnvironmentScan = new EnvironmentScanService(Paths, ShellState, UI, CreateLogger<EnvironmentScanService>());

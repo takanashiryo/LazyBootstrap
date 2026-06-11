@@ -13,14 +13,13 @@ namespace LazyBootstrap.Views
         {
             try
             {
-                SetSettingsBusy(true);
                 await _settingsWorkflowService.EditConfigAsync(_settingsState);
                 ApplyStartupSettingsStateToUi();
                 ApplyDeferredSettingsStateToUi();
             }
-            finally
+            catch (Exception ex)
             {
-                SetSettingsBusy(_settingsState.IsSettingsBusy);
+                _logger.LogError(ex, "Edit spicecfg workflow failed.");
             }
         }
 
