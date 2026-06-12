@@ -33,9 +33,12 @@ namespace LazyBootstrap.Services.Update
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public async Task ApplyUpdateFromUserSelectedArchiveAsync(Action<bool> setBusy)
+        public async Task ApplyUpdateFromUserSelectedArchiveAsync()
         {
             _logger.LogInformation("KFC update workflow requested.");
+            using var busy = _shellStateService.BeginBusy(
+                ShellBusyPresentation.GlobalOverlay,
+                "正在选择更新压缩包...");
 
             string sevenZip = _paths.ResolveSevenZipExecutablePath();
             if (!File.Exists(sevenZip))
@@ -73,14 +76,15 @@ namespace LazyBootstrap.Services.Update
             _logger.LogInformation("KFC update archive selected: {ArchivePath}", archivePath);
 
             string staging = _paths.GetUpdateStagingDirectoryPath();
-            _shellStateService.IsInteractionEnabled = false;
-            setBusy(true);
+            busy.UpdateText("正在准备更新...");
             bool updateDetached = false;
             try
             {
+                busy.UpdateText("正在清理更新临时目录...");
                 _logger.LogInformation("Clearing update staging directory: {StagingDirectory}", staging);
                 ClearStagingDirectory(staging);
 
+                busy.UpdateText("正在解压更新压缩包...");
                 if (!await RunSevenZipExtractAsync(sevenZip, archivePath, staging).ConfigureAwait(true))
                 {
                     _logger.LogWarning("KFC update aborted because archive extraction failed.");
@@ -94,6 +98,7 @@ namespace LazyBootstrap.Services.Update
                     return;
                 }
 
+                busy.UpdateText("正在启动更新程序...");
                 if (!TryStartMediaUpdater(mediaUpdater, _paths.BaseDir, staging, _paths.ApplicationDirectoryPath))
                 {
                     _logger.LogWarning("KFC update failed because MediaUpdater could not be started.");
@@ -124,9 +129,6 @@ namespace LazyBootstrap.Services.Update
                     {
                         _logger.LogWarning(ex, "Failed to clear update staging directory.");
                     }
-
-                    setBusy(false);
-                    _shellStateService.IsInteractionEnabled = true;
                 }
             }
 

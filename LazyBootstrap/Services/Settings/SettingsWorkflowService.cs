@@ -26,6 +26,7 @@ namespace LazyBootstrap.Services.Settings
         private readonly SpiceConfigFileService _spiceConfigFileService;
         private readonly GpuCompatLayerService _gpuCompatLayerService;
         private readonly UiInteractionService _uiInteractionService;
+        private readonly ShellStateService _shellStateService;
         private readonly ILogger<SettingsWorkflowService> _logger;
 
         private sealed record SpiceOptionDescriptor(
@@ -155,6 +156,7 @@ namespace LazyBootstrap.Services.Settings
             SpiceConfigFileService spiceConfigFileService,
             GpuCompatLayerService gpuCompatLayerService,
             UiInteractionService uiInteractionService,
+            ShellStateService shellStateService,
             ILogger<SettingsWorkflowService> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
@@ -162,6 +164,7 @@ namespace LazyBootstrap.Services.Settings
             _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
             _gpuCompatLayerService = gpuCompatLayerService ?? throw new ArgumentNullException(nameof(gpuCompatLayerService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
+            _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -475,8 +478,9 @@ namespace LazyBootstrap.Services.Settings
             }
 
             string arguments = Spice64CommandLine.BuildConfigEditorArguments(settings.UseSystemSpiceConfig);
-
-            settings.IsSettingsBusy = true;
+            using var busy = _shellStateService.BeginBusy(
+                ShellBusyPresentation.GlobalOverlay,
+                "spicecfg 运行中...");
 
             try
             {
@@ -505,10 +509,6 @@ namespace LazyBootstrap.Services.Settings
             {
                 _logger.LogError(ex, "spicecfg editor launch failed.");
                 _uiInteractionService.ShowErrorToast("启动 spice 配置失败", ex.Message);
-            }
-            finally
-            {
-                settings.IsSettingsBusy = false;
             }
         }
 

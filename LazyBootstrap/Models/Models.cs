@@ -160,8 +160,6 @@ namespace LazyBootstrap.Models
 
         public string SpiceConfigEmptyStateMessage { get; set; } = "未找到任何spice2x配置文件";
 
-        public bool IsSettingsBusy { get; set; }
-
         public string ActiveServerPreset { get; set; } = string.Empty;
 
         public string ServerAddress { get; set; } = string.Empty;

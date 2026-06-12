@@ -55,14 +55,9 @@ namespace LazyBootstrap.Services.Environment
             try
             {
                 _shellStateService.StatusText = "正在进行环境检查...";
-                _shellStateService.IsStatusProgressVisible = true;
-                _shellStateService.StatusProgressValue = 0d;
 
                 var summary = await EnvironmentScan.RunAsync(
-                    (progress, _) =>
-                    {
-                        _shellStateService.StatusProgressValue = Math.Clamp(progress, 0, 100);
-                    },
+                    (_, _) => { },
                     _paths.GetContentsDirectoryPath(),
                     _paths.GetBundledLibsDirectoryPath());
 
@@ -89,8 +84,6 @@ namespace LazyBootstrap.Services.Environment
             finally
             {
                 _shellStateService.StatusText = "就绪";
-                _shellStateService.IsStatusProgressVisible = false;
-                _shellStateService.StatusProgressValue = 0d;
             }
         }
 
