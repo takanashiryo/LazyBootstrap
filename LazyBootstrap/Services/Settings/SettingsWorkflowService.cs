@@ -605,9 +605,9 @@ namespace LazyBootstrap.Services.Settings
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Add server preset dialog opened.");
 
-            var nameBox = new TextBox { Watermark = "预设名" };
-            var urlBox = new TextBox { Watermark = "http://SERVERURL:PORT" };
-            var pcbBox = new TextBox { Watermark = "PCBID" };
+            var nameBox = new TextBox { PlaceholderText = "预设名" };
+            var urlBox = new TextBox { PlaceholderText = "http://SERVERURL:PORT" };
+            var pcbBox = new TextBox { PlaceholderText = "PCBID" };
 
             var content = new StackPanel
             {

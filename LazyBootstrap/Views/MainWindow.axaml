@@ -489,7 +489,7 @@
                                                                   VerticalAlignment="Center">
                                                                 <TextBlock Text="窗口大小" VerticalAlignment="Center" />
                                                                 <TextBox x:Name="WindowSizeTextBox" Grid.Column="1"
-                                                                         Watermark="1080,1920" />
+                                                                         PlaceholderText="1080,1920" />
                                                             </Grid>
                                                             <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                                 <TextBlock Text="只使用主屏" VerticalAlignment="Center" />

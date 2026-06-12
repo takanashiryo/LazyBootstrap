@@ -492,15 +492,15 @@ namespace LazyBootstrap.Views
         {
             if (ServerAddressTextBox != null)
             {
-                ServerAddressTextBox.Watermark = "http://SERVER:PORT";
+                ServerAddressTextBox.PlaceholderText = "http://SERVER:PORT";
             }
             if (PcbIdTextBox != null)
             {
-                PcbIdTextBox.Watermark = string.Empty;
+                PcbIdTextBox.PlaceholderText = string.Empty;
             }
             if (NetworkAdapterIpTextBox != null)
             {
-                NetworkAdapterIpTextBox.Watermark = string.Empty;
+                NetworkAdapterIpTextBox.PlaceholderText = string.Empty;
                 NetworkAdapterIpTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingNetworkUi) return;
@@ -512,7 +512,7 @@ namespace LazyBootstrap.Views
             }
             if (NetworkAdapterSubnetTextBox != null)
             {
-                NetworkAdapterSubnetTextBox.Watermark = string.Empty;
+                NetworkAdapterSubnetTextBox.PlaceholderText = string.Empty;
                 NetworkAdapterSubnetTextBox.TextChanged += async (s, e) =>
                 {
                     if (_isLoadingSettings || _isUpdatingNetworkUi) return;
@@ -576,7 +576,7 @@ namespace LazyBootstrap.Views
         {
             if (DllInjectionTextBox != null)
             {
-                DllInjectionTextBox.Watermark = "example.dll";
+                DllInjectionTextBox.PlaceholderText = "example.dll";
                 DllInjectionTextBox.TextChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
