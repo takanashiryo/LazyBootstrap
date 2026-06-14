@@ -6,73 +6,95 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using LazyBootstrap.Services.Shared;
 
 namespace LazyBootstrap.Services.Config
 {
     public sealed class SpiceConfigFileService
     {
+        private readonly object _sync = new object();
+
         public bool TryLoadOptionsContext(string spiceXmlPath, LoadOptions loadOptions, bool createOptionsWhenMissing, out SpiceOptionsContext context, out string message, out bool warning)
         {
-            context = null;
-            message = string.Empty;
-            warning = false;
+            lock (_sync)
+            {
+                context = null;
+                message = string.Empty;
+                warning = false;
 
-            if (!File.Exists(spiceXmlPath))
-            {
-                return false;
-            }
+                if (string.IsNullOrWhiteSpace(spiceXmlPath))
+                {
+                    message = "Spice config path is empty.";
+                    return false;
+                }
 
-            var document = XDocument.Load(spiceXmlPath, loadOptions);
-            var root = document.Root;
-            if (root == null)
-            {
-                message = "SpiceTools XML 根节点为空。";
-                return false;
-            }
-
-            var soundVoltex = root.Elements("game").FirstOrDefault(game =>
-            {
-                var nameAttribute = game.Attribute("name");
-                return nameAttribute != null
-                    && string.Equals(nameAttribute.Value, "Sound Voltex", StringComparison.OrdinalIgnoreCase);
-            });
-            if (soundVoltex == null)
-            {
-                message = "未找到游戏条目: Sound Voltex。";
-                warning = true;
-                return false;
-            }
-
-            var options = soundVoltex.Element("options");
-            if (options == null)
-            {
-                if (!createOptionsWhenMissing)
+                if (!File.Exists(spiceXmlPath))
                 {
                     return false;
                 }
 
-                options = new XElement("options");
-                soundVoltex.Add(options);
-            }
-
-            var lookup = new Dictionary<string, XElement>(StringComparer.Ordinal);
-            foreach (var option in options.Elements("option"))
-            {
-                var nameAttribute = option.Attribute("name");
-                if (nameAttribute == null)
+                XDocument document;
+                try
                 {
-                    continue;
+                    document = XDocument.Load(spiceXmlPath, loadOptions);
+                }
+                catch (Exception ex)
+                {
+                    message = $"Unable to load spice config XML: {ex.Message}";
+                    return false;
                 }
 
-                var key = nameAttribute.Value;
-                if (!lookup.ContainsKey(key))
+                var root = document.Root;
+                if (root == null)
                 {
-                    lookup[key] = option;
+                    message = "SpiceTools XML 根节点为空。";
+                    return false;
                 }
-            }
 
-            context = new SpiceOptionsContext(spiceXmlPath, document, soundVoltex, options, lookup);
-            return true;
+                var soundVoltex = root.Elements("game").FirstOrDefault(game =>
+                {
+                    var nameAttribute = game.Attribute("name");
+                    return nameAttribute != null
+                        && string.Equals(nameAttribute.Value, "Sound Voltex", StringComparison.OrdinalIgnoreCase);
+                });
+                if (soundVoltex == null)
+                {
+                    message = "未找到游戏条目: Sound Voltex。";
+                    warning = true;
+                    return false;
+                }
+
+                var options = soundVoltex.Element("options");
+                if (options == null)
+                {
+                    if (!createOptionsWhenMissing)
+                    {
+                        return false;
+                    }
+
+                    options = new XElement("options");
+                    soundVoltex.Add(options);
+                }
+
+                var lookup = new Dictionary<string, XElement>(StringComparer.Ordinal);
+                foreach (var option in options.Elements("option"))
+                {
+                    var nameAttribute = option.Attribute("name");
+                    if (nameAttribute == null)
+                    {
+                        continue;
+                    }
+
+                    var key = nameAttribute.Value;
+                    if (!lookup.ContainsKey(key))
+                    {
+                        lookup[key] = option;
+                    }
+                }
+
+                context = new SpiceOptionsContext(spiceXmlPath, document, soundVoltex, options, lookup);
+                return true;
+            }
         }
 
         public void ApplyUpdates(SpiceOptionsContext context, IEnumerable<SpiceOptionUpdate> updates)
@@ -80,84 +102,101 @@ namespace LazyBootstrap.Services.Config
             ArgumentNullException.ThrowIfNull(context);
             ArgumentNullException.ThrowIfNull(updates);
 
-            var updateList = updates
-                .Where(update => update != null && !string.IsNullOrEmpty(update.Name))
-                .ToList();
-            if (updateList.Count == 0)
+            lock (_sync)
             {
-                return;
-            }
-
-            var options = context.OptionsElement;
-            var soundVoltex = context.SoundVoltex;
-            string newline = "\r\n";
-            string optionsIndent = ExtractIndentation(options.PreviousNode as XText, ref newline) ?? string.Empty;
-            string indentStep = DetermineIndentStep(soundVoltex, ref newline) ?? new string(' ', 4);
-
-            string optionIndent = ExtractIndentation(options.Elements("option").FirstOrDefault()?.PreviousNode as XText, ref newline);
-            if (string.IsNullOrEmpty(optionIndent))
-            {
-                optionIndent = optionsIndent + indentStep;
-            }
-
-            string optionLinePrefix = newline + optionIndent;
-            string closingLinePrefix = newline + optionsIndent;
-            var closingWhitespace = EnsureClosingWhitespace(options, closingLinePrefix);
-
-            foreach (var update in updateList)
-            {
-                context.OptionLookup.TryGetValue(update.Name, out var existing);
-
-                if (existing == null)
+                var updateList = updates
+                    .Where(update => update != null && !string.IsNullOrEmpty(update.Name))
+                    .ToList();
+                if (updateList.Count == 0)
                 {
-                    if (update.ShouldRemove || string.IsNullOrEmpty(update.Value))
+                    return;
+                }
+
+                var options = context.OptionsElement;
+                var soundVoltex = context.SoundVoltex;
+                string newline = "\r\n";
+                string optionsIndent = ExtractIndentation(options.PreviousNode as XText, ref newline) ?? string.Empty;
+                string indentStep = DetermineIndentStep(soundVoltex, ref newline) ?? new string(' ', 4);
+
+                string optionIndent = ExtractIndentation(options.Elements("option").FirstOrDefault()?.PreviousNode as XText, ref newline);
+                if (string.IsNullOrEmpty(optionIndent))
+                {
+                    optionIndent = optionsIndent + indentStep;
+                }
+
+                string optionLinePrefix = newline + optionIndent;
+                string closingLinePrefix = newline + optionsIndent;
+                var closingWhitespace = EnsureClosingWhitespace(options, closingLinePrefix);
+
+                foreach (var update in updateList)
+                {
+                    context.OptionLookup.TryGetValue(update.Name, out var existing);
+
+                    if (existing == null)
                     {
+                        if (update.ShouldRemove || string.IsNullOrEmpty(update.Value))
+                        {
+                            continue;
+                        }
+
+                        if (closingWhitespace == null)
+                        {
+                            closingWhitespace = EnsureClosingWhitespace(options, closingLinePrefix);
+                        }
+
+                        closingWhitespace.AddBeforeSelf(new XText(optionLinePrefix));
+                        var newOption = CreateOptionElement(update);
+                        closingWhitespace.AddBeforeSelf(newOption);
+                        context.OptionLookup[update.Name] = newOption;
                         continue;
                     }
 
-                    if (closingWhitespace == null)
+                    if (update.ShouldRemove)
                     {
-                        closingWhitespace = EnsureClosingWhitespace(options, closingLinePrefix);
+                        var whitespace = existing.PreviousNode as XText;
+                        existing.Remove();
+                        if (whitespace != null && string.IsNullOrWhiteSpace(whitespace.Value))
+                        {
+                            whitespace.Remove();
+                        }
+
+                        context.OptionLookup.Remove(update.Name);
+                        continue;
                     }
 
-                    closingWhitespace.AddBeforeSelf(new XText(optionLinePrefix));
-                    var newOption = CreateOptionElement(update);
-                    closingWhitespace.AddBeforeSelf(newOption);
-                    context.OptionLookup[update.Name] = newOption;
-                    continue;
+                    existing.SetAttributeValue("value", update.Value ?? string.Empty);
                 }
 
-                if (update.ShouldRemove)
+                if (!TrySaveDocument(context.Document, context.FilePath, newline, out var saveError))
                 {
-                    var whitespace = existing.PreviousNode as XText;
-                    existing.Remove();
-                    if (whitespace != null && string.IsNullOrWhiteSpace(whitespace.Value))
-                    {
-                        whitespace.Remove();
-                    }
-
-                    context.OptionLookup.Remove(update.Name);
-                    continue;
+                    throw new IOException(saveError);
                 }
-
-                existing.SetAttributeValue("value", update.Value ?? string.Empty);
             }
-
-            SaveDocument(context.Document, context.FilePath, newline);
         }
 
         public bool ApplySpiceOptions(string spiceXmlPath, IEnumerable<SpiceOptionUpdate> updates, out string error)
         {
-            error = string.Empty;
-
-            if (!TryLoadOptionsContext(spiceXmlPath, LoadOptions.PreserveWhitespace, true, out var context, out var message, out _))
+            lock (_sync)
             {
-                error = string.IsNullOrWhiteSpace(message) ? "Unable to load spice config file." : message;
-                return false;
-            }
+                error = string.Empty;
 
-            ApplyUpdates(context, updates);
-            return true;
+                try
+                {
+                    if (!TryLoadOptionsContext(spiceXmlPath, LoadOptions.PreserveWhitespace, true, out var context, out var message, out _))
+                    {
+                        error = string.IsNullOrWhiteSpace(message) ? "Unable to load spice config file." : message;
+                        return false;
+                    }
+
+                    ApplyUpdates(context, updates);
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    error = ex.Message;
+                    return false;
+                }
+            }
         }
 
         private static XElement CreateOptionElement(SpiceOptionUpdate update)
@@ -168,8 +207,9 @@ namespace LazyBootstrap.Services.Config
                 new XAttribute("value", update.Value ?? string.Empty));
         }
 
-        private static string SaveDocument(XDocument document, string filePath, string newline)
+        private static bool TrySaveDocument(XDocument document, string filePath, string newline, out string error)
         {
+            error = string.Empty;
             var settings = new XmlWriterSettings
             {
                 Indent = false,
@@ -188,8 +228,46 @@ namespace LazyBootstrap.Services.Config
 
             string content = settings.Encoding.GetString(stream.ToArray());
             string normalizationWarning = TryNormalizeSelfClosingTags(ref content);
-            File.WriteAllText(filePath, content, TomlTextShared.Utf8NoBom);
-            return normalizationWarning;
+            if (!string.IsNullOrWhiteSpace(normalizationWarning))
+            {
+                error = $"Unable to normalize XML text: {normalizationWarning}";
+                return false;
+            }
+
+            string contentValidationError = ValidateXmlContent(content);
+            if (!string.IsNullOrWhiteSpace(contentValidationError))
+            {
+                error = contentValidationError;
+                return false;
+            }
+
+            return SafeFileWriter.TryWriteAllText(filePath, content, ValidateXmlFile, out error);
+        }
+
+        private static string ValidateXmlContent(string content)
+        {
+            try
+            {
+                XDocument.Parse(content ?? string.Empty, LoadOptions.None);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                return $"Serialized XML failed validation: {ex.Message}";
+            }
+        }
+
+        private static string ValidateXmlFile(string filePath)
+        {
+            try
+            {
+                XDocument.Load(filePath, LoadOptions.None);
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                return $"XML file validation failed: {ex.Message}";
+            }
         }
 
         private static string ExtractIndentation(XText textNode, ref string newlineChars)
