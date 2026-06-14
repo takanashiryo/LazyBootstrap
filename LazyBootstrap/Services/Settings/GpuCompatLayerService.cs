@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using LazyBootstrap.Services.Config;
+using LazyBootstrap.Services.Shared;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Settings
@@ -496,7 +497,11 @@ namespace LazyBootstrap.Services.Settings
                     Directory.CreateDirectory(directory);
                 }
 
-                File.WriteAllBytes(Path, _content);
+                if (!SafeFileWriter.TryWriteAllBytes(Path, _content, null, out var error))
+                {
+                    throw new IOException(error);
+                }
+
                 return;
             }
 
