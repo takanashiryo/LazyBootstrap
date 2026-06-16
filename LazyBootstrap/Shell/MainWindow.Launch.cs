@@ -13,13 +13,13 @@ namespace LazyBootstrap.Shell
     public partial class MainWindow
     {
         private void OnToggleLaunchLogClick(object sender, RoutedEventArgs e)
-            => _ = _launchWorkflowService.ToggleLaunchLogAsync(_launchState, this);
+            => _ = _launchOrchestrator.ToggleLaunchLogAsync(_launchState, this);
 
         private void OnOpenLogClick(object sender, RoutedEventArgs e)
-            => _ = _launchWorkflowService.OpenLogAsync();
+            => _ = _launchOrchestrator.OpenLogAsync();
 
         private void OnKillProcessesClick(object sender, RoutedEventArgs e)
-            => _ = _launchWorkflowService.KillProcessesAsync();
+            => _ = _launchOrchestrator.KillProcessesAsync();
 
         private void OnStartClick(object sender, RoutedEventArgs e)
             => _ = StartLaunchAsync(false);
@@ -34,7 +34,7 @@ namespace LazyBootstrap.Shell
                 return Task.CompletedTask;
             }
 
-            return _launchWorkflowService.StartAsync(
+            return _launchOrchestrator.StartAsync(
                 _launchState,
                 new LaunchRequest(_settingsState, _displayState, asphyxiaDevOnly),
                 this);

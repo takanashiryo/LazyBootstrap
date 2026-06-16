@@ -18,7 +18,7 @@ using SukiUI.MessageBox;
 namespace LazyBootstrap.Features.Launch.Services
 {
 
-    public sealed class LaunchWorkflowService
+    public sealed class LaunchOrchestrator
     {
         private const int MaxLogLines = 1200;
         private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(3);
@@ -30,7 +30,7 @@ namespace LazyBootstrap.Features.Launch.Services
         private readonly WindowsDefenderExclusionService _windowsDefenderExclusionService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
-        private readonly ILogger<LaunchWorkflowService> _logger;
+        private readonly ILogger<LaunchOrchestrator> _logger;
 
         private readonly Queue<string> _logLines = new Queue<string>(MaxLogLines + 64);
         private Process _gameProcess;
@@ -42,14 +42,14 @@ namespace LazyBootstrap.Features.Launch.Services
         private AppShellState.ShellBusyLease _launchNavigationLock;
         private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
-        public LaunchWorkflowService(
+        public LaunchOrchestrator(
             LauncherPaths paths,
             GameProcessTracker gameProcessTracker,
             DisplayWorkflowService displayWorkflowService,
             WindowsDefenderExclusionService windowsDefenderExclusionService,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
-            ILogger<LaunchWorkflowService> logger)
+            ILogger<LaunchOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _gameProcessTracker = gameProcessTracker ?? throw new ArgumentNullException(nameof(gameProcessTracker));

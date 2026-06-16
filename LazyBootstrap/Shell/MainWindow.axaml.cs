@@ -23,7 +23,7 @@ namespace LazyBootstrap.Shell
     public partial class MainWindow : SukiWindow, ILaunchWorkflowObserver
     {
         private readonly AppShellState _shellStateService = null!;
-        private readonly LaunchWorkflowService _launchWorkflowService = null!;
+        private readonly LaunchOrchestrator _launchOrchestrator = null!;
         private readonly DisplayWorkflowService _displayWorkflowService = null!;
         private readonly EnvironmentScanService _environmentScanService = null!;
         private readonly SettingsState _settingsState = null!;
@@ -90,7 +90,7 @@ namespace LazyBootstrap.Shell
         internal MainWindow(
             AppShellState shellStateService,
             LauncherPaths paths,
-            LaunchWorkflowService launchWorkflowService,
+            LaunchOrchestrator launchOrchestrator,
             DisplayWorkflowService displayWorkflowService,
             EnvironmentScanService environmentScanService,
             SettingsView settingsView,
@@ -106,7 +106,7 @@ namespace LazyBootstrap.Shell
 
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _launchWorkflowService = launchWorkflowService ?? throw new ArgumentNullException(nameof(launchWorkflowService));
+            _launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
             _displayWorkflowService = displayWorkflowService ?? throw new ArgumentNullException(nameof(displayWorkflowService));
             _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
@@ -383,7 +383,7 @@ namespace LazyBootstrap.Shell
             {
                 UpdateStatusText("正在读取启动配置...");
                 await _settingsView.InitializeStartupAsync();
-                await _launchWorkflowService.InitializeStartupAsync(_launchState, _displayState, this);
+                await _launchOrchestrator.InitializeStartupAsync(_launchState, _displayState, this);
 
                 UpdateStatusText("正在预热页面内容...");
                 await _settingsView.WarmDeferredAsync();
