@@ -14,21 +14,21 @@ namespace LazyBootstrap.Services.Settings
         string DetectedRenderMode,
         bool HasInconsistentFiles);
 
-    public sealed class GpuCompatLayerService
+    public sealed class GpuCompatLayerConfigurator
     {
         private static readonly string[] BaseGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
         private static readonly string[] ManagedGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
 
         private readonly ConfigHandler _configFile;
         private readonly LauncherPaths _paths;
-        private readonly SpiceConfigFileService _spiceConfigFileService;
-        private readonly ILogger<GpuCompatLayerService> _logger;
+        private readonly SpiceConfigFile _spiceConfigFileService;
+        private readonly ILogger<GpuCompatLayerConfigurator> _logger;
 
-        public GpuCompatLayerService(
+        public GpuCompatLayerConfigurator(
             ConfigHandler configFile,
             LauncherPaths paths,
-            SpiceConfigFileService spiceConfigFileService,
-            ILogger<GpuCompatLayerService> logger)
+            SpiceConfigFile spiceConfigFileService,
+            ILogger<GpuCompatLayerConfigurator> logger)
         {
             ArgumentNullException.ThrowIfNull(configFile);
             ArgumentNullException.ThrowIfNull(paths);

@@ -179,7 +179,7 @@ namespace LazyBootstrap.Services.Environment
             {
                 try
                 {
-                    if (GpuCompatLayerService.DetectRuntimeState(contentsDirectoryPath, bundledLibsDirectoryPath).IsFullyApplied)
+                    if (GpuCompatLayerConfigurator.DetectRuntimeState(contentsDirectoryPath, bundledLibsDirectoryPath).IsFullyApplied)
                     {
                         AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", ScanResultLevel.Success);
                         return;

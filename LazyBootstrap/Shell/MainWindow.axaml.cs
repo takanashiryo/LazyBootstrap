@@ -27,14 +27,14 @@ namespace LazyBootstrap.Shell
         private readonly LaunchWorkflowService _launchWorkflowService = null!;
         private readonly DisplayWorkflowService _displayWorkflowService = null!;
         private readonly EnvironmentScanService _environmentScanService = null!;
-        private readonly SettingsConfigurationSnapshot _settingsState = new();
+        private readonly SettingsState _settingsState = new();
         private readonly DisplayConfigurationSnapshot _displayState = new();
         private readonly LaunchState _launchState = new();
         private readonly EnvironmentScanPresentation _infoState = new();
         private bool _isLoadingSettings;
 
         private readonly LauncherPaths _paths = null!;
-        private readonly SettingsWorkflowService _settingsWorkflowService = null!;
+        private readonly SettingsOrchestrator _settingsWorkflowService = null!;
         private readonly ToolsWorkflowService _toolsWorkflowService = null!;
         private readonly UpdateWorkflowService _updateWorkflowService = null!;
 
@@ -99,7 +99,7 @@ namespace LazyBootstrap.Shell
             LaunchWorkflowService launchWorkflowService,
             DisplayWorkflowService displayWorkflowService,
             EnvironmentScanService environmentScanService,
-            SettingsWorkflowService settingsWorkflowService,
+            SettingsOrchestrator settingsWorkflowService,
             ToolsWorkflowService toolsWorkflowService,
             UpdateWorkflowService updateWorkflowService,
             ISukiDialogManager dialogManager,

@@ -31,9 +31,9 @@ namespace LazyBootstrap.Shell
             }
 
             var mode = btn.Tag?.ToString() ?? btn.CommandParameter?.ToString() ?? string.Empty;
-            string normalizedMode = GpuCompatLayerService.NormalizeRenderMode(mode);
+            string normalizedMode = GpuCompatLayerConfigurator.NormalizeRenderMode(mode);
             if (string.Equals(
-                    GpuCompatLayerService.NormalizeRenderMode(_settingsState.GpuCompatLayerRenderMode),
+                    GpuCompatLayerConfigurator.NormalizeRenderMode(_settingsState.GpuCompatLayerRenderMode),
                     normalizedMode,
                     StringComparison.OrdinalIgnoreCase))
             {
@@ -383,7 +383,7 @@ namespace LazyBootstrap.Shell
                 }
 
                 bool chipsEnabled = !gpuCompatLayerEnabled && modulesDirectoryExists;
-                string renderMode = GpuCompatLayerService.NormalizeRenderMode(_settingsState.GpuCompatLayerRenderMode);
+                string renderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(_settingsState.GpuCompatLayerRenderMode);
                 if (GpuCompatLayerDx9on12RadioButton != null)
                 {
                     GpuCompatLayerDx9on12RadioButton.IsChecked = string.Equals(renderMode, "dx9on12", StringComparison.OrdinalIgnoreCase);

@@ -19,7 +19,7 @@ namespace LazyBootstrap.Services.Display
 
         private readonly ConfigHandler _configHandler;
         private readonly LauncherPaths _paths;
-        private readonly SpiceConfigFileService _spiceConfigFileService;
+        private readonly SpiceConfigFile _spiceConfigFileService;
         private readonly WindowsDisplayConfigurationService _displayConfigurationService;
         private readonly DisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator;
         private readonly UiInteractionService _uiInteractionService;
@@ -28,7 +28,7 @@ namespace LazyBootstrap.Services.Display
         public DisplayWorkflowService(
             ConfigHandler configHandler,
             LauncherPaths paths,
-            SpiceConfigFileService spiceConfigFileService,
+            SpiceConfigFile spiceConfigFileService,
             WindowsDisplayConfigurationService displayConfigurationService,
             DisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
             UiInteractionService uiInteractionService,

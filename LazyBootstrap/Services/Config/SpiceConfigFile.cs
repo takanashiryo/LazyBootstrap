@@ -10,7 +10,7 @@ using LazyBootstrap.Services.Shared;
 
 namespace LazyBootstrap.Services.Config
 {
-    public sealed class SpiceConfigFileService
+    public sealed class SpiceConfigFile
     {
         private readonly object _sync = new object();
 

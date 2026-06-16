@@ -127,7 +127,7 @@ namespace LazyBootstrap.Models
         public override string ToString() => DisplayName;
     }
 
-    public sealed class SettingsConfigurationSnapshot
+    public sealed class SettingsState
     {
         private bool _suspendPersistence;
 
@@ -235,7 +235,7 @@ namespace LazyBootstrap.Models
         }
     }
 
-    public sealed record SettingsPersistRequest(SettingsConfigurationSnapshot Settings);
+    public sealed record SettingsPersistRequest(SettingsState Settings);
 
     public sealed class DisplayConfigurationSnapshot
     {
@@ -381,7 +381,7 @@ namespace LazyBootstrap.Models
     }
 
     public sealed record LaunchRequest(
-        SettingsConfigurationSnapshot Settings,
+        SettingsState Settings,
         DisplayConfigurationSnapshot Display,
         bool AsphyxiaDevOnly);
 

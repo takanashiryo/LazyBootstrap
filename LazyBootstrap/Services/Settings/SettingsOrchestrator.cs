@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 namespace LazyBootstrap.Services.Settings
 {
 
-    public sealed class SettingsWorkflowService
+    public sealed class SettingsOrchestrator
     {
         private const string NonePresetName = "无";
         private const string AsphyxiaPresetName = "Asphyxia";
@@ -23,27 +23,27 @@ namespace LazyBootstrap.Services.Settings
 
         private readonly ConfigHandler _configHandler;
         private readonly LauncherPaths _paths;
-        private readonly SpiceConfigFileService _spiceConfigFileService;
-        private readonly GpuCompatLayerService _gpuCompatLayerService;
+        private readonly SpiceConfigFile _spiceConfigFileService;
+        private readonly GpuCompatLayerConfigurator _gpuCompatLayerService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
-        private readonly ILogger<SettingsWorkflowService> _logger;
+        private readonly ILogger<SettingsOrchestrator> _logger;
 
         private sealed record SpiceOptionDescriptor(
             string XmlName,
-            Func<SettingsConfigurationSnapshot, string> GetXmlValue,
-            Action<SettingsConfigurationSnapshot, string> ApplyXmlValue);
+            Func<SettingsState, string> GetXmlValue,
+            Action<SettingsState, string> ApplyXmlValue);
 
         private static SpiceOptionDescriptor B(string name,
-            Func<SettingsConfigurationSnapshot, bool> getter,
-            Action<SettingsConfigurationSnapshot, bool> setter,
+            Func<SettingsState, bool> getter,
+            Action<SettingsState, bool> setter,
             string enabledValue) => new(name,
                 vm => getter(vm) ? enabledValue : string.Empty,
                 (vm, xmlValue) => setter(vm, string.Equals(xmlValue, enabledValue, StringComparison.OrdinalIgnoreCase)));
 
         private static SpiceOptionDescriptor S(string name,
-            Func<SettingsConfigurationSnapshot, string> getter,
-            Action<SettingsConfigurationSnapshot, string> setter) => new(name,
+            Func<SettingsState, string> getter,
+            Action<SettingsState, string> setter) => new(name,
                 vm => getter(vm) ?? string.Empty,
                 (vm, xmlValue) => setter(vm, xmlValue ?? string.Empty));
 
@@ -150,14 +150,14 @@ namespace LazyBootstrap.Services.Settings
             public required NetworkAdapterOption SelectedNetworkAdapter { get; init; }
         }
 
-        public SettingsWorkflowService(
+        public SettingsOrchestrator(
             ConfigHandler configHandler,
             LauncherPaths paths,
-            SpiceConfigFileService spiceConfigFileService,
-            GpuCompatLayerService gpuCompatLayerService,
+            SpiceConfigFile spiceConfigFileService,
+            GpuCompatLayerConfigurator gpuCompatLayerService,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
-            ILogger<SettingsWorkflowService> logger)
+            ILogger<SettingsOrchestrator> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
@@ -168,14 +168,14 @@ namespace LazyBootstrap.Services.Settings
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task InitializeStartupAsync(SettingsConfigurationSnapshot settings)
+        public Task InitializeStartupAsync(SettingsState settings)
         {
             _logger.LogInformation("Settings startup initialization started.");
             settings.RunSilently(() =>
             {
                 settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
                 settings.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
-                settings.GpuCompatLayerRenderMode = GpuCompatLayerService.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
+                settings.GpuCompatLayerRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
                 settings.IsSpiceConfigAvailable = IsSpiceConfigAvailable(settings.UseSystemSpiceConfig);
                 settings.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             });
@@ -186,7 +186,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public async Task WarmDeferredAsync(SettingsConfigurationSnapshot settings)
+        public async Task WarmDeferredAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Deferred settings warm-up started.");
@@ -241,7 +241,7 @@ namespace LazyBootstrap.Services.Settings
                 settings.NetworkAdapters.Count);
         }
 
-        public Task PersistLauncherSettingsAsync(SettingsConfigurationSnapshot settings)
+        public Task PersistLauncherSettingsAsync(SettingsState settings)
         {
             try
             {
@@ -258,7 +258,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public Task PersistServerEndpointAsync(SettingsConfigurationSnapshot settings)
+        public Task PersistServerEndpointAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Server endpoint persistence started.");
@@ -283,7 +283,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public Task ApplySelectedNetworkAdapterAsync(SettingsConfigurationSnapshot settings)
+        public Task ApplySelectedNetworkAdapterAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Selected network adapter application started.");
@@ -298,7 +298,7 @@ namespace LazyBootstrap.Services.Settings
             return PersistNetworkSettingsAsync(settings);
         }
 
-        public async Task OpenNetworkAdapterPickerAsync(SettingsConfigurationSnapshot settings)
+        public async Task OpenNetworkAdapterPickerAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Network adapter picker opened.");
@@ -357,7 +357,7 @@ namespace LazyBootstrap.Services.Settings
             _logger.LogInformation("Network adapter picker selection persisted.");
         }
 
-        public Task PersistNetworkSettingsAsync(SettingsConfigurationSnapshot settings)
+        public Task PersistNetworkSettingsAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Network settings persistence started.");
@@ -381,7 +381,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public Task PersistSpiceSettingsAsync(SettingsConfigurationSnapshot settings)
+        public Task PersistSpiceSettingsAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Spice settings persistence started.");
@@ -400,7 +400,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public Task PersistGpuCompatLayerToggleAsync(SettingsConfigurationSnapshot settings)
+        public Task PersistGpuCompatLayerToggleAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("GPU compatibility layer toggle persistence started.");
@@ -410,7 +410,7 @@ namespace LazyBootstrap.Services.Settings
                 return ConfirmAndEnableGpuCompatLayerAsync(settings);
             }
 
-            var renderMode = GpuCompatLayerService.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
+            var renderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
             if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
                     settings.GpuCompatLayerEnabled,
@@ -430,12 +430,12 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public Task PersistGpuCompatLayerRenderModeAsync(SettingsConfigurationSnapshot settings)
+        public Task PersistGpuCompatLayerRenderModeAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("GPU compatibility layer render mode persistence started.");
 
-            var renderMode = GpuCompatLayerService.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
+            var renderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
 
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
             if (_gpuCompatLayerService.TryPersistGpuCompatLayerRenderMode(
@@ -456,7 +456,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public async Task EditConfigAsync(SettingsConfigurationSnapshot settings)
+        public async Task EditConfigAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("spicecfg editor launch requested.");
@@ -512,7 +512,7 @@ namespace LazyBootstrap.Services.Settings
             }
         }
 
-        public Task PersistUseSystemSpiceConfigAsync(SettingsConfigurationSnapshot settings)
+        public Task PersistUseSystemSpiceConfigAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Spice config mode persistence started.");
@@ -536,7 +536,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        private async Task ConfirmAndEnableGpuCompatLayerAsync(SettingsConfigurationSnapshot settings)
+        private async Task ConfirmAndEnableGpuCompatLayerAsync(SettingsState settings)
         {
             _logger.LogInformation("GPU compatibility layer confirmation dialog opened.");
             var confirmed = await _uiInteractionService.ShowDialogAsync(
@@ -553,7 +553,7 @@ namespace LazyBootstrap.Services.Settings
                 return;
             }
 
-            var renderMode = GpuCompatLayerService.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
+            var renderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
             if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
                     true,
@@ -577,7 +577,7 @@ namespace LazyBootstrap.Services.Settings
             return Directory.Exists(Path.Combine(_paths.GetContentsDirectoryPath(), "modules"));
         }
 
-        public Task OpenAsioControlPanelAsync(SettingsConfigurationSnapshot settings)
+        public Task OpenAsioControlPanelAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
 
@@ -600,7 +600,7 @@ namespace LazyBootstrap.Services.Settings
             return Task.CompletedTask;
         }
 
-        public async Task AddServerPresetAsync(SettingsConfigurationSnapshot settings)
+        public async Task AddServerPresetAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Add server preset dialog opened.");
@@ -665,7 +665,7 @@ namespace LazyBootstrap.Services.Settings
             _uiInteractionService.ShowInfoToast("新建预设", $"已创建预设：{presetName}");
         }
 
-        public async Task DeleteServerPresetAsync(SettingsConfigurationSnapshot settings)
+        public async Task DeleteServerPresetAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Delete server preset requested.");
@@ -715,7 +715,7 @@ namespace LazyBootstrap.Services.Settings
             _uiInteractionService.ShowInfoToast("删除预设", $"已删除预设：{preset.Name}");
         }
 
-        public async Task PersistSelectedServerPresetAsync(SettingsConfigurationSnapshot settings)
+        public async Task PersistSelectedServerPresetAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("Selected server preset persistence started.");
@@ -746,7 +746,7 @@ namespace LazyBootstrap.Services.Settings
             _logger.LogInformation("Selected server preset persistence completed.");
         }
 
-        private void LoadServerPresets(SettingsConfigurationSnapshot settings)
+        private void LoadServerPresets(SettingsState settings)
         {
             var result = _configHandler.LoadServerPresets(NonePresetName, AsphyxiaPresetName, AsphyxiaDefaultUrl);
             if (result.Mutated)
@@ -769,7 +769,7 @@ namespace LazyBootstrap.Services.Settings
             _logger.LogInformation("Server presets loaded. PresetCount={PresetCount}", settings.ServerPresets.Count);
         }
 
-        private void LoadSpiceSettings(SettingsConfigurationSnapshot settings)
+        private void LoadSpiceSettings(SettingsState settings)
         {
             if (!settings.IsSpiceConfigAvailable)
             {
@@ -784,7 +784,7 @@ namespace LazyBootstrap.Services.Settings
             _logger.LogInformation("Spice settings loaded from active config.");
         }
 
-        private void ReloadRuntimeState(SettingsConfigurationSnapshot settings)
+        private void ReloadRuntimeState(SettingsState settings)
         {
             _logger.LogInformation("Settings runtime state reload started.");
             if (!RefreshSpiceConfigAvailability(settings))
@@ -801,7 +801,7 @@ namespace LazyBootstrap.Services.Settings
             _logger.LogInformation("Settings runtime state reload completed.");
         }
 
-        private void RefreshGpuCompatLayerState(SettingsConfigurationSnapshot settings)
+        private void RefreshGpuCompatLayerState(SettingsState settings)
         {
             var runtimeState = GetGpuCompatLayerRuntimeState();
             var configuredRenderMode = SyncGpuCompatLayerConfigToRuntimeState(runtimeState);
@@ -816,7 +816,7 @@ namespace LazyBootstrap.Services.Settings
             _logger.LogDebug("GPU compatibility layer runtime state refreshed. FullyApplied={FullyApplied}, InconsistentFiles={InconsistentFiles}", runtimeState.IsFullyApplied, runtimeState.HasInconsistentFiles);
         }
 
-        private void ApplyUnavailableSpiceState(SettingsConfigurationSnapshot settings)
+        private void ApplyUnavailableSpiceState(SettingsState settings)
         {
             settings.AsioDrivers.Clear();
             settings.NetworkAdapters.Clear();
@@ -830,7 +830,7 @@ namespace LazyBootstrap.Services.Settings
             SyncSelectedServerPresetFromCurrentFields(settings);
         }
 
-        private void SyncSelectedServerPresetFromCurrentFields(SettingsConfigurationSnapshot settings)
+        private void SyncSelectedServerPresetFromCurrentFields(SettingsState settings)
         {
             var serverUrl = (settings.ServerAddress ?? string.Empty).Trim();
             var pcbId = (settings.PcbId ?? string.Empty).Trim();
@@ -848,7 +848,7 @@ namespace LazyBootstrap.Services.Settings
             settings.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
         }
 
-        private void RefreshAsioDrivers(SettingsConfigurationSnapshot settings, string selectedValue)
+        private void RefreshAsioDrivers(SettingsState settings, string selectedValue)
         {
             var choices = BuildAsioDriverOptions(selectedValue);
             settings.AsioDrivers.Clear();
@@ -862,7 +862,7 @@ namespace LazyBootstrap.Services.Settings
             settings.RunSilently(() => settings.SelectedAsioDriver = selectedOption);
         }
 
-        private void RefreshNetworkAdapters(SettingsConfigurationSnapshot settings, string selectedIpAddress, string selectedSubnetMask)
+        private void RefreshNetworkAdapters(SettingsState settings, string selectedIpAddress, string selectedSubnetMask)
         {
             var choices = BuildNetworkAdapterOptions(selectedIpAddress, selectedSubnetMask);
             settings.NetworkAdapters.Clear();
@@ -878,7 +878,7 @@ namespace LazyBootstrap.Services.Settings
             settings.RunSilently(() => settings.SelectedNetworkAdapter = selectedOption);
         }
 
-        private void SyncSelectedNetworkAdapter(SettingsConfigurationSnapshot settings, string selectedIpAddress, string selectedSubnetMask)
+        private void SyncSelectedNetworkAdapter(SettingsState settings, string selectedIpAddress, string selectedSubnetMask)
         {
             var selectedOption = settings.NetworkAdapters.FirstOrDefault(choice =>
                     string.Equals(choice.IpAddress, selectedIpAddress ?? string.Empty, StringComparison.OrdinalIgnoreCase)
@@ -915,7 +915,7 @@ namespace LazyBootstrap.Services.Settings
             return values;
         }
 
-        private void ApplySpiceOptionValues(SettingsConfigurationSnapshot settings, Dictionary<string, string> values)
+        private void ApplySpiceOptionValues(SettingsState settings, Dictionary<string, string> values)
         {
             foreach (var option in SpiceOptions)
             {
@@ -931,7 +931,7 @@ namespace LazyBootstrap.Services.Settings
         }
 
         private void ApplyDeferredSettingsState(
-            SettingsConfigurationSnapshot settings,
+            SettingsState settings,
             DeferredSettingsState deferredState,
             string currentAsioDriverValue,
             string currentNetworkIp,
@@ -1010,7 +1010,7 @@ namespace LazyBootstrap.Services.Settings
         {
             try
             {
-                return GpuCompatLayerService.DetectRuntimeState(
+                return GpuCompatLayerConfigurator.DetectRuntimeState(
                     _paths.GetContentsDirectoryPath(),
                     _paths.GetBundledLibsDirectoryPath());
             }
@@ -1022,7 +1022,7 @@ namespace LazyBootstrap.Services.Settings
         }
 
 
-        private bool RefreshSpiceConfigAvailability(SettingsConfigurationSnapshot settings)
+        private bool RefreshSpiceConfigAvailability(SettingsState settings)
         {
             bool isSpiceConfigAvailable = IsSpiceConfigAvailable(settings.UseSystemSpiceConfig);
             settings.RunSilently(() =>
@@ -1067,11 +1067,11 @@ namespace LazyBootstrap.Services.Settings
 
         private string SyncGpuCompatLayerConfigToRuntimeState(GpuCompatLayerRuntimeState runtimeState)
         {
-            var configuredRenderMode = GpuCompatLayerService.NormalizeRenderMode(
+            var configuredRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(
                 _configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
             var detectedRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
                 ? string.Empty
-                : GpuCompatLayerService.NormalizeRenderMode(runtimeState.DetectedRenderMode);
+                : GpuCompatLayerConfigurator.NormalizeRenderMode(runtimeState.DetectedRenderMode);
             var targetCompatEnabled = runtimeState.IsFullyApplied;
 
             try
@@ -1100,14 +1100,14 @@ namespace LazyBootstrap.Services.Settings
             return configuredRenderMode;
         }
 
-        private void SaveServerPresets(SettingsConfigurationSnapshot settings)
+        private void SaveServerPresets(SettingsState settings)
         {
             _configHandler.SaveServerPresets(settings.ServerPresets, settings.ActiveServerPreset, NonePresetName);
         }
 
         private bool TryApplySpiceUpdates(
             string spiceXmlPath,
-            SettingsConfigurationSnapshot settings,
+            SettingsState settings,
             bool reloadSettingsOnSuccess = true,
             params SpiceOptionUpdate[] updates)
         {
@@ -1133,7 +1133,7 @@ namespace LazyBootstrap.Services.Settings
             return true;
         }
 
-        private static IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsConfigurationSnapshot settings)
+        private static IEnumerable<SpiceOptionUpdate> BuildSpiceOptionUpdates(SettingsState settings)
         {
             foreach (var option in GeneralSpiceOptions)
             {

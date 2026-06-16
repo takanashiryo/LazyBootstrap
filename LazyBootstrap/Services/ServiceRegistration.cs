@@ -46,14 +46,14 @@ namespace LazyBootstrap.Services
                 context.ConfigFilePath));
 
             // Workers (no SukiUI dependency).
-            services.AddSingleton<SpiceConfigFileService>();
+            services.AddSingleton<SpiceConfigFile>();
             services.AddSingleton<WindowsDisplayConfigurationService>();
             services.AddSingleton<WindowsDefenderExclusionService>();
             services.AddSingleton<GameProcessTracker>();
             services.AddSingleton<AppShellState>();
             services.AddSingleton<SavedataTransferPlanner>();
             services.AddSingleton<DisplaySettingsTransactionCoordinator>();
-            services.AddSingleton<GpuCompatLayerService>();
+            services.AddSingleton<GpuCompatLayerConfigurator>();
 
             // SukiUI-dependent services: lazy singletons (see remarks on the timing constraint).
             services.AddSingleton<ISukiDialogManager, SukiDialogManager>();
@@ -63,7 +63,7 @@ namespace LazyBootstrap.Services
             // Orchestrators (feature workflow coordinators).
             services.AddSingleton<DisplayWorkflowService>();
             services.AddSingleton<LaunchWorkflowService>();
-            services.AddSingleton<SettingsWorkflowService>();
+            services.AddSingleton<SettingsOrchestrator>();
             services.AddSingleton<ToolsWorkflowService>();
             services.AddSingleton<UpdateWorkflowService>();
             services.AddSingleton<EnvironmentScanService>();
@@ -77,7 +77,7 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<LaunchWorkflowService>(),
                 provider.GetRequiredService<DisplayWorkflowService>(),
                 provider.GetRequiredService<EnvironmentScanService>(),
-                provider.GetRequiredService<SettingsWorkflowService>(),
+                provider.GetRequiredService<SettingsOrchestrator>(),
                 provider.GetRequiredService<ToolsWorkflowService>(),
                 provider.GetRequiredService<UpdateWorkflowService>(),
                 provider.GetRequiredService<ISukiDialogManager>(),
