@@ -10,6 +10,7 @@ global using LazyBootstrap.Infrastructure.Platform;
 global using LazyBootstrap.Infrastructure.Paths;
 global using LazyBootstrap.Infrastructure.Processes;
 global using LazyBootstrap.Infrastructure.FileSystem;
+global using LazyBootstrap.Infrastructure.Serialization;
 global using LazyBootstrap.Services.Processes;
 global using LazyBootstrap.Services.Savedata;
 global using LazyBootstrap.Services.Settings;

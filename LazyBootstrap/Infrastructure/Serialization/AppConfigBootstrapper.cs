@@ -3,7 +3,7 @@ using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
 using System.IO;
 
-namespace LazyBootstrap.Services.Config
+namespace LazyBootstrap.Infrastructure.Serialization
 {
     internal static class AppConfigBootstrapper
     {

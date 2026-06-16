@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
+namespace LazyBootstrap.Infrastructure.Serialization;
+
 internal static class TomlTextShared
 {
     public static readonly UTF8Encoding Utf8NoBom = new UTF8Encoding(false);
