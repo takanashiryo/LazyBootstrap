@@ -15,7 +15,7 @@ using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
 using SukiUI.MessageBox;
 
-namespace LazyBootstrap.Services.Launch
+namespace LazyBootstrap.Features.Launch.Services
 {
 
     public sealed class LaunchWorkflowService
