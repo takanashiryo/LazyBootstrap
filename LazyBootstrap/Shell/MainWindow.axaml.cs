@@ -17,7 +17,6 @@ using SukiUI.Controls;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 using Avalonia;
-using LazyBootstrap.Services.Update;
 
 namespace LazyBootstrap.Shell
 {
@@ -36,7 +35,7 @@ namespace LazyBootstrap.Shell
         private readonly LauncherPaths _paths = null!;
         private readonly SettingsView _settingsView = null!;
         private readonly ToolsWorkflowService _toolsWorkflowService = null!;
-        private readonly UpdateWorkflowService _updateWorkflowService = null!;
+        private readonly UpdateView _updateView = null!;
 
         private DispatcherTimer _displayPulseTimer;
         private double _displayPulsePhase = 0d;
@@ -97,7 +96,7 @@ namespace LazyBootstrap.Shell
             SettingsView settingsView,
             SettingsState settingsState,
             ToolsWorkflowService toolsWorkflowService,
-            UpdateWorkflowService updateWorkflowService,
+            UpdateView updateView,
             ISukiDialogManager dialogManager,
             ISukiToastManager toastManager,
             UiInteractionService uiInteractionService,
@@ -113,7 +112,7 @@ namespace LazyBootstrap.Shell
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
             _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
             _toolsWorkflowService = toolsWorkflowService ?? throw new ArgumentNullException(nameof(toolsWorkflowService));
-            _updateWorkflowService = updateWorkflowService ?? throw new ArgumentNullException(nameof(updateWorkflowService));
+            _updateView = updateView ?? throw new ArgumentNullException(nameof(updateView));
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
             _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
@@ -131,6 +130,11 @@ namespace LazyBootstrap.Shell
             if (SettingsPageHost != null)
             {
                 SettingsPageHost.Content = _settingsView;
+            }
+
+            if (UpdatePageHost != null)
+            {
+                UpdatePageHost.Content = _updateView;
             }
 
             _uiInteractionService.AttachWindow(this);

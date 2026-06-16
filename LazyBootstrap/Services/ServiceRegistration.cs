@@ -3,7 +3,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
-using LazyBootstrap.Services.Update;
 
 namespace LazyBootstrap.Services
 {
@@ -65,7 +64,7 @@ namespace LazyBootstrap.Services
             services.AddSingleton<LaunchWorkflowService>();
             services.AddSingleton<SettingsOrchestrator>();
             services.AddSingleton<ToolsWorkflowService>();
-            services.AddSingleton<UpdateWorkflowService>();
+            services.AddSingleton<UpdateOrchestrator>();
             services.AddSingleton<EnvironmentScanService>();
 
             // Feature shared state and views.
@@ -75,6 +74,8 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<SettingsOrchestrator>(),
                 provider.GetRequiredService<AppShellState>(),
                 provider.GetRequiredService<ILogger<SettingsView>>()));
+            services.AddSingleton(provider => new UpdateView(
+                provider.GetRequiredService<UpdateOrchestrator>()));
 
             // Shell window. MainWindow exposes an internal parameterised constructor that the
             // default DI constructor selection cannot see, so build it through an explicit
@@ -88,7 +89,7 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<SettingsView>(),
                 provider.GetRequiredService<SettingsState>(),
                 provider.GetRequiredService<ToolsWorkflowService>(),
-                provider.GetRequiredService<UpdateWorkflowService>(),
+                provider.GetRequiredService<UpdateView>(),
                 provider.GetRequiredService<ISukiDialogManager>(),
                 provider.GetRequiredService<ISukiToastManager>(),
                 provider.GetRequiredService<UiInteractionService>(),

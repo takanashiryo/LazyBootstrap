@@ -8,22 +8,22 @@ using LazyBootstrap.MediaUpdate;
 using LazyBootstrap.Infrastructure.Paths;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Update
+namespace LazyBootstrap.Features.Update
 {
-    public sealed class UpdateWorkflowService
+    public sealed class UpdateOrchestrator
     {
         private static readonly string[] UpdateArchiveFilePatterns = ["*.7z", "*.zip", "*.rar", "*.001"];
 
         private readonly LauncherPaths _paths;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
-        private readonly ILogger<UpdateWorkflowService> _logger;
+        private readonly ILogger<UpdateOrchestrator> _logger;
 
-        public UpdateWorkflowService(
+        public UpdateOrchestrator(
             LauncherPaths paths,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
-            ILogger<UpdateWorkflowService> logger)
+            ILogger<UpdateOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));

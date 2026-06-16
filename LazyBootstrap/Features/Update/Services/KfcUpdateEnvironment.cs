@@ -1,6 +1,6 @@
 using LazyBootstrap.MediaUpdate;
 
-namespace LazyBootstrap.Services.Update
+namespace LazyBootstrap.Features.Update
 {
     internal static class KfcUpdateEnvironment
     {
