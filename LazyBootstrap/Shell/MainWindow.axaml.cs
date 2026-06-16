@@ -19,11 +19,11 @@ using SukiUI.Toasts;
 using Avalonia;
 using LazyBootstrap.Services.Update;
 
-namespace LazyBootstrap.Views
+namespace LazyBootstrap.Shell
 {
     public partial class MainWindow : SukiWindow, ILaunchWorkflowObserver
     {
-        private readonly ShellStateService _shellStateService = null!;
+        private readonly AppShellState _shellStateService = null!;
         private readonly LaunchWorkflowService _launchWorkflowService = null!;
         private readonly DisplayWorkflowService _displayWorkflowService = null!;
         private readonly EnvironmentScanService _environmentScanService = null!;
@@ -94,7 +94,7 @@ namespace LazyBootstrap.Views
         }
 
         internal MainWindow(
-            ShellStateService shellStateService,
+            AppShellState shellStateService,
             LauncherPaths paths,
             LaunchWorkflowService launchWorkflowService,
             DisplayWorkflowService displayWorkflowService,
@@ -176,34 +176,34 @@ namespace LazyBootstrap.Views
 
             string propertyName = e?.PropertyName ?? string.Empty;
             if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(ShellStateService.StatusText), StringComparison.Ordinal))
+                || string.Equals(propertyName, nameof(AppShellState.StatusText), StringComparison.Ordinal))
             {
                 _launchState.StateText = _shellStateService.StatusText;
             }
 
             if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(ShellStateService.IsGlobalBusy), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(ShellStateService.GlobalBusyText), StringComparison.Ordinal))
+                || string.Equals(propertyName, nameof(AppShellState.IsGlobalBusy), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(AppShellState.GlobalBusyText), StringComparison.Ordinal))
             {
                 ApplyGlobalBusyStateToUi();
             }
 
             if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(ShellStateService.IsRuntimeProgressBusy), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(ShellStateService.RuntimeProgressText), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(ShellStateService.RuntimeProgressValue), StringComparison.Ordinal))
+                || string.Equals(propertyName, nameof(AppShellState.IsRuntimeProgressBusy), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(AppShellState.RuntimeProgressText), StringComparison.Ordinal)
+                || string.Equals(propertyName, nameof(AppShellState.RuntimeProgressValue), StringComparison.Ordinal))
             {
                 ApplyRuntimeProgressStateToUi();
             }
 
             if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(ShellStateService.IsNavigationLocked), StringComparison.Ordinal))
+                || string.Equals(propertyName, nameof(AppShellState.IsNavigationLocked), StringComparison.Ordinal))
             {
                 ApplySideMenuNavigationLock();
             }
 
             if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(ShellStateService.SelectedPage), StringComparison.Ordinal))
+                || string.Equals(propertyName, nameof(AppShellState.SelectedPage), StringComparison.Ordinal))
             {
                 if (_shellStateService.SelectedPage == ShellPage.Settings)
                 {

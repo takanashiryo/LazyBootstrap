@@ -29,7 +29,7 @@ namespace LazyBootstrap.Services.Launch
         private readonly DisplayWorkflowService _displayWorkflowService;
         private readonly WindowsDefenderExclusionService _windowsDefenderExclusionService;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly ShellStateService _shellStateService;
+        private readonly AppShellState _shellStateService;
         private readonly ILogger<LaunchWorkflowService> _logger;
 
         private readonly Queue<string> _logLines = new Queue<string>(MaxLogLines + 64);
@@ -39,7 +39,7 @@ namespace LazyBootstrap.Services.Launch
         private LaunchState _launchState;
         private DisplayConfigurationSnapshot _display;
         private ILaunchWorkflowObserver _observer;
-        private ShellStateService.ShellBusyLease _launchNavigationLock;
+        private AppShellState.ShellBusyLease _launchNavigationLock;
         private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
         public LaunchWorkflowService(
@@ -48,7 +48,7 @@ namespace LazyBootstrap.Services.Launch
             DisplayWorkflowService displayWorkflowService,
             WindowsDefenderExclusionService windowsDefenderExclusionService,
             UiInteractionService uiInteractionService,
-            ShellStateService shellStateService,
+            AppShellState shellStateService,
             ILogger<LaunchWorkflowService> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));

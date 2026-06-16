@@ -4,7 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
-namespace LazyBootstrap.Services.Shell
+namespace LazyBootstrap.Shell
 {
     public enum ShellBusyPresentation
     {
@@ -13,7 +13,7 @@ namespace LazyBootstrap.Services.Shell
         RuntimeProgress
     }
 
-    public sealed class ShellStateService : INotifyPropertyChanged
+    public sealed class AppShellState : INotifyPropertyChanged
     {
         private readonly object _sync = new object();
         private readonly List<BusyEntry> _busyEntries = new List<BusyEntry>();
@@ -207,11 +207,11 @@ namespace LazyBootstrap.Services.Shell
 
         public sealed class ShellBusyLease : IDisposable
         {
-            private readonly ShellStateService _owner;
+            private readonly AppShellState _owner;
             private readonly int _id;
             private bool _disposed;
 
-            internal ShellBusyLease(ShellStateService owner, int id)
+            internal ShellBusyLease(AppShellState owner, int id)
             {
                 _owner = owner ?? throw new ArgumentNullException(nameof(owner));
                 _id = id;

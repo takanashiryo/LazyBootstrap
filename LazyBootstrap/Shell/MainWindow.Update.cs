@@ -1,7 +1,7 @@
 using Avalonia.Interactivity;
 using LazyBootstrap.Services;
 
-namespace LazyBootstrap.Views
+namespace LazyBootstrap.Shell
 {
     public partial class MainWindow
     {

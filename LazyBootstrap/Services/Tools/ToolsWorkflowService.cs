@@ -17,14 +17,14 @@ namespace LazyBootstrap.Services.Tools
         private readonly LauncherPaths _paths;
         private readonly SavedataTransferPlanner _savedataTransferPlanner;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly ShellStateService _shellStateService;
+        private readonly AppShellState _shellStateService;
         private readonly ILogger<ToolsWorkflowService> _logger;
 
         public ToolsWorkflowService(
             LauncherPaths paths,
             SavedataTransferPlanner savedataTransferPlanner,
             UiInteractionService uiInteractionService,
-            ShellStateService shellStateService,
+            AppShellState shellStateService,
             ILogger<ToolsWorkflowService> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));

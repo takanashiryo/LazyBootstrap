@@ -10,7 +10,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using SukiUI.Controls;
 
-namespace LazyBootstrap.Views
+namespace LazyBootstrap.Shell
 {
     public partial class MainWindow
     {

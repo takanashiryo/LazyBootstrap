@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SukiUI;
 using SukiUI.Models;
-using LazyBootstrap.Views;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap
 {

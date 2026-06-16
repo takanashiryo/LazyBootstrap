@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace LazyBootstrap.Views
+namespace LazyBootstrap.Shell
 {
     public partial class MainWindow
     {

@@ -15,13 +15,13 @@ namespace LazyBootstrap.Services.Environment
     {
         private static readonly List<EnvironmentScan.ScanResultItem> EmptyScanBucket = [];
         private readonly LauncherPaths _paths;
-        private readonly ShellStateService _shellStateService;
+        private readonly AppShellState _shellStateService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly ILogger<EnvironmentScanService> _logger;
 
         public EnvironmentScanService(
             LauncherPaths paths,
-            ShellStateService shellStateService,
+            AppShellState shellStateService,
             UiInteractionService uiInteractionService,
             ILogger<EnvironmentScanService> logger)
         {

@@ -7,7 +7,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 
-namespace LazyBootstrap.Views
+namespace LazyBootstrap.Shell
 {
     public partial class MainWindow
     {

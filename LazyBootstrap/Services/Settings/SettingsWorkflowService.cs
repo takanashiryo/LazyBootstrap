@@ -26,7 +26,7 @@ namespace LazyBootstrap.Services.Settings
         private readonly SpiceConfigFileService _spiceConfigFileService;
         private readonly GpuCompatLayerService _gpuCompatLayerService;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly ShellStateService _shellStateService;
+        private readonly AppShellState _shellStateService;
         private readonly ILogger<SettingsWorkflowService> _logger;
 
         private sealed record SpiceOptionDescriptor(
@@ -156,7 +156,7 @@ namespace LazyBootstrap.Services.Settings
             SpiceConfigFileService spiceConfigFileService,
             GpuCompatLayerService gpuCompatLayerService,
             UiInteractionService uiInteractionService,
-            ShellStateService shellStateService,
+            AppShellState shellStateService,
             ILogger<SettingsWorkflowService> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));

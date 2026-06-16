@@ -15,7 +15,7 @@ namespace LazyBootstrap.Services
     /// <remarks>
     /// SukiUI timing constraint: <see cref="SukiDialogManager"/> and <see cref="SukiToastManager"/>
     /// must only be instantiated after <c>SukiTheme</c> is loaded. They are registered as lazy
-    /// singletons here and are first created when <see cref="LazyBootstrap.Views.MainWindow"/> is
+    /// singletons here and are first created when <see cref="LazyBootstrap.Shell.MainWindow"/> is
     /// resolved in <c>App.OnFrameworkInitializationCompleted</c> (which runs after
     /// <c>App.Initialize</c> loads the theme). The provider must therefore be built WITHOUT
     /// <c>ValidateOnBuild</c>, otherwise every singleton would be eagerly created up-front and
@@ -50,7 +50,7 @@ namespace LazyBootstrap.Services
             services.AddSingleton<WindowsDisplayConfigurationService>();
             services.AddSingleton<WindowsDefenderExclusionService>();
             services.AddSingleton<GameProcessTracker>();
-            services.AddSingleton<ShellStateService>();
+            services.AddSingleton<AppShellState>();
             services.AddSingleton<SavedataTransferPlanner>();
             services.AddSingleton<DisplaySettingsTransactionCoordinator>();
             services.AddSingleton<GpuCompatLayerService>();
@@ -71,8 +71,8 @@ namespace LazyBootstrap.Services
             // Shell window. MainWindow exposes an internal parameterised constructor that the
             // default DI constructor selection cannot see, so build it through an explicit
             // same-assembly factory.
-            services.AddSingleton(provider => new Views.MainWindow(
-                provider.GetRequiredService<ShellStateService>(),
+            services.AddSingleton(provider => new Shell.MainWindow(
+                provider.GetRequiredService<AppShellState>(),
                 provider.GetRequiredService<LauncherPaths>(),
                 provider.GetRequiredService<LaunchWorkflowService>(),
                 provider.GetRequiredService<DisplayWorkflowService>(),
@@ -83,7 +83,7 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<ISukiDialogManager>(),
                 provider.GetRequiredService<ISukiToastManager>(),
                 provider.GetRequiredService<UiInteractionService>(),
-                provider.GetRequiredService<ILogger<Views.MainWindow>>()));
+                provider.GetRequiredService<ILogger<Shell.MainWindow>>()));
 
             return services;
         }

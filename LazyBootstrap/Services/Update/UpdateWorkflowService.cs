@@ -6,8 +6,6 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using LazyBootstrap.MediaUpdate;
 using LazyBootstrap.Infrastructure.Paths;
-using LazyBootstrap.Services.Shell;
-using LazyBootstrap.Services.UI;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Update
@@ -18,13 +16,13 @@ namespace LazyBootstrap.Services.Update
 
         private readonly LauncherPaths _paths;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly ShellStateService _shellStateService;
+        private readonly AppShellState _shellStateService;
         private readonly ILogger<UpdateWorkflowService> _logger;
 
         public UpdateWorkflowService(
             LauncherPaths paths,
             UiInteractionService uiInteractionService,
-            ShellStateService shellStateService,
+            AppShellState shellStateService,
             ILogger<UpdateWorkflowService> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));

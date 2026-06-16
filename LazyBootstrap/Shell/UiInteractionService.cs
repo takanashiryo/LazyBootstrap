@@ -11,7 +11,7 @@ using Avalonia.Threading;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
-namespace LazyBootstrap.Services.UI
+namespace LazyBootstrap.Shell
 {
 
     public sealed class UiInteractionService
