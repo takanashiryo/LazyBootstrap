@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using Avalonia.Controls.Notifications;
 using LazyBootstrap.Services.Environment;
 
 namespace LazyBootstrap.Models
@@ -206,63 +205,6 @@ namespace LazyBootstrap.Models
     }
 
     public sealed record DisplayUpdateRequest(DisplayConfigurationSnapshot Display, bool RefreshMainOptions, bool RefreshSubOptions);
-
-    public sealed class LaunchState
-    {
-        public string LaunchLogText { get; set; } = string.Empty;
-
-        public bool IsLaunchLogVisible { get; set; }
-
-        public string ToggleLaunchLogText { get; set; } = "显示启动日志";
-
-        public string StateText { get; set; } = "就绪";
-
-        public bool IsLaunching { get; set; }
-
-        public bool IsGameRunning { get; set; }
-
-        public bool IsMessageVisible { get; set; }
-
-        public NotificationType MessageType { get; set; } = NotificationType.Error;
-
-        public string MessageTitle { get; set; } = string.Empty;
-
-        public string MessageAccentText { get; set; } = string.Empty;
-
-        public string MessageBodyText { get; set; } = string.Empty;
-
-        public bool CanStartLaunch => !IsLaunching && !IsGameRunning;
-
-        public LaunchMessage ToMessage() =>
-            new LaunchMessage(IsMessageVisible, MessageType, MessageTitle, MessageAccentText, MessageBodyText);
-    }
-
-    public sealed record LaunchRequest(
-        SettingsState Settings,
-        DisplayConfigurationSnapshot Display,
-        bool AsphyxiaDevOnly);
-
-    public sealed record LaunchMessage(
-        bool IsVisible,
-        NotificationType MessageType,
-        string Title,
-        string AccentText,
-        string BodyText)
-    {
-        public static LaunchMessage Hidden { get; } =
-            new LaunchMessage(false, NotificationType.Error, string.Empty, string.Empty, string.Empty);
-    }
-
-    public interface ILaunchWorkflowObserver
-    {
-        void OnLaunchStateChanged(LaunchState state);
-
-        void OnLaunchLogVisibilityChanged(LaunchState state);
-
-        void OnLaunchLogChanged(LaunchState state);
-
-        void OnLaunchMessageChanged(LaunchMessage message);
-    }
 
     public sealed class EnvironmentScanPresentation
     {
