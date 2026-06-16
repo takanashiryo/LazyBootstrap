@@ -15,3 +15,4 @@ global using LazyBootstrap.Services.Savedata;
 global using LazyBootstrap.Services.Shared;
 global using LazyBootstrap.Services.Tools;
 global using LazyBootstrap.Shell;
+global using static LazyBootstrap.Shared.Controls.ControlHelpers;

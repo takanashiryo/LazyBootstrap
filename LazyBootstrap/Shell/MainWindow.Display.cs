@@ -355,68 +355,6 @@ namespace LazyBootstrap.Shell
             }
         }
 
-        private static void ReplaceComboBoxItems<T>(ComboBox comboBox, System.Collections.Generic.IEnumerable<T> items)
-        {
-            if (comboBox == null)
-            {
-                return;
-            }
-
-            var desiredItems = (items ?? Enumerable.Empty<T>()).Cast<object>().ToList();
-            if (HasSameComboBoxItems(comboBox, desiredItems))
-            {
-                return;
-            }
-
-            ClearComboBoxSelection(comboBox);
-            comboBox.Items.Clear();
-            foreach (var item in desiredItems)
-            {
-                comboBox.Items.Add(item);
-            }
-        }
-
-        private static bool HasSameComboBoxItems(ComboBox comboBox, IReadOnlyList<object> desiredItems)
-        {
-            if (comboBox.Items.Count != desiredItems.Count)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < desiredItems.Count; i++)
-            {
-                var currentItem = comboBox.Items[i];
-                var desiredItem = desiredItems[i];
-                if (ReferenceEquals(currentItem, desiredItem) || Equals(currentItem, desiredItem))
-                {
-                    continue;
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-
-        private static void ClearComboBoxSelection(ComboBox comboBox)
-        {
-            try
-            {
-                comboBox.SelectedIndex = -1;
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-            }
-
-            try
-            {
-                comboBox.SelectedItem = null;
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-            }
-        }
-
         private static void SelectComboBoxIndex(ComboBox comboBox, int index)
         {
             if (comboBox == null)

@@ -486,22 +486,6 @@ namespace LazyBootstrap.Shell
             return null;
         }
 
-        private static void SetTextBoxTextIfNeeded(TextBox textBox, string value)
-        {
-            if (textBox == null)
-            {
-                return;
-            }
-
-            string normalizedValue = value ?? string.Empty;
-            if (string.Equals(textBox.Text ?? string.Empty, normalizedValue, StringComparison.Ordinal))
-            {
-                return;
-            }
-
-            textBox.Text = normalizedValue;
-        }
-
         private void UpdateUseSystemSpiceConfigSwitchVisibility()
         {
             bool show = _settingsState.IsSpiceConfigAvailable;
