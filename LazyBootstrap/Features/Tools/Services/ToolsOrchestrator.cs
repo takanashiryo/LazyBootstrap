@@ -10,22 +10,22 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Layout;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Tools
+namespace LazyBootstrap.Features.Tools
 {
-    public sealed class ToolsWorkflowService
+    public sealed class ToolsOrchestrator
     {
         private readonly LauncherPaths _paths;
         private readonly SavedataTransferPlanner _savedataTransferPlanner;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
-        private readonly ILogger<ToolsWorkflowService> _logger;
+        private readonly ILogger<ToolsOrchestrator> _logger;
 
-        public ToolsWorkflowService(
+        public ToolsOrchestrator(
             LauncherPaths paths,
             SavedataTransferPlanner savedataTransferPlanner,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
-            ILogger<ToolsWorkflowService> logger)
+            ILogger<ToolsOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _savedataTransferPlanner = savedataTransferPlanner ?? throw new ArgumentNullException(nameof(savedataTransferPlanner));

@@ -34,7 +34,7 @@ namespace LazyBootstrap.Shell
 
         private readonly LauncherPaths _paths = null!;
         private readonly SettingsView _settingsView = null!;
-        private readonly ToolsWorkflowService _toolsWorkflowService = null!;
+        private readonly ToolsView _toolsView = null!;
         private readonly UpdateView _updateView = null!;
 
         private DispatcherTimer _displayPulseTimer;
@@ -95,7 +95,7 @@ namespace LazyBootstrap.Shell
             EnvironmentScanService environmentScanService,
             SettingsView settingsView,
             SettingsState settingsState,
-            ToolsWorkflowService toolsWorkflowService,
+            ToolsView toolsView,
             UpdateView updateView,
             ISukiDialogManager dialogManager,
             ISukiToastManager toastManager,
@@ -111,7 +111,7 @@ namespace LazyBootstrap.Shell
             _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
             _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
-            _toolsWorkflowService = toolsWorkflowService ?? throw new ArgumentNullException(nameof(toolsWorkflowService));
+            _toolsView = toolsView ?? throw new ArgumentNullException(nameof(toolsView));
             _updateView = updateView ?? throw new ArgumentNullException(nameof(updateView));
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
             _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
@@ -135,6 +135,11 @@ namespace LazyBootstrap.Shell
             if (UpdatePageHost != null)
             {
                 UpdatePageHost.Content = _updateView;
+            }
+
+            if (ToolsPageHost != null)
+            {
+                ToolsPageHost.Content = _toolsView;
             }
 
             _uiInteractionService.AttachWindow(this);

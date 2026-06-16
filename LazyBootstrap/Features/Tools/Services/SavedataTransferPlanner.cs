@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
-namespace LazyBootstrap.Services.Savedata
+namespace LazyBootstrap.Features.Tools
 {
 
     public sealed class SavedataTransferPlanner

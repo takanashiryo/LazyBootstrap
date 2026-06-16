@@ -63,7 +63,7 @@ namespace LazyBootstrap.Services
             services.AddSingleton<DisplayWorkflowService>();
             services.AddSingleton<LaunchWorkflowService>();
             services.AddSingleton<SettingsOrchestrator>();
-            services.AddSingleton<ToolsWorkflowService>();
+            services.AddSingleton<ToolsOrchestrator>();
             services.AddSingleton<UpdateOrchestrator>();
             services.AddSingleton<EnvironmentScanService>();
 
@@ -76,6 +76,8 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<ILogger<SettingsView>>()));
             services.AddSingleton(provider => new UpdateView(
                 provider.GetRequiredService<UpdateOrchestrator>()));
+            services.AddSingleton(provider => new ToolsView(
+                provider.GetRequiredService<ToolsOrchestrator>()));
 
             // Shell window. MainWindow exposes an internal parameterised constructor that the
             // default DI constructor selection cannot see, so build it through an explicit
@@ -88,7 +90,7 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<EnvironmentScanService>(),
                 provider.GetRequiredService<SettingsView>(),
                 provider.GetRequiredService<SettingsState>(),
-                provider.GetRequiredService<ToolsWorkflowService>(),
+                provider.GetRequiredService<ToolsView>(),
                 provider.GetRequiredService<UpdateView>(),
                 provider.GetRequiredService<ISukiDialogManager>(),
                 provider.GetRequiredService<ISukiToastManager>(),

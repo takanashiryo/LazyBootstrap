@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 
-namespace LazyBootstrap.Services.Savedata
+namespace LazyBootstrap.Features.Tools
 {
     internal static class SavedataTransferOperations
     {
