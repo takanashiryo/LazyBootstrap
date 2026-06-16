@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using LazyBootstrap.Services.Config;
 using Microsoft.Extensions.Logging;
 
 namespace LazyBootstrap.Services.Shared

@@ -8,7 +8,7 @@ using System.Xml;
 using System.Xml.Linq;
 using LazyBootstrap.Services.Shared;
 
-namespace LazyBootstrap.Services.Config
+namespace LazyBootstrap.Features.Settings
 {
     public sealed class SpiceConfigFile
     {

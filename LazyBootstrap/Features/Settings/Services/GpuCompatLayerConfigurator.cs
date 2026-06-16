@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using LazyBootstrap.Services.Config;
 using LazyBootstrap.Services.Shared;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Settings
+namespace LazyBootstrap.Features.Settings
 {
 
     internal readonly record struct GpuCompatLayerRuntimeState(

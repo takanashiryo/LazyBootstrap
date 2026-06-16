@@ -10,7 +10,7 @@ using Avalonia.Controls.Notifications;
 using LazyBootstrap.Services.Launch;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Settings
+namespace LazyBootstrap.Features.Settings
 {
 
     public sealed class SettingsOrchestrator

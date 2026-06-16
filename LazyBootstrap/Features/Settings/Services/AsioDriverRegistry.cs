@@ -5,7 +5,7 @@ using System.Runtime.Versioning;
 using Microsoft.Win32;
 using NAudio.Wave.Asio;
 
-namespace LazyBootstrap.Services.Audio
+namespace LazyBootstrap.Features.Settings
 {
     internal static class AsioDriverRegistry
     {
