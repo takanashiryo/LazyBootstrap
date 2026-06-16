@@ -7,7 +7,7 @@ namespace LazyBootstrap.Views
     {
         private async void OnApplyUpdateClick(object sender, RoutedEventArgs e)
         {
-            await AppServices.UpdateWorkflow.ApplyUpdateFromUserSelectedArchiveAsync();
+            await _updateWorkflowService.ApplyUpdateFromUserSelectedArchiveAsync();
         }
     }
 }

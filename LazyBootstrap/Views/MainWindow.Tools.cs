@@ -16,21 +16,21 @@ namespace LazyBootstrap.Views
         }
 
         private async void OnClearCacheClick(object sender, RoutedEventArgs e) =>
-            await AppServices.ToolsWorkflow.ClearCacheAsync();
+            await _toolsWorkflowService.ClearCacheAsync();
         private async void OnAddFirewallRuleClick(object sender, RoutedEventArgs e) =>
-            await AppServices.ToolsWorkflow.AddFirewallRuleAsync();
+            await _toolsWorkflowService.AddFirewallRuleAsync();
         private async void OnOpenAudioPanelClick(object sender, RoutedEventArgs e) =>
-            await AppServices.ToolsWorkflow.OpenAudioPanelAsync();
+            await _toolsWorkflowService.OpenAudioPanelAsync();
         private async void OnInstallRuntimeClick(object sender, RoutedEventArgs e)
         {
-            await AppServices.ToolsWorkflow.InstallRuntimeAsync();
+            await _toolsWorkflowService.InstallRuntimeAsync();
         }
         private async void OnBackupSavedataClick(object sender, RoutedEventArgs e) =>
-            await AppServices.ToolsWorkflow.BackupSavedataAsync();
+            await _toolsWorkflowService.BackupSavedataAsync();
         private async void OnImportSavedataClick(object sender, RoutedEventArgs e) =>
-            await AppServices.ToolsWorkflow.ImportSavedataAsync();
+            await _toolsWorkflowService.ImportSavedataAsync();
         private async void OnMigrateSavedataClick(object sender, RoutedEventArgs e) =>
-            await AppServices.ToolsWorkflow.MigrateSavedataAsync();
+            await _toolsWorkflowService.MigrateSavedataAsync();
 
         private void OnWindowClosing(object sender, System.ComponentModel.CancelEventArgs e)
         {

@@ -17,6 +17,7 @@ using SukiUI.Controls;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 using Avalonia;
+using LazyBootstrap.Services.Update;
 
 namespace LazyBootstrap.Views
 {
@@ -34,6 +35,8 @@ namespace LazyBootstrap.Views
 
         private readonly LauncherPaths _paths = null!;
         private readonly SettingsWorkflowService _settingsWorkflowService = null!;
+        private readonly ToolsWorkflowService _toolsWorkflowService = null!;
+        private readonly UpdateWorkflowService _updateWorkflowService = null!;
 
         private DispatcherTimer _displayPulseTimer;
         private double _displayPulsePhase = 0d;
@@ -97,6 +100,8 @@ namespace LazyBootstrap.Views
             DisplayWorkflowService displayWorkflowService,
             EnvironmentScanService environmentScanService,
             SettingsWorkflowService settingsWorkflowService,
+            ToolsWorkflowService toolsWorkflowService,
+            UpdateWorkflowService updateWorkflowService,
             ISukiDialogManager dialogManager,
             ISukiToastManager toastManager,
             UiInteractionService uiInteractionService,
@@ -110,6 +115,8 @@ namespace LazyBootstrap.Views
             _displayWorkflowService = displayWorkflowService ?? throw new ArgumentNullException(nameof(displayWorkflowService));
             _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
             _settingsWorkflowService = settingsWorkflowService ?? throw new ArgumentNullException(nameof(settingsWorkflowService));
+            _toolsWorkflowService = toolsWorkflowService ?? throw new ArgumentNullException(nameof(toolsWorkflowService));
+            _updateWorkflowService = updateWorkflowService ?? throw new ArgumentNullException(nameof(updateWorkflowService));
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
             _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
