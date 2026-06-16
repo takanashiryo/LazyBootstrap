@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using LazyBootstrap.MediaUpdate;
-using LazyBootstrap.Services.Paths;
+using LazyBootstrap.Infrastructure.Paths;
 using LazyBootstrap.Services.Shell;
 using LazyBootstrap.Services.UI;
 using Microsoft.Extensions.Logging;

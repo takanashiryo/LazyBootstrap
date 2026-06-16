@@ -2,7 +2,7 @@ using System;
 using SystemEnvironment = System.Environment;
 using System.IO;
 
-namespace LazyBootstrap.Services.Paths
+namespace LazyBootstrap.Infrastructure.Paths
 {
 
     public sealed class LauncherPaths

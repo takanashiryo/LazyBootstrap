@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Security
+namespace LazyBootstrap.Infrastructure.Platform
 {
 
     public sealed class WindowsDefenderExclusionService

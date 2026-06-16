@@ -4,7 +4,7 @@ using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 
-namespace LazyBootstrap.Services.Network
+namespace LazyBootstrap.Infrastructure.Platform
 {
     internal static class NetworkAdapterDiscovery
     {

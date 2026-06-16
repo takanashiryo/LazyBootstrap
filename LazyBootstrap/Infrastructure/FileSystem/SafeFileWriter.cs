@@ -2,7 +2,7 @@ using System;
 using System.IO;
 using System.Text;
 
-namespace LazyBootstrap.Services.Shared
+namespace LazyBootstrap.Infrastructure.FileSystem
 {
     internal static class SafeFileWriter
     {

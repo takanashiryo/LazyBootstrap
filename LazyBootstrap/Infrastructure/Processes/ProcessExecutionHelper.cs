@@ -3,7 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 
-namespace LazyBootstrap.Services.Processes
+namespace LazyBootstrap.Infrastructure.Processes
 {
     internal static class ProcessExecutionHelper
     {
@@ -20,7 +20,7 @@ namespace LazyBootstrap.Services.Processes
                     Verb = "runas"
                 };
 
-                using var process = Process.Start(startInfo);
+                using var process = System.Diagnostics.Process.Start(startInfo);
                 if (process == null)
                 {
                     return -1;
@@ -48,7 +48,7 @@ namespace LazyBootstrap.Services.Processes
                 CreateNoWindow = true
             };
 
-            using var process = Process.Start(startInfo);
+            using var process = System.Diagnostics.Process.Start(startInfo);
             if (process == null)
             {
                 return (-1, string.Empty, "进程创建失败");
@@ -86,7 +86,7 @@ namespace LazyBootstrap.Services.Processes
 
         public static void OpenLogFolderAndSelectFile(string logPath)
         {
-            Process.Start(new ProcessStartInfo
+            System.Diagnostics.Process.Start(new ProcessStartInfo
             {
                 FileName = "explorer.exe",
                 Arguments = $"/select,\"{logPath}\"",
@@ -96,7 +96,7 @@ namespace LazyBootstrap.Services.Processes
 
         public static void OpenControlPanel(string arguments)
         {
-            Process.Start(new ProcessStartInfo
+            System.Diagnostics.Process.Start(new ProcessStartInfo
             {
                 FileName = "control.exe",
                 Arguments = arguments,

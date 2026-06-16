@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Serilog;
 using LazyBootstrap.Models;
-using LazyBootstrap.Services.Paths;
+using LazyBootstrap.Infrastructure.Paths;
 
 namespace LazyBootstrap.Services
 {
