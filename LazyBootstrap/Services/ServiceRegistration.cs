@@ -68,6 +68,14 @@ namespace LazyBootstrap.Services
             services.AddSingleton<UpdateWorkflowService>();
             services.AddSingleton<EnvironmentScanService>();
 
+            // Feature shared state and views.
+            services.AddSingleton<SettingsState>();
+            services.AddSingleton(provider => new SettingsView(
+                provider.GetRequiredService<SettingsState>(),
+                provider.GetRequiredService<SettingsOrchestrator>(),
+                provider.GetRequiredService<AppShellState>(),
+                provider.GetRequiredService<ILogger<SettingsView>>()));
+
             // Shell window. MainWindow exposes an internal parameterised constructor that the
             // default DI constructor selection cannot see, so build it through an explicit
             // same-assembly factory.
@@ -77,7 +85,8 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<LaunchWorkflowService>(),
                 provider.GetRequiredService<DisplayWorkflowService>(),
                 provider.GetRequiredService<EnvironmentScanService>(),
-                provider.GetRequiredService<SettingsOrchestrator>(),
+                provider.GetRequiredService<SettingsView>(),
+                provider.GetRequiredService<SettingsState>(),
                 provider.GetRequiredService<ToolsWorkflowService>(),
                 provider.GetRequiredService<UpdateWorkflowService>(),
                 provider.GetRequiredService<ISukiDialogManager>(),

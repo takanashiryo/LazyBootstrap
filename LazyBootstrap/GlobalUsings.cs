@@ -2,6 +2,7 @@ global using LazyBootstrap.Models;
 global using LazyBootstrap.Services;
 global using Microsoft.Extensions.Logging;
 global using LazyBootstrap.Features.Settings;
+global using LazyBootstrap.Features.Settings.Views;
 global using LazyBootstrap.Services.Display;
 global using LazyBootstrap.Services.Environment;
 global using LazyBootstrap.Services.Launch;
