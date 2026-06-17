@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using LazyBootstrap.Services.Environment;
+using LazyBootstrap.Features.Diagnostic.Services;
 
 namespace LazyBootstrap.Models
 {

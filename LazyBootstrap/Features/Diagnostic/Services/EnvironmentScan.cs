@@ -7,7 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace LazyBootstrap.Services.Environment
+namespace LazyBootstrap.Features.Diagnostic.Services
 {
     public static class EnvironmentScan
     {

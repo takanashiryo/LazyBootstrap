@@ -8,7 +8,7 @@ using System.Xml.Linq;
 
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Environment
+namespace LazyBootstrap.Features.Diagnostic.Services
 {
 
     public sealed class EnvironmentScanService
