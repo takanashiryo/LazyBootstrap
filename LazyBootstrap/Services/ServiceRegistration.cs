@@ -76,6 +76,12 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<LaunchOrchestrator>(),
                 provider.GetRequiredService<SettingsState>(),
                 provider.GetRequiredService<DisplayConfigurationSnapshot>()));
+            services.AddSingleton(provider => new DisplayView(
+                provider.GetRequiredService<DisplayConfigurationSnapshot>(),
+                provider.GetRequiredService<DisplayOrchestrator>(),
+                provider.GetRequiredService<SettingsState>(),
+                provider.GetRequiredService<UiInteractionService>(),
+                provider.GetRequiredService<ILogger<DisplayView>>()));
             services.AddSingleton(provider => new SettingsView(
                 provider.GetRequiredService<SettingsState>(),
                 provider.GetRequiredService<SettingsOrchestrator>(),
@@ -92,12 +98,10 @@ namespace LazyBootstrap.Services
             services.AddSingleton(provider => new Shell.MainWindow(
                 provider.GetRequiredService<AppShellState>(),
                 provider.GetRequiredService<LauncherPaths>(),
-                provider.GetRequiredService<DisplayConfigurationSnapshot>(),
-                provider.GetRequiredService<DisplayOrchestrator>(),
                 provider.GetRequiredService<EnvironmentScanService>(),
                 provider.GetRequiredService<LaunchView>(),
+                provider.GetRequiredService<DisplayView>(),
                 provider.GetRequiredService<SettingsView>(),
-                provider.GetRequiredService<SettingsState>(),
                 provider.GetRequiredService<ToolsView>(),
                 provider.GetRequiredService<UpdateView>(),
                 provider.GetRequiredService<ISukiDialogManager>(),

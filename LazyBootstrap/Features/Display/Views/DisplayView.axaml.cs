@@ -7,10 +7,64 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 
-namespace LazyBootstrap.Shell
+namespace LazyBootstrap.Features.Display.Views
 {
-    public partial class MainWindow
+    public partial class DisplayView : UserControl
     {
+        private readonly DisplayConfigurationSnapshot _displayState = null!;
+        private readonly DisplayOrchestrator _displayOrchestrator = null!;
+        private readonly SettingsState _settingsState = null!;
+        private readonly UiInteractionService _uiInteractionService = null!;
+        private readonly ILogger<DisplayView> _logger = null!;
+
+        private DispatcherTimer _displayPulseTimer;
+        private double _displayPulsePhase = 0d;
+        private bool _isUpdatingDisplayLayoutUi;
+        private bool _isDisplayLayoutInitialized;
+        private bool _isLoadingSettings;
+
+        public DisplayView()
+        {
+            InitializeComponent();
+        }
+
+        public DisplayView(
+            DisplayConfigurationSnapshot displayState,
+            DisplayOrchestrator displayOrchestrator,
+            SettingsState settingsState,
+            UiInteractionService uiInteractionService,
+            ILogger<DisplayView> logger)
+        {
+            InitializeComponent();
+
+            _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
+            _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
+            _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
+            _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+
+            InitializeExitRestoreBinding();
+        }
+
+        /// <summary>Warms up the deferred display configuration options (invoked during the startup sequence).</summary>
+        public Task WarmDeferredAsync()
+            => _displayOrchestrator.WarmDeferredAsync(_displayState);
+
+        private void InitializeExitRestoreBinding()
+        {
+            if (ExitRestoreToggleSwitch != null)
+            {
+                ExitRestoreToggleSwitch.IsCheckedChanged += async (_, _) =>
+                {
+                    if (_isLoadingSettings) return;
+                    bool enabled = ExitRestoreToggleSwitch.IsChecked == true;
+                    _displayState.ExitRestore = enabled;
+                    _settingsState.ExitRestore = enabled;
+                    await _displayOrchestrator.PersistGeneralSettingsAsync(_displayState);
+                };
+            }
+        }
+
         private void OnSelectMainDisplayClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             _displayState.SelectMainDisplay();
@@ -40,7 +94,7 @@ namespace LazyBootstrap.Shell
             ApplyDisplayStateToUi();
         }
 
-        private void InitializeDisplayLayoutControls()
+        public void InitializeLayoutControls()
         {
             if (!_isDisplayLayoutInitialized)
             {

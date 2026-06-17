@@ -23,29 +23,22 @@ namespace LazyBootstrap.Shell
     public partial class MainWindow : SukiWindow
     {
         private readonly AppShellState _shellStateService = null!;
-        private readonly DisplayOrchestrator _displayOrchestrator = null!;
         private readonly EnvironmentScanService _environmentScanService = null!;
-        private readonly SettingsState _settingsState = null!;
-        private readonly DisplayConfigurationSnapshot _displayState = null!;
         private readonly EnvironmentScanPresentation _infoState = new();
-        private bool _isLoadingSettings;
 
         private readonly LauncherPaths _paths = null!;
         private readonly LaunchView _launchView = null!;
+        private readonly DisplayView _displayView = null!;
         private readonly SettingsView _settingsView = null!;
         private readonly ToolsView _toolsView = null!;
         private readonly UpdateView _updateView = null!;
 
-        private DispatcherTimer _displayPulseTimer;
-        private double _displayPulsePhase = 0d;
         private readonly ISukiDialogManager _dialogManager = null!;
         private readonly ISukiToastManager _toastManager = null!;
         private readonly UiInteractionService _uiInteractionService = null!;
         private readonly ILogger<MainWindow> _logger = null!;
 
-        private bool _isUpdatingDisplayLayoutUi;
         private bool _startupSequenceStarted;
-        private bool _isDisplayLayoutInitialized;
         private bool _isWindowCloseAnimationRunning;
         private bool _allowImmediateWindowClose;
         private bool _pendingEnvironmentScanErrorDialog;
@@ -86,12 +79,10 @@ namespace LazyBootstrap.Shell
         internal MainWindow(
             AppShellState shellStateService,
             LauncherPaths paths,
-            DisplayConfigurationSnapshot displayState,
-            DisplayOrchestrator displayOrchestrator,
             EnvironmentScanService environmentScanService,
             LaunchView launchView,
+            DisplayView displayView,
             SettingsView settingsView,
-            SettingsState settingsState,
             ToolsView toolsView,
             UpdateView updateView,
             ISukiDialogManager dialogManager,
@@ -103,12 +94,10 @@ namespace LazyBootstrap.Shell
 
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
-            _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
             _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
             _launchView = launchView ?? throw new ArgumentNullException(nameof(launchView));
+            _displayView = displayView ?? throw new ArgumentNullException(nameof(displayView));
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
-            _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
             _toolsView = toolsView ?? throw new ArgumentNullException(nameof(toolsView));
             _updateView = updateView ?? throw new ArgumentNullException(nameof(updateView));
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
@@ -135,6 +124,11 @@ namespace LazyBootstrap.Shell
                 SettingsPageHost.Content = _settingsView;
             }
 
+            if (DisplayPageHost != null)
+            {
+                DisplayPageHost.Content = _displayView;
+            }
+
             if (UpdatePageHost != null)
             {
                 UpdatePageHost.Content = _updateView;
@@ -154,9 +148,7 @@ namespace LazyBootstrap.Shell
                 MainSideMenu.SelectionChanged += OnMainSideMenuSelectionChanged;
             }
 
-            _isLoadingSettings = true;
             InitializeCustomComponents();
-            _isLoadingSettings = false;
             _logger.LogInformation("Main window initialized for base directory {BaseDirectory}.", _paths.BaseDir);
         }
 
@@ -380,11 +372,11 @@ namespace LazyBootstrap.Shell
 
                 UpdateStatusText("正在预热页面内容...");
                 await _settingsView.WarmDeferredAsync();
-                await _displayOrchestrator.WarmDeferredAsync(_displayState);
+                await _displayView.WarmDeferredAsync();
                 await _environmentScanService.InitializeInfoAsync(_infoState);
                 await _environmentScanService.RunScanAsync(_infoState);
                 ApplyInfoStateToUi();
-                InitializeDisplayLayoutControls();
+                _displayView.InitializeLayoutControls();
                 RefreshEnvironmentOverviewChrome();
                 _pendingEnvironmentScanErrorDialog = _infoState.HasEnvironmentScanErrors;
             }
@@ -552,23 +544,7 @@ namespace LazyBootstrap.Shell
 
         private void InitializeCustomComponents()
         {
-            InitializeExitRestoreBinding();
             FinalizeInitialViewState();
-        }
-
-        private void InitializeExitRestoreBinding()
-        {
-            if (ExitRestoreToggleSwitch != null)
-            {
-                ExitRestoreToggleSwitch.IsCheckedChanged += async (_, _) =>
-                {
-                    if (_isLoadingSettings) return;
-                    bool enabled = ExitRestoreToggleSwitch.IsChecked == true;
-                    _displayState.ExitRestore = enabled;
-                    _settingsState.ExitRestore = enabled;
-                    await _displayOrchestrator.PersistGeneralSettingsAsync(_displayState);
-                };
-            }
         }
 
         private void FinalizeInitialViewState()
