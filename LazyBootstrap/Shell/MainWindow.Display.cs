@@ -154,9 +154,9 @@ namespace LazyBootstrap.Shell
                             bool isDualDisplay = DisplayModeComboBox.SelectedIndex == 1;
                             _displayState.IsDualDisplay = isDualDisplay;
 
-                            if (!isDualDisplay && _displayState.SelectedTarget == global::LazyBootstrap.Models.DisplaySelectionTarget.Sub)
+                            if (!isDualDisplay && _displayState.SelectedTarget == DisplaySelectionTarget.Sub)
                             {
-                                _displayState.SelectedTarget = global::LazyBootstrap.Models.DisplaySelectionTarget.None;
+                                _displayState.SelectedTarget = DisplaySelectionTarget.None;
                                 _displayState.ShowNoScreenSelected = true;
                                 _displayState.ShowMainScreenConfig = false;
                                 _displayState.ShowSubScreenConfig = false;
