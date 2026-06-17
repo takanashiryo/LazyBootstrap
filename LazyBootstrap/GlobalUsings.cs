@@ -13,6 +13,7 @@ global using LazyBootstrap.Features.Launch.Views;
 global using LazyBootstrap.Features.Display;
 global using LazyBootstrap.Features.Display.Services;
 global using LazyBootstrap.Features.Display.Views;
+global using LazyBootstrap.Features.Diagnostic;
 global using LazyBootstrap.Features.Diagnostic.Services;
 global using LazyBootstrap.Infrastructure.Platform;
 global using LazyBootstrap.Infrastructure.Paths;
