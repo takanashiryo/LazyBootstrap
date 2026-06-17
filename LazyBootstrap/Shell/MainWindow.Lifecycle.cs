@@ -38,7 +38,7 @@ namespace LazyBootstrap.Shell
             AsioDriverRegistry.DisposeControlPanelDrivers();
             try
             {
-                _launchOrchestrator.HandleClosingAsync(_displayState).ConfigureAwait(false).GetAwaiter().GetResult();
+                _launchView.HandleClosingAsync().ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {

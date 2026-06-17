@@ -2,16 +2,70 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 
-namespace LazyBootstrap.Shell
+namespace LazyBootstrap.Features.Launch.Views
 {
-    public partial class MainWindow
+    public partial class LaunchView : UserControl, ILaunchWorkflowObserver
     {
+        private readonly LaunchState _launchState = null!;
+        private readonly LaunchOrchestrator _launchOrchestrator = null!;
+        private readonly SettingsState _settingsState = null!;
+        private readonly DisplayConfigurationSnapshot _displayState = null!;
+
+        private bool _isLaunchLogVisible;
+        private bool _isLaunchLogAppendAnimating;
+        private bool _isLaunchLogAppendAnimationPending;
+
+        private static readonly Color LaunchMessageErrorStartColor = Color.Parse("#FFFF0000");
+        private static readonly Color LaunchMessageWarningStartColor = Color.Parse("#FFFFD200");
+        private static readonly Color LaunchMessageBorderEndColor = Color.Parse("#FFFFFFFF");
+        private static readonly TimeSpan LaunchMessageOverlayAnimationDuration = TimeSpan.FromSeconds(1.4);
+
+        private readonly SolidColorBrush _launchMessageOverlayBorderBrush = new SolidColorBrush(LaunchMessageErrorStartColor);
+        private DispatcherTimer _launchMessageOverlayAnimationTimer;
+        private Stopwatch _launchMessageOverlayAnimationStopwatch;
+        private Color _launchMessageOverlayStartColor = LaunchMessageErrorStartColor;
+
+        public LaunchView()
+        {
+            InitializeComponent();
+        }
+
+        public LaunchView(
+            LaunchState launchState,
+            LaunchOrchestrator launchOrchestrator,
+            SettingsState settingsState,
+            DisplayConfigurationSnapshot displayState)
+        {
+            InitializeComponent();
+
+            _launchState = launchState ?? throw new ArgumentNullException(nameof(launchState));
+            _launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
+            _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
+            _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
+
+            HideLaunchLogArea(true);
+            InitializeLaunchControls();
+            Unloaded += OnViewUnloaded;
+        }
+
+        /// <summary>Initializes the launch workflow for the startup sequence (invoked by the shell before showing).</summary>
+        public Task InitializeStartupAsync()
+            => _launchOrchestrator.InitializeStartupAsync(_launchState, _displayState, this);
+
+        /// <summary>Runs the launch-related cleanup that must complete before the window closes.</summary>
+        public Task HandleClosingAsync()
+            => _launchOrchestrator.HandleClosingAsync(_displayState);
+
+        private void OnViewUnloaded(object sender, RoutedEventArgs e)
+            => ReleaseLaunchControls();
+
         private void OnToggleLaunchLogClick(object sender, RoutedEventArgs e)
             => _ = _launchOrchestrator.ToggleLaunchLogAsync(_launchState, this);
 
@@ -39,16 +93,6 @@ namespace LazyBootstrap.Shell
                 new LaunchRequest(_settingsState, _displayState, asphyxiaDevOnly),
                 this);
         }
-
-        private static readonly Color LaunchMessageErrorStartColor = Color.Parse("#FFFF0000");
-        private static readonly Color LaunchMessageWarningStartColor = Color.Parse("#FFFFD200");
-        private static readonly Color LaunchMessageBorderEndColor = Color.Parse("#FFFFFFFF");
-        private static readonly TimeSpan LaunchMessageOverlayAnimationDuration = TimeSpan.FromSeconds(1.4);
-
-        private readonly SolidColorBrush _launchMessageOverlayBorderBrush = new SolidColorBrush(LaunchMessageErrorStartColor);
-        private DispatcherTimer _launchMessageOverlayAnimationTimer;
-        private Stopwatch _launchMessageOverlayAnimationStopwatch;
-        private Color _launchMessageOverlayStartColor = LaunchMessageErrorStartColor;
 
         private void InitializeLaunchControls()
         {
@@ -464,6 +508,13 @@ namespace LazyBootstrap.Shell
                 NotificationType.Warning => LaunchMessageWarningStartColor,
                 _ => LaunchMessageErrorStartColor
             };
+        }
+
+        private static double EaseInOutCubic(double progress)
+        {
+            return progress < 0.5d
+                ? 4d * progress * progress * progress
+                : 1d - Math.Pow(-2d * progress + 2d, 3d) / 2d;
         }
 
         private static Color InterpolateColor(Color from, Color to, double progress)

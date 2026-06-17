@@ -20,19 +20,18 @@ using Avalonia;
 
 namespace LazyBootstrap.Shell
 {
-    public partial class MainWindow : SukiWindow, ILaunchWorkflowObserver
+    public partial class MainWindow : SukiWindow
     {
         private readonly AppShellState _shellStateService = null!;
-        private readonly LaunchOrchestrator _launchOrchestrator = null!;
         private readonly DisplayWorkflowService _displayWorkflowService = null!;
         private readonly EnvironmentScanService _environmentScanService = null!;
         private readonly SettingsState _settingsState = null!;
-        private readonly DisplayConfigurationSnapshot _displayState = new();
-        private readonly LaunchState _launchState = new();
+        private readonly DisplayConfigurationSnapshot _displayState = null!;
         private readonly EnvironmentScanPresentation _infoState = new();
         private bool _isLoadingSettings;
 
         private readonly LauncherPaths _paths = null!;
+        private readonly LaunchView _launchView = null!;
         private readonly SettingsView _settingsView = null!;
         private readonly ToolsView _toolsView = null!;
         private readonly UpdateView _updateView = null!;
@@ -44,9 +43,6 @@ namespace LazyBootstrap.Shell
         private readonly UiInteractionService _uiInteractionService = null!;
         private readonly ILogger<MainWindow> _logger = null!;
 
-        private bool _isLaunchLogVisible;
-        private bool _isLaunchLogAppendAnimating;
-        private bool _isLaunchLogAppendAnimationPending;
         private bool _isUpdatingDisplayLayoutUi;
         private bool _startupSequenceStarted;
         private bool _isDisplayLayoutInitialized;
@@ -90,9 +86,10 @@ namespace LazyBootstrap.Shell
         internal MainWindow(
             AppShellState shellStateService,
             LauncherPaths paths,
-            LaunchOrchestrator launchOrchestrator,
+            DisplayConfigurationSnapshot displayState,
             DisplayWorkflowService displayWorkflowService,
             EnvironmentScanService environmentScanService,
+            LaunchView launchView,
             SettingsView settingsView,
             SettingsState settingsState,
             ToolsView toolsView,
@@ -106,9 +103,10 @@ namespace LazyBootstrap.Shell
 
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
+            _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
             _displayWorkflowService = displayWorkflowService ?? throw new ArgumentNullException(nameof(displayWorkflowService));
             _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
+            _launchView = launchView ?? throw new ArgumentNullException(nameof(launchView));
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
             _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
             _toolsView = toolsView ?? throw new ArgumentNullException(nameof(toolsView));
@@ -125,6 +123,11 @@ namespace LazyBootstrap.Shell
             if (ToastHost != null)
             {
                 ToastHost.Manager = _toastManager;
+            }
+
+            if (LaunchPageHost != null)
+            {
+                LaunchPageHost.Content = _launchView;
             }
 
             if (SettingsPageHost != null)
@@ -153,8 +156,6 @@ namespace LazyBootstrap.Shell
 
             _isLoadingSettings = true;
             InitializeCustomComponents();
-            HideLaunchLogArea(true);
-            InitializeLaunchControls();
             _isLoadingSettings = false;
             _logger.LogInformation("Main window initialized for base directory {BaseDirectory}.", _paths.BaseDir);
         }
@@ -162,13 +163,11 @@ namespace LazyBootstrap.Shell
         private void UpdateStatusText(string statusText)
         {
             _shellStateService.StatusText = statusText ?? string.Empty;
-            _launchState.StateText = _shellStateService.StatusText;
         }
 
         private void OnWindowClosed(object sender, EventArgs e)
         {
             Opened -= OnWindowOpened;
-            ReleaseLaunchControls();
             _shellStateService.PropertyChanged -= OnShellStatePropertyChanged;
             if (MainSideMenu != null)
             {
@@ -186,12 +185,6 @@ namespace LazyBootstrap.Shell
             }
 
             string propertyName = e?.PropertyName ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(AppShellState.StatusText), StringComparison.Ordinal))
-            {
-                _launchState.StateText = _shellStateService.StatusText;
-            }
-
             if (string.IsNullOrWhiteSpace(propertyName)
                 || string.Equals(propertyName, nameof(AppShellState.IsGlobalBusy), StringComparison.Ordinal)
                 || string.Equals(propertyName, nameof(AppShellState.GlobalBusyText), StringComparison.Ordinal))
@@ -383,7 +376,7 @@ namespace LazyBootstrap.Shell
             {
                 UpdateStatusText("正在读取启动配置...");
                 await _settingsView.InitializeStartupAsync();
-                await _launchOrchestrator.InitializeStartupAsync(_launchState, _displayState, this);
+                await _launchView.InitializeStartupAsync();
 
                 UpdateStatusText("正在预热页面内容...");
                 await _settingsView.WarmDeferredAsync();
