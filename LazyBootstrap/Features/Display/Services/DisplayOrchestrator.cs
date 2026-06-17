@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 namespace LazyBootstrap.Features.Display.Services
 {
 
-    public sealed class DisplayWorkflowService
+    public sealed class DisplayOrchestrator
     {
         private const string MainMonitorOptionName = "mainmonitor";
         private const string SubMonitorOptionName = "sdvxsubmonitor";
@@ -22,16 +22,16 @@ namespace LazyBootstrap.Features.Display.Services
         private readonly WindowsDisplayConfigurationService _displayConfigurationService;
         private readonly DisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly ILogger<DisplayWorkflowService> _logger;
+        private readonly ILogger<DisplayOrchestrator> _logger;
 
-        public DisplayWorkflowService(
+        public DisplayOrchestrator(
             ConfigHandler configHandler,
             LauncherPaths paths,
             SpiceConfigFile spiceConfigFileService,
             WindowsDisplayConfigurationService displayConfigurationService,
             DisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
             UiInteractionService uiInteractionService,
-            ILogger<DisplayWorkflowService> logger)
+            ILogger<DisplayOrchestrator> logger)
         {
             _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));

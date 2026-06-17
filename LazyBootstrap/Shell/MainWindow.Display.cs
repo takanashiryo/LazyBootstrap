@@ -25,18 +25,18 @@ namespace LazyBootstrap.Shell
 
         private async void OnOpenTouchPanelClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            await _displayWorkflowService.OpenTouchPanelAsync();
+            await _displayOrchestrator.OpenTouchPanelAsync();
         }
 
         private async void OnPreviewDisplaySettingsClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            await _displayWorkflowService.PreviewDisplaySettingsAsync(_displayState);
+            await _displayOrchestrator.PreviewDisplaySettingsAsync(_displayState);
             ApplyDisplayStateToUi();
         }
 
         private async Task HandleDisplayConfigurationChangedAsync(bool refreshMainOptions, bool refreshSubOptions)
         {
-            await _displayWorkflowService.HandleConfigurationChangedAsync(_displayState, refreshMainOptions, refreshSubOptions);
+            await _displayOrchestrator.HandleConfigurationChangedAsync(_displayState, refreshMainOptions, refreshSubOptions);
             ApplyDisplayStateToUi();
         }
 
@@ -207,7 +207,7 @@ namespace LazyBootstrap.Shell
             try
             {
                 updateState?.Invoke();
-                await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
+                await _displayOrchestrator.PersistGeneralSettingsAsync(_displayState);
                 ApplyDisplayStateToUi();
             }
             catch (Exception ex)

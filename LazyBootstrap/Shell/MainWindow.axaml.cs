@@ -23,7 +23,7 @@ namespace LazyBootstrap.Shell
     public partial class MainWindow : SukiWindow
     {
         private readonly AppShellState _shellStateService = null!;
-        private readonly DisplayWorkflowService _displayWorkflowService = null!;
+        private readonly DisplayOrchestrator _displayOrchestrator = null!;
         private readonly EnvironmentScanService _environmentScanService = null!;
         private readonly SettingsState _settingsState = null!;
         private readonly DisplayConfigurationSnapshot _displayState = null!;
@@ -87,7 +87,7 @@ namespace LazyBootstrap.Shell
             AppShellState shellStateService,
             LauncherPaths paths,
             DisplayConfigurationSnapshot displayState,
-            DisplayWorkflowService displayWorkflowService,
+            DisplayOrchestrator displayOrchestrator,
             EnvironmentScanService environmentScanService,
             LaunchView launchView,
             SettingsView settingsView,
@@ -104,7 +104,7 @@ namespace LazyBootstrap.Shell
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
-            _displayWorkflowService = displayWorkflowService ?? throw new ArgumentNullException(nameof(displayWorkflowService));
+            _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
             _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
             _launchView = launchView ?? throw new ArgumentNullException(nameof(launchView));
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
@@ -380,7 +380,7 @@ namespace LazyBootstrap.Shell
 
                 UpdateStatusText("正在预热页面内容...");
                 await _settingsView.WarmDeferredAsync();
-                await _displayWorkflowService.WarmDeferredAsync(_displayState);
+                await _displayOrchestrator.WarmDeferredAsync(_displayState);
                 await _environmentScanService.InitializeInfoAsync(_infoState);
                 await _environmentScanService.RunScanAsync(_infoState);
                 ApplyInfoStateToUi();
@@ -566,7 +566,7 @@ namespace LazyBootstrap.Shell
                     bool enabled = ExitRestoreToggleSwitch.IsChecked == true;
                     _displayState.ExitRestore = enabled;
                     _settingsState.ExitRestore = enabled;
-                    await _displayWorkflowService.PersistGeneralSettingsAsync(_displayState);
+                    await _displayOrchestrator.PersistGeneralSettingsAsync(_displayState);
                 };
             }
         }

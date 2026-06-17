@@ -60,7 +60,7 @@ namespace LazyBootstrap.Services
             services.AddSingleton<UiInteractionService>();
 
             // Orchestrators (feature workflow coordinators).
-            services.AddSingleton<DisplayWorkflowService>();
+            services.AddSingleton<DisplayOrchestrator>();
             services.AddSingleton<LaunchOrchestrator>();
             services.AddSingleton<SettingsOrchestrator>();
             services.AddSingleton<ToolsOrchestrator>();
@@ -93,7 +93,7 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<AppShellState>(),
                 provider.GetRequiredService<LauncherPaths>(),
                 provider.GetRequiredService<DisplayConfigurationSnapshot>(),
-                provider.GetRequiredService<DisplayWorkflowService>(),
+                provider.GetRequiredService<DisplayOrchestrator>(),
                 provider.GetRequiredService<EnvironmentScanService>(),
                 provider.GetRequiredService<LaunchView>(),
                 provider.GetRequiredService<SettingsView>(),

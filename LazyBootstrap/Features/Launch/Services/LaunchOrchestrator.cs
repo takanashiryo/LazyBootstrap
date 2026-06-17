@@ -26,7 +26,7 @@ namespace LazyBootstrap.Features.Launch.Services
 
         private readonly LauncherPaths _paths;
         private readonly GameProcessTracker _gameProcessTracker;
-        private readonly DisplayWorkflowService _displayWorkflowService;
+        private readonly DisplayOrchestrator _displayOrchestrator;
         private readonly WindowsDefenderExclusionService _windowsDefenderExclusionService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
@@ -45,7 +45,7 @@ namespace LazyBootstrap.Features.Launch.Services
         public LaunchOrchestrator(
             LauncherPaths paths,
             GameProcessTracker gameProcessTracker,
-            DisplayWorkflowService displayWorkflowService,
+            DisplayOrchestrator displayOrchestrator,
             WindowsDefenderExclusionService windowsDefenderExclusionService,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
@@ -53,7 +53,7 @@ namespace LazyBootstrap.Features.Launch.Services
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _gameProcessTracker = gameProcessTracker ?? throw new ArgumentNullException(nameof(gameProcessTracker));
-            _displayWorkflowService = displayWorkflowService ?? throw new ArgumentNullException(nameof(displayWorkflowService));
+            _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
             _windowsDefenderExclusionService = windowsDefenderExclusionService ?? throw new ArgumentNullException(nameof(windowsDefenderExclusionService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
@@ -266,11 +266,11 @@ namespace LazyBootstrap.Features.Launch.Services
                     if (display.Displays.Count == 0)
                     {
                         AppendLaunchOutput(launchState, "正在准备显示器配置...");
-                        await _displayWorkflowService.WarmDeferredAsync(display);
+                        await _displayOrchestrator.WarmDeferredAsync(display);
                     }
 
                     AppendLaunchOutput(launchState, "正在应用显示器配置...");
-                    bool applySucceeded = _displayWorkflowService.TryApplyForLaunch(display, out var restoreStates, out var displayMessages);
+                    bool applySucceeded = _displayOrchestrator.TryApplyForLaunch(display, out var restoreStates, out var displayMessages);
                     _logger.LogInformation(
                         "Display configuration apply for launch completed. Succeeded={Succeeded}, RestoreStateCount={RestoreStateCount}, MessageCount={MessageCount}",
                         applySucceeded,
@@ -435,7 +435,7 @@ namespace LazyBootstrap.Features.Launch.Services
                 {
                     AppendLaunchOutput(launchState, "启动未完成，正在恢复显示器设置...");
                     var restoreMessages = new List<string>();
-                    int restored = _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+                    int restored = _displayOrchestrator.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
                     _logger.LogInformation("Display settings restored after incomplete launch. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
                     AppendLaunchOutput(launchState, restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。", restored > 0 ? NotificationType.Information : NotificationType.Warning);
                     foreach (var restoreMessage in restoreMessages)
@@ -493,7 +493,7 @@ namespace LazyBootstrap.Features.Launch.Services
             if (display?.ExitRestore == true && _displayRestoreStates.Count > 0)
             {
                 var restoreMessages = new List<string>();
-                int restored = _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+                int restored = _displayOrchestrator.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
                 _logger.LogInformation("Display settings restored during window close. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
             }
 
@@ -700,7 +700,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     && _displayRestoreStates.Count > 0)
                 {
                     var restoreMessages = new List<string>();
-                    int restored = _displayWorkflowService.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+                    int restored = _displayOrchestrator.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
                     _logger.LogInformation("Display settings restored after game exit. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
                     AppendLaunchOutput(_launchState, restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。");
                     foreach (var restoreMessage in restoreMessages)
