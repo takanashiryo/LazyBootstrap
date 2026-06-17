@@ -1,6 +1,5 @@
 using System;
 using Avalonia.Interactivity;
-using LazyBootstrap.Services;
 
 namespace LazyBootstrap.Shell
 {

@@ -4,7 +4,7 @@ using Serilog;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
 
-namespace LazyBootstrap.Services
+namespace LazyBootstrap.Infrastructure.DependencyInjection
 {
     /// <summary>
     /// Composition root for the dependency-injection container. Registers every service

@@ -1,5 +1,4 @@
 global using LazyBootstrap.Models;
-global using LazyBootstrap.Services;
 global using Microsoft.Extensions.Logging;
 global using LazyBootstrap.Features.Settings;
 global using LazyBootstrap.Features.Settings.Views;
@@ -21,6 +20,8 @@ global using LazyBootstrap.Infrastructure.Paths;
 global using LazyBootstrap.Infrastructure.Processes;
 global using LazyBootstrap.Infrastructure.FileSystem;
 global using LazyBootstrap.Infrastructure.Serialization;
+global using LazyBootstrap.Infrastructure.DependencyInjection;
+global using LazyBootstrap.Infrastructure.Logging;
 global using LazyBootstrap.Shared.Extensions;
 global using LazyBootstrap.Shell;
 global using static LazyBootstrap.Shared.Controls.ControlHelpers;

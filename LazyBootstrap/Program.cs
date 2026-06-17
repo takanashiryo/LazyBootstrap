@@ -1,4 +1,3 @@
-using LazyBootstrap.Services;
 using System;
 using Avalonia;
 using Microsoft.Extensions.DependencyInjection;

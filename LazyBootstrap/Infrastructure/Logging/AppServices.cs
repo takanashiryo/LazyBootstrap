@@ -7,7 +7,7 @@ using Serilog;
 using LazyBootstrap.Models;
 using LazyBootstrap.Infrastructure.Paths;
 
-namespace LazyBootstrap.Services
+namespace LazyBootstrap.Infrastructure.Logging
 {
     /// <summary>
     /// Startup bootstrap helpers: Serilog configuration, runtime-context resolution and
