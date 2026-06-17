@@ -1,4 +1,3 @@
-global using LazyBootstrap.Models;
 global using Microsoft.Extensions.Logging;
 global using LazyBootstrap.Features.Settings;
 global using LazyBootstrap.Features.Settings.Views;
