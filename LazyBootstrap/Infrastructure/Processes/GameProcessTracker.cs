@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 
-namespace LazyBootstrap.Services.Processes
+namespace LazyBootstrap.Infrastructure.Processes
 {
 
     public sealed class GameProcessTracker
