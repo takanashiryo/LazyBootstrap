@@ -5,7 +5,7 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
-namespace LazyBootstrap.Services.Display
+namespace LazyBootstrap.Features.Display.Services
 {
 
     public sealed class DisplayDiscoveryResult

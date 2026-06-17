@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace LazyBootstrap.Services.Display
+namespace LazyBootstrap.Features.Display.Services
 {
     public sealed class DisplaySettingsRequest
     {

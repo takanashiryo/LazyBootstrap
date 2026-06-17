@@ -8,7 +8,7 @@ using System.Xml.Linq;
 using Avalonia.Controls.Notifications;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Display
+namespace LazyBootstrap.Features.Display.Services
 {
 
     public sealed class DisplayWorkflowService
