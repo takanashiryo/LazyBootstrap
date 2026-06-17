@@ -1,32 +1,9 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Services.Shared
+namespace LazyBootstrap.Shared.Extensions
 {
-    internal static class ConfigHelper
-    {
-        public static string NormalizeNetworkValue(string value) => (value ?? string.Empty).Trim();
-
-        public static bool TryReadBool(this ConfigHandler config, string section, string key, bool defaultValue)
-        {
-            return bool.TryParse(
-                config.ReadString(section, key, defaultValue ? "true" : "false"),
-                out var parsed) && parsed;
-        }
-    }
-
-    internal static class PathHelper
-    {
-        public static string NormalizePath(string path)
-        {
-            if (string.IsNullOrWhiteSpace(path)) return string.Empty;
-            try { return Path.GetFullPath(path.Trim()); }
-            catch { return path.Trim(); }
-        }
-    }
-
     internal static class TaskObservationExtensions
     {
         internal static void ForgetWithLogging(this Task task, ILogger logger, string errorMessage)

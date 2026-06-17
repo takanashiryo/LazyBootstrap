@@ -6,7 +6,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
-using LazyBootstrap.Services.Shared;
 
 namespace LazyBootstrap.Features.Settings
 {
