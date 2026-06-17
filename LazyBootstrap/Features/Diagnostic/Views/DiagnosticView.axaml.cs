@@ -10,10 +10,39 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using SukiUI.Controls;
 
-namespace LazyBootstrap.Shell
+namespace LazyBootstrap.Features.Diagnostic.Views
 {
-    public partial class MainWindow
+    public partial class DiagnosticView : UserControl
     {
+        private readonly EnvironmentScanPresentation _infoState = null!;
+        private readonly DiagnosticOrchestrator _diagnosticOrchestrator = null!;
+
+        public DiagnosticView()
+        {
+            InitializeComponent();
+        }
+
+        public DiagnosticView(
+            EnvironmentScanPresentation infoState,
+            DiagnosticOrchestrator diagnosticOrchestrator)
+        {
+            InitializeComponent();
+
+            _infoState = infoState ?? throw new ArgumentNullException(nameof(infoState));
+            _diagnosticOrchestrator = diagnosticOrchestrator ?? throw new ArgumentNullException(nameof(diagnosticOrchestrator));
+        }
+
+        /// <summary>True when the most recent scan found environment errors (queried by the shell startup flow).</summary>
+        public bool HasEnvironmentScanErrors => _infoState.HasEnvironmentScanErrors;
+
+        /// <summary>Runs the initial environment scan and renders it (invoked during the startup sequence).</summary>
+        public async Task InitializeStartupAsync()
+        {
+            await _diagnosticOrchestrator.InitializeInfoAsync(_infoState);
+            await _diagnosticOrchestrator.RunScanAsync(_infoState);
+            ApplyInfoStateToUi();
+        }
+
         private async void OnRefreshEnvironmentScanClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
             await _diagnosticOrchestrator.RunScanAsync(_infoState);
@@ -24,11 +53,6 @@ namespace LazyBootstrap.Shell
         {
             SetTextBoxTextIfNeeded(MachinePropertyTextBox, _infoState.MachineProperty);
             SetTextBoxTextIfNeeded(GameVersionTextBox, _infoState.GameVersion);
-
-            if (LauncherVersionTextBlock != null)
-            {
-                LauncherVersionTextBlock.Text = _infoState.LauncherVersion;
-            }
 
             if (EnvironmentScanPendingHintTextBlock != null)
             {
@@ -73,59 +97,7 @@ namespace LazyBootstrap.Shell
             RefreshEnvironmentOverviewChrome();
         }
 
-        private async Task ShowEnvironmentScanErrorDialogAsync()
-        {
-            const string errorContent =
-                "(*´ - `*)∩ 啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
-                "(∩^-^)∩(∩^-^)∩ Noah 建议的操作步骤：\n" +
-                "- 在工具页点击「安装运行库」按钮安装必要运行环境\n" +
-                "- 确保已安装最新的显卡驱动程序\n" +
-                "- 如为 AMD/Intel 显卡请启用“显卡兼容层”功能\n\n" +
-                "如“系统媒体功能包”异常：\n" +
-                "- 检查“Windows 设置”中是否已启用“媒体功能包”\n\n" +
-                "请注意！由于硬件不同，检查结果可能会误报！\n" +
-                "如果所有游戏运行正常没有问题，请忽略以上提示。";
-
-            bool openInfoPage = await _uiInteractionService.ShowDialogAsync(
-                "环境检查提示",
-                errorContent,
-                "查看异常项",
-                "关闭",
-                NotificationType.Error,
-                "Flat");
-
-            if (openInfoPage)
-            {
-                GoToInfoPageCore();
-            }
-        }
-
-        private void GoToInfoPageCore()
-        {
-            try
-            {
-                if (MainSideMenu == null)
-                {
-                    return;
-                }
-
-                var target = MainSideMenu.Items?
-                    .OfType<SukiSideMenuItem>()
-                    .FirstOrDefault(item => string.Equals(item.Header?.ToString(), "信息", StringComparison.Ordinal));
-
-                target ??= MainSideMenu.Items?.OfType<SukiSideMenuItem>().ElementAtOrDefault(5);
-
-                if (target != null)
-                {
-                    MainSideMenu.SelectedItem = target;
-                }
-            }
-            catch
-            {
-            }
-        }
-
-        internal void RefreshEnvironmentOverviewChrome()
+        private void RefreshEnvironmentOverviewChrome()
         {
             if (EnvironmentOverviewInfoBar == null)
             {

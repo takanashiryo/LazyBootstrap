@@ -23,12 +23,12 @@ namespace LazyBootstrap.Shell
     public partial class MainWindow : SukiWindow
     {
         private readonly AppShellState _shellStateService = null!;
-        private readonly DiagnosticOrchestrator _diagnosticOrchestrator = null!;
-        private readonly EnvironmentScanPresentation _infoState = new();
 
         private readonly LauncherPaths _paths = null!;
         private readonly LaunchView _launchView = null!;
         private readonly DisplayView _displayView = null!;
+        private readonly DiagnosticView _diagnosticView = null!;
+        private readonly AboutView _aboutView = null!;
         private readonly SettingsView _settingsView = null!;
         private readonly ToolsView _toolsView = null!;
         private readonly UpdateView _updateView = null!;
@@ -79,9 +79,10 @@ namespace LazyBootstrap.Shell
         internal MainWindow(
             AppShellState shellStateService,
             LauncherPaths paths,
-            DiagnosticOrchestrator diagnosticOrchestrator,
             LaunchView launchView,
             DisplayView displayView,
+            DiagnosticView diagnosticView,
+            AboutView aboutView,
             SettingsView settingsView,
             ToolsView toolsView,
             UpdateView updateView,
@@ -94,9 +95,10 @@ namespace LazyBootstrap.Shell
 
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _diagnosticOrchestrator = diagnosticOrchestrator ?? throw new ArgumentNullException(nameof(diagnosticOrchestrator));
             _launchView = launchView ?? throw new ArgumentNullException(nameof(launchView));
             _displayView = displayView ?? throw new ArgumentNullException(nameof(displayView));
+            _diagnosticView = diagnosticView ?? throw new ArgumentNullException(nameof(diagnosticView));
+            _aboutView = aboutView ?? throw new ArgumentNullException(nameof(aboutView));
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
             _toolsView = toolsView ?? throw new ArgumentNullException(nameof(toolsView));
             _updateView = updateView ?? throw new ArgumentNullException(nameof(updateView));
@@ -137,6 +139,16 @@ namespace LazyBootstrap.Shell
             if (ToolsPageHost != null)
             {
                 ToolsPageHost.Content = _toolsView;
+            }
+
+            if (DiagnosticPageHost != null)
+            {
+                DiagnosticPageHost.Content = _diagnosticView;
+            }
+
+            if (AboutPageHost != null)
+            {
+                AboutPageHost.Content = _aboutView;
             }
 
             _uiInteractionService.AttachWindow(this);
@@ -355,6 +367,58 @@ namespace LazyBootstrap.Shell
             }
         }
 
+        private async Task ShowEnvironmentScanErrorDialogAsync()
+        {
+            const string errorContent =
+                "(*´ - `*)∩ 啊哇哇。。。Near 检测到你的系统可能缺少必要的运行环境！\n\n" +
+                "(∩^-^)∩(∩^-^)∩ Noah 建议的操作步骤：\n" +
+                "- 在工具页点击「安装运行库」按钮安装必要运行环境\n" +
+                "- 确保已安装最新的显卡驱动程序\n" +
+                "- 如为 AMD/Intel 显卡请启用“显卡兼容层”功能\n\n" +
+                "如“系统媒体功能包”异常：\n" +
+                "- 检查“Windows 设置”中是否已启用“媒体功能包”\n\n" +
+                "请注意！由于硬件不同，检查结果可能会误报！\n" +
+                "如果所有游戏运行正常没有问题，请忽略以上提示。";
+
+            bool openInfoPage = await _uiInteractionService.ShowDialogAsync(
+                "环境检查提示",
+                errorContent,
+                "查看异常项",
+                "关闭",
+                NotificationType.Error,
+                "Flat");
+
+            if (openInfoPage)
+            {
+                GoToInfoPageCore();
+            }
+        }
+
+        private void GoToInfoPageCore()
+        {
+            try
+            {
+                if (MainSideMenu == null)
+                {
+                    return;
+                }
+
+                var target = MainSideMenu.Items?
+                    .OfType<SukiSideMenuItem>()
+                    .FirstOrDefault(item => string.Equals(item.Header?.ToString(), "信息", StringComparison.Ordinal));
+
+                target ??= MainSideMenu.Items?.OfType<SukiSideMenuItem>().ElementAtOrDefault(5);
+
+                if (target != null)
+                {
+                    MainSideMenu.SelectedItem = target;
+                }
+            }
+            catch
+            {
+            }
+        }
+
         internal async Task PrepareForDisplayAsync()
         {
             if (_startupSequenceStarted)
@@ -373,12 +437,10 @@ namespace LazyBootstrap.Shell
                 UpdateStatusText("正在预热页面内容...");
                 await _settingsView.WarmDeferredAsync();
                 await _displayView.WarmDeferredAsync();
-                await _diagnosticOrchestrator.InitializeInfoAsync(_infoState);
-                await _diagnosticOrchestrator.RunScanAsync(_infoState);
-                ApplyInfoStateToUi();
+                await _diagnosticView.InitializeStartupAsync();
+                _aboutView.ApplyVersion();
                 _displayView.InitializeLayoutControls();
-                RefreshEnvironmentOverviewChrome();
-                _pendingEnvironmentScanErrorDialog = _infoState.HasEnvironmentScanErrors;
+                _pendingEnvironmentScanErrorDialog = _diagnosticView.HasEnvironmentScanErrors;
             }
             catch (Exception ex)
             {

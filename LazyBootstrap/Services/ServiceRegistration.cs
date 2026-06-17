@@ -71,6 +71,7 @@ namespace LazyBootstrap.Services
             services.AddSingleton<DisplayConfigurationSnapshot>();
             services.AddSingleton<LaunchState>();
             services.AddSingleton<SettingsState>();
+            services.AddSingleton<EnvironmentScanPresentation>();
             services.AddSingleton(provider => new LaunchView(
                 provider.GetRequiredService<LaunchState>(),
                 provider.GetRequiredService<LaunchOrchestrator>(),
@@ -82,6 +83,11 @@ namespace LazyBootstrap.Services
                 provider.GetRequiredService<SettingsState>(),
                 provider.GetRequiredService<UiInteractionService>(),
                 provider.GetRequiredService<ILogger<DisplayView>>()));
+            services.AddSingleton(provider => new DiagnosticView(
+                provider.GetRequiredService<EnvironmentScanPresentation>(),
+                provider.GetRequiredService<DiagnosticOrchestrator>()));
+            services.AddSingleton(provider => new AboutView(
+                provider.GetRequiredService<EnvironmentScanPresentation>()));
             services.AddSingleton(provider => new SettingsView(
                 provider.GetRequiredService<SettingsState>(),
                 provider.GetRequiredService<SettingsOrchestrator>(),
@@ -98,9 +104,10 @@ namespace LazyBootstrap.Services
             services.AddSingleton(provider => new Shell.MainWindow(
                 provider.GetRequiredService<AppShellState>(),
                 provider.GetRequiredService<LauncherPaths>(),
-                provider.GetRequiredService<DiagnosticOrchestrator>(),
                 provider.GetRequiredService<LaunchView>(),
                 provider.GetRequiredService<DisplayView>(),
+                provider.GetRequiredService<DiagnosticView>(),
+                provider.GetRequiredService<AboutView>(),
                 provider.GetRequiredService<SettingsView>(),
                 provider.GetRequiredService<ToolsView>(),
                 provider.GetRequiredService<UpdateView>(),
