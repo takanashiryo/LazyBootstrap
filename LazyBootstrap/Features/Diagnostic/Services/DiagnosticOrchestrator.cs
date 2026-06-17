@@ -11,19 +11,19 @@ using Microsoft.Extensions.Logging;
 namespace LazyBootstrap.Features.Diagnostic.Services
 {
 
-    public sealed class EnvironmentScanService
+    public sealed class DiagnosticOrchestrator
     {
         private static readonly List<EnvironmentScan.ScanResultItem> EmptyScanBucket = [];
         private readonly LauncherPaths _paths;
         private readonly AppShellState _shellStateService;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly ILogger<EnvironmentScanService> _logger;
+        private readonly ILogger<DiagnosticOrchestrator> _logger;
 
-        public EnvironmentScanService(
+        public DiagnosticOrchestrator(
             LauncherPaths paths,
             AppShellState shellStateService,
             UiInteractionService uiInteractionService,
-            ILogger<EnvironmentScanService> logger)
+            ILogger<DiagnosticOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));

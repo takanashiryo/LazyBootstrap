@@ -23,7 +23,7 @@ namespace LazyBootstrap.Shell
     public partial class MainWindow : SukiWindow
     {
         private readonly AppShellState _shellStateService = null!;
-        private readonly EnvironmentScanService _environmentScanService = null!;
+        private readonly DiagnosticOrchestrator _diagnosticOrchestrator = null!;
         private readonly EnvironmentScanPresentation _infoState = new();
 
         private readonly LauncherPaths _paths = null!;
@@ -79,7 +79,7 @@ namespace LazyBootstrap.Shell
         internal MainWindow(
             AppShellState shellStateService,
             LauncherPaths paths,
-            EnvironmentScanService environmentScanService,
+            DiagnosticOrchestrator diagnosticOrchestrator,
             LaunchView launchView,
             DisplayView displayView,
             SettingsView settingsView,
@@ -94,7 +94,7 @@ namespace LazyBootstrap.Shell
 
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _environmentScanService = environmentScanService ?? throw new ArgumentNullException(nameof(environmentScanService));
+            _diagnosticOrchestrator = diagnosticOrchestrator ?? throw new ArgumentNullException(nameof(diagnosticOrchestrator));
             _launchView = launchView ?? throw new ArgumentNullException(nameof(launchView));
             _displayView = displayView ?? throw new ArgumentNullException(nameof(displayView));
             _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
@@ -373,8 +373,8 @@ namespace LazyBootstrap.Shell
                 UpdateStatusText("正在预热页面内容...");
                 await _settingsView.WarmDeferredAsync();
                 await _displayView.WarmDeferredAsync();
-                await _environmentScanService.InitializeInfoAsync(_infoState);
-                await _environmentScanService.RunScanAsync(_infoState);
+                await _diagnosticOrchestrator.InitializeInfoAsync(_infoState);
+                await _diagnosticOrchestrator.RunScanAsync(_infoState);
                 ApplyInfoStateToUi();
                 _displayView.InitializeLayoutControls();
                 RefreshEnvironmentOverviewChrome();

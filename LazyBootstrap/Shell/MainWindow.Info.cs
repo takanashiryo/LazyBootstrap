@@ -16,7 +16,7 @@ namespace LazyBootstrap.Shell
     {
         private async void OnRefreshEnvironmentScanClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            await _environmentScanService.RunScanAsync(_infoState);
+            await _diagnosticOrchestrator.RunScanAsync(_infoState);
             ApplyInfoStateToUi();
         }
 

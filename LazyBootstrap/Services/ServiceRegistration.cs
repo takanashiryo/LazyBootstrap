@@ -65,7 +65,7 @@ namespace LazyBootstrap.Services
             services.AddSingleton<SettingsOrchestrator>();
             services.AddSingleton<ToolsOrchestrator>();
             services.AddSingleton<UpdateOrchestrator>();
-            services.AddSingleton<EnvironmentScanService>();
+            services.AddSingleton<DiagnosticOrchestrator>();
 
             // Feature shared state and views.
             services.AddSingleton<DisplayConfigurationSnapshot>();
@@ -98,7 +98,7 @@ namespace LazyBootstrap.Services
             services.AddSingleton(provider => new Shell.MainWindow(
                 provider.GetRequiredService<AppShellState>(),
                 provider.GetRequiredService<LauncherPaths>(),
-                provider.GetRequiredService<EnvironmentScanService>(),
+                provider.GetRequiredService<DiagnosticOrchestrator>(),
                 provider.GetRequiredService<LaunchView>(),
                 provider.GetRequiredService<DisplayView>(),
                 provider.GetRequiredService<SettingsView>(),
