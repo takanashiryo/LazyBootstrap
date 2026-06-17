@@ -51,7 +51,7 @@ namespace LazyBootstrap.Features.Launch.Views
             _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
 
             HideLaunchLogArea(true);
-            InitializeLaunchControls();
+            Loaded += OnViewLoaded;
             Unloaded += OnViewUnloaded;
         }
 
@@ -62,6 +62,9 @@ namespace LazyBootstrap.Features.Launch.Views
         /// <summary>Runs the launch-related cleanup that must complete before the window closes.</summary>
         public Task HandleClosingAsync()
             => _launchOrchestrator.HandleClosingAsync(_displayState);
+
+        private void OnViewLoaded(object sender, RoutedEventArgs e)
+            => InitializeLaunchControls();
 
         private void OnViewUnloaded(object sender, RoutedEventArgs e)
             => ReleaseLaunchControls();
