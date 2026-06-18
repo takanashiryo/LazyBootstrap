@@ -409,18 +409,6 @@ namespace LazyBootstrap.Features.Display.Views
             }
         }
 
-        private static void SelectComboBoxIndex(ComboBox comboBox, int index)
-        {
-            if (comboBox == null)
-            {
-                return;
-            }
-
-            comboBox.SelectedIndex = comboBox.Items.Count == 0
-                ? -1
-                : Math.Clamp(index, -1, comboBox.Items.Count - 1);
-        }
-
         private static void SelectComboBoxItem(ComboBox comboBox, object value)
         {
             if (comboBox == null)
@@ -447,16 +435,6 @@ namespace LazyBootstrap.Features.Display.Views
             }
 
             comboBox.SelectedIndex = 0;
-        }
-
-        private static int GetOptionIndex<T>(System.Collections.ObjectModel.ObservableCollection<T> options, T selected)
-        {
-            if (options == null || options.Count == 0 || selected == null)
-            {
-                return -1;
-            }
-
-            return options.IndexOf(selected);
         }
 
         private void UpdateDisplayLayoutControlsEnabled()

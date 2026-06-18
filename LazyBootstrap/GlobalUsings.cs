@@ -21,6 +21,5 @@ global using LazyBootstrap.Infrastructure.FileSystem;
 global using LazyBootstrap.Infrastructure.Serialization;
 global using LazyBootstrap.Infrastructure.DependencyInjection;
 global using LazyBootstrap.Infrastructure.Logging;
-global using LazyBootstrap.Shared.Extensions;
 global using LazyBootstrap.Shell;
 global using static LazyBootstrap.Shared.Controls.ControlHelpers;
