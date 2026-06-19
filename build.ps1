@@ -74,7 +74,7 @@ try {
     $mediaUpdaterProj = Join-Path $root 'LazyBootstrap.MediaUpdater/LazyBootstrap.MediaUpdater.csproj'
     & dotnet publish $launcherProj -c Release -r win-x64 -o $launcherPublish
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $launcherProj (exit $LASTEXITCODE)" }
-    & dotnet publish $mainProj -c Release -r win-x64 --self-contained true -p:PublishAot=false -p:PublishTrimmed=false -o $mainPublish
+    & dotnet publish $mainProj -c Release -r win-x64 -o $mainPublish
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $mainProj (exit $LASTEXITCODE)" }
     & dotnet publish $mediaUpdaterProj -c Release -r win-x64 -o $mediaUpdaterPublish
     if ($LASTEXITCODE -ne 0) { throw "dotnet publish failed for $mediaUpdaterProj (exit $LASTEXITCODE)" }
