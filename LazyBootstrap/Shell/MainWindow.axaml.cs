@@ -304,27 +304,12 @@ namespace LazyBootstrap.Shell
 
         private ShellPage ResolveShellPage(SukiSideMenuItem selectedItem)
         {
-            if (MainSideMenu == null || selectedItem == null)
+            if (selectedItem?.Tag is ShellPage page)
             {
-                return _shellStateService.SelectedPage;
+                return page;
             }
 
-            var items = MainSideMenu.Items?
-                .OfType<SukiSideMenuItem>()
-                .ToList() ?? new List<SukiSideMenuItem>();
-            int index = items.IndexOf(selectedItem);
-
-            return index switch
-            {
-                0 => ShellPage.Launch,
-                1 => ShellPage.Settings,
-                2 => ShellPage.Display,
-                3 => ShellPage.Tools,
-                4 => ShellPage.Update,
-                5 => ShellPage.Info,
-                6 => ShellPage.About,
-                _ => _shellStateService.SelectedPage
-            };
+            return _shellStateService.SelectedPage;
         }
 
         private async void OnWindowOpened(object sender, EventArgs e)
@@ -385,9 +370,7 @@ namespace LazyBootstrap.Shell
 
                 var target = MainSideMenu.Items?
                     .OfType<SukiSideMenuItem>()
-                    .FirstOrDefault(item => string.Equals(item.Header?.ToString(), "信息", StringComparison.Ordinal));
-
-                target ??= MainSideMenu.Items?.OfType<SukiSideMenuItem>().ElementAtOrDefault(5);
+                    .FirstOrDefault(item => item.Tag is ShellPage.Info);
 
                 if (target != null)
                 {

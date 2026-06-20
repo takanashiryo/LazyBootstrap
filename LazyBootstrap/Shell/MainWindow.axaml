@@ -2,6 +2,7 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:generic="clr-namespace:System.Collections.Generic;assembly=System.Collections"
                  xmlns:suki="clr-namespace:SukiUI.Controls;assembly=SukiUI"
+                 xmlns:shell="clr-namespace:LazyBootstrap.Shell"
                  x:Class="LazyBootstrap.Shell.MainWindow"
                  Title="SOUND VOLTEX LazyBootstrap"
                  Width="1536" Height="864"
@@ -56,7 +57,7 @@
 
                 <suki:SukiSideMenu x:Name="MainSideMenu" IsSearchEnabled="False">
                     <suki:SukiSideMenu.Items>
-                        <suki:SukiSideMenuItem Header="启动">
+                        <suki:SukiSideMenuItem Header="启动" Tag="{x:Static shell:ShellPage.Launch}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
@@ -205,7 +206,7 @@
                             </suki:SukiSideMenuItem.PageContent>
                         </suki:SukiSideMenuItem>
 
-                        <suki:SukiSideMenuItem Header="设定">
+                        <suki:SukiSideMenuItem Header="设定" Tag="{x:Static shell:ShellPage.Settings}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF013;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
@@ -749,7 +750,7 @@
                             </suki:SukiSideMenuItem.PageContent>
                         </suki:SukiSideMenuItem>
 
-                        <suki:SukiSideMenuItem Header="显示器配置">
+                        <suki:SukiSideMenuItem Header="显示器配置" Tag="{x:Static shell:ShellPage.Display}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF390;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
@@ -914,7 +915,7 @@
                             </suki:SukiSideMenuItem.PageContent>
                         </suki:SukiSideMenuItem>
 
-                        <suki:SukiSideMenuItem Header="工具">
+                        <suki:SukiSideMenuItem Header="工具" Tag="{x:Static shell:ShellPage.Tools}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF552;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
@@ -1008,7 +1009,7 @@
                             </suki:SukiSideMenuItem.PageContent>
                         </suki:SukiSideMenuItem>
 
-                        <suki:SukiSideMenuItem Header="更新">
+                        <suki:SukiSideMenuItem Header="更新" Tag="{x:Static shell:ShellPage.Update}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF2F1;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
@@ -1048,7 +1049,7 @@
                             </suki:SukiSideMenuItem.PageContent>
                         </suki:SukiSideMenuItem>
 
-                        <suki:SukiSideMenuItem Header="信息">
+                        <suki:SukiSideMenuItem Header="信息" Tag="{x:Static shell:ShellPage.Info}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF05A;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
@@ -1473,7 +1474,7 @@
                             </suki:SukiSideMenuItem.PageContent>
                         </suki:SukiSideMenuItem>
 
-                        <suki:SukiSideMenuItem Header="关于">
+                        <suki:SukiSideMenuItem Header="关于" Tag="{x:Static shell:ShellPage.About}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF128;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
