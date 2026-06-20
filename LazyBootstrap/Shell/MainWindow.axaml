@@ -1049,12 +1049,12 @@
                             </suki:SukiSideMenuItem.PageContent>
                         </suki:SukiSideMenuItem>
 
-                        <suki:SukiSideMenuItem Header="信息" Tag="{x:Static shell:ShellPage.Info}">
+                        <suki:SukiSideMenuItem Header="诊断" Tag="{x:Static shell:ShellPage.Diag}">
                             <suki:SukiSideMenuItem.Icon>
                                 <TextBlock Classes="FaIcon" Text="&#xF05A;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
                             <suki:SukiSideMenuItem.PageContent>
-                                <ScrollViewer x:Name="InfoPageView" Margin="14" VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer x:Name="DiagPageView" Margin="14" VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel Spacing="12">
                                         <suki:GlassCard IsAnimated="False">

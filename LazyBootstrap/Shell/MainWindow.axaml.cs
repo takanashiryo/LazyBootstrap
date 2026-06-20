@@ -345,7 +345,7 @@ namespace LazyBootstrap.Shell
                 "请注意！由于硬件不同，检查结果可能会误报！\n" +
                 "如果所有游戏运行正常没有问题，请忽略以上提示。";
 
-            bool openInfoPage = await _uiInteractionService.ShowDialogAsync(
+            bool openDiagPage = await _uiInteractionService.ShowDialogAsync(
                 "环境检查提示",
                 errorContent,
                 "查看异常项",
@@ -353,13 +353,13 @@ namespace LazyBootstrap.Shell
                 NotificationType.Error,
                 "Flat");
 
-            if (openInfoPage)
+            if (openDiagPage)
             {
-                GoToInfoPageCore();
+                GoToDiagPageCore();
             }
         }
 
-        private void GoToInfoPageCore()
+        private void GoToDiagPageCore()
         {
             try
             {
@@ -370,7 +370,7 @@ namespace LazyBootstrap.Shell
 
                 var target = MainSideMenu.Items?
                     .OfType<SukiSideMenuItem>()
-                    .FirstOrDefault(item => item.Tag is ShellPage.Info);
+                    .FirstOrDefault(item => item.Tag is ShellPage.Diag);
 
                 if (target != null)
                 {

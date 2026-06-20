@@ -7,7 +7,7 @@ namespace LazyBootstrap.Shell
         Display = 2,
         Tools = 3,
         Update = 4,
-        Info = 5,
+        Diag = 5,
         About = 6
     }
 }
