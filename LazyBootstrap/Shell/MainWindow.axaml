@@ -1022,13 +1022,13 @@
                                                     MaxWidth="420"
                                                     Margin="24">
                                             <StackPanel Spacing="10">
-                                                <TextBlock Text="请选择增量更新文件"
+                                                <TextBlock Text="请选择增量更新包"
                                                            HorizontalAlignment="Center"
                                                            TextAlignment="Center"
                                                            TextWrapping="Wrap"
                                                            FontSize="24"
                                                            FontWeight="SemiBold" />
-                                                <TextBlock Text="*不支持纯净更新文件！"
+                                                <TextBlock Text="仅支持UPDATE_LAZY_KFC_*开头的压缩包！"
                                                            HorizontalAlignment="Center"
                                                            TextAlignment="Center"
                                                            TextWrapping="Wrap"
