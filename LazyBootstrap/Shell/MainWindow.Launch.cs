@@ -9,15 +9,10 @@ using Avalonia.Interactivity;
 using Avalonia.Media;
 using Avalonia.Threading;
 
-namespace LazyBootstrap.Features.Launch.Views
+namespace LazyBootstrap.Shell
 {
-    public partial class LaunchView : UserControl, ILaunchWorkflowObserver
+    public partial class MainWindow : ILaunchWorkflowObserver
     {
-        private readonly LaunchState _launchState = null!;
-        private readonly LaunchOrchestrator _launchOrchestrator = null!;
-        private readonly SettingsState _settingsState = null!;
-        private readonly DisplayConfigurationSnapshot _displayState = null!;
-
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
@@ -32,42 +27,13 @@ namespace LazyBootstrap.Features.Launch.Views
         private Stopwatch _launchMessageOverlayAnimationStopwatch;
         private Color _launchMessageOverlayStartColor = LaunchMessageErrorStartColor;
 
-        public LaunchView()
-        {
-            InitializeComponent();
-        }
-
-        public LaunchView(
-            LaunchState launchState,
-            LaunchOrchestrator launchOrchestrator,
-            SettingsState settingsState,
-            DisplayConfigurationSnapshot displayState)
-        {
-            InitializeComponent();
-
-            _launchState = launchState ?? throw new ArgumentNullException(nameof(launchState));
-            _launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
-            _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
-            _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
-
-            HideLaunchLogArea(true);
-            Loaded += OnViewLoaded;
-            Unloaded += OnViewUnloaded;
-        }
-
         /// <summary>Initializes the launch workflow for the startup sequence (invoked by the shell before showing).</summary>
-        public Task InitializeStartupAsync()
+        private Task InitializeLaunchStartupAsync()
             => _launchOrchestrator.InitializeStartupAsync(_launchState, _displayState, this);
 
         /// <summary>Runs the launch-related cleanup that must complete before the window closes.</summary>
-        public Task HandleClosingAsync()
+        private Task HandleLaunchClosingAsync()
             => _launchOrchestrator.HandleClosingAsync(_displayState);
-
-        private void OnViewLoaded(object sender, RoutedEventArgs e)
-            => InitializeLaunchControls();
-
-        private void OnViewUnloaded(object sender, RoutedEventArgs e)
-            => ReleaseLaunchControls();
 
         private void OnToggleLaunchLogClick(object sender, RoutedEventArgs e)
             => _ = _launchOrchestrator.ToggleLaunchLogAsync(_launchState, this);
@@ -500,7 +466,7 @@ namespace LazyBootstrap.Features.Launch.Views
 
             double cycleProgress = (_launchMessageOverlayAnimationStopwatch.Elapsed.TotalMilliseconds / durationMilliseconds) % 2d;
             double pingPongProgress = cycleProgress <= 1d ? cycleProgress : 2d - cycleProgress;
-            double easedProgress = EaseInOutCubic(Math.Clamp(pingPongProgress, 0d, 1d));
+            double easedProgress = EaseInOutCubicForLaunchMessage(Math.Clamp(pingPongProgress, 0d, 1d));
             _launchMessageOverlayBorderBrush.Color = InterpolateColor(_launchMessageOverlayStartColor, LaunchMessageBorderEndColor, easedProgress);
         }
 
@@ -513,7 +479,7 @@ namespace LazyBootstrap.Features.Launch.Views
             };
         }
 
-        private static double EaseInOutCubic(double progress)
+        private static double EaseInOutCubicForLaunchMessage(double progress)
         {
             return progress < 0.5d
                 ? 4d * progress * progress * progress

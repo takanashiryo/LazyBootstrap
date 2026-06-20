@@ -67,36 +67,11 @@ namespace LazyBootstrap.Infrastructure.DependencyInjection
             services.AddSingleton<UpdateOrchestrator>();
             services.AddSingleton<DiagnosticOrchestrator>();
 
-            // Feature shared state and views.
+            // Feature shared state.
             services.AddSingleton<DisplayConfigurationSnapshot>();
             services.AddSingleton<LaunchState>();
             services.AddSingleton<SettingsState>();
             services.AddSingleton<EnvironmentScanPresentation>();
-            services.AddSingleton(provider => new LaunchView(
-                provider.GetRequiredService<LaunchState>(),
-                provider.GetRequiredService<LaunchOrchestrator>(),
-                provider.GetRequiredService<SettingsState>(),
-                provider.GetRequiredService<DisplayConfigurationSnapshot>()));
-            services.AddSingleton(provider => new DisplayView(
-                provider.GetRequiredService<DisplayConfigurationSnapshot>(),
-                provider.GetRequiredService<DisplayOrchestrator>(),
-                provider.GetRequiredService<SettingsState>(),
-                provider.GetRequiredService<UiInteractionService>(),
-                provider.GetRequiredService<ILogger<DisplayView>>()));
-            services.AddSingleton(provider => new DiagnosticView(
-                provider.GetRequiredService<EnvironmentScanPresentation>(),
-                provider.GetRequiredService<DiagnosticOrchestrator>()));
-            services.AddSingleton(provider => new AboutView(
-                provider.GetRequiredService<EnvironmentScanPresentation>()));
-            services.AddSingleton(provider => new SettingsView(
-                provider.GetRequiredService<SettingsState>(),
-                provider.GetRequiredService<SettingsOrchestrator>(),
-                provider.GetRequiredService<AppShellState>(),
-                provider.GetRequiredService<ILogger<SettingsView>>()));
-            services.AddSingleton(provider => new UpdateView(
-                provider.GetRequiredService<UpdateOrchestrator>()));
-            services.AddSingleton(provider => new ToolsView(
-                provider.GetRequiredService<ToolsOrchestrator>()));
 
             // Shell window. MainWindow exposes an internal parameterised constructor that the
             // default DI constructor selection cannot see, so build it through an explicit
@@ -104,13 +79,16 @@ namespace LazyBootstrap.Infrastructure.DependencyInjection
             services.AddSingleton(provider => new Shell.MainWindow(
                 provider.GetRequiredService<AppShellState>(),
                 provider.GetRequiredService<LauncherPaths>(),
-                provider.GetRequiredService<LaunchView>(),
-                provider.GetRequiredService<DisplayView>(),
-                provider.GetRequiredService<DiagnosticView>(),
-                provider.GetRequiredService<AboutView>(),
-                provider.GetRequiredService<SettingsView>(),
-                provider.GetRequiredService<ToolsView>(),
-                provider.GetRequiredService<UpdateView>(),
+                provider.GetRequiredService<LaunchState>(),
+                provider.GetRequiredService<LaunchOrchestrator>(),
+                provider.GetRequiredService<SettingsState>(),
+                provider.GetRequiredService<SettingsOrchestrator>(),
+                provider.GetRequiredService<DisplayConfigurationSnapshot>(),
+                provider.GetRequiredService<DisplayOrchestrator>(),
+                provider.GetRequiredService<EnvironmentScanPresentation>(),
+                provider.GetRequiredService<DiagnosticOrchestrator>(),
+                provider.GetRequiredService<ToolsOrchestrator>(),
+                provider.GetRequiredService<UpdateOrchestrator>(),
                 provider.GetRequiredService<ISukiDialogManager>(),
                 provider.GetRequiredService<ISukiToastManager>(),
                 provider.GetRequiredService<UiInteractionService>(),

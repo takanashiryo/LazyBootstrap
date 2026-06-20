@@ -6,17 +6,11 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
-using Microsoft.Extensions.Logging;
 
-namespace LazyBootstrap.Features.Settings.Views
+namespace LazyBootstrap.Shell
 {
-    public partial class SettingsView : UserControl
+    public partial class MainWindow
     {
-        private readonly SettingsState _settingsState = null!;
-        private readonly SettingsOrchestrator _settingsWorkflowService = null!;
-        private readonly AppShellState _shellState = null!;
-        private readonly ILogger<SettingsView> _logger = null!;
-
         private bool _isLoadingSettings;
         private bool _isSyncingModel;
         private bool _isUpdatingGpuCompatLayerUi;
@@ -24,46 +18,21 @@ namespace LazyBootstrap.Features.Settings.Views
         private bool _isUpdatingAsioDriverUi;
         private bool _isUpdatingNetworkUi;
 
-        public SettingsView()
-        {
-            InitializeComponent();
-        }
-
-        public SettingsView(
-            SettingsState settingsState,
-            SettingsOrchestrator settingsOrchestrator,
-            AppShellState shellState,
-            ILogger<SettingsView> logger)
-        {
-            InitializeComponent();
-
-            _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
-            _settingsWorkflowService = settingsOrchestrator ?? throw new ArgumentNullException(nameof(settingsOrchestrator));
-            _shellState = shellState ?? throw new ArgumentNullException(nameof(shellState));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-
-            _isLoadingSettings = true;
-            InitializeCustomComponents();
-            _isLoadingSettings = false;
-
-            _shellState.PropertyChanged += OnShellStateChanged;
-        }
-
         /// <summary>Loads the initial (startup) settings and applies them to the UI.</summary>
-        public async Task InitializeStartupAsync()
+        private async Task InitializeSettingsStartupAsync()
         {
             await _settingsWorkflowService.InitializeStartupAsync(_settingsState);
             ApplyStartupSettingsStateToUi();
         }
 
         /// <summary>Warms up deferred settings options (ASIO/network/...) and applies them.</summary>
-        public async Task WarmDeferredAsync()
+        private async Task WarmSettingsDeferredAsync()
         {
             await _settingsWorkflowService.WarmDeferredAsync(_settingsState);
             ApplyDeferredSettingsStateToUi();
         }
 
-        private void InitializeCustomComponents()
+        private void InitializeSettingsComponents()
         {
             InitializeGpuCompatLayerControls();
             InitializeNetworkBindings();
@@ -72,22 +41,23 @@ namespace LazyBootstrap.Features.Settings.Views
             InitializeServerPresetBindings();
         }
 
-        private void OnShellStateChanged(object sender, PropertyChangedEventArgs e)
+        private void OnSettingsShellStateChanged(object sender, PropertyChangedEventArgs e)
         {
             if (!Dispatcher.UIThread.CheckAccess())
             {
-                Dispatcher.UIThread.Post(() => OnShellStateChanged(sender, e));
+                Dispatcher.UIThread.Post(() => OnSettingsShellStateChanged(sender, e));
                 return;
             }
 
             string propertyName = e?.PropertyName ?? string.Empty;
             if ((string.IsNullOrWhiteSpace(propertyName)
                  || string.Equals(propertyName, nameof(AppShellState.SelectedPage), StringComparison.Ordinal))
-                && _shellState.SelectedPage == ShellPage.Settings)
+                && _shellStateService.SelectedPage == ShellPage.Settings)
             {
                 ApplyServerPresetStateToUi();
             }
         }
+
         private async void OnEditConfigClick(object sender, RoutedEventArgs e)
         {
             try

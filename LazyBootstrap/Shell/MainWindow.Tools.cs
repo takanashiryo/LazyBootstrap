@@ -2,25 +2,12 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 
-namespace LazyBootstrap.Features.Tools.Views
+namespace LazyBootstrap.Shell
 {
-    public partial class ToolsView : UserControl
+    public partial class MainWindow
     {
-        private readonly ToolsOrchestrator _toolsWorkflowService = null!;
-
-        public ToolsView()
-        {
-            InitializeComponent();
-        }
-
-        public ToolsView(ToolsOrchestrator toolsOrchestrator)
-        {
-            InitializeComponent();
-            _toolsWorkflowService = toolsOrchestrator ?? throw new ArgumentNullException(nameof(toolsOrchestrator));
-        }
-
         private async void OnClearCacheClick(object sender, RoutedEventArgs e) =>
-            await _toolsWorkflowService.ClearCacheAsync();
+                    await _toolsWorkflowService.ClearCacheAsync();
         private async void OnAddFirewallRuleClick(object sender, RoutedEventArgs e) =>
             await _toolsWorkflowService.AddFirewallRuleAsync();
         private async void OnOpenAudioPanelClick(object sender, RoutedEventArgs e) =>

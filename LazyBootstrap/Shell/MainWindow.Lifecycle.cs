@@ -35,9 +35,10 @@ namespace LazyBootstrap.Shell
         private void PerformFinalWindowCloseCleanup()
         {
             AsioDriverRegistry.DisposeControlPanelDrivers();
+            ReleaseLaunchControls();
             try
             {
-                _launchView.HandleClosingAsync().ConfigureAwait(false).GetAwaiter().GetResult();
+                HandleLaunchClosingAsync().ConfigureAwait(false).GetAwaiter().GetResult();
             }
             catch (Exception ex)
             {

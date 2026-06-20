@@ -25,13 +25,16 @@ namespace LazyBootstrap.Shell
         private readonly AppShellState _shellStateService = null!;
 
         private readonly LauncherPaths _paths = null!;
-        private readonly LaunchView _launchView = null!;
-        private readonly DisplayView _displayView = null!;
-        private readonly DiagnosticView _diagnosticView = null!;
-        private readonly AboutView _aboutView = null!;
-        private readonly SettingsView _settingsView = null!;
-        private readonly ToolsView _toolsView = null!;
-        private readonly UpdateView _updateView = null!;
+        private readonly LaunchState _launchState = null!;
+        private readonly LaunchOrchestrator _launchOrchestrator = null!;
+        private readonly SettingsState _settingsState = null!;
+        private readonly SettingsOrchestrator _settingsWorkflowService = null!;
+        private readonly DisplayConfigurationSnapshot _displayState = null!;
+        private readonly DisplayOrchestrator _displayOrchestrator = null!;
+        private readonly EnvironmentScanPresentation _environmentScanState = null!;
+        private readonly DiagnosticOrchestrator _diagnosticOrchestrator = null!;
+        private readonly ToolsOrchestrator _toolsWorkflowService = null!;
+        private readonly UpdateOrchestrator _updateWorkflowService = null!;
 
         private readonly ISukiDialogManager _dialogManager = null!;
         private readonly ISukiToastManager _toastManager = null!;
@@ -79,13 +82,16 @@ namespace LazyBootstrap.Shell
         internal MainWindow(
             AppShellState shellStateService,
             LauncherPaths paths,
-            LaunchView launchView,
-            DisplayView displayView,
-            DiagnosticView diagnosticView,
-            AboutView aboutView,
-            SettingsView settingsView,
-            ToolsView toolsView,
-            UpdateView updateView,
+            LaunchState launchState,
+            LaunchOrchestrator launchOrchestrator,
+            SettingsState settingsState,
+            SettingsOrchestrator settingsOrchestrator,
+            DisplayConfigurationSnapshot displayState,
+            DisplayOrchestrator displayOrchestrator,
+            EnvironmentScanPresentation environmentScanState,
+            DiagnosticOrchestrator diagnosticOrchestrator,
+            ToolsOrchestrator toolsOrchestrator,
+            UpdateOrchestrator updateOrchestrator,
             ISukiDialogManager dialogManager,
             ISukiToastManager toastManager,
             UiInteractionService uiInteractionService,
@@ -95,13 +101,16 @@ namespace LazyBootstrap.Shell
 
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _launchView = launchView ?? throw new ArgumentNullException(nameof(launchView));
-            _displayView = displayView ?? throw new ArgumentNullException(nameof(displayView));
-            _diagnosticView = diagnosticView ?? throw new ArgumentNullException(nameof(diagnosticView));
-            _aboutView = aboutView ?? throw new ArgumentNullException(nameof(aboutView));
-            _settingsView = settingsView ?? throw new ArgumentNullException(nameof(settingsView));
-            _toolsView = toolsView ?? throw new ArgumentNullException(nameof(toolsView));
-            _updateView = updateView ?? throw new ArgumentNullException(nameof(updateView));
+            _launchState = launchState ?? throw new ArgumentNullException(nameof(launchState));
+            _launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
+            _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
+            _settingsWorkflowService = settingsOrchestrator ?? throw new ArgumentNullException(nameof(settingsOrchestrator));
+            _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
+            _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
+            _environmentScanState = environmentScanState ?? throw new ArgumentNullException(nameof(environmentScanState));
+            _diagnosticOrchestrator = diagnosticOrchestrator ?? throw new ArgumentNullException(nameof(diagnosticOrchestrator));
+            _toolsWorkflowService = toolsOrchestrator ?? throw new ArgumentNullException(nameof(toolsOrchestrator));
+            _updateWorkflowService = updateOrchestrator ?? throw new ArgumentNullException(nameof(updateOrchestrator));
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
             _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
@@ -114,41 +123,6 @@ namespace LazyBootstrap.Shell
             if (ToastHost != null)
             {
                 ToastHost.Manager = _toastManager;
-            }
-
-            if (LaunchPageHost != null)
-            {
-                LaunchPageHost.Content = _launchView;
-            }
-
-            if (SettingsPageHost != null)
-            {
-                SettingsPageHost.Content = _settingsView;
-            }
-
-            if (DisplayPageHost != null)
-            {
-                DisplayPageHost.Content = _displayView;
-            }
-
-            if (UpdatePageHost != null)
-            {
-                UpdatePageHost.Content = _updateView;
-            }
-
-            if (ToolsPageHost != null)
-            {
-                ToolsPageHost.Content = _toolsView;
-            }
-
-            if (DiagnosticPageHost != null)
-            {
-                DiagnosticPageHost.Content = _diagnosticView;
-            }
-
-            if (AboutPageHost != null)
-            {
-                AboutPageHost.Content = _aboutView;
             }
 
             _uiInteractionService.AttachWindow(this);
@@ -208,6 +182,12 @@ namespace LazyBootstrap.Shell
                 || string.Equals(propertyName, nameof(AppShellState.IsNavigationLocked), StringComparison.Ordinal))
             {
                 ApplySideMenuNavigationLock();
+            }
+
+            if (string.IsNullOrWhiteSpace(propertyName)
+                || string.Equals(propertyName, nameof(AppShellState.SelectedPage), StringComparison.Ordinal))
+            {
+                OnSettingsShellStateChanged(sender, e);
             }
         }
 
@@ -431,16 +411,16 @@ namespace LazyBootstrap.Shell
             try
             {
                 UpdateStatusText("正在读取启动配置...");
-                await _settingsView.InitializeStartupAsync();
-                await _launchView.InitializeStartupAsync();
+                await InitializeSettingsStartupAsync();
+                await InitializeLaunchStartupAsync();
 
                 UpdateStatusText("正在预热页面内容...");
-                await _settingsView.WarmDeferredAsync();
-                await _displayView.WarmDeferredAsync();
-                await _diagnosticView.InitializeStartupAsync();
-                _aboutView.ApplyVersion();
-                _displayView.InitializeLayoutControls();
-                _pendingEnvironmentScanErrorDialog = _diagnosticView.HasEnvironmentScanErrors;
+                await WarmSettingsDeferredAsync();
+                await WarmDisplayDeferredAsync();
+                await InitializeDiagnosticStartupAsync();
+                ApplyAboutVersion();
+                InitializeDisplayLayoutControls();
+                _pendingEnvironmentScanErrorDialog = HasEnvironmentScanErrors;
             }
             catch (Exception ex)
             {
@@ -606,6 +586,14 @@ namespace LazyBootstrap.Shell
 
         private void InitializeCustomComponents()
         {
+            _isLoadingSettings = true;
+            InitializeSettingsComponents();
+            _isLoadingSettings = false;
+
+            InitializeExitRestoreBinding();
+            HideLaunchLogArea(clearOutput: true);
+            InitializeLaunchControls();
+
             FinalizeInitialViewState();
         }
 
