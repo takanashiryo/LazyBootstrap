@@ -30,6 +30,7 @@ namespace LazyBootstrap.Infrastructure.Logging
             Directory.CreateDirectory(RuntimeContext.ApplicationDirectoryPath);
             string logFilePath = Path.Combine(RuntimeContext.ApplicationDirectoryPath, "LazyBootstrap.log");
             string applicationVersion = ResolveApplicationVersion();
+            ResetLogFile(logFilePath);
 
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
@@ -54,6 +55,18 @@ namespace LazyBootstrap.Infrastructure.Logging
                 RuntimeContext.ApplicationDirectoryPath,
                 RuntimeContext.ConfigFilePath,
                 logFilePath);
+        }
+
+        private static void ResetLogFile(string logFilePath)
+        {
+            try
+            {
+                using var _ = new FileStream(logFilePath, FileMode.Create, FileAccess.Write, FileShare.ReadWrite);
+            }
+            catch
+            {
+                // Keep startup tolerant if another process has a stricter lock on the log file.
+            }
         }
 
         private static void EnsureRuntimeContext(string[] args)
