@@ -15,9 +15,30 @@ if not defined LAZY_KFC_UPDATE_GAME_PATH (
 set "gamePath=%LAZY_KFC_UPDATE_GAME_PATH%"
 set "updaterLog=%gamePath%\updater_log.txt"
 set "sourcePath=%~dp0source"
+set "sourceLauncherPath=%sourcePath%\launcher"
+set "targetLauncherPath=%gamePath%\launcher"
 
-robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT
-if errorlevel 8 exit /b 1
+if exist "%sourceLauncherPath%\" (
+    if exist "%targetLauncherPath%\" (
+        for %%F in ("%targetLauncherPath%\*") do (
+            if /I not "%%~nxF"=="MediaUpdater.exe" (
+                del /F /Q "%%~fF"
+                if errorlevel 1 exit /b 1
+            )
+        )
+
+        for /D %%D in ("%targetLauncherPath%\*") do (
+            rmdir /S /Q "%%~fD"
+            if errorlevel 1 exit /b 1
+        )
+    )
+
+    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT /XF MediaUpdater.exe
+    if errorlevel 8 exit /b 1
+) else (
+    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT
+    if errorlevel 8 exit /b 1
+)
 
 if exist "%sourcePath%\contents\data_mods\omnimix" (
     robocopy "%sourcePath%\contents\data_mods\omnimix" "%gamePath%\contents\data_mods\omnimix" /E /V /LOG+:"%updaterLog%" /MIR /IS /IT
