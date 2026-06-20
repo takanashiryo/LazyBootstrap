@@ -1030,10 +1030,10 @@ namespace LazyBootstrap.Features.Launch.Services
         {
             if (useSystemConfig)
             {
-                return "-cfg";
+                return "-cfg -forcesoftware";
             }
 
-            return $"-cfg -cmdoverride -cfgpath {LazyCfgRelative} -patchcfgpath {LazyPatchRelative}";
+            return $"-cfg -cmdoverride -forcesoftware -cfgpath {LazyCfgRelative} -patchcfgpath {LazyPatchRelative}";
         }
     }
 }
