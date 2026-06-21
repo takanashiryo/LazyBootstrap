@@ -23,6 +23,7 @@ namespace LazyBootstrap.Features.Launch.Services
         private const int MaxLogLines = 1200;
         private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(3);
         private static readonly TimeSpan LauncherAutoMinimizeDelay = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan AsphyxiaToSpiceLaunchDelay = TimeSpan.FromMilliseconds(300);
 
         private readonly LauncherPaths _paths;
         private readonly GameProcessTracker _gameProcessTracker;
@@ -209,6 +210,7 @@ namespace LazyBootstrap.Features.Launch.Services
             _logger.LogInformation("Game launch workflow started. LaunchSessionId={LaunchSessionId}, AsphyxiaDevOnly={AsphyxiaDevOnly}", launchSessionId, asphyxiaDevOnly);
 
             bool handoffToGameSession = false;
+            bool startedAsphyxiaForGame = false;
 
             try
             {
@@ -335,6 +337,7 @@ namespace LazyBootstrap.Features.Launch.Services
                         if (!asphyxiaDevOnly)
                         {
                             _gameProcessTracker.TrackManagedAsphyxiaProcess(asphyxiaProcess);
+                            startedAsphyxiaForGame = true;
                         }
 
                         _logger.LogInformation("Asphyxia Core process started. ProcessId={ProcessId}, DevOnly={DevOnly}", asphyxiaProcess.Id, asphyxiaDevOnly);
@@ -357,6 +360,12 @@ namespace LazyBootstrap.Features.Launch.Services
                     NotifyLaunchStateChanged(launchState);
                     AppendLaunchOutput(launchState, "已按调试模式启动 Asphyxia Core（--dev），未启动 spice64。");
                     return;
+                }
+
+                if (startedAsphyxiaForGame)
+                {
+                    // wait 300ms to start spice2x
+                    await Task.Delay(AsphyxiaToSpiceLaunchDelay);
                 }
 
                 var argumentsBuilder = new StringBuilder();
