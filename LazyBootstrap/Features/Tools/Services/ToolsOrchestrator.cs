@@ -444,8 +444,8 @@ namespace LazyBootstrap.Features.Tools
         {
             while (true)
             {
-                var gameDirectoryBox = new TextBox { PlaceholderText = "旧游戏目录" };
-                var asphyxiaDirectoryBox = new TextBox { PlaceholderText = "旧氧无目录" };
+                var gameDirectoryBox = new TextBox { Watermark = "旧游戏目录" };
+                var asphyxiaDirectoryBox = new TextBox { Watermark = "旧氧无目录" };
 
                 var selectGameDirectoryButton = new Button { Content = "选择", MinWidth = 72 };
                 selectGameDirectoryButton.Classes.Add("Basic");
