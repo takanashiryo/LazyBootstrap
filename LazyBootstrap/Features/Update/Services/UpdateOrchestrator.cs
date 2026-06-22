@@ -13,7 +13,9 @@ namespace LazyBootstrap.Features.Update
 {
     public sealed class UpdateOrchestrator
     {
+        private const string RequiredUpdateArchiveFileNamePrefix = "UPDATE_LAZY_KFC";
         private static readonly string[] UpdateArchiveFilePatterns = ["*.7z", "*.zip", "*.rar", "*.001"];
+        private static readonly string[] UpdateArchiveExtensions = [".7z", ".zip", ".rar", ".001"];
 
         private enum MediaUpdaterStartResult
         {
@@ -79,6 +81,21 @@ namespace LazyBootstrap.Features.Update
                 _logger.LogInformation("KFC update cancelled before archive selection.");
                 return;
             }
+
+            if (!IsSupportedUpdateArchive(archivePath))
+            {
+                _logger.LogWarning("KFC update rejected because the selected file is not a supported archive: {ArchivePath}", archivePath);
+                _uiInteractionService.ShowErrorToast("更新失败", "仅支持 7z、zip、rar 或 001 更新压缩包。");
+                return;
+            }
+
+            if (!HasRequiredUpdateArchivePrefix(archivePath))
+            {
+                _logger.LogWarning("KFC update rejected because the selected archive file name has an invalid prefix: {ArchivePath}", archivePath);
+                _uiInteractionService.ShowErrorToast("更新失败", $"更新压缩包文件名必须以 {RequiredUpdateArchiveFileNamePrefix} 开头。");
+                return;
+            }
+
             _logger.LogInformation("KFC update archive selected: {ArchivePath}", archivePath);
 
             string staging = _paths.GetUpdateStagingDirectoryPath();
@@ -175,6 +192,26 @@ namespace LazyBootstrap.Features.Update
             {
                 Directory.Delete(staging, true);
             }
+        }
+
+        private static bool IsSupportedUpdateArchive(string archivePath)
+        {
+            string extension = Path.GetExtension(archivePath);
+            foreach (string supportedExtension in UpdateArchiveExtensions)
+            {
+                if (string.Equals(extension, supportedExtension, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool HasRequiredUpdateArchivePrefix(string archivePath)
+        {
+            string fileName = Path.GetFileName(archivePath);
+            return fileName.StartsWith(RequiredUpdateArchiveFileNamePrefix, StringComparison.Ordinal);
         }
 
         private async Task<bool> RunSevenZipExtractAsync(string sevenZipPath, string archivePath, string outputDir)
