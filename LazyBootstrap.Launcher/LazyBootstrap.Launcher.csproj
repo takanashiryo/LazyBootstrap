@@ -4,7 +4,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-    <AssemblyName>LazyBootstrap</AssemblyName>
+    <AssemblyName>Launcher</AssemblyName>
     <PublishAot>false</PublishAot>
     <PublishTrimmed>false</PublishTrimmed>
     <InvariantGlobalization>true</InvariantGlobalization>
