@@ -33,8 +33,19 @@ if exist "%sourceLauncherPath%\" (
         )
     )
 
-    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT /XF MediaUpdater.exe
+    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT /XF MediaUpdater.exe MediaUpdater.exe.pending
     if errorlevel 8 exit /b 1
+
+    if exist "%sourceLauncherPath%\MediaUpdater.exe" (
+        if not exist "%targetLauncherPath%\" (
+            mkdir "%targetLauncherPath%"
+            if errorlevel 1 exit /b 1
+        )
+
+        copy /Y "%sourceLauncherPath%\MediaUpdater.exe" "%targetLauncherPath%\MediaUpdater.exe.pending" >nul
+        if errorlevel 1 exit /b 1
+        echo MediaUpdater pending update staged: "%targetLauncherPath%\MediaUpdater.exe.pending"
+    )
 ) else (
     robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT
     if errorlevel 8 exit /b 1

@@ -14,6 +14,7 @@ namespace LazyBootstrap
             {
                 AppServices.InitializeSerilog(args);
                 Log.Information("LazyBootstrap process started.");
+                MediaUpdaterPendingUpdateService.ApplyPendingUpdate(AppServices.RuntimeContext.ApplicationDirectoryPath);
 
                 // Build the DI container. Lazy singletons keep SukiUI managers uncreated until
                 // MainWindow is resolved (after SukiTheme loads); do NOT enable ValidateOnBuild.
