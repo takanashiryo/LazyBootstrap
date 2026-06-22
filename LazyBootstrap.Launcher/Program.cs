@@ -14,6 +14,7 @@ var startInfo = new ProcessStartInfo
 {
     FileName = targetExe,
     UseShellExecute = true,
+    Verb = "runas",
     WorkingDirectory = Path.GetDirectoryName(targetExe) ?? baseDirectory
 };
 
