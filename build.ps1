@@ -84,7 +84,7 @@ try {
         $_.Extension -in '.log', '.tmp', '.bak'
     } | Remove-Item -Force
 
-    Copy-RequiredFile -SourcePath (Join-Path $launcherPublish 'LazyBootstrap.exe') -DestinationDirectory $buildDirectory
+    Copy-RequiredFile -SourcePath (Join-Path $launcherPublish 'Launcher.exe') -DestinationDirectory $buildDirectory
     Copy-PublishTree -SourceDirectory $mainPublish -DestinationDirectory $launcherBuildDirectory
     # MediaUpdater Native AOT: same tree copy; exe + satellites next to launcher.
     Copy-PublishTree -SourceDirectory $mediaUpdaterPublish -DestinationDirectory $launcherBuildDirectory
