@@ -5,11 +5,11 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
+using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SukiUI;
 using SukiUI.Models;
-using LazyBootstrap.Services;
-using LazyBootstrap.Views;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap
 {
@@ -19,6 +19,12 @@ namespace LazyBootstrap
             "Lazy Green",
             Color.Parse("#8CCF43"),
             Color.Parse("#D8FF8C"));
+
+        /// <summary>
+        /// Application composition root. Set from <c>Program.Main</c> before the Avalonia
+        /// lifetime starts and used to resolve the main window after the theme is loaded.
+        /// </summary>
+        public static IServiceProvider Services { get; set; }
 
         public override void Initialize()
         {
@@ -34,8 +40,6 @@ namespace LazyBootstrap
                 return;
             }
 
-            // SukiUI managers must be created AFTER SukiTheme is loaded.
-            AppServices.InitSukiManagers();
             Log.Information("Avalonia application initialization completed.");
         }
 
@@ -52,17 +56,10 @@ namespace LazyBootstrap
                 Log.Information("Framework initialization completed. Preparing main window.");
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-                var mainWindow = new MainWindow(
-                    AppServices.ShellState,
-                    AppServices.Paths,
-                    AppServices.LaunchWorkflow,
-                    AppServices.DisplayWorkflow,
-                    AppServices.EnvironmentScan,
-                    AppServices.SettingsWorkflow,
-                    AppServices.DialogManager,
-                    AppServices.ToastManager,
-                    AppServices.UI,
-                    AppServices.CreateLogger<MainWindow>());
+                // SukiTheme is loaded by Initialize() above, so resolving MainWindow here is the
+                // first time the SukiUI dialog/toast managers are instantiated. This satisfies the
+                // SukiUI initialization-order constraint.
+                var mainWindow = Services.GetRequiredService<MainWindow>();
 
                 ShowPreparedMainWindowAsync(desktop, mainWindow);
             }

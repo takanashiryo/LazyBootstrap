@@ -1,88 +1,99 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <OutputType>WinExe</OutputType>
-    <TargetFramework>net10.0</TargetFramework>
-    <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
-    <RootNamespace>LazyBootstrap</RootNamespace>
-    <AssemblyName>LazyBootstrap</AssemblyName>
-    <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
-    <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
-    <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
-    <Nullable>disable</Nullable>
-    <ImplicitUsings>disable</ImplicitUsings>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <InvariantGlobalization>false</InvariantGlobalization>
-    <Version>26.3</Version>
-    <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
-    <Description>A tool made for SDVX with spice2x</Description>
-    <Company>LazyBootstrap - Lazy SDVX</Company>
-    <Copyright>Copyright © 2025 Takanashi Ryo</Copyright>
-    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
-  </PropertyGroup>
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+        <RootNamespace>LazyBootstrap</RootNamespace>
+        <AssemblyName>LazyBootstrap</AssemblyName>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
+        <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
+        <Nullable>disable</Nullable>
+        <ImplicitUsings>disable</ImplicitUsings>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <InvariantGlobalization>false</InvariantGlobalization>
+        <Version>26.4.1</Version>
+        <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
+        <Description>A tool made for SDVX with spice2x</Description>
+        <Company>LazyBootstrap - Lazy SDVX</Company>
+        <Copyright>Copyright © 2026 Takanashi Ryo</Copyright>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    </PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
-    <PublishAot>false</PublishAot>
-    <PublishTrimmed>true</PublishTrimmed>
-    <PublishSingleFile>true</PublishSingleFile>
-    <SelfContained>true</SelfContained>
-    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
-  </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
+        <PublishAot>true</PublishAot>
+        <PublishTrimmed>true</PublishTrimmed>
+        <PublishSingleFile>false</PublishSingleFile>
+        <SelfContained>true</SelfContained>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        
+        <!--keep it false, otherwise it will crash on old Windows 10-->
+        <CETCompat>false</CETCompat>
+        
+        <!--disable build warnings for trimming and AOT-->
+        <SuppressTrimAnalysisWarnings>true</SuppressTrimAnalysisWarnings>
+        <SuppressAotAnalysisWarnings>true</SuppressAotAnalysisWarnings>
+    </PropertyGroup>
 
-  <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.0.4" />
-    <PackageReference Include="Avalonia.Controls.ColorPicker" Version="12.0.4" />
-    <PackageReference Include="Avalonia.Desktop" Version="12.0.4" />
-    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.0.4" />
-    <PackageReference Include="Avalonia.Themes.Simple" Version="12.0.4" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7" />
-    <PackageReference Include="NAudio.Asio" Version="2.3.0" />
-    <PackageReference Include="Serilog" Version="4.3.1" />
-    <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0" />
-    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
-    <PackageReference Include="System.Management" Version="10.0.7" />
-    <PackageReference Include="SukiUI" Version="7.0.1" />
-  </ItemGroup>
+    <!--bypass the trimmer for SukiUI-->
+    <ItemGroup Condition="'$(Configuration)' == 'Release' and '$(DesignTimeBuild)' != 'true'">
+        <TrimmerRootAssembly Include="SukiUI"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <AvaloniaResource Include="Assets\Fonts\*.ttf" />
-    <AvaloniaResource Include="Assets\Fonts\*.otf" />
-    <AvaloniaResource Include="Assets\Images\*.png" />
-    <AvaloniaResource Include="Assets\Images\*.jpg" />
-  </ItemGroup>
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="11.3.17"/>
+        <PackageReference Include="Avalonia.Desktop" Version="11.3.17"/>
+        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.17"/>
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7"/>
+        <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7"/>
+        <PackageReference Include="NAudio.Asio" Version="2.3.0"/>
+        <PackageReference Include="Serilog" Version="4.3.1"/>
+        <PackageReference Include="Serilog.Extensions.Logging" Version="10.0.0"/>
+        <PackageReference Include="Serilog.Sinks.File" Version="7.0.0"/>
+        <PackageReference Include="System.Management" Version="10.0.7"/>
+        <PackageReference Include="SukiUI" Version="6.1.1"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <None Include="..\Resources\vii\vii_icon.ico">
-      <Link>vii_icon.ico</Link>
-    </None>
-    <None Include="Public\7z\7za.exe">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <TargetPath>7za.exe</TargetPath>
-    </None>
-    <None Include="Public\7z\7za.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <TargetPath>7za.dll</TargetPath>
-    </None>
-    <None Include="Public\7z\7zxa.dll">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <TargetPath>7zxa.dll</TargetPath>
-    </None>
-    <None Include="Public\libs\**\*">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-      <TargetPath>libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
-    </None>
-  </ItemGroup>
+    <ItemGroup>
+        <AvaloniaResource Include="Assets\Fonts\*.ttf"/>
+        <AvaloniaResource Include="Assets\Fonts\*.otf"/>
+        <AvaloniaResource Include="Assets\Images\*.png"/>
+        <AvaloniaResource Include="Assets\Images\*.jpg"/>
+    </ItemGroup>
 
-  <ItemGroup>
-    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdatePaths.cs" Link="MediaUpdate\MediaUpdatePaths.cs" />
-    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateSecurity.cs" Link="MediaUpdate\MediaUpdateSecurity.cs" />
-    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateConstants.cs" Link="MediaUpdate\MediaUpdateConstants.cs" />
-    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateArguments.cs" Link="MediaUpdate\MediaUpdateArguments.cs" />
-    <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateRunner.cs" Link="MediaUpdate\MediaUpdateRunner.cs" />
-  </ItemGroup>
+    <ItemGroup>
+        <None Include="..\Resources\vii\vii_icon.ico">
+            <Link>vii_icon.ico</Link>
+        </None>
+        <None Include="Public\7z\7za.exe">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+            <TargetPath>7za.exe</TargetPath>
+        </None>
+        <None Include="Public\7z\7za.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+            <TargetPath>7za.dll</TargetPath>
+        </None>
+        <None Include="Public\7z\7zxa.dll">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+            <TargetPath>7zxa.dll</TargetPath>
+        </None>
+        <None Include="Public\libs\**\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+            <CopyToPublishDirectory>Always</CopyToPublishDirectory>
+            <TargetPath>libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+        </None>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdatePaths.cs" Link="MediaUpdate\MediaUpdatePaths.cs"/>
+        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateSecurity.cs" Link="MediaUpdate\MediaUpdateSecurity.cs"/>
+        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateConstants.cs" Link="MediaUpdate\MediaUpdateConstants.cs"/>
+        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateArguments.cs" Link="MediaUpdate\MediaUpdateArguments.cs"/>
+        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateRunner.cs" Link="MediaUpdate\MediaUpdateRunner.cs"/>
+    </ItemGroup>
 
 </Project>
