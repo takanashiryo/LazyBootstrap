@@ -1,12 +1,73 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Principal;
 using System.Threading.Tasks;
 
 namespace LazyBootstrap.Infrastructure.Processes
 {
     internal static class ProcessExecutionHelper
     {
+        public const int ElevationCancelledExitCode = -1223;
+
+        public static bool IsCurrentProcessElevated()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return false;
+            }
+
+            try
+            {
+                using var identity = WindowsIdentity.GetCurrent();
+                var principal = new WindowsPrincipal(identity);
+                return principal.IsInRole(WindowsBuiltInRole.Administrator);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        public static Process StartShellProcess(
+            string fileName,
+            string workingDirectory,
+            bool runAsAdministrator,
+            Action<ProcessStartInfo> configure = null)
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                WorkingDirectory = workingDirectory,
+                UseShellExecute = true
+            };
+
+            if (runAsAdministrator && OperatingSystem.IsWindows())
+            {
+                startInfo.Verb = "runas";
+            }
+
+            configure?.Invoke(startInfo);
+            return Process.Start(startInfo);
+        }
+
+        public static async Task<int> RunShellProcessAsync(
+            string fileName,
+            string workingDirectory,
+            bool runAsAdministrator,
+            Action<ProcessStartInfo> configure = null)
+        {
+            using var process = StartShellProcess(fileName, workingDirectory, runAsAdministrator, configure);
+            if (process == null)
+            {
+                return -1;
+            }
+
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            return process.ExitCode;
+        }
+
         public static async Task<int> RunElevatedInstallerAsync(string filePath, string arguments, string workingDirectory)
         {
             try
@@ -29,9 +90,9 @@ namespace LazyBootstrap.Infrastructure.Processes
                 await process.WaitForExitAsync();
                 return process.ExitCode;
             }
-            catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
             {
-                return -1223;
+                return ElevationCancelledExitCode;
             }
         }
 

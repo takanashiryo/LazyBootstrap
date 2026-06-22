@@ -1,4 +1,5 @@
 using System;
+using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
@@ -13,6 +14,13 @@ namespace LazyBootstrap.Features.Update
     public sealed class UpdateOrchestrator
     {
         private static readonly string[] UpdateArchiveFilePatterns = ["*.7z", "*.zip", "*.rar", "*.001"];
+
+        private enum MediaUpdaterStartResult
+        {
+            Started,
+            CancelledByUser,
+            Failed
+        }
 
         private readonly LauncherPaths _paths;
         private readonly UiInteractionService _uiInteractionService;
@@ -97,10 +105,28 @@ namespace LazyBootstrap.Features.Update
                 }
 
                 busy.UpdateText("正在启动更新程序...");
-                if (!TryStartMediaUpdater(mediaUpdater, _paths.BaseDir, staging, _paths.ApplicationDirectoryPath))
+                var updaterStartResult = TryStartMediaUpdater(
+                    mediaUpdater,
+                    _paths.BaseDir,
+                    staging,
+                    _paths.ApplicationDirectoryPath,
+                    out string updaterStartError);
+
+                if (updaterStartResult != MediaUpdaterStartResult.Started)
                 {
-                    _logger.LogWarning("KFC update failed because MediaUpdater could not be started.");
-                    _uiInteractionService.ShowErrorToast("更新失败", "无法启动 MediaUpdater。");
+                    if (updaterStartResult == MediaUpdaterStartResult.CancelledByUser)
+                    {
+                        _logger.LogWarning("KFC update cancelled because MediaUpdater elevation was cancelled.");
+                        _uiInteractionService.ShowWarningToast("更新已取消", updaterStartError);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("KFC update failed because MediaUpdater could not be started. Error={Error}", updaterStartError);
+                        _uiInteractionService.ShowErrorToast(
+                            "更新失败",
+                            string.IsNullOrWhiteSpace(updaterStartError) ? "无法启动 MediaUpdater。" : updaterStartError);
+                    }
+
                     return;
                 }
 
@@ -165,28 +191,39 @@ namespace LazyBootstrap.Features.Update
                 return false;
             }
 
-            var startInfo = new ProcessStartInfo
-            {
-                FileName = sevenZipPath,
-                UseShellExecute = false,
-                CreateNoWindow = true,
-                WorkingDirectory = Path.GetDirectoryName(sevenZipPath) ?? _paths.ApplicationDirectoryPath
-            };
-            startInfo.ArgumentList.Add("x");
-            startInfo.ArgumentList.Add(archivePath);
-            startInfo.ArgumentList.Add("-o" + outputDir + Path.DirectorySeparatorChar);
-            startInfo.ArgumentList.Add("-y");
+            string workingDirectory = Path.GetDirectoryName(sevenZipPath) ?? _paths.ApplicationDirectoryPath;
 
-            using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+            int exitCode;
             try
             {
-                if (!process.Start())
+                _logger.LogInformation(
+                    "Starting update extraction. Elevated={IsElevated}",
+                    ProcessExecutionHelper.IsCurrentProcessElevated());
+                exitCode = await ProcessExecutionHelper.RunShellProcessAsync(
+                    sevenZipPath,
+                    workingDirectory,
+                    true,
+                    startInfo =>
+                    {
+                        startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+                        startInfo.ArgumentList.Add("x");
+                        startInfo.ArgumentList.Add(archivePath);
+                        startInfo.ArgumentList.Add("-o" + outputDir + Path.DirectorySeparatorChar);
+                        startInfo.ArgumentList.Add("-y");
+                    }).ConfigureAwait(true);
+
+                if (exitCode == -1)
                 {
                     _logger.LogWarning("Update extraction failed because 7za process start returned false.");
                     _uiInteractionService.ShowErrorToast("更新失败", "无法启动 7za。");
                     return false;
                 }
-                _logger.LogInformation("Update extraction process started. ProcessId={ProcessId}", process.Id);
+            }
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
+            {
+                _logger.LogWarning("Update extraction cancelled at UAC prompt.");
+                _uiInteractionService.ShowWarningToast("解压已取消", "用户取消了 7za 管理员授权。");
+                return false;
             }
             catch (Exception ex)
             {
@@ -195,53 +232,68 @@ namespace LazyBootstrap.Features.Update
                 return false;
             }
 
-            await process.WaitForExitAsync().ConfigureAwait(true);
-            _logger.LogInformation("Update extraction process exited. ExitCode={ExitCode}", process.ExitCode);
-            if (process.ExitCode != 0)
+            _logger.LogInformation("Update extraction process exited. ExitCode={ExitCode}", exitCode);
+            if (exitCode != 0)
             {
-                _logger.LogWarning("7za exited with code {Code}.", process.ExitCode);
-                _uiInteractionService.ShowErrorToast("解压失败", $"7za 退出代码: {process.ExitCode}");
+                _logger.LogWarning("7za exited with code {Code}.", exitCode);
+                _uiInteractionService.ShowErrorToast("解压失败", $"7za 退出代码: {exitCode}");
                 return false;
             }
 
             return true;
         }
 
-        private static bool TryStartMediaUpdater(
+        private static MediaUpdaterStartResult TryStartMediaUpdater(
             string mediaUpdaterPath,
             string gamePath,
             string stagingPath,
-            string applicationDirectoryPath)
+            string applicationDirectoryPath,
+            out string error)
         {
+            error = null;
+
             try
             {
                 if (string.IsNullOrEmpty(gamePath) || string.IsNullOrEmpty(stagingPath)
                     || gamePath.Contains('"', StringComparison.Ordinal)
                     || stagingPath.Contains('"', StringComparison.Ordinal))
                 {
-                    return false;
+                    error = "更新路径无效。";
+                    return MediaUpdaterStartResult.Failed;
                 }
 
                 string g = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gamePath));
                 string s = Path.TrimEndingDirectorySeparator(Path.GetFullPath(stagingPath));
 
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = mediaUpdaterPath,
-                    UseShellExecute = true,
-                    WorkingDirectory = Path.GetDirectoryName(mediaUpdaterPath) ?? applicationDirectoryPath
-                };
-                startInfo.ArgumentList.Add("--game");
-                startInfo.ArgumentList.Add(g);
-                startInfo.ArgumentList.Add("--staging");
-                startInfo.ArgumentList.Add(s);
+                using var process = ProcessExecutionHelper.StartShellProcess(
+                    mediaUpdaterPath,
+                    Path.GetDirectoryName(mediaUpdaterPath) ?? applicationDirectoryPath,
+                    true,
+                    startInfo =>
+                    {
+                        startInfo.ArgumentList.Add("--game");
+                        startInfo.ArgumentList.Add(g);
+                        startInfo.ArgumentList.Add("--staging");
+                        startInfo.ArgumentList.Add(s);
+                    });
 
-                using var process = Process.Start(startInfo);
-                return process != null;
+                if (process == null)
+                {
+                    error = "未能创建 MediaUpdater 进程。";
+                    return MediaUpdaterStartResult.Failed;
+                }
+
+                return MediaUpdaterStartResult.Started;
             }
-            catch
+            catch (Win32Exception ex) when (ex.NativeErrorCode == 1223)
             {
-                return false;
+                error = "用户取消了 MediaUpdater 管理员授权。";
+                return MediaUpdaterStartResult.CancelledByUser;
+            }
+            catch (Exception ex)
+            {
+                error = $"无法启动 MediaUpdater: {ex.Message}";
+                return MediaUpdaterStartResult.Failed;
             }
         }
     }
