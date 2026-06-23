@@ -1,9 +1,7 @@
 using System;
-using System.Diagnostics;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Notifications;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
@@ -16,16 +14,6 @@ namespace LazyBootstrap.Shell
         private bool _isLaunchLogVisible;
         private bool _isLaunchLogAppendAnimating;
         private bool _isLaunchLogAppendAnimationPending;
-
-        private static readonly Color LaunchMessageErrorStartColor = Color.Parse("#FFFF0000");
-        private static readonly Color LaunchMessageWarningStartColor = Color.Parse("#FFFFD200");
-        private static readonly Color LaunchMessageBorderEndColor = Color.Parse("#FFFFFFFF");
-        private static readonly TimeSpan LaunchMessageOverlayAnimationDuration = TimeSpan.FromSeconds(1.4);
-
-        private readonly SolidColorBrush _launchMessageOverlayBorderBrush = new SolidColorBrush(LaunchMessageErrorStartColor);
-        private DispatcherTimer _launchMessageOverlayAnimationTimer;
-        private Stopwatch _launchMessageOverlayAnimationStopwatch;
-        private Color _launchMessageOverlayStartColor = LaunchMessageErrorStartColor;
 
         /// <summary>Initializes the launch workflow for the startup sequence (invoked by the shell before showing).</summary>
         private Task InitializeLaunchStartupAsync()
@@ -76,7 +64,7 @@ namespace LazyBootstrap.Shell
         private void ReleaseLaunchControls()
         {
             RemoveHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed);
-            StopLaunchMessageOverlayAnimation();
+            ArcadeMessageOverlay?.StopAnimation();
         }
 
         public void OnLaunchStateChanged(LaunchState state)
@@ -318,8 +306,6 @@ namespace LazyBootstrap.Shell
                 return;
             }
 
-            UpdateLaunchMessageContent();
-
             if (_launchState.IsMessageVisible)
             {
                 ShowLaunchMessageOverlay();
@@ -329,44 +315,18 @@ namespace LazyBootstrap.Shell
             HideLaunchMessageOverlay();
         }
 
-        private void UpdateLaunchMessageContent()
-        {
-            if (LaunchMessageTitleTextBlock != null)
-            {
-                LaunchMessageTitleTextBlock.Text = _launchState.MessageTitle ?? string.Empty;
-            }
-
-            if (LaunchMessageAccentTextBlock != null)
-            {
-                string accentText = _launchState.MessageAccentText ?? string.Empty;
-                LaunchMessageAccentTextBlock.Text = accentText;
-                LaunchMessageAccentTextBlock.IsVisible = !string.IsNullOrWhiteSpace(accentText);
-            }
-
-            if (LaunchMessageBodyTextBlock != null)
-            {
-                LaunchMessageBodyTextBlock.Text = _launchState.MessageBodyText ?? string.Empty;
-            }
-        }
-
         private void ShowLaunchMessageOverlay()
         {
-            if (LaunchMessageOverlay == null)
+            if (ArcadeMessageOverlay == null)
             {
                 return;
             }
 
-            _launchMessageOverlayStartColor = ResolveLaunchMessageStartColor(_launchState.MessageType);
-
-            if (LaunchMessageBorder != null && !ReferenceEquals(LaunchMessageBorder.BorderBrush, _launchMessageOverlayBorderBrush))
-            {
-                LaunchMessageBorder.BorderBrush = _launchMessageOverlayBorderBrush;
-            }
-
-            _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
-            UpdateLaunchMessageContent();
-            LaunchMessageOverlay.IsVisible = true;
-            StartLaunchMessageOverlayAnimation();
+            ArcadeMessageOverlay.Show(
+                _launchState.MessageType,
+                _launchState.MessageTitle,
+                _launchState.MessageAccentText,
+                _launchState.MessageBodyText);
         }
 
         private void DismissLaunchMessageOverlay()
@@ -382,59 +342,7 @@ namespace LazyBootstrap.Shell
 
         private void HideLaunchMessageOverlay()
         {
-            StopLaunchMessageOverlayAnimation();
-
-            if (LaunchMessageOverlay == null)
-            {
-                return;
-            }
-
-            LaunchMessageOverlay.IsVisible = false;
-        }
-
-        private void StartLaunchMessageOverlayAnimation()
-        {
-            if (_launchMessageOverlayAnimationTimer == null)
-            {
-                _launchMessageOverlayAnimationTimer = new DispatcherTimer
-                {
-                    Interval = TimeSpan.FromMilliseconds(16)
-                };
-                _launchMessageOverlayAnimationTimer.Tick += OnLaunchMessageOverlayAnimationTick;
-            }
-
-            if (_launchMessageOverlayAnimationStopwatch == null)
-            {
-                _launchMessageOverlayAnimationStopwatch = new Stopwatch();
-            }
-
-            _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
-            _launchMessageOverlayAnimationStopwatch.Restart();
-
-            if (!_launchMessageOverlayAnimationTimer.IsEnabled)
-            {
-                _launchMessageOverlayAnimationTimer.Start();
-            }
-        }
-
-        private void StopLaunchMessageOverlayAnimation()
-        {
-            if (_launchMessageOverlayAnimationTimer != null)
-            {
-                _launchMessageOverlayAnimationTimer.Stop();
-            }
-
-            if (_launchMessageOverlayAnimationStopwatch != null && _launchMessageOverlayAnimationStopwatch.IsRunning)
-            {
-                _launchMessageOverlayAnimationStopwatch.Stop();
-            }
-
-            _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
-
-            if (LaunchMessageBorder != null && !ReferenceEquals(LaunchMessageBorder.BorderBrush, _launchMessageOverlayBorderBrush))
-            {
-                LaunchMessageBorder.BorderBrush = _launchMessageOverlayBorderBrush;
-            }
+            ArcadeMessageOverlay?.Hide();
         }
 
         private void OnLaunchMessageOverlayPointerPressed(object sender, PointerPressedEventArgs e)
@@ -446,55 +354,6 @@ namespace LazyBootstrap.Shell
 
             DismissLaunchMessageOverlay();
             e.Handled = true;
-        }
-
-        private void OnLaunchMessageOverlayAnimationTick(object sender, EventArgs e)
-        {
-            if (LaunchMessageOverlay == null
-                || !LaunchMessageOverlay.IsVisible
-                || _launchMessageOverlayAnimationStopwatch == null)
-            {
-                return;
-            }
-
-            double durationMilliseconds = LaunchMessageOverlayAnimationDuration.TotalMilliseconds;
-            if (durationMilliseconds <= 0)
-            {
-                _launchMessageOverlayBorderBrush.Color = _launchMessageOverlayStartColor;
-                return;
-            }
-
-            double cycleProgress = (_launchMessageOverlayAnimationStopwatch.Elapsed.TotalMilliseconds / durationMilliseconds) % 2d;
-            double pingPongProgress = cycleProgress <= 1d ? cycleProgress : 2d - cycleProgress;
-            double easedProgress = EaseInOutCubicForLaunchMessage(Math.Clamp(pingPongProgress, 0d, 1d));
-            _launchMessageOverlayBorderBrush.Color = InterpolateColor(_launchMessageOverlayStartColor, LaunchMessageBorderEndColor, easedProgress);
-        }
-
-        private static Color ResolveLaunchMessageStartColor(NotificationType messageType)
-        {
-            return messageType switch
-            {
-                NotificationType.Warning => LaunchMessageWarningStartColor,
-                _ => LaunchMessageErrorStartColor
-            };
-        }
-
-        private static double EaseInOutCubicForLaunchMessage(double progress)
-        {
-            return progress < 0.5d
-                ? 4d * progress * progress * progress
-                : 1d - Math.Pow(-2d * progress + 2d, 3d) / 2d;
-        }
-
-        private static Color InterpolateColor(Color from, Color to, double progress)
-        {
-            progress = Math.Clamp(progress, 0d, 1d);
-
-            return Color.FromArgb(
-                (byte)Math.Round(from.A + ((to.A - from.A) * progress)),
-                (byte)Math.Round(from.R + ((to.R - from.R) * progress)),
-                (byte)Math.Round(from.G + ((to.G - from.G) * progress)),
-                (byte)Math.Round(from.B + ((to.B - from.B) * progress)));
         }
     }
 }
