@@ -26,6 +26,7 @@ namespace LazyBootstrap.Features.Launch.Services
         private static readonly TimeSpan AsphyxiaToSpiceLaunchDelay = TimeSpan.FromMilliseconds(300);
 
         private readonly LauncherPaths _paths;
+        private readonly SpiceCrashLogAnalyzer _spiceCrashLogAnalyzer;
         private readonly GameProcessTracker _gameProcessTracker;
         private readonly DisplayOrchestrator _displayOrchestrator;
         private readonly WindowsDefenderExclusionService _windowsDefenderExclusionService;
@@ -41,10 +42,12 @@ namespace LazyBootstrap.Features.Launch.Services
         private DisplayConfigurationSnapshot _display;
         private ILaunchWorkflowObserver _observer;
         private AppShellState.ShellBusyLease _launchNavigationLock;
+        private bool _openLogAfterLaunchMessageDismissal;
         private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
         public LaunchOrchestrator(
             LauncherPaths paths,
+            SpiceCrashLogAnalyzer spiceCrashLogAnalyzer,
             GameProcessTracker gameProcessTracker,
             DisplayOrchestrator displayOrchestrator,
             WindowsDefenderExclusionService windowsDefenderExclusionService,
@@ -53,6 +56,7 @@ namespace LazyBootstrap.Features.Launch.Services
             ILogger<LaunchOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
+            _spiceCrashLogAnalyzer = spiceCrashLogAnalyzer ?? throw new ArgumentNullException(nameof(spiceCrashLogAnalyzer));
             _gameProcessTracker = gameProcessTracker ?? throw new ArgumentNullException(nameof(gameProcessTracker));
             _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
             _windowsDefenderExclusionService = windowsDefenderExclusionService ?? throw new ArgumentNullException(nameof(windowsDefenderExclusionService));
@@ -75,6 +79,22 @@ namespace LazyBootstrap.Features.Launch.Services
             NotifyLaunchLogVisibilityChanged(launchState);
             NotifyLaunchMessageChanged(launchState);
             return Task.CompletedTask;
+        }
+
+        public async Task DismissLaunchMessageAsync(LaunchState launchState)
+        {
+            if (launchState == null || !launchState.IsMessageVisible)
+            {
+                return;
+            }
+
+            bool shouldOpenLog = _openLogAfterLaunchMessageDismissal;
+            ClearLaunchMessage(launchState);
+
+            if (shouldOpenLog)
+            {
+                await OpenLogAsync();
+            }
         }
 
         public Task ToggleLaunchLogAsync(LaunchState launchState, ILaunchWorkflowObserver observer)
@@ -106,7 +126,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     return;
                 }
 
-                var content = await File.ReadAllTextAsync(logPath, Encoding.UTF8);
+                var content = await File.ReadAllTextAsync(logPath, SpiceLogEncoding.ShiftJis);
                 if (string.IsNullOrWhiteSpace(content))
                 {
                     content = "(log.txt 为空)";
@@ -659,28 +679,56 @@ namespace LazyBootstrap.Features.Launch.Services
         {
             try
             {
+                SpiceCrashDiagnostic crashDiagnostic = null;
+                if (abnormalExit)
+                {
+                    crashDiagnostic = await _spiceCrashLogAnalyzer.AnalyzeAsync();
+                    _logger.LogInformation(
+                        "spice64 abnormal exit diagnostic resolved. ExitCode={ExitCode}, CrashSignal={CrashSignal}, CrashReason={CrashReason}, MatchedRuleId={MatchedRuleId}, MatchedLine={MatchedLine}, LogPath={LogPath}, LogReadSucceeded={LogReadSucceeded}",
+                        exitCode,
+                        crashDiagnostic.Signal,
+                        crashDiagnostic.ReasonText,
+                        crashDiagnostic.MatchedRuleId,
+                        crashDiagnostic.MatchedLine,
+                        crashDiagnostic.LogPath,
+                        crashDiagnostic.ReadSucceeded);
+                }
+
                 _logger.LogInformation("spice64 process exited. ExitCode={ExitCode}, AbnormalExit={AbnormalExit}", exitCode, abnormalExit);
-                AppendLaunchOutput(_launchState, abnormalExit ? $"游戏进程异常退出（ExitCode: {exitCode}）。" : "游戏进程已正常退出。", abnormalExit ? NotificationType.Warning : NotificationType.Information);
+                AppendLaunchOutput(
+                    _launchState,
+                    abnormalExit
+                        ? $"游戏进程异常退出。错误信号：{crashDiagnostic?.Signal ?? SpiceCrashDiagnostic.UnknownSignal}，崩溃原因：{crashDiagnostic?.ReasonText ?? "未识别具体崩溃原因"}。"
+                        : "游戏进程已正常退出。",
+                    abnormalExit ? NotificationType.Warning : NotificationType.Information);
 
                 if (abnormalExit && !cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
                 {
+                    var diagnostic = crashDiagnostic ?? new SpiceCrashDiagnostic(
+                        SpiceCrashDiagnostic.UnknownSignal,
+                        "未识别具体崩溃原因",
+                        string.Empty,
+                        string.Empty,
+                        Path.Combine(_paths.GetContentsDirectoryPath(), "log.txt"),
+                        readSucceeded: false);
+                    _openLogAfterLaunchMessageDismissal = true;
+
                     Dispatcher.UIThread.Post(() =>
                     {
-                        if (_shellStateService.SelectedPage == ShellPage.Launch && _launchState != null)
+                        if (_launchState != null)
                         {
                             ShowLaunchMessage(
                                 _launchState,
                                 NotificationType.Error,
                                 "进程异常退出",
-                                $"（ExitCode: {exitCode}）",
-                                $"检测到游戏进程异常退出{SystemEnvironment.NewLine}请阅读 log.txt");
+                                diagnostic.Signal,
+                                BuildCrashOverlayBody(diagnostic));
                         }
                         else
                         {
-                            _uiInteractionService.ShowErrorToast("游戏异常退出", $"spice64.exe 异常退出（ExitCode: {exitCode}），已自动打开日志窗口。");
+                            _openLogAfterLaunchMessageDismissal = false;
+                            _ = OpenLogAsync();
                         }
-
-                        _ = OpenLogAsync();
                     });
                 }
 
@@ -736,7 +784,7 @@ namespace LazyBootstrap.Features.Launch.Services
                         _launchState.IsGameRunning = false;
                         _launchState.StateText = _shellStateService.StatusText;
 
-                        if (!abnormalExit || _shellStateService.SelectedPage != ShellPage.Launch)
+                        if (!abnormalExit)
                         {
                             ClearLaunchMessage(_launchState);
                         }
@@ -834,6 +882,18 @@ namespace LazyBootstrap.Features.Launch.Services
             NotifyLaunchMessageChanged(launchState);
         }
 
+        private static string BuildCrashOverlayBody(SpiceCrashDiagnostic diagnostic)
+        {
+            string signalHint = diagnostic.Signal == SpiceCrashDiagnostic.UnknownSignal
+                ? $"{SystemEnvironment.NewLine}未捕获到错误信号"
+                : string.Empty;
+
+            return
+                $"检测到游戏进程异常退出{signalHint}{SystemEnvironment.NewLine}" +
+                $"崩溃原因：{diagnostic.ReasonText}{SystemEnvironment.NewLine}" +
+                "请阅读 log.txt";
+        }
+
         private void ClearLaunchMessage(LaunchState launchState)
         {
             if (launchState == null)
@@ -841,6 +901,7 @@ namespace LazyBootstrap.Features.Launch.Services
                 return;
             }
 
+            _openLogAfterLaunchMessageDismissal = false;
             launchState.IsMessageVisible = false;
             launchState.MessageType = NotificationType.Error;
             launchState.MessageTitle = string.Empty;

@@ -53,6 +53,7 @@ namespace LazyBootstrap.Infrastructure.DependencyInjection
             services.AddSingleton<SavedataTransferPlanner>();
             services.AddSingleton<DisplaySettingsTransactionCoordinator>();
             services.AddSingleton<GpuCompatLayerConfigurator>();
+            services.AddSingleton<SpiceCrashLogAnalyzer>();
 
             // SukiUI-dependent services: lazy singletons (see remarks on the timing constraint).
             services.AddSingleton<ISukiDialogManager, SukiDialogManager>();
