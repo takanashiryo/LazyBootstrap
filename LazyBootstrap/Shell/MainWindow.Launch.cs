@@ -336,8 +336,8 @@ namespace LazyBootstrap.Shell
                 return;
             }
 
-            _launchState.IsMessageVisible = false;
             HideLaunchMessageOverlay();
+            _ = _launchOrchestrator.DismissLaunchMessageAsync(_launchState);
         }
 
         private void HideLaunchMessageOverlay()
