@@ -59,6 +59,7 @@ namespace LazyBootstrap.Infrastructure.Serialization
         private static void EnsureDefaults(ConfigHandler config)
         {
             EnsureDefault(config, SettingSectionName, "noasphyxia", "false");
+            EnsureDefault(config, SettingSectionName, "disable-fso", "false");
             EnsureDefault(config, SettingSectionName, "compatlayer", "false");
             EnsureDefault(config, SettingSectionName, "cl-rendermode", "dx9on12");
             EnsureDefault(config, SettingSectionName, "use-system-config", "false");
@@ -97,6 +98,7 @@ namespace LazyBootstrap.Infrastructure.Serialization
             {
                 "[Setting]",
                 "noasphyxia = \"false\"",
+                "disable-fso = \"false\"",
                 "compatlayer = \"false\"",
                 "cl-rendermode = \"dx9on12\"",
                 "use-system-config = \"false\"",

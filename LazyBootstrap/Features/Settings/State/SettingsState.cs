@@ -15,6 +15,8 @@ namespace LazyBootstrap.Features.Settings
 
         public bool NoAsphyxia { get; set; }
 
+        public bool DisableSpiceFso { get; set; }
+
         public bool UseSystemSpiceConfig { get; set; }
 
         public bool GpuCompatLayerEnabled { get; set; }
