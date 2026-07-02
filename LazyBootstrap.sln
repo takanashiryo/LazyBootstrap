@@ -7,10 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LazyBootstrap", "LazyBootst
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LazyBootstrap.Launcher", "LazyBootstrap.Launcher\LazyBootstrap.Launcher.csproj", "{9A49B75B-A2D5-47A8-B980-1E292067A4BE}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LauncherApp", "LauncherApp", "{4AB43358-4296-0C7A-360B-9E6F8044CF7C}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "LazyBootstrap.MediaUpdater", "LazyBootstrap.MediaUpdater", "{248DBFFB-4A26-E3FB-18AC-77507085351C}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LazyBootstrap.MediaUpdater", "LazyBootstrap.MediaUpdater\LazyBootstrap.MediaUpdater.csproj", "{AB5AF994-A587-43FC-A470-CF07DDE34C3B}"
 EndProject
 Global
@@ -62,10 +58,6 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{248DBFFB-4A26-E3FB-18AC-77507085351C} = {4AB43358-4296-0C7A-360B-9E6F8044CF7C}
-		{AB5AF994-A587-43FC-A470-CF07DDE34C3B} = {248DBFFB-4A26-E3FB-18AC-77507085351C}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {4127428E-1F85-4B0B-BDBD-D897C7E3CA04}
