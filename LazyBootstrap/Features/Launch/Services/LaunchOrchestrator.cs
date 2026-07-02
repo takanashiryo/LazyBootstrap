@@ -30,6 +30,7 @@ namespace LazyBootstrap.Features.Launch.Services
         private readonly GameProcessTracker _gameProcessTracker;
         private readonly DisplayOrchestrator _displayOrchestrator;
         private readonly WindowsDefenderExclusionService _windowsDefenderExclusionService;
+        private readonly WindowsAppCompatLayerService _appCompatLayerService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
         private readonly ILogger<LaunchOrchestrator> _logger;
@@ -51,6 +52,7 @@ namespace LazyBootstrap.Features.Launch.Services
             GameProcessTracker gameProcessTracker,
             DisplayOrchestrator displayOrchestrator,
             WindowsDefenderExclusionService windowsDefenderExclusionService,
+            WindowsAppCompatLayerService appCompatLayerService,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
             ILogger<LaunchOrchestrator> logger)
@@ -60,6 +62,7 @@ namespace LazyBootstrap.Features.Launch.Services
             _gameProcessTracker = gameProcessTracker ?? throw new ArgumentNullException(nameof(gameProcessTracker));
             _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
             _windowsDefenderExclusionService = windowsDefenderExclusionService ?? throw new ArgumentNullException(nameof(windowsDefenderExclusionService));
+            _appCompatLayerService = appCompatLayerService ?? throw new ArgumentNullException(nameof(appCompatLayerService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -261,6 +264,24 @@ namespace LazyBootstrap.Features.Launch.Services
                     _logger.LogWarning("Launch aborted because spice64.exe was not found: {SpicePath}", spicePath);
                     FailLaunch(launchState, $"未找到 spice64.exe: {spicePath}", "未找到spice64.exe");
                     return;
+                }
+
+                if (!asphyxiaDevOnly && settings?.DisableSpiceFso == true)
+                {
+                    AppendLaunchOutput(launchState, "正在应用 spice64 全屏优化设置...");
+                    if (_appCompatLayerService.TrySetFsoDisabled(spicePath, true, out var fsoError))
+                    {
+                        _logger.LogInformation("FSO registry setting ensured before launch.");
+                        AppendLaunchOutput(launchState, "已禁用 spice64 全屏优化。");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("FSO registry setting failed before launch: {Error}", fsoError);
+                        AppendLaunchOutput(
+                            launchState,
+                            $"禁用全屏优化设置失败: {(string.IsNullOrWhiteSpace(fsoError) ? "未知错误" : fsoError)}",
+                            NotificationType.Warning);
+                    }
                 }
 
                 bool startAsphyxia = asphyxiaDevOnly || !settings.NoAsphyxia;

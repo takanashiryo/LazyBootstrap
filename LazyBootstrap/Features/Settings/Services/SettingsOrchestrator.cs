@@ -19,12 +19,14 @@ namespace LazyBootstrap.Features.Settings
         private const string AsphyxiaPresetName = "Asphyxia";
         private const string AsphyxiaDefaultUrl = "http://localhost:8083";
         private const string UseSystemConfigKey = "use-system-config";
+        private const string DisableFsoConfigKey = "disable-fso";
         private const string MissingSpiceConfigMessage = "未找到任何spice2x配置文件";
 
         private readonly ConfigHandler _configHandler;
         private readonly LauncherPaths _paths;
         private readonly SpiceConfigFile _spiceConfigFileService;
         private readonly GpuCompatLayerConfigurator _gpuCompatLayerService;
+        private readonly WindowsAppCompatLayerService _appCompatLayerService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
         private readonly ILogger<SettingsOrchestrator> _logger;
@@ -155,6 +157,7 @@ namespace LazyBootstrap.Features.Settings
             LauncherPaths paths,
             SpiceConfigFile spiceConfigFileService,
             GpuCompatLayerConfigurator gpuCompatLayerService,
+            WindowsAppCompatLayerService appCompatLayerService,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
             ILogger<SettingsOrchestrator> logger)
@@ -163,6 +166,7 @@ namespace LazyBootstrap.Features.Settings
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
             _gpuCompatLayerService = gpuCompatLayerService ?? throw new ArgumentNullException(nameof(gpuCompatLayerService));
+            _appCompatLayerService = appCompatLayerService ?? throw new ArgumentNullException(nameof(appCompatLayerService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -174,6 +178,7 @@ namespace LazyBootstrap.Features.Settings
             settings.RunSilently(() =>
             {
                 settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
+                settings.DisableSpiceFso = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false);
                 settings.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
                 settings.GpuCompatLayerRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
                 settings.IsSpiceConfigAvailable = IsSpiceConfigAvailable(settings.UseSystemSpiceConfig);
@@ -378,6 +383,56 @@ namespace LazyBootstrap.Features.Settings
 
             SyncSelectedNetworkAdapter(settings, settings.NetworkAdapterIp, settings.NetworkAdapterSubnet);
             _logger.LogInformation("Network settings persistence completed.");
+            return Task.CompletedTask;
+        }
+
+        public Task PersistFsoToggleAsync(SettingsState settings)
+        {
+            ArgumentNullException.ThrowIfNull(settings);
+            _logger.LogInformation("FSO toggle persistence started.");
+
+            try
+            {
+                _configHandler.WriteString(
+                    AppConfigBootstrapper.SettingSectionName,
+                    DisableFsoConfigKey,
+                    settings.DisableSpiceFso.ToString().ToLowerInvariant());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to persist FSO setting.");
+                _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
+                settings.RunSilently(() => settings.DisableSpiceFso = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false));
+                return Task.CompletedTask;
+            }
+
+            string spicePath = _paths.GetSpicePath();
+            if (!File.Exists(spicePath))
+            {
+                _logger.LogWarning("FSO registry update skipped because spice64.exe was not found: {SpicePath}", spicePath);
+                _uiInteractionService.ShowWarningToast("FSO 设置已保存", $"未找到 spice64.exe，启动游戏前会再次尝试应用：{spicePath}");
+                return Task.CompletedTask;
+            }
+
+            if (_appCompatLayerService.TrySetFsoDisabled(spicePath, settings.DisableSpiceFso, out var error))
+            {
+                _logger.LogInformation("FSO registry setting applied. Disabled={Disabled}", settings.DisableSpiceFso);
+                return Task.CompletedTask;
+            }
+
+            _logger.LogWarning("FSO registry setting failed: {Error}", error);
+            _uiInteractionService.ShowErrorToast("FSO 设置失败", string.IsNullOrWhiteSpace(error) ? "未知错误" : error);
+            bool actualDisabled = _appCompatLayerService.IsFsoDisabled(spicePath);
+            settings.RunSilently(() => settings.DisableSpiceFso = actualDisabled);
+            try
+            {
+                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, actualDisabled.ToString().ToLowerInvariant());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to restore FSO setting after registry failure.");
+            }
+
             return Task.CompletedTask;
         }
 
