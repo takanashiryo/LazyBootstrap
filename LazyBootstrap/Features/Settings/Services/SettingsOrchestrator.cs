@@ -567,6 +567,32 @@ namespace LazyBootstrap.Features.Settings
             }
         }
 
+        public async Task SetUseSystemSpiceConfigAsync(SettingsState settings, bool requestedValue)
+        {
+            ArgumentNullException.ThrowIfNull(settings);
+
+            if (requestedValue && !settings.UseSystemSpiceConfig)
+            {
+                _logger.LogInformation("Use system spice config confirmation dialog opened.");
+                var confirmed = await _uiInteractionService.ShowDialogAsync(
+                    "切换为系统配置",
+                    "开启后将失去下列功能：\n- 更新后自动应用 Patch\n- 与其他 BEMANI 游戏的配置隔离\n\n是否继续开启？",
+                    "开启",
+                    "取消",
+                    NotificationType.Warning);
+
+                if (!confirmed)
+                {
+                    _logger.LogInformation("Use system spice config enable was cancelled.");
+                    settings.RunSilently(() => settings.UseSystemSpiceConfig = false);
+                    return;
+                }
+            }
+
+            settings.UseSystemSpiceConfig = requestedValue;
+            await PersistUseSystemSpiceConfigAsync(settings);
+        }
+
         public Task PersistUseSystemSpiceConfigAsync(SettingsState settings)
         {
             ArgumentNullException.ThrowIfNull(settings);

@@ -686,10 +686,19 @@ namespace LazyBootstrap.Shell
                 UseSystemSpiceConfigToggleSwitch.IsCheckedChanged += async (_, _) =>
                 {
                     if (_isLoadingSettings) return;
-                    _settingsState.UseSystemSpiceConfig = UseSystemSpiceConfigToggleSwitch.IsChecked == true;
-                    await _settingsWorkflowService.PersistUseSystemSpiceConfigAsync(_settingsState);
-                    ApplyStartupSettingsStateToUi();
-                    ApplyDeferredSettingsStateToUi();
+                    try
+                    {
+                        bool requestedValue = UseSystemSpiceConfigToggleSwitch.IsChecked == true;
+                        await _settingsWorkflowService.SetUseSystemSpiceConfigAsync(_settingsState, requestedValue);
+                        ApplyStartupSettingsStateToUi();
+                        ApplyDeferredSettingsStateToUi();
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Persist use system spice config toggle failed.");
+                        ApplyStartupSettingsStateToUi();
+                        ApplyDeferredSettingsStateToUi();
+                    }
                 };
             }
         }
