@@ -752,12 +752,22 @@ public class ConfigHandler
             if (TryGetStandardSectionName(trimmed, out _))
             {
                 insertIndex = i;
+                while (insertIndex > sectionHeaderIndex + 1 && string.IsNullOrWhiteSpace(lines[insertIndex - 1]))
+                {
+                    insertIndex--;
+                }
+
                 break;
             }
 
             if (TryGetArraySectionName(trimmed, out _))
             {
                 insertIndex = i;
+                while (insertIndex > sectionHeaderIndex + 1 && string.IsNullOrWhiteSpace(lines[insertIndex - 1]))
+                {
+                    insertIndex--;
+                }
+
                 break;
             }
 
