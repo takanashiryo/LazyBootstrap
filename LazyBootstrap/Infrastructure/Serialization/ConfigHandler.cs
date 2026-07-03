@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Tomlyn;
+using Tomlyn.Model;
+using Tomlyn.Parsing;
 
 namespace LazyBootstrap.Infrastructure.Serialization;
 
@@ -18,6 +22,11 @@ internal static class TomlTextShared
             .Replace("\r", "\\r")
             .Replace("\n", "\\n")
             .Replace("\t", "\\t");
+    }
+
+    public static string BuildStringLine(string key, string value)
+    {
+        return $"{key} = \"{EscapeTomlString(value)}\"";
     }
 
     public static void NormalizeBlankLines(List<string> lines, bool preserveSectionSeparator)
@@ -44,135 +53,164 @@ internal static class TomlTextShared
                 continue;
             }
 
-            if (preserveSectionSeparator)
+            if (preserveSectionSeparator && IsSectionSeparator(lines, i))
             {
-                string prevNonBlank = string.Empty;
-                string nextNonBlank = string.Empty;
-
-                for (int p = i - 1; p >= 0; p--)
-                {
-                    if (!string.IsNullOrWhiteSpace(lines[p]))
-                    {
-                        prevNonBlank = lines[p].Trim();
-                        break;
-                    }
-                }
-
-                for (int n = i + 1; n < lines.Count; n++)
-                {
-                    if (!string.IsNullOrWhiteSpace(lines[n]))
-                    {
-                        nextNonBlank = lines[n].Trim();
-                        break;
-                    }
-                }
-
-                bool keepAsSectionSeparator = !string.IsNullOrWhiteSpace(prevNonBlank)
-                    && !string.IsNullOrWhiteSpace(nextNonBlank)
-                    && !prevNonBlank.StartsWith("[", StringComparison.Ordinal)
-                    && nextNonBlank.StartsWith("[", StringComparison.Ordinal);
-
-                if (keepAsSectionSeparator)
-                {
-                    continue;
-                }
+                continue;
             }
 
             lines.RemoveAt(i);
         }
     }
-}
 
+    private static bool IsSectionSeparator(List<string> lines, int blankLineIndex)
+    {
+        string previous = string.Empty;
+        string next = string.Empty;
+
+        for (int i = blankLineIndex - 1; i >= 0; i--)
+        {
+            if (!string.IsNullOrWhiteSpace(lines[i]))
+            {
+                previous = lines[i].Trim();
+                break;
+            }
+        }
+
+        for (int i = blankLineIndex + 1; i < lines.Count; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(lines[i]))
+            {
+                next = lines[i].Trim();
+                break;
+            }
+        }
+
+        return !string.IsNullOrWhiteSpace(previous)
+            && !string.IsNullOrWhiteSpace(next)
+            && !previous.StartsWith("[", StringComparison.Ordinal)
+            && next.StartsWith("[", StringComparison.Ordinal);
+    }
+}
 
 public class ConfigHandler
 {
+    private const string InvalidBackupSuffix = "invalid";
     private readonly string _path;
     private readonly object _sync = new object();
+    private readonly ILogger<ConfigHandler> _logger;
 
     public ConfigHandler(string tomlPath)
+        : this(tomlPath, null)
+    {
+    }
+
+    public ConfigHandler(string tomlPath, ILogger<ConfigHandler> logger)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tomlPath);
         _path = new FileInfo(tomlPath).FullName;
+        _logger = logger;
+    }
+
+    public bool TryValidate(out string error)
+    {
+        lock (_sync)
+        {
+            if (!File.Exists(_path))
+            {
+                error = string.Empty;
+                return true;
+            }
+
+            try
+            {
+                error = ValidateTomlText(File.ReadAllText(_path, Encoding.UTF8));
+                return string.IsNullOrWhiteSpace(error);
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+    }
+
+    public void ReplaceWithText(string content)
+    {
+        lock (_sync)
+        {
+            WriteTextUnsafe(content ?? string.Empty);
+        }
+    }
+
+    public string BackupInvalidAndReplace(string replacementContent)
+    {
+        lock (_sync)
+        {
+            string backupPath = string.Empty;
+            if (File.Exists(_path))
+            {
+                backupPath = CreateUniqueBackupPath();
+                File.Move(_path, backupPath);
+                _logger?.LogWarning("Invalid config.toml was moved to {BackupPath}.", backupPath);
+            }
+
+            try
+            {
+                WriteTextUnsafe(replacementContent ?? string.Empty);
+                return backupPath;
+            }
+            catch
+            {
+                RestoreBackupAfterFailedReset(backupPath);
+                throw;
+            }
+        }
     }
 
     public void WriteString(string section, string key, string value)
     {
         lock (_sync)
         {
-            var lines = File.Exists(_path)
-                ? File.ReadAllLines(_path, Encoding.UTF8).ToList()
-                : new List<string>();
-
-            string sectionName = section?.Trim() ?? string.Empty;
-            string keyName = key?.Trim() ?? string.Empty;
-            string valueLine = BuildTomlLine(keyName, value ?? string.Empty);
-
+            string sectionName = NormalizeName(section);
+            string keyName = NormalizeName(key);
             if (string.IsNullOrWhiteSpace(keyName))
             {
                 return;
             }
 
-            if (!TryUpsertInSection(lines, sectionName, keyName, valueLine))
-            {
-                AppendSectionWithKey(lines, sectionName, valueLine);
-            }
-
-            NormalizeBlankLines(lines);
-            WriteLinesUnsafe(lines);
+            var document = LoadDocumentUnsafe();
+            document.UpsertString(sectionName, keyName, value ?? string.Empty);
+            WriteDocumentUnsafe(document);
         }
+    }
+
+    public void WriteBool(string section, string key, bool value)
+    {
+        WriteString(section, key, value ? "true" : "false");
+    }
+
+    public void WriteInt(string section, string key, int value)
+    {
+        WriteString(section, key, value.ToString(CultureInfo.InvariantCulture));
     }
 
     public void RenameSection(string sourceSection, string targetSection)
     {
         lock (_sync)
         {
-            if (string.IsNullOrWhiteSpace(sourceSection) || string.IsNullOrWhiteSpace(targetSection)
+            if (string.IsNullOrWhiteSpace(sourceSection)
+                || string.IsNullOrWhiteSpace(targetSection)
                 || string.Equals(sourceSection, targetSection, StringComparison.OrdinalIgnoreCase)
                 || !File.Exists(_path))
             {
                 return;
             }
 
-            var lines = File.ReadAllLines(_path, Encoding.UTF8).ToList();
-            int sourceHeaderIndex = -1;
-            int targetHeaderIndex = -1;
-
-            for (int i = 0; i < lines.Count; i++)
+            var document = LoadDocumentUnsafe();
+            if (document.RenameSection(NormalizeName(sourceSection), NormalizeName(targetSection)))
             {
-                var trimmed = lines[i].Trim();
-                if (!TryGetStandardSectionName(trimmed, out var parsedSection))
-                {
-                    continue;
-                }
-
-                if (string.Equals(parsedSection, targetSection, StringComparison.OrdinalIgnoreCase))
-                {
-                    targetHeaderIndex = i;
-                }
-
-                if (string.Equals(parsedSection, sourceSection, StringComparison.OrdinalIgnoreCase))
-                {
-                    sourceHeaderIndex = i;
-                }
+                WriteDocumentUnsafe(document);
             }
-
-            if (sourceHeaderIndex < 0)
-            {
-                return;
-            }
-
-            if (targetHeaderIndex >= 0)
-            {
-                MergeMissingKeysIntoSection(lines, sourceSection, targetSection);
-                RemoveSection(lines, sourceSection);
-            }
-            else
-            {
-                lines[sourceHeaderIndex] = $"[{targetSection}]";
-            }
-
-            NormalizeBlankLines(lines);
-            WriteLinesUnsafe(lines);
         }
     }
 
@@ -188,50 +226,11 @@ public class ConfigHandler
                 return;
             }
 
-            var lines = File.ReadAllLines(_path, Encoding.UTF8).ToList();
-            if (!TryGetSectionBounds(lines, sourceSection, out var sourceHeaderIndex, out _, out var sourceEndExclusive))
+            var document = LoadDocumentUnsafe();
+            if (document.MoveKey(NormalizeName(sourceSection), NormalizeName(targetSection), NormalizeName(key)))
             {
-                return;
+                WriteDocumentUnsafe(document);
             }
-
-            int keyLineIndex = -1;
-            string keyValue = string.Empty;
-            for (int i = sourceHeaderIndex + 1; i < sourceEndExclusive; i++)
-            {
-                var trimmed = lines[i].Trim();
-                if (!TryParseTomlKeyValue(trimmed, out var parsedKey, out var parsedValue))
-                {
-                    continue;
-                }
-
-                if (string.Equals(parsedKey, key, StringComparison.OrdinalIgnoreCase))
-                {
-                    keyLineIndex = i;
-                    keyValue = parsedValue;
-                    break;
-                }
-            }
-
-            if (keyLineIndex < 0)
-            {
-                return;
-            }
-
-            lines.RemoveAt(keyLineIndex);
-            if (TryGetSectionBounds(lines, sourceSection, out sourceHeaderIndex, out _, out sourceEndExclusive)
-                && sourceEndExclusive <= sourceHeaderIndex + 1)
-            {
-                lines.RemoveAt(sourceHeaderIndex);
-            }
-
-            string valueLine = BuildTomlLine(key, keyValue);
-            if (!TryUpsertInSection(lines, targetSection, key, valueLine))
-            {
-                AppendSectionWithKey(lines, targetSection, valueLine);
-            }
-
-            NormalizeBlankLines(lines);
-            WriteLinesUnsafe(lines);
         }
     }
 
@@ -246,35 +245,10 @@ public class ConfigHandler
                 return;
             }
 
-            var lines = LoadLinesUnsafe();
-            if (!TryGetSectionBounds(lines, section, out var headerIndex, out var contentStart, out var contentEndExclusive))
+            var document = LoadDocumentUnsafe();
+            if (document.DeleteKey(NormalizeName(section), NormalizeName(key)))
             {
-                return;
-            }
-
-            for (int i = contentStart; i < contentEndExclusive; i++)
-            {
-                var trimmed = lines[i].Trim();
-                if (!TryParseTomlKeyValue(trimmed, out var parsedKey, out _))
-                {
-                    continue;
-                }
-
-                if (!string.Equals(parsedKey, key, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                lines.RemoveAt(i);
-                if (TryGetSectionBounds(lines, section, out headerIndex, out contentStart, out contentEndExclusive)
-                    && contentEndExclusive <= contentStart)
-                {
-                    lines.RemoveAt(headerIndex);
-                }
-
-                NormalizeBlankLines(lines);
-                WriteLinesUnsafe(lines);
-                return;
+                WriteDocumentUnsafe(document);
             }
         }
     }
@@ -288,59 +262,49 @@ public class ConfigHandler
                 return defaultValue;
             }
 
-            string sectionName = section?.Trim() ?? string.Empty;
-            string keyName = key?.Trim() ?? string.Empty;
-
-            string currentSection = string.Empty;
-            bool inArraySection = false;
-
-            foreach (var rawLine in File.ReadAllLines(_path, Encoding.UTF8))
+            string sectionName = NormalizeName(section);
+            string keyName = NormalizeName(key);
+            if (string.IsNullOrWhiteSpace(keyName))
             {
-                var line = rawLine.Trim();
-                if (string.IsNullOrWhiteSpace(line) || line.StartsWith("#", StringComparison.Ordinal))
-                {
-                    continue;
-                }
-
-                if (TryGetStandardSectionName(line, out var parsedSection))
-                {
-                    currentSection = parsedSection;
-                    inArraySection = false;
-                    continue;
-                }
-
-                if (TryGetArraySectionName(line, out _))
-                {
-                    inArraySection = true;
-                    continue;
-                }
-
-                if (inArraySection)
-                {
-                    continue;
-                }
-
-                if (!string.Equals(currentSection, sectionName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                if (!TryParseTomlKeyValue(line, out var parsedKey, out var parsedValue))
-                {
-                    continue;
-                }
-
-                if (string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return parsedValue;
-                }
+                return defaultValue;
             }
 
-            return defaultValue;
+            if (TryLoadModelUnsafe(out var model, out var error)
+                && TryReadModelValue(model, sectionName, keyName, out var modelValue))
+            {
+                return modelValue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(error))
+            {
+                _logger?.LogWarning("Falling back to text-level config read because TOML model loading failed: {Error}", error);
+            }
+
+            var document = LoadDocumentUnsafe();
+            return document.TryReadString(sectionName, keyName, out var textValue)
+                ? textValue
+                : defaultValue;
         }
     }
 
-    public (List<ServerPresetItem> Presets, string ActivePreset, bool Mutated) LoadServerPresets(string nonePresetName, string asphyxiaPresetName, string asphyxiaDefaultUrl)
+    public bool ReadBool(string section, string key, bool defaultValue)
+    {
+        var value = ReadString(section, key, defaultValue ? "true" : "false");
+        return bool.TryParse(value, out var parsed) ? parsed : defaultValue;
+    }
+
+    public int ReadInt(string section, string key, int defaultValue)
+    {
+        var value = ReadString(section, key, defaultValue.ToString(CultureInfo.InvariantCulture));
+        return int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            ? parsed
+            : defaultValue;
+    }
+
+    public (List<ServerPresetItem> Presets, string ActivePreset, bool Mutated) LoadServerPresets(
+        string nonePresetName,
+        string asphyxiaPresetName,
+        string asphyxiaDefaultUrl)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(nonePresetName);
         ArgumentException.ThrowIfNullOrWhiteSpace(asphyxiaPresetName);
@@ -352,135 +316,32 @@ public class ConfigHandler
             {
                 new ServerPresetItem { Name = nonePresetName }
             };
-
             string activePreset = nonePresetName;
             bool hasPresetSection = false;
-            bool mutated = false;
+            string modelError = string.Empty;
 
-            var lines = LoadLinesUnsafe();
-            if (lines.Count > 0)
+            if (File.Exists(_path) && TryLoadModelUnsafe(out var model, out modelError))
             {
-                ServerPresetItem current = null;
-                bool inServerSection = false;
-                string fileActivePreset = string.Empty;
-
-                void CommitCurrent()
+                LoadServerPresetsFromModel(model, presets, ref activePreset, ref hasPresetSection);
+            }
+            else
+            {
+                if (!string.IsNullOrWhiteSpace(modelError))
                 {
-                    if (current == null || string.IsNullOrWhiteSpace(current.Name))
-                    {
-                        return;
-                    }
-
-                    if (presets.Any(p => string.Equals(p.Name, current.Name, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        return;
-                    }
-
-                    presets.Add(current);
+                    _logger?.LogWarning("Falling back to text-level server preset read because TOML model loading failed: {Error}", modelError);
                 }
 
-                foreach (var rawLine in lines)
-                {
-                    var line = rawLine.Trim();
-
-                    if (line.StartsWith("[Server]", StringComparison.OrdinalIgnoreCase))
-                    {
-                        inServerSection = true;
-                        continue;
-                    }
-
-                    if (line.StartsWith("[[Server.Presets]]", StringComparison.OrdinalIgnoreCase)
-                        || line.StartsWith("[[ServerPresets]]", StringComparison.OrdinalIgnoreCase))
-                    {
-                        hasPresetSection = true;
-                        inServerSection = false;
-                        CommitCurrent();
-                        current = new ServerPresetItem();
-                        continue;
-                    }
-
-                    if (inServerSection)
-                    {
-                        if (line.StartsWith("[", StringComparison.Ordinal) && !line.StartsWith("[[", StringComparison.Ordinal))
-                        {
-                            inServerSection = false;
-                        }
-                        else
-                        {
-                            if (TryParseTomlKeyValue(line, out var serverKey, out var serverValue)
-                                && string.Equals(serverKey, "activepreset", StringComparison.OrdinalIgnoreCase))
-                            {
-                                fileActivePreset = serverValue;
-                            }
-
-                            continue;
-                        }
-                    }
-
-                    if (current == null)
-                    {
-                        continue;
-                    }
-
-                    if (line.StartsWith("[", StringComparison.Ordinal) && !line.StartsWith("[[", StringComparison.Ordinal))
-                    {
-                        CommitCurrent();
-                        current = null;
-                        continue;
-                    }
-
-                    if (!TryParseTomlKeyValue(line, out var key, out var value))
-                    {
-                        continue;
-                    }
-
-                    if (string.Equals(key, "name", StringComparison.OrdinalIgnoreCase))
-                    {
-                        current.Name = value;
-                    }
-                    else if (string.Equals(key, "serverurl", StringComparison.OrdinalIgnoreCase))
-                    {
-                        current.ServerUrl = value;
-                    }
-                    else if (string.Equals(key, "pcbid", StringComparison.OrdinalIgnoreCase))
-                    {
-                        current.PcbId = value;
-                    }
-                }
-
-                CommitCurrent();
-
-                if (!string.IsNullOrWhiteSpace(fileActivePreset))
-                {
-                    var matched = presets.FirstOrDefault(p => string.Equals(p.Name, fileActivePreset, StringComparison.OrdinalIgnoreCase));
-                    if (matched != null)
-                    {
-                        activePreset = matched.Name;
-                    }
-                }
+                LoadServerPresetsFromText(LoadDocumentUnsafe(), presets, ref activePreset, ref hasPresetSection);
             }
 
-            var existingAsphyxia = presets.FirstOrDefault(p => string.Equals(p.Name, asphyxiaPresetName, StringComparison.OrdinalIgnoreCase));
-            if (existingAsphyxia == null)
-            {
-                presets.Add(new ServerPresetItem
-                {
-                    Name = asphyxiaPresetName,
-                    ServerUrl = asphyxiaDefaultUrl,
-                    PcbId = string.Empty
-                });
-                mutated = true;
-            }
-            else if (string.IsNullOrWhiteSpace(existingAsphyxia.ServerUrl))
-            {
-                existingAsphyxia.ServerUrl = asphyxiaDefaultUrl;
-                mutated = true;
-            }
-
+            bool mutated = EnsureServerPresetDefaults(presets, asphyxiaPresetName, asphyxiaDefaultUrl);
             if (!hasPresetSection)
             {
                 mutated = true;
             }
+
+            var active = presets.FirstOrDefault(p => string.Equals(p.Name, activePreset, StringComparison.OrdinalIgnoreCase));
+            activePreset = active?.Name ?? nonePresetName;
 
             return (presets, activePreset, mutated);
         }
@@ -493,231 +354,202 @@ public class ConfigHandler
 
         lock (_sync)
         {
-            var lines = LoadLinesUnsafe();
-            var kept = new List<string>();
-            bool skippingOldPresets = false;
-            bool skippingServerSection = false;
-
-            foreach (var line in lines)
-            {
-                var trimmed = line.Trim();
-
-                if (trimmed.StartsWith("[Server]", StringComparison.OrdinalIgnoreCase))
-                {
-                    skippingServerSection = true;
-                    continue;
-                }
-
-                if (trimmed.StartsWith("[[Server.Presets]]", StringComparison.OrdinalIgnoreCase)
-                    || trimmed.StartsWith("[[ServerPresets]]", StringComparison.OrdinalIgnoreCase))
-                {
-                    skippingOldPresets = true;
-                    continue;
-                }
-
-                if (skippingServerSection || skippingOldPresets)
-                {
-                    if (trimmed.StartsWith("[", StringComparison.Ordinal) && !trimmed.StartsWith("[[", StringComparison.Ordinal))
-                    {
-                        skippingServerSection = false;
-                        skippingOldPresets = false;
-                        kept.Add(line);
-                    }
-
-                    continue;
-                }
-
-                kept.Add(line);
-            }
-
-            while (kept.Count > 0 && string.IsNullOrWhiteSpace(kept[^1]))
-            {
-                kept.RemoveAt(kept.Count - 1);
-            }
-
-            if (kept.Count > 0)
-            {
-                kept.Add(string.Empty);
-            }
-
-            kept.Add("[Server]");
-            kept.Add($"activepreset = \"{TomlTextShared.EscapeTomlString(activePreset ?? nonePresetName)}\"");
+            var document = LoadDocumentUnsafe();
+            document.RemoveArrayTableBlocks("Server.Presets");
+            document.RemoveArrayTableBlocks("ServerPresets");
+            document.UpsertString("Server", "activepreset", activePreset ?? nonePresetName);
 
             foreach (var preset in presets.Where(p =>
                          p != null
+                         && !string.IsNullOrWhiteSpace(p.Name)
                          && !string.Equals(p.Name, nonePresetName, StringComparison.OrdinalIgnoreCase)))
             {
-                kept.Add(string.Empty);
-                kept.Add("[[Server.Presets]]");
-                kept.Add($"name = \"{TomlTextShared.EscapeTomlString(preset.Name)}\"");
-                kept.Add($"serverurl = \"{TomlTextShared.EscapeTomlString(preset.ServerUrl)}\"");
-                kept.Add($"pcbid = \"{TomlTextShared.EscapeTomlString(preset.PcbId)}\"");
+                document.AppendServerPreset(preset);
             }
 
-            TomlTextShared.NormalizeBlankLines(kept, preserveSectionSeparator: false);
-            WriteLinesUnsafe(kept);
+            WriteDocumentUnsafe(document, preserveSectionSeparator: false);
         }
     }
 
-    private static string BuildTomlLine(string key, string value)
-    {
-        return $"{key} = \"{TomlTextShared.EscapeTomlString(value)}\"";
-    }
-
-    private List<string> LoadLinesUnsafe()
+    private TomlLineDocument LoadDocumentUnsafe()
     {
         return File.Exists(_path)
-            ? File.ReadAllLines(_path, Encoding.UTF8).ToList()
-            : new List<string>();
+            ? TomlLineDocument.FromLines(File.ReadAllLines(_path, Encoding.UTF8))
+            : TomlLineDocument.Empty();
     }
 
-    private void WriteLinesUnsafe(List<string> lines)
+    private void WriteDocumentUnsafe(TomlLineDocument document, bool preserveSectionSeparator = true)
     {
-        ArgumentNullException.ThrowIfNull(lines);
-        WriteTextAtomically(string.Join(Environment.NewLine, lines));
+        ArgumentNullException.ThrowIfNull(document);
+        document.NormalizeBlankLines(preserveSectionSeparator);
+        WriteTextUnsafe(document.ToText());
     }
 
-    private void WriteTextAtomically(string content)
+    private void WriteTextUnsafe(string content)
     {
-        var directory = Path.GetDirectoryName(_path);
-        if (!string.IsNullOrWhiteSpace(directory))
+        var validationError = ValidateTomlText(content ?? string.Empty);
+        if (!string.IsNullOrWhiteSpace(validationError))
         {
-            Directory.CreateDirectory(directory);
+            throw new InvalidDataException($"Serialized TOML failed validation: {validationError}");
         }
 
-        var tempPath = Path.Combine(
-            directory ?? string.Empty,
-            $"{Path.GetFileName(_path)}.{Guid.NewGuid():N}.tmp");
+        if (!SafeFileWriter.TryWriteAllText(_path, content ?? string.Empty, ValidateTomlFile, out var error))
+        {
+            throw new IOException(error);
+        }
+    }
 
-        File.WriteAllText(tempPath, content ?? string.Empty, TomlTextShared.Utf8NoBom);
+    private bool TryLoadModelUnsafe(out TomlTable model, out string error)
+    {
+        model = null;
+        error = string.Empty;
 
         try
         {
-            if (File.Exists(_path))
+            string text = File.ReadAllText(_path, Encoding.UTF8);
+            error = ValidateTomlText(text);
+            if (!string.IsNullOrWhiteSpace(error))
             {
-                try
-                {
-                    File.Replace(tempPath, _path, null, true);
-                }
-                catch (PlatformNotSupportedException)
-                {
-                    File.Move(tempPath, _path, true);
-                }
+                return false;
             }
-            else
-            {
-                File.Move(tempPath, _path);
-            }
+
+            model = TomlSerializer.Deserialize<TomlTable>(text) ?? new TomlTable();
+            return true;
         }
-        finally
+        catch (Exception ex)
         {
-            if (File.Exists(tempPath))
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private string CreateUniqueBackupPath()
+    {
+        var directory = Path.GetDirectoryName(_path) ?? string.Empty;
+        var fileName = Path.GetFileName(_path);
+        var timestamp = DateTime.Now.ToString("yyyyMMddHHmmss", CultureInfo.InvariantCulture);
+        string basePath = Path.Combine(directory, $"{fileName}.{InvalidBackupSuffix}.{timestamp}.bak");
+        if (!File.Exists(basePath))
+        {
+            return basePath;
+        }
+
+        for (int i = 1; ; i++)
+        {
+            string candidate = Path.Combine(directory, $"{fileName}.{InvalidBackupSuffix}.{timestamp}.{i}.bak");
+            if (!File.Exists(candidate))
             {
-                File.Delete(tempPath);
+                return candidate;
             }
         }
     }
 
-    private static void NormalizeBlankLines(List<string> lines)
+    private void RestoreBackupAfterFailedReset(string backupPath)
     {
-        TomlTextShared.NormalizeBlankLines(lines, preserveSectionSeparator: true);
-    }
-
-    private static bool TryGetSectionBounds(List<string> lines, string sectionName, out int headerIndex, out int contentStart, out int contentEndExclusive)
-    {
-        headerIndex = -1;
-        contentStart = -1;
-        contentEndExclusive = -1;
-
-        for (int i = 0; i < lines.Count; i++)
+        if (string.IsNullOrWhiteSpace(backupPath) || !File.Exists(backupPath) || File.Exists(_path))
         {
-            var trimmed = lines[i].Trim();
-            if (TryGetStandardSectionName(trimmed, out var parsedSection)
-                && string.Equals(parsedSection, sectionName, StringComparison.OrdinalIgnoreCase))
-            {
-                headerIndex = i;
-                contentStart = i + 1;
-                break;
-            }
+            return;
         }
 
-        if (headerIndex < 0)
+        try
+        {
+            File.Move(backupPath, _path);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogError(ex, "Failed to restore invalid config backup after reset failure.");
+        }
+    }
+
+    private static string ValidateTomlFile(string path)
+    {
+        try
+        {
+            return ValidateTomlText(File.ReadAllText(path, Encoding.UTF8));
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private static string ValidateTomlText(string text)
+    {
+        try
+        {
+            SyntaxParser.ParseStrict(text ?? string.Empty, "config.toml", true);
+            return string.Empty;
+        }
+        catch (Exception ex)
+        {
+            return ex.Message;
+        }
+    }
+
+    private static bool TryReadModelValue(TomlTable model, string sectionName, string keyName, out string value)
+    {
+        value = string.Empty;
+        if (!TryGetSectionTable(model, sectionName, out var section))
         {
             return false;
         }
 
-        contentEndExclusive = lines.Count;
-        for (int i = contentStart; i < lines.Count; i++)
+        if (!TryGetValue(section, keyName, out var rawValue))
         {
-            var trimmed = lines[i].Trim();
-            if (TryGetStandardSectionName(trimmed, out _) || TryGetArraySectionName(trimmed, out _))
-            {
-                contentEndExclusive = i;
-                break;
-            }
+            return false;
         }
 
+        value = ConvertTomlValue(rawValue);
         return true;
     }
 
-    private static void RemoveSection(List<string> lines, string sectionName)
+    private static bool TryGetSectionTable(TomlTable model, string sectionName, out TomlTable section)
     {
-        if (!TryGetSectionBounds(lines, sectionName, out var headerIndex, out _, out var contentEndExclusive))
-        {
-            return;
-        }
-
-        lines.RemoveRange(headerIndex, contentEndExclusive - headerIndex);
-    }
-
-    private static void MergeMissingKeysIntoSection(List<string> lines, string sourceSection, string targetSection)
-    {
-        if (!TryGetSectionBounds(lines, sourceSection, out _, out var sourceContentStart, out var sourceEndExclusive))
-        {
-            return;
-        }
-
-        var sourceEntries = new List<(string Key, string Value)>();
-        for (int i = sourceContentStart; i < sourceEndExclusive; i++)
-        {
-            var trimmed = lines[i].Trim();
-            if (!TryParseTomlKeyValue(trimmed, out var parsedKey, out var parsedValue))
-            {
-                continue;
-            }
-
-            sourceEntries.Add((parsedKey, parsedValue));
-        }
-
-        foreach (var sourceEntry in sourceEntries)
-        {
-            if (SectionContainsKey(lines, targetSection, sourceEntry.Key))
-            {
-                continue;
-            }
-
-            string valueLine = BuildTomlLine(sourceEntry.Key, sourceEntry.Value);
-            TryUpsertInSection(lines, targetSection, sourceEntry.Key, valueLine);
-        }
-    }
-
-    private static bool SectionContainsKey(List<string> lines, string sectionName, string keyName)
-    {
-        if (!TryGetSectionBounds(lines, sectionName, out _, out var contentStart, out var contentEndExclusive))
+        section = null;
+        if (model == null)
         {
             return false;
         }
 
-        for (int i = contentStart; i < contentEndExclusive; i++)
+        if (string.IsNullOrWhiteSpace(sectionName))
         {
-            var trimmed = lines[i].Trim();
-            if (!TryParseTomlKeyValue(trimmed, out var parsedKey, out _))
+            section = model;
+            return true;
+        }
+
+        TomlTable current = model;
+        foreach (var segment in sectionName.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            if (!TryGetValue(current, segment, out var next) || next is not TomlTable nextTable)
             {
-                continue;
+                return false;
             }
 
-            if (string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+            current = nextTable;
+        }
+
+        section = current;
+        return true;
+    }
+
+    private static bool TryGetValue(TomlTable table, string key, out object value)
+    {
+        value = null;
+        if (table == null || string.IsNullOrWhiteSpace(key))
+        {
+            return false;
+        }
+
+        if (table.TryGetValue(key, out value))
+        {
+            return true;
+        }
+
+        foreach (var entry in table)
+        {
+            if (string.Equals(entry.Key, key, StringComparison.OrdinalIgnoreCase))
             {
+                value = entry.Value;
                 return true;
             }
         }
@@ -725,205 +557,814 @@ public class ConfigHandler
         return false;
     }
 
-    private static bool TryUpsertInSection(List<string> lines, string sectionName, string keyName, string valueLine)
+    private static string ConvertTomlValue(object value)
     {
-        int sectionHeaderIndex = -1;
-        for (int i = 0; i < lines.Count; i++)
+        return value switch
         {
-            var trimmed = lines[i].Trim();
-            if (TryGetStandardSectionName(trimmed, out var parsedSection)
-                && string.Equals(parsedSection, sectionName, StringComparison.OrdinalIgnoreCase))
+            null => string.Empty,
+            string text => text,
+            bool boolean => boolean ? "true" : "false",
+            int number => number.ToString(CultureInfo.InvariantCulture),
+            long number => number.ToString(CultureInfo.InvariantCulture),
+            float number => number.ToString(CultureInfo.InvariantCulture),
+            double number => number.ToString(CultureInfo.InvariantCulture),
+            decimal number => number.ToString(CultureInfo.InvariantCulture),
+            DateTime dateTime => dateTime.ToString("O", CultureInfo.InvariantCulture),
+            DateTimeOffset dateTimeOffset => dateTimeOffset.ToString("O", CultureInfo.InvariantCulture),
+            _ => value.ToString() ?? string.Empty
+        };
+    }
+
+    private static void LoadServerPresetsFromModel(
+        TomlTable model,
+        List<ServerPresetItem> presets,
+        ref string activePreset,
+        ref bool hasPresetSection)
+    {
+        if (TryGetSectionTable(model, "Server", out var serverTable))
+        {
+            if (TryGetValue(serverTable, "activepreset", out var active))
             {
-                sectionHeaderIndex = i;
-                break;
+                activePreset = ConvertTomlValue(active);
+            }
+
+            if (TryGetValue(serverTable, "Presets", out var serverPresets))
+            {
+                hasPresetSection = true;
+                AddPresetsFromObject(serverPresets, presets);
             }
         }
 
-        if (sectionHeaderIndex < 0)
+        if (TryGetValue(model, "ServerPresets", out var legacyPresets))
+        {
+            hasPresetSection = true;
+            AddPresetsFromObject(legacyPresets, presets);
+        }
+    }
+
+    private static void AddPresetsFromObject(object value, List<ServerPresetItem> presets)
+    {
+        if (value is TomlTableArray array)
+        {
+            foreach (var table in array)
+            {
+                AddPresetFromTable(table, presets);
+            }
+
+            return;
+        }
+
+        if (value is TomlArray tomlArray)
+        {
+            foreach (var item in tomlArray)
+            {
+                if (item is TomlTable table)
+                {
+                    AddPresetFromTable(table, presets);
+                }
+            }
+        }
+    }
+
+    private static void AddPresetFromTable(TomlTable table, List<ServerPresetItem> presets)
+    {
+        if (table == null)
+        {
+            return;
+        }
+
+        string name = TryGetValue(table, "name", out var rawName) ? ConvertTomlValue(rawName) : string.Empty;
+        if (string.IsNullOrWhiteSpace(name)
+            || presets.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        presets.Add(new ServerPresetItem
+        {
+            Name = name,
+            ServerUrl = TryGetValue(table, "serverurl", out var serverUrl) ? ConvertTomlValue(serverUrl) : string.Empty,
+            PcbId = TryGetValue(table, "pcbid", out var pcbId) ? ConvertTomlValue(pcbId) : string.Empty
+        });
+    }
+
+    private static void LoadServerPresetsFromText(
+        TomlLineDocument document,
+        List<ServerPresetItem> presets,
+        ref string activePreset,
+        ref bool hasPresetSection)
+    {
+        document.LoadServerPresetsFromText(presets, ref activePreset, ref hasPresetSection);
+    }
+
+    private static bool EnsureServerPresetDefaults(
+        List<ServerPresetItem> presets,
+        string asphyxiaPresetName,
+        string asphyxiaDefaultUrl)
+    {
+        var existing = presets.FirstOrDefault(p => string.Equals(p.Name, asphyxiaPresetName, StringComparison.OrdinalIgnoreCase));
+        if (existing == null)
+        {
+            presets.Add(new ServerPresetItem
+            {
+                Name = asphyxiaPresetName,
+                ServerUrl = asphyxiaDefaultUrl,
+                PcbId = string.Empty
+            });
+            return true;
+        }
+
+        if (!string.IsNullOrWhiteSpace(existing.ServerUrl))
         {
             return false;
         }
 
-        int insertIndex = sectionHeaderIndex + 1;
-        for (int i = sectionHeaderIndex + 1; i < lines.Count; i++)
+        existing.ServerUrl = asphyxiaDefaultUrl;
+        return true;
+    }
+
+    private static string NormalizeName(string value)
+    {
+        return value?.Trim() ?? string.Empty;
+    }
+
+    private sealed class TomlLineDocument
+    {
+        private readonly List<string> _lines;
+
+        private TomlLineDocument(IEnumerable<string> lines)
         {
-            var trimmed = lines[i].Trim();
+            _lines = lines?.ToList() ?? new List<string>();
+        }
 
-            if (TryGetStandardSectionName(trimmed, out _))
+        public static TomlLineDocument Empty()
+        {
+            return new TomlLineDocument(Array.Empty<string>());
+        }
+
+        public static TomlLineDocument FromLines(IEnumerable<string> lines)
+        {
+            return new TomlLineDocument(lines);
+        }
+
+        public string ToText()
+        {
+            return string.Join(Environment.NewLine, _lines);
+        }
+
+        public void NormalizeBlankLines(bool preserveSectionSeparator)
+        {
+            TomlTextShared.NormalizeBlankLines(_lines, preserveSectionSeparator);
+        }
+
+        public bool TryReadString(string sectionName, string keyName, out string value)
+        {
+            value = string.Empty;
+            if (string.IsNullOrWhiteSpace(keyName))
             {
-                insertIndex = i;
-                while (insertIndex > sectionHeaderIndex + 1 && string.IsNullOrWhiteSpace(lines[insertIndex - 1]))
-                {
-                    insertIndex--;
-                }
-
-                break;
+                return false;
             }
 
-            if (TryGetArraySectionName(trimmed, out _))
+            if (!TryGetSectionBounds(sectionName, out _, out var contentStart, out var contentEndExclusive))
             {
-                insertIndex = i;
-                while (insertIndex > sectionHeaderIndex + 1 && string.IsNullOrWhiteSpace(lines[insertIndex - 1]))
-                {
-                    insertIndex--;
-                }
-
-                break;
+                return false;
             }
 
-            if (TryParseTomlKeyValue(trimmed, out var parsedKey, out _)
-                && string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+            for (int i = contentStart; i < contentEndExclusive; i++)
             {
-                lines[i] = valueLine;
+                if (!TrySplitKeyValue(_lines[i], out var parsedKey, out var rawValue, out _)
+                    || !string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                value = ParseScalarToString(rawValue);
                 return true;
             }
 
-            if (!string.IsNullOrWhiteSpace(trimmed) && !trimmed.StartsWith("#", StringComparison.Ordinal))
+            return false;
+        }
+
+        public void UpsertString(string sectionName, string keyName, string value)
+        {
+            string valueLine = TomlTextShared.BuildStringLine(keyName, value ?? string.Empty);
+            if (!TryGetSectionBounds(sectionName, out var headerIndex, out var contentStart, out var contentEndExclusive))
             {
-                insertIndex = i + 1;
+                AppendSectionWithLine(sectionName, valueLine);
+                return;
+            }
+
+            for (int i = contentStart; i < contentEndExclusive; i++)
+            {
+                if (!TrySplitKeyValue(_lines[i], out var parsedKey, out _, out var trailingComment)
+                    || !string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string indent = GetIndent(_lines[i]);
+                _lines[i] = AppendTrailingComment(indent + valueLine, trailingComment);
+                return;
+            }
+
+            int insertIndex = contentEndExclusive;
+            while (insertIndex > contentStart && string.IsNullOrWhiteSpace(_lines[insertIndex - 1]))
+            {
+                insertIndex--;
+            }
+
+            if (headerIndex >= 0 || string.IsNullOrWhiteSpace(sectionName))
+            {
+                _lines.Insert(insertIndex, valueLine);
             }
         }
 
-        lines.Insert(insertIndex, valueLine);
-        return true;
-    }
-
-    private static void AppendSectionWithKey(List<string> lines, string sectionName, string valueLine)
-    {
-        if (lines.Count > 0 && !string.IsNullOrWhiteSpace(lines[^1]))
+        public bool RenameSection(string sourceSection, string targetSection)
         {
-            lines.Add(string.Empty);
+            if (!TryGetSectionBounds(sourceSection, out var sourceHeaderIndex, out var sourceContentStart, out var sourceEndExclusive))
+            {
+                return false;
+            }
+
+            if (TryGetSectionBounds(targetSection, out _, out _, out _))
+            {
+                var sourceEntries = ReadSectionEntries(sourceContentStart, sourceEndExclusive);
+                foreach (var entry in sourceEntries)
+                {
+                    if (!SectionContainsKey(targetSection, entry.Key))
+                    {
+                        UpsertString(targetSection, entry.Key, entry.Value);
+                    }
+                }
+
+                RemoveRange(sourceHeaderIndex, sourceEndExclusive - sourceHeaderIndex);
+                return true;
+            }
+
+            string trailingComment = TryGetHeaderTrailingComment(_lines[sourceHeaderIndex], out var comment)
+                ? comment
+                : string.Empty;
+            _lines[sourceHeaderIndex] = AppendTrailingComment($"[{targetSection}]", trailingComment);
+            return true;
         }
 
-        if (!string.IsNullOrWhiteSpace(sectionName))
+        public bool MoveKey(string sourceSection, string targetSection, string keyName)
         {
-            lines.Add($"[{sectionName}]");
-        }
+            if (!TryGetSectionBounds(sourceSection, out _, out var sourceContentStart, out var sourceEndExclusive))
+            {
+                return false;
+            }
 
-        lines.Add(valueLine);
-    }
+            for (int i = sourceContentStart; i < sourceEndExclusive; i++)
+            {
+                if (!TrySplitKeyValue(_lines[i], out var parsedKey, out var rawValue, out _)
+                    || !string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
 
-    private static bool TryGetStandardSectionName(string line, out string sectionName)
-    {
-        sectionName = string.Empty;
-        if (string.IsNullOrWhiteSpace(line)
-            || !line.StartsWith("[", StringComparison.Ordinal)
-            || !line.EndsWith("]", StringComparison.Ordinal)
-            || line.StartsWith("[[", StringComparison.Ordinal)
-            || line.EndsWith("]]", StringComparison.Ordinal))
-        {
+                string value = ParseScalarToString(rawValue);
+                _lines.RemoveAt(i);
+                RemoveSectionIfEmpty(sourceSection);
+                UpsertString(targetSection, keyName, value);
+                return true;
+            }
+
             return false;
         }
 
-        sectionName = line.Substring(1, line.Length - 2).Trim();
-        return true;
-    }
-
-    private static bool TryGetArraySectionName(string line, out string sectionName)
-    {
-        sectionName = string.Empty;
-        if (string.IsNullOrWhiteSpace(line)
-            || !line.StartsWith("[[", StringComparison.Ordinal)
-            || !line.EndsWith("]]", StringComparison.Ordinal)
-            || line.Length <= 4)
+        public bool DeleteKey(string sectionName, string keyName)
         {
+            if (!TryGetSectionBounds(sectionName, out _, out var contentStart, out var contentEndExclusive))
+            {
+                return false;
+            }
+
+            for (int i = contentStart; i < contentEndExclusive; i++)
+            {
+                if (!TrySplitKeyValue(_lines[i], out var parsedKey, out _, out _)
+                    || !string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                _lines.RemoveAt(i);
+                RemoveSectionIfEmpty(sectionName);
+                return true;
+            }
+
             return false;
         }
 
-        sectionName = line.Substring(2, line.Length - 4).Trim();
-        return true;
-    }
-
-    private static bool TryParseTomlKeyValue(string line, out string key, out string value)
-    {
-        key = string.Empty;
-        value = string.Empty;
-
-        int eqIndex = line.IndexOf('=');
-        if (eqIndex <= 0)
+        public void RemoveArrayTableBlocks(string sectionName)
         {
+            for (int i = 0; i < _lines.Count;)
+            {
+                if (!TryGetArraySectionName(_lines[i], out var parsedSection)
+                    || !string.Equals(parsedSection, sectionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    i++;
+                    continue;
+                }
+
+                int end = i + 1;
+                while (end < _lines.Count && !IsAnySectionHeader(_lines[end]))
+                {
+                    end++;
+                }
+
+                RemoveRange(i, end - i);
+            }
+        }
+
+        public void AppendServerPreset(ServerPresetItem preset)
+        {
+            if (_lines.Count > 0 && !string.IsNullOrWhiteSpace(_lines[^1]))
+            {
+                _lines.Add(string.Empty);
+            }
+
+            _lines.Add("[[Server.Presets]]");
+            _lines.Add(TomlTextShared.BuildStringLine("name", preset.Name ?? string.Empty));
+            _lines.Add(TomlTextShared.BuildStringLine("serverurl", preset.ServerUrl ?? string.Empty));
+            _lines.Add(TomlTextShared.BuildStringLine("pcbid", preset.PcbId ?? string.Empty));
+        }
+
+        public void LoadServerPresetsFromText(
+            List<ServerPresetItem> presets,
+            ref string activePreset,
+            ref bool hasPresetSection)
+        {
+            ServerPresetItem current = null;
+            bool inServerSection = false;
+
+            void CommitCurrent()
+            {
+                if (current == null
+                    || string.IsNullOrWhiteSpace(current.Name)
+                    || presets.Any(p => string.Equals(p.Name, current.Name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    return;
+                }
+
+                presets.Add(current);
+            }
+
+            foreach (var rawLine in _lines)
+            {
+                if (TryGetStandardSectionName(rawLine, out var standardSection))
+                {
+                    if (current != null)
+                    {
+                        CommitCurrent();
+                        current = null;
+                    }
+
+                    inServerSection = string.Equals(standardSection, "Server", StringComparison.OrdinalIgnoreCase);
+                    continue;
+                }
+
+                if (TryGetArraySectionName(rawLine, out var arraySection))
+                {
+                    if (current != null)
+                    {
+                        CommitCurrent();
+                    }
+
+                    bool isPresetSection = string.Equals(arraySection, "Server.Presets", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(arraySection, "ServerPresets", StringComparison.OrdinalIgnoreCase);
+                    hasPresetSection |= isPresetSection;
+                    current = isPresetSection ? new ServerPresetItem() : null;
+                    inServerSection = false;
+                    continue;
+                }
+
+                if (inServerSection)
+                {
+                    if (TrySplitKeyValue(rawLine, out var key, out var rawValue, out _)
+                        && string.Equals(key, "activepreset", StringComparison.OrdinalIgnoreCase))
+                    {
+                        activePreset = ParseScalarToString(rawValue);
+                    }
+
+                    continue;
+                }
+
+                if (current == null
+                    || !TrySplitKeyValue(rawLine, out var presetKey, out var presetRawValue, out _))
+                {
+                    continue;
+                }
+
+                string value = ParseScalarToString(presetRawValue);
+                if (string.Equals(presetKey, "name", StringComparison.OrdinalIgnoreCase))
+                {
+                    current.Name = value;
+                }
+                else if (string.Equals(presetKey, "serverurl", StringComparison.OrdinalIgnoreCase))
+                {
+                    current.ServerUrl = value;
+                }
+                else if (string.Equals(presetKey, "pcbid", StringComparison.OrdinalIgnoreCase))
+                {
+                    current.PcbId = value;
+                }
+            }
+
+            CommitCurrent();
+        }
+
+        private bool TryGetSectionBounds(
+            string sectionName,
+            out int headerIndex,
+            out int contentStart,
+            out int contentEndExclusive)
+        {
+            headerIndex = -1;
+            contentStart = 0;
+            contentEndExclusive = _lines.Count;
+
+            if (string.IsNullOrWhiteSpace(sectionName))
+            {
+                for (int i = 0; i < _lines.Count; i++)
+                {
+                    if (IsAnySectionHeader(_lines[i]))
+                    {
+                        contentEndExclusive = i;
+                        break;
+                    }
+                }
+
+                return true;
+            }
+
+            for (int i = 0; i < _lines.Count; i++)
+            {
+                if (TryGetStandardSectionName(_lines[i], out var parsedSection)
+                    && string.Equals(parsedSection, sectionName, StringComparison.OrdinalIgnoreCase))
+                {
+                    headerIndex = i;
+                    contentStart = i + 1;
+                    break;
+                }
+            }
+
+            if (headerIndex < 0)
+            {
+                return false;
+            }
+
+            contentEndExclusive = _lines.Count;
+            for (int i = contentStart; i < _lines.Count; i++)
+            {
+                if (IsAnySectionHeader(_lines[i]))
+                {
+                    contentEndExclusive = i;
+                    break;
+                }
+            }
+
+            return true;
+        }
+
+        private List<(string Key, string Value)> ReadSectionEntries(int contentStart, int contentEndExclusive)
+        {
+            var entries = new List<(string Key, string Value)>();
+            for (int i = contentStart; i < contentEndExclusive; i++)
+            {
+                if (TrySplitKeyValue(_lines[i], out var key, out var rawValue, out _))
+                {
+                    entries.Add((key, ParseScalarToString(rawValue)));
+                }
+            }
+
+            return entries;
+        }
+
+        private bool SectionContainsKey(string sectionName, string keyName)
+        {
+            if (!TryGetSectionBounds(sectionName, out _, out var contentStart, out var contentEndExclusive))
+            {
+                return false;
+            }
+
+            for (int i = contentStart; i < contentEndExclusive; i++)
+            {
+                if (TrySplitKeyValue(_lines[i], out var parsedKey, out _, out _)
+                    && string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
             return false;
         }
 
-        key = line.Substring(0, eqIndex).Trim();
-        if (string.IsNullOrWhiteSpace(key))
+        private void RemoveSectionIfEmpty(string sectionName)
         {
-            return false;
+            if (string.IsNullOrWhiteSpace(sectionName)
+                || !TryGetSectionBounds(sectionName, out var headerIndex, out var contentStart, out var contentEndExclusive))
+            {
+                return;
+            }
+
+            if (contentEndExclusive <= contentStart)
+            {
+                RemoveRange(headerIndex, contentEndExclusive - headerIndex);
+            }
         }
 
-        string rawValue = line.Substring(eqIndex + 1).Trim();
-        value = ParseTomlValue(rawValue);
-        return true;
-    }
-
-    private static string ParseTomlValue(string rawValue)
-    {
-        if (string.IsNullOrWhiteSpace(rawValue))
+        private void AppendSectionWithLine(string sectionName, string valueLine)
         {
+            if (_lines.Count > 0 && !string.IsNullOrWhiteSpace(_lines[^1]))
+            {
+                _lines.Add(string.Empty);
+            }
+
+            if (!string.IsNullOrWhiteSpace(sectionName))
+            {
+                _lines.Add($"[{sectionName}]");
+            }
+
+            _lines.Add(valueLine);
+        }
+
+        private void RemoveRange(int index, int count)
+        {
+            if (count <= 0)
+            {
+                return;
+            }
+
+            _lines.RemoveRange(index, count);
+        }
+
+        private static bool IsAnySectionHeader(string line)
+        {
+            return TryGetStandardSectionName(line, out _) || TryGetArraySectionName(line, out _);
+        }
+
+        private static bool TryGetStandardSectionName(string line, out string sectionName)
+        {
+            sectionName = string.Empty;
+            string header = StripInlineComment(line).Trim();
+            if (string.IsNullOrWhiteSpace(header)
+                || !header.StartsWith("[", StringComparison.Ordinal)
+                || !header.EndsWith("]", StringComparison.Ordinal)
+                || header.StartsWith("[[", StringComparison.Ordinal)
+                || header.EndsWith("]]", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            sectionName = header.Substring(1, header.Length - 2).Trim();
+            return !string.IsNullOrWhiteSpace(sectionName);
+        }
+
+        private static bool TryGetArraySectionName(string line, out string sectionName)
+        {
+            sectionName = string.Empty;
+            string header = StripInlineComment(line).Trim();
+            if (string.IsNullOrWhiteSpace(header)
+                || !header.StartsWith("[[", StringComparison.Ordinal)
+                || !header.EndsWith("]]", StringComparison.Ordinal)
+                || header.Length <= 4)
+            {
+                return false;
+            }
+
+            sectionName = header.Substring(2, header.Length - 4).Trim();
+            return !string.IsNullOrWhiteSpace(sectionName);
+        }
+
+        private static bool TryGetHeaderTrailingComment(string line, out string comment)
+        {
+            comment = ExtractTrailingComment(line, out _);
+            return !string.IsNullOrWhiteSpace(comment);
+        }
+
+        private static bool TrySplitKeyValue(string line, out string key, out string rawValue, out string trailingComment)
+        {
+            key = string.Empty;
+            rawValue = string.Empty;
+            trailingComment = string.Empty;
+
+            if (string.IsNullOrWhiteSpace(line) || line.TrimStart().StartsWith("#", StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            int equalsIndex = FindUnquotedEquals(line);
+            if (equalsIndex <= 0)
+            {
+                return false;
+            }
+
+            key = NormalizeKeyText(line.Substring(0, equalsIndex).Trim());
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                return false;
+            }
+
+            string valueWithComment = line.Substring(equalsIndex + 1);
+            trailingComment = ExtractTrailingComment(valueWithComment, out rawValue);
+            rawValue = rawValue.Trim();
+            return true;
+        }
+
+        private static int FindUnquotedEquals(string line)
+        {
+            bool inDoubleQuote = false;
+            bool inSingleQuote = false;
+            bool escaped = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char ch = line[i];
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (ch == '\\' && inDoubleQuote)
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (ch == '"' && !inSingleQuote)
+                {
+                    inDoubleQuote = !inDoubleQuote;
+                    continue;
+                }
+
+                if (ch == '\'' && !inDoubleQuote)
+                {
+                    inSingleQuote = !inSingleQuote;
+                    continue;
+                }
+
+                if (ch == '=' && !inDoubleQuote && !inSingleQuote)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static string ExtractTrailingComment(string text, out string valuePart)
+        {
+            bool inDoubleQuote = false;
+            bool inSingleQuote = false;
+            bool escaped = false;
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                char ch = text[i];
+                if (escaped)
+                {
+                    escaped = false;
+                    continue;
+                }
+
+                if (ch == '\\' && inDoubleQuote)
+                {
+                    escaped = true;
+                    continue;
+                }
+
+                if (ch == '"' && !inSingleQuote)
+                {
+                    inDoubleQuote = !inDoubleQuote;
+                    continue;
+                }
+
+                if (ch == '\'' && !inDoubleQuote)
+                {
+                    inSingleQuote = !inSingleQuote;
+                    continue;
+                }
+
+                if (ch == '#' && !inDoubleQuote && !inSingleQuote)
+                {
+                    valuePart = text.Substring(0, i);
+                    return text.Substring(i).TrimEnd();
+                }
+            }
+
+            valuePart = text;
             return string.Empty;
         }
 
-        var value = StripInlineComment(rawValue).Trim();
-        if (value.Length >= 2 && value[0] == '"' && value[value.Length - 1] == '"')
+        private static string StripInlineComment(string line)
         {
-            var inner = value.Substring(1, value.Length - 2);
-            return inner
-                .Replace("\\\"", "\"")
-                .Replace("\\\\", "\\")
-                .Replace("\\n", "\n")
-                .Replace("\\r", "\r")
-                .Replace("\\t", "\t");
+            ExtractTrailingComment(line ?? string.Empty, out var valuePart);
+            return valuePart;
         }
 
-        if (value.Length >= 2 && value[0] == '\'' && value[value.Length - 1] == '\'')
+        private static string ParseScalarToString(string rawValue)
         {
-            return value.Substring(1, value.Length - 2);
+            if (string.IsNullOrWhiteSpace(rawValue))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                var table = TomlSerializer.Deserialize<TomlTable>($"value = {rawValue}") ?? new TomlTable();
+                return table.TryGetValue("value", out var value)
+                    ? ConvertTomlValue(value)
+                    : string.Empty;
+            }
+            catch
+            {
+                return ParseLegacyScalar(rawValue);
+            }
         }
 
-        return value;
+        private static string ParseLegacyScalar(string rawValue)
+        {
+            string value = StripInlineComment(rawValue).Trim();
+            if (value.Length >= 2 && value[0] == '"' && value[^1] == '"')
+            {
+                return UnescapeBasicString(value.Substring(1, value.Length - 2));
+            }
+
+            if (value.Length >= 2 && value[0] == '\'' && value[^1] == '\'')
+            {
+                return value.Substring(1, value.Length - 2);
+            }
+
+            return value;
+        }
+
+        private static string UnescapeBasicString(string value)
+        {
+            var builder = new StringBuilder(value.Length);
+            for (int i = 0; i < value.Length; i++)
+            {
+                char ch = value[i];
+                if (ch != '\\' || i + 1 >= value.Length)
+                {
+                    builder.Append(ch);
+                    continue;
+                }
+
+                char escaped = value[++i];
+                builder.Append(escaped switch
+                {
+                    'b' => '\b',
+                    't' => '\t',
+                    'n' => '\n',
+                    'f' => '\f',
+                    'r' => '\r',
+                    '"' => '"',
+                    '\\' => '\\',
+                    _ => escaped
+                });
+            }
+
+            return builder.ToString();
+        }
+
+        private static string NormalizeKeyText(string key)
+        {
+            if (key.Length >= 2 && key[0] == '"' && key[^1] == '"')
+            {
+                return ParseLegacyScalar(key);
+            }
+
+            if (key.Length >= 2 && key[0] == '\'' && key[^1] == '\'')
+            {
+                return key.Substring(1, key.Length - 2);
+            }
+
+            return key;
+        }
+
+        private static string GetIndent(string line)
+        {
+            if (string.IsNullOrEmpty(line))
+            {
+                return string.Empty;
+            }
+
+            int length = 0;
+            while (length < line.Length && char.IsWhiteSpace(line[length]))
+            {
+                length++;
+            }
+
+            return length == 0 ? string.Empty : line.Substring(0, length);
+        }
+
+        private static string AppendTrailingComment(string line, string comment)
+        {
+            return string.IsNullOrWhiteSpace(comment)
+                ? line
+                : $"{line} {comment.TrimStart()}";
+        }
     }
-
-    private static string StripInlineComment(string rawValue)
-    {
-        bool inDoubleQuote = false;
-        bool inSingleQuote = false;
-        bool escaped = false;
-
-        for (int i = 0; i < rawValue.Length; i++)
-        {
-            char ch = rawValue[i];
-
-            if (escaped)
-            {
-                escaped = false;
-                continue;
-            }
-
-            if (ch == '\\' && inDoubleQuote)
-            {
-                escaped = true;
-                continue;
-            }
-
-            if (ch == '"' && !inSingleQuote)
-            {
-                inDoubleQuote = !inDoubleQuote;
-                continue;
-            }
-
-            if (ch == '\'' && !inDoubleQuote)
-            {
-                inSingleQuote = !inSingleQuote;
-                continue;
-            }
-
-            if (ch == '#' && !inDoubleQuote && !inSingleQuote)
-            {
-                return rawValue.Substring(0, i);
-            }
-        }
-
-        return rawValue;
-    }
-
 }
