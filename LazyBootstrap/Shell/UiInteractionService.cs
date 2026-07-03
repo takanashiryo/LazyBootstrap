@@ -92,6 +92,31 @@ namespace LazyBootstrap.Shell
             return builder.TryShowAsync();
         }
 
+        public Task ShowMessageDialogAsync(
+            string title,
+            object content,
+            string buttonText,
+            NotificationType type = NotificationType.Information,
+            string buttonClasses = "Flat",
+            string customIconAssetName = null)
+        {
+            var builder = _dialogManager
+                .CreateDialog()
+                .OfType(type)
+                .WithTitle(title ?? string.Empty)
+                .WithContent(content);
+
+            builder.Completion = new TaskCompletionSource<bool>();
+            builder.WithActionButton(
+                buttonText ?? "确定",
+                _ => builder.Completion.TrySetResult(true),
+                true,
+                SplitClasses(buttonClasses ?? "Flat"));
+
+            ApplyDialogNotificationIcon(builder, type, customIconAssetName);
+            return builder.TryShowAsync();
+        }
+
         public async Task<string> PickFolderAsync(string title)
         {
             if (_window?.StorageProvider == null)

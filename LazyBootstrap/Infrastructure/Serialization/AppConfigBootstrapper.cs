@@ -1,80 +1,126 @@
 using System;
-using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
-using System.IO;
+using System.Linq;
 
 namespace LazyBootstrap.Infrastructure.Serialization
 {
     internal static class AppConfigBootstrapper
     {
         public const string SettingSectionName = "Setting";
-        public const string LegacySettingsSectionName = "Settings";
         public const string DisplaySectionName = "Display";
+
+        private const string ServerSectionName = "Server";
+        private const string AsphyxiaPresetName = "Asphyxia";
+        private const string AsphyxiaDefaultUrl = "http://localhost:8083";
+
+        private static readonly ConfigDefaultEntry[] Defaults =
+        [
+            new ConfigDefaultEntry(SettingSectionName, "noasphyxia", "false"),
+            new ConfigDefaultEntry(SettingSectionName, "disable-fso", "false"),
+            new ConfigDefaultEntry(SettingSectionName, "compatlayer", "false"),
+            new ConfigDefaultEntry(SettingSectionName, "cl-rendermode", "dx9on12"),
+            new ConfigDefaultEntry(SettingSectionName, "use-system-config", "false"),
+
+            new ConfigDefaultEntry(DisplaySectionName, "displayconfigure", "false"),
+            new ConfigDefaultEntry(DisplaySectionName, "exitrestore", "true"),
+            new ConfigDefaultEntry(DisplaySectionName, "mode", "single"),
+            new ConfigDefaultEntry(DisplaySectionName, "mainscreen", "0"),
+            new ConfigDefaultEntry(DisplaySectionName, "subscreen", "0"),
+            new ConfigDefaultEntry(DisplaySectionName, "subrotation", "0"),
+            new ConfigDefaultEntry(DisplaySectionName, "mainrotation", "0"),
+            new ConfigDefaultEntry(DisplaySectionName, "mainresolution", "640x480"),
+            new ConfigDefaultEntry(DisplaySectionName, "subresolution", "640x480"),
+            new ConfigDefaultEntry(DisplaySectionName, "mainrefresh", "59"),
+            new ConfigDefaultEntry(DisplaySectionName, "subrefresh", "59")
+        ];
 
         public static void InitializeAndMigrate(string configPath, ConfigHandler config)
         {
-            if (!File.Exists(configPath))
+            ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
+            ArgumentNullException.ThrowIfNull(config);
+
+            string defaultConfigText = CreateDefaultConfigText();
+            ConfigFileHealth health;
+            try
             {
-                WriteInitialConfigToml(configPath);
+                health = config.CheckStartupHealth();
+            }
+            catch (Exception ex)
+            {
+                EnterReadOnlySession(config, defaultConfigText, $"读取 config.toml 失败：{ex.Message}");
+                EnsureDefaults(config);
+                return;
             }
 
-            config.RenameSection(LegacySettingsSectionName, SettingSectionName);
-            config.MoveKey(SettingSectionName, DisplaySectionName, "displayconfigure");
-
-            var legacyCompatLayer = config.ReadString(SettingSectionName, "compatlayerenabled", string.Empty);
-            var currentCompatLayer = config.ReadString(SettingSectionName, "compatlayer", string.Empty);
-            if (string.IsNullOrWhiteSpace(currentCompatLayer) && !string.IsNullOrWhiteSpace(legacyCompatLayer))
+            if (health.Status == ConfigFileHealthStatus.Inaccessible)
             {
-                config.WriteString(SettingSectionName, "compatlayer", legacyCompatLayer);
+                string seedText = string.IsNullOrWhiteSpace(health.Content)
+                    ? defaultConfigText
+                    : health.Content;
+                EnterReadOnlySession(config, seedText, $"config.toml 无法读取或保存：{health.ErrorMessage}");
+                EnsureDefaults(config);
+                return;
             }
 
-            var legacyRenderMode = config.ReadString(SettingSectionName, "rendermode", string.Empty);
-            var currentRenderMode = config.ReadString(SettingSectionName, "cl-rendermode", string.Empty);
-            if (string.IsNullOrWhiteSpace(currentRenderMode) && !string.IsNullOrWhiteSpace(legacyRenderMode))
+            if (health.Status == ConfigFileHealthStatus.Missing)
             {
-                config.WriteString(SettingSectionName, "cl-rendermode", legacyRenderMode);
+                if (!TryRunStartupConfigOperation(
+                        () => config.ReplaceWithText(defaultConfigText),
+                        out var createError))
+                {
+                    EnterReadOnlySession(config, defaultConfigText, $"创建 config.toml 失败：{createError}");
+                    EnsureDefaults(config);
+                    return;
+                }
+            }
+            else if (health.Status == ConfigFileHealthStatus.InvalidToml)
+            {
+                if (!TryRunStartupConfigOperation(
+                        () => config.BackupInvalidAndReplace(defaultConfigText),
+                        out var repairError))
+                {
+                    EnterReadOnlySession(config, defaultConfigText, $"config.toml 损坏且无法重建：{repairError}");
+                    EnsureDefaults(config);
+                    return;
+                }
             }
 
-            var legacyNoRestore = config.ReadString(DisplaySectionName, "norestorerotation", string.Empty);
-            if (string.IsNullOrWhiteSpace(legacyNoRestore))
+            if (!TryRunStartupConfigOperation(() => EnsureDefaults(config), out var defaultsError))
             {
-                legacyNoRestore = config.ReadString(SettingSectionName, "norestorerotation", string.Empty);
+                string readOnlySeed = health.Status == ConfigFileHealthStatus.Valid
+                    ? health.Content
+                    : defaultConfigText;
+                EnterReadOnlySession(config, readOnlySeed, $"config.toml 无法保存设置：{defaultsError}");
+                EnsureDefaults(config);
             }
+        }
 
-            var existingExitRestore = config.ReadString(DisplaySectionName, "exitrestore", string.Empty);
-            if (string.IsNullOrWhiteSpace(existingExitRestore) && !string.IsNullOrWhiteSpace(legacyNoRestore))
+        private static bool TryRunStartupConfigOperation(Action operation, out string error)
+        {
+            error = string.Empty;
+            try
             {
-                bool noRestore = bool.TryParse(legacyNoRestore, out var parsedNoRestore) && parsedNoRestore;
-                config.WriteString(DisplaySectionName, "exitrestore", (!noRestore).ToString().ToLowerInvariant());
+                operation();
+                return true;
             }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
 
-            config.DeleteKey(SettingSectionName, "portablemode");
-            config.DeleteKey(SettingSectionName, "usepreconfig");
-            config.DeleteKey(SettingSectionName, "contentsoverride");
-            config.DeleteKey(SettingSectionName, "asphyxiaoverride");
-
-            EnsureDefaults(config);
+        private static void EnterReadOnlySession(ConfigHandler config, string seedText, string reason)
+        {
+            config.EnterReadOnlySession(seedText, reason);
         }
 
         private static void EnsureDefaults(ConfigHandler config)
         {
-            EnsureDefault(config, SettingSectionName, "noasphyxia", "false");
-            EnsureDefault(config, SettingSectionName, "disable-fso", "false");
-            EnsureDefault(config, SettingSectionName, "compatlayer", "false");
-            EnsureDefault(config, SettingSectionName, "cl-rendermode", "dx9on12");
-            EnsureDefault(config, SettingSectionName, "use-system-config", "false");
-
-            EnsureDefault(config, DisplaySectionName, "displayconfigure", "false");
-            EnsureDefault(config, DisplaySectionName, "exitrestore", "true");
-            EnsureDefault(config, DisplaySectionName, "mode", "single");
-            EnsureDefault(config, DisplaySectionName, "mainscreen", "0");
-            EnsureDefault(config, DisplaySectionName, "subscreen", "0");
-            EnsureDefault(config, DisplaySectionName, "subrotation", "0");
-            EnsureDefault(config, DisplaySectionName, "mainrotation", "0");
-            EnsureDefault(config, DisplaySectionName, "mainresolution", "640x480");
-            EnsureDefault(config, DisplaySectionName, "subresolution", "640x480");
-            EnsureDefault(config, DisplaySectionName, "mainrefresh", "59");
-            EnsureDefault(config, DisplaySectionName, "subrefresh", "59");
+            foreach (var entry in Defaults)
+            {
+                EnsureDefault(config, entry.Section, entry.Key, entry.Value);
+            }
         }
 
         private static void EnsureDefault(ConfigHandler config, string section, string key, string defaultValue)
@@ -86,46 +132,32 @@ namespace LazyBootstrap.Infrastructure.Serialization
             }
         }
 
-        private static void WriteInitialConfigToml(string configPath)
+        internal static string CreateDefaultConfigText()
         {
-            var dir = Path.GetDirectoryName(configPath);
-            if (!string.IsNullOrWhiteSpace(dir))
-            {
-                Directory.CreateDirectory(dir);
-            }
-
-            var lines = new List<string>
-            {
-                "[Setting]",
-                "noasphyxia = \"false\"",
-                "disable-fso = \"false\"",
-                "compatlayer = \"false\"",
-                "cl-rendermode = \"dx9on12\"",
-                "use-system-config = \"false\"",
-                string.Empty,
-                "[Display]",
-                "displayconfigure = \"false\"",
-                "exitrestore = \"true\"",
-                "mode = \"single\"",
-                "mainscreen = \"0\"",
-                "subscreen = \"0\"",
-                "subrotation = \"0\"",
-                "mainrotation = \"0\"",
-                "mainresolution = \"640x480\"",
-                "subresolution = \"640x480\"",
-                "mainrefresh = \"59\"",
-                "subrefresh = \"59\"",
-                string.Empty,
-                "[Server]",
-                "activepreset = \"Asphyxia\"",
-                string.Empty,
-                "[[Server.Presets]]",
-                "name = \"Asphyxia\"",
-                "serverurl = \"http://localhost:8083\"",
-                "pcbid = \"\""
-            };
-
-            File.WriteAllText(configPath, string.Join(SystemEnvironment.NewLine, lines), TomlTextShared.Utf8NoBom);
+            var lines = new List<string>();
+            AppendDefaultSection(lines, SettingSectionName);
+            lines.Add(string.Empty);
+            AppendDefaultSection(lines, DisplaySectionName);
+            lines.Add(string.Empty);
+            lines.Add($"[{ServerSectionName}]");
+            lines.Add(TomlTextShared.BuildStringLine("activepreset", AsphyxiaPresetName));
+            lines.Add(string.Empty);
+            lines.Add("[[Server.Presets]]");
+            lines.Add(TomlTextShared.BuildStringLine("name", AsphyxiaPresetName));
+            lines.Add(TomlTextShared.BuildStringLine("serverurl", AsphyxiaDefaultUrl));
+            lines.Add(TomlTextShared.BuildStringLine("pcbid", string.Empty));
+            return string.Join(Environment.NewLine, lines);
         }
+
+        private static void AppendDefaultSection(List<string> lines, string sectionName)
+        {
+            lines.Add($"[{sectionName}]");
+            foreach (var entry in Defaults.Where(item => string.Equals(item.Section, sectionName, StringComparison.Ordinal)))
+            {
+                lines.Add(TomlTextShared.BuildStringLine(entry.Key, entry.Value));
+            }
+        }
+
+        private readonly record struct ConfigDefaultEntry(string Section, string Key, string Value);
     }
 }

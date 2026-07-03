@@ -39,6 +39,7 @@ namespace LazyBootstrap.Shell
         private readonly ISukiDialogManager _dialogManager = null!;
         private readonly ISukiToastManager _toastManager = null!;
         private readonly UiInteractionService _uiInteractionService = null!;
+        private readonly ConfigHandler _configHandler = null!;
         private readonly ILogger<MainWindow> _logger = null!;
 
         private bool _startupSequenceStarted;
@@ -95,6 +96,7 @@ namespace LazyBootstrap.Shell
             ISukiDialogManager dialogManager,
             ISukiToastManager toastManager,
             UiInteractionService uiInteractionService,
+            ConfigHandler configHandler,
             ILogger<MainWindow> logger)
         {
             InitializeComponent();
@@ -114,6 +116,7 @@ namespace LazyBootstrap.Shell
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
             _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
+            _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             if (DialogHost != null)
@@ -318,18 +321,41 @@ namespace LazyBootstrap.Shell
             {
                 Opened -= OnWindowOpened;
 
-                if (!_pendingEnvironmentScanErrorDialog)
+                if (_configHandler.IsReadOnlySession)
                 {
-                    return;
+                    await ShowConfigReadOnlyDialogAsync();
                 }
 
-                _pendingEnvironmentScanErrorDialog = false;
-                await ShowEnvironmentScanErrorDialogAsync();
+                if (_pendingEnvironmentScanErrorDialog)
+                {
+                    _pendingEnvironmentScanErrorDialog = false;
+                    await ShowEnvironmentScanErrorDialogAsync();
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Environment scan error dialog failed.");
+                _logger.LogError(ex, "Startup dialog display failed.");
             }
+        }
+
+        private async Task ShowConfigReadOnlyDialogAsync()
+        {
+            string reason = _configHandler.ReadOnlyReason;
+            string content =
+                "config.toml 被占用或无法读取，当前会话将使用临时内存配置。\n\n" +
+                "你仍可继续使用程序，但所有修改将无法保存。";
+
+            if (!string.IsNullOrWhiteSpace(reason))
+            {
+                content += $"\n\n原因：{reason}";
+            }
+
+            await _uiInteractionService.ShowMessageDialogAsync(
+                "配置文件无法保存",
+                content,
+                "我知道了",
+                NotificationType.Warning,
+                "Flat");
         }
 
         private async Task ShowEnvironmentScanErrorDialogAsync()

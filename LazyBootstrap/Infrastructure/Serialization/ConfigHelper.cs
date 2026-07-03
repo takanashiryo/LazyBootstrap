@@ -6,9 +6,7 @@ namespace LazyBootstrap.Infrastructure.Serialization
 
         public static bool TryReadBool(this ConfigHandler config, string section, string key, bool defaultValue)
         {
-            return bool.TryParse(
-                config.ReadString(section, key, defaultValue ? "true" : "false"),
-                out var parsed) && parsed;
+            return config.ReadBool(section, key, defaultValue);
         }
     }
 }

@@ -28,7 +28,7 @@ namespace LazyBootstrap
                 AppConfigBootstrapper.InitializeAndMigrate(
                     AppServices.RuntimeContext.ConfigFilePath,
                     serviceProvider.GetRequiredService<ConfigHandler>());
-                Log.Information("Configuration initialized and migrated.");
+                Log.Information("Configuration initialized.");
 
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
                 Log.Information("Avalonia lifetime ended.");
@@ -36,6 +36,7 @@ namespace LazyBootstrap
             catch (Exception ex)
             {
                 Log.Error(ex, "LazyBootstrap startup failed.");
+                Environment.ExitCode = -1;
             }
             finally
             {

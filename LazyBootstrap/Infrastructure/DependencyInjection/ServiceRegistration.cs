@@ -38,7 +38,9 @@ namespace LazyBootstrap.Infrastructure.DependencyInjection
 
             // Runtime context and configuration / paths (no SukiUI dependency).
             services.AddSingleton(context);
-            services.AddSingleton(_ => new ConfigHandler(context.ConfigFilePath));
+            services.AddSingleton(provider => new ConfigHandler(
+                context.ConfigFilePath,
+                provider.GetRequiredService<ILogger<ConfigHandler>>()));
             services.AddSingleton(_ => new LauncherPaths(
                 context.BaseDirectoryPath,
                 context.ApplicationDirectoryPath,
@@ -94,6 +96,7 @@ namespace LazyBootstrap.Infrastructure.DependencyInjection
                 provider.GetRequiredService<ISukiDialogManager>(),
                 provider.GetRequiredService<ISukiToastManager>(),
                 provider.GetRequiredService<UiInteractionService>(),
+                provider.GetRequiredService<ConfigHandler>(),
                 provider.GetRequiredService<ILogger<Shell.MainWindow>>()));
 
             return services;
