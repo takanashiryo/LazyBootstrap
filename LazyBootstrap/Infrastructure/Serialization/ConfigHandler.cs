@@ -194,65 +194,6 @@ public class ConfigHandler
         WriteString(section, key, value.ToString(CultureInfo.InvariantCulture));
     }
 
-    public void RenameSection(string sourceSection, string targetSection)
-    {
-        lock (_sync)
-        {
-            if (string.IsNullOrWhiteSpace(sourceSection)
-                || string.IsNullOrWhiteSpace(targetSection)
-                || string.Equals(sourceSection, targetSection, StringComparison.OrdinalIgnoreCase)
-                || !File.Exists(_path))
-            {
-                return;
-            }
-
-            var document = LoadDocumentUnsafe();
-            if (document.RenameSection(NormalizeName(sourceSection), NormalizeName(targetSection)))
-            {
-                WriteDocumentUnsafe(document);
-            }
-        }
-    }
-
-    public void MoveKey(string sourceSection, string targetSection, string key)
-    {
-        lock (_sync)
-        {
-            if (string.IsNullOrWhiteSpace(sourceSection)
-                || string.IsNullOrWhiteSpace(targetSection)
-                || string.IsNullOrWhiteSpace(key)
-                || !File.Exists(_path))
-            {
-                return;
-            }
-
-            var document = LoadDocumentUnsafe();
-            if (document.MoveKey(NormalizeName(sourceSection), NormalizeName(targetSection), NormalizeName(key)))
-            {
-                WriteDocumentUnsafe(document);
-            }
-        }
-    }
-
-    public void DeleteKey(string section, string key)
-    {
-        lock (_sync)
-        {
-            if (string.IsNullOrWhiteSpace(section)
-                || string.IsNullOrWhiteSpace(key)
-                || !File.Exists(_path))
-            {
-                return;
-            }
-
-            var document = LoadDocumentUnsafe();
-            if (document.DeleteKey(NormalizeName(section), NormalizeName(key)))
-            {
-                WriteDocumentUnsafe(document);
-            }
-        }
-    }
-
     public string ReadString(string section, string key, string defaultValue = "")
     {
         lock (_sync)
@@ -356,7 +297,6 @@ public class ConfigHandler
         {
             var document = LoadDocumentUnsafe();
             document.RemoveArrayTableBlocks("Server.Presets");
-            document.RemoveArrayTableBlocks("ServerPresets");
             document.UpsertString("Server", "activepreset", activePreset ?? nonePresetName);
 
             foreach (var preset in presets.Where(p =>
@@ -595,11 +535,6 @@ public class ConfigHandler
             }
         }
 
-        if (TryGetValue(model, "ServerPresets", out var legacyPresets))
-        {
-            hasPresetSection = true;
-            AddPresetsFromObject(legacyPresets, presets);
-        }
     }
 
     private static void AddPresetsFromObject(object value, List<ServerPresetItem> presets)
@@ -779,83 +714,6 @@ public class ConfigHandler
             }
         }
 
-        public bool RenameSection(string sourceSection, string targetSection)
-        {
-            if (!TryGetSectionBounds(sourceSection, out var sourceHeaderIndex, out var sourceContentStart, out var sourceEndExclusive))
-            {
-                return false;
-            }
-
-            if (TryGetSectionBounds(targetSection, out _, out _, out _))
-            {
-                var sourceEntries = ReadSectionEntries(sourceContentStart, sourceEndExclusive);
-                foreach (var entry in sourceEntries)
-                {
-                    if (!SectionContainsKey(targetSection, entry.Key))
-                    {
-                        UpsertString(targetSection, entry.Key, entry.Value);
-                    }
-                }
-
-                RemoveRange(sourceHeaderIndex, sourceEndExclusive - sourceHeaderIndex);
-                return true;
-            }
-
-            string trailingComment = TryGetHeaderTrailingComment(_lines[sourceHeaderIndex], out var comment)
-                ? comment
-                : string.Empty;
-            _lines[sourceHeaderIndex] = AppendTrailingComment($"[{targetSection}]", trailingComment);
-            return true;
-        }
-
-        public bool MoveKey(string sourceSection, string targetSection, string keyName)
-        {
-            if (!TryGetSectionBounds(sourceSection, out _, out var sourceContentStart, out var sourceEndExclusive))
-            {
-                return false;
-            }
-
-            for (int i = sourceContentStart; i < sourceEndExclusive; i++)
-            {
-                if (!TrySplitKeyValue(_lines[i], out var parsedKey, out var rawValue, out _)
-                    || !string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                string value = ParseScalarToString(rawValue);
-                _lines.RemoveAt(i);
-                RemoveSectionIfEmpty(sourceSection);
-                UpsertString(targetSection, keyName, value);
-                return true;
-            }
-
-            return false;
-        }
-
-        public bool DeleteKey(string sectionName, string keyName)
-        {
-            if (!TryGetSectionBounds(sectionName, out _, out var contentStart, out var contentEndExclusive))
-            {
-                return false;
-            }
-
-            for (int i = contentStart; i < contentEndExclusive; i++)
-            {
-                if (!TrySplitKeyValue(_lines[i], out var parsedKey, out _, out _)
-                    || !string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
-                {
-                    continue;
-                }
-
-                _lines.RemoveAt(i);
-                RemoveSectionIfEmpty(sectionName);
-                return true;
-            }
-
-            return false;
-        }
-
         public void RemoveArrayTableBlocks(string sectionName)
         {
             for (int i = 0; i < _lines.Count;)
@@ -931,8 +789,7 @@ public class ConfigHandler
                         CommitCurrent();
                     }
 
-                    bool isPresetSection = string.Equals(arraySection, "Server.Presets", StringComparison.OrdinalIgnoreCase)
-                        || string.Equals(arraySection, "ServerPresets", StringComparison.OrdinalIgnoreCase);
+                    bool isPresetSection = string.Equals(arraySection, "Server.Presets", StringComparison.OrdinalIgnoreCase);
                     hasPresetSection |= isPresetSection;
                     current = isPresetSection ? new ServerPresetItem() : null;
                     inServerSection = false;
@@ -1027,53 +884,6 @@ public class ConfigHandler
             return true;
         }
 
-        private List<(string Key, string Value)> ReadSectionEntries(int contentStart, int contentEndExclusive)
-        {
-            var entries = new List<(string Key, string Value)>();
-            for (int i = contentStart; i < contentEndExclusive; i++)
-            {
-                if (TrySplitKeyValue(_lines[i], out var key, out var rawValue, out _))
-                {
-                    entries.Add((key, ParseScalarToString(rawValue)));
-                }
-            }
-
-            return entries;
-        }
-
-        private bool SectionContainsKey(string sectionName, string keyName)
-        {
-            if (!TryGetSectionBounds(sectionName, out _, out var contentStart, out var contentEndExclusive))
-            {
-                return false;
-            }
-
-            for (int i = contentStart; i < contentEndExclusive; i++)
-            {
-                if (TrySplitKeyValue(_lines[i], out var parsedKey, out _, out _)
-                    && string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private void RemoveSectionIfEmpty(string sectionName)
-        {
-            if (string.IsNullOrWhiteSpace(sectionName)
-                || !TryGetSectionBounds(sectionName, out var headerIndex, out var contentStart, out var contentEndExclusive))
-            {
-                return;
-            }
-
-            if (contentEndExclusive <= contentStart)
-            {
-                RemoveRange(headerIndex, contentEndExclusive - headerIndex);
-            }
-        }
-
         private void AppendSectionWithLine(string sectionName, string valueLine)
         {
             if (_lines.Count > 0 && !string.IsNullOrWhiteSpace(_lines[^1]))
@@ -1135,12 +945,6 @@ public class ConfigHandler
 
             sectionName = header.Substring(2, header.Length - 4).Trim();
             return !string.IsNullOrWhiteSpace(sectionName);
-        }
-
-        private static bool TryGetHeaderTrailingComment(string line, out string comment)
-        {
-            comment = ExtractTrailingComment(line, out _);
-            return !string.IsNullOrWhiteSpace(comment);
         }
 
         private static bool TrySplitKeyValue(string line, out string key, out string rawValue, out string trailingComment)

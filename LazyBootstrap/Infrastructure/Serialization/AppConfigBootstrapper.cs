@@ -8,7 +8,6 @@ namespace LazyBootstrap.Infrastructure.Serialization
     internal static class AppConfigBootstrapper
     {
         public const string SettingSectionName = "Setting";
-        public const string LegacySettingsSectionName = "Settings";
         public const string DisplaySectionName = "Display";
 
         private const string ServerSectionName = "Server";
@@ -49,41 +48,6 @@ namespace LazyBootstrap.Infrastructure.Serialization
             {
                 config.BackupInvalidAndReplace(CreateDefaultConfigText());
             }
-
-            config.RenameSection(LegacySettingsSectionName, SettingSectionName);
-            config.MoveKey(SettingSectionName, DisplaySectionName, "displayconfigure");
-
-            var legacyCompatLayer = config.ReadString(SettingSectionName, "compatlayerenabled", string.Empty);
-            var currentCompatLayer = config.ReadString(SettingSectionName, "compatlayer", string.Empty);
-            if (string.IsNullOrWhiteSpace(currentCompatLayer) && !string.IsNullOrWhiteSpace(legacyCompatLayer))
-            {
-                config.WriteString(SettingSectionName, "compatlayer", legacyCompatLayer);
-            }
-
-            var legacyRenderMode = config.ReadString(SettingSectionName, "rendermode", string.Empty);
-            var currentRenderMode = config.ReadString(SettingSectionName, "cl-rendermode", string.Empty);
-            if (string.IsNullOrWhiteSpace(currentRenderMode) && !string.IsNullOrWhiteSpace(legacyRenderMode))
-            {
-                config.WriteString(SettingSectionName, "cl-rendermode", legacyRenderMode);
-            }
-
-            var legacyNoRestore = config.ReadString(DisplaySectionName, "norestorerotation", string.Empty);
-            if (string.IsNullOrWhiteSpace(legacyNoRestore))
-            {
-                legacyNoRestore = config.ReadString(SettingSectionName, "norestorerotation", string.Empty);
-            }
-
-            var existingExitRestore = config.ReadString(DisplaySectionName, "exitrestore", string.Empty);
-            if (string.IsNullOrWhiteSpace(existingExitRestore) && !string.IsNullOrWhiteSpace(legacyNoRestore))
-            {
-                bool noRestore = bool.TryParse(legacyNoRestore, out var parsedNoRestore) && parsedNoRestore;
-                config.WriteString(DisplaySectionName, "exitrestore", (!noRestore).ToString().ToLowerInvariant());
-            }
-
-            config.DeleteKey(SettingSectionName, "portablemode");
-            config.DeleteKey(SettingSectionName, "usepreconfig");
-            config.DeleteKey(SettingSectionName, "contentsoverride");
-            config.DeleteKey(SettingSectionName, "asphyxiaoverride");
 
             EnsureDefaults(config);
         }
