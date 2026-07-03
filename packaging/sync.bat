@@ -21,7 +21,7 @@ set "targetLauncherPath=%gamePath%\launcher"
 if exist "%sourceLauncherPath%\" (
     if exist "%targetLauncherPath%\" (
         for %%F in ("%targetLauncherPath%\*") do (
-            if /I not "%%~nxF"=="MediaUpdater.exe" (
+            if /I not "%%~nxF"=="MediaUpdater.exe" if /I not "%%~nxF"=="config.toml" (
                 del /F /Q "%%~fF"
                 if errorlevel 1 exit /b 1
             )
@@ -33,7 +33,7 @@ if exist "%sourceLauncherPath%\" (
         )
     )
 
-    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT /XF MediaUpdater.exe MediaUpdater.exe.pending
+    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT /XF MediaUpdater.exe MediaUpdater.exe.pending config.toml
     if errorlevel 8 exit /b 1
 
     if exist "%sourceLauncherPath%\MediaUpdater.exe" (
@@ -47,7 +47,7 @@ if exist "%sourceLauncherPath%\" (
         echo MediaUpdater pending update staged: "%targetLauncherPath%\MediaUpdater.exe.pending"
     )
 ) else (
-    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT
+    robocopy "%sourcePath%" "%gamePath%" /E /V /LOG:"%updaterLog%" /TEE /IS /IT /XF config.toml
     if errorlevel 8 exit /b 1
 )
 
