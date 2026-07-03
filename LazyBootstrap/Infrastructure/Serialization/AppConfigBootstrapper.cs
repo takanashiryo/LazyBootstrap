@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 
 namespace LazyBootstrap.Infrastructure.Serialization
@@ -40,16 +39,80 @@ namespace LazyBootstrap.Infrastructure.Serialization
             ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
             ArgumentNullException.ThrowIfNull(config);
 
-            if (!File.Exists(configPath))
+            string defaultConfigText = CreateDefaultConfigText();
+            ConfigFileHealth health;
+            try
             {
-                config.ReplaceWithText(CreateDefaultConfigText());
+                health = config.CheckStartupHealth();
             }
-            else if (!config.TryValidate(out _))
+            catch (Exception ex)
             {
-                config.BackupInvalidAndReplace(CreateDefaultConfigText());
+                EnterReadOnlySession(config, defaultConfigText, $"读取 config.toml 失败：{ex.Message}");
+                EnsureDefaults(config);
+                return;
             }
 
-            EnsureDefaults(config);
+            if (health.Status == ConfigFileHealthStatus.Inaccessible)
+            {
+                string seedText = string.IsNullOrWhiteSpace(health.Content)
+                    ? defaultConfigText
+                    : health.Content;
+                EnterReadOnlySession(config, seedText, $"config.toml 无法读取或保存：{health.ErrorMessage}");
+                EnsureDefaults(config);
+                return;
+            }
+
+            if (health.Status == ConfigFileHealthStatus.Missing)
+            {
+                if (!TryRunStartupConfigOperation(
+                        () => config.ReplaceWithText(defaultConfigText),
+                        out var createError))
+                {
+                    EnterReadOnlySession(config, defaultConfigText, $"创建 config.toml 失败：{createError}");
+                    EnsureDefaults(config);
+                    return;
+                }
+            }
+            else if (health.Status == ConfigFileHealthStatus.InvalidToml)
+            {
+                if (!TryRunStartupConfigOperation(
+                        () => config.BackupInvalidAndReplace(defaultConfigText),
+                        out var repairError))
+                {
+                    EnterReadOnlySession(config, defaultConfigText, $"config.toml 损坏且无法重建：{repairError}");
+                    EnsureDefaults(config);
+                    return;
+                }
+            }
+
+            if (!TryRunStartupConfigOperation(() => EnsureDefaults(config), out var defaultsError))
+            {
+                string readOnlySeed = health.Status == ConfigFileHealthStatus.Valid
+                    ? health.Content
+                    : defaultConfigText;
+                EnterReadOnlySession(config, readOnlySeed, $"config.toml 无法保存设置：{defaultsError}");
+                EnsureDefaults(config);
+            }
+        }
+
+        private static bool TryRunStartupConfigOperation(Action operation, out string error)
+        {
+            error = string.Empty;
+            try
+            {
+                operation();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                error = ex.Message;
+                return false;
+            }
+        }
+
+        private static void EnterReadOnlySession(ConfigHandler config, string seedText, string reason)
+        {
+            config.EnterReadOnlySession(seedText, reason);
         }
 
         private static void EnsureDefaults(ConfigHandler config)

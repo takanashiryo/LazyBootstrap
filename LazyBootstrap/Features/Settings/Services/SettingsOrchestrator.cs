@@ -516,6 +516,13 @@ namespace LazyBootstrap.Features.Settings
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("spicecfg editor launch requested.");
 
+            if (_configHandler.IsReadOnlySession)
+            {
+                _logger.LogWarning("spicecfg editor launch skipped because config.toml is in a read-only session.");
+                _uiInteractionService.ShowWarningToast("配置文件无法保存", "config.toml 当前无法读取，本次会话的配置修改仅保存在内存中。");
+                return;
+            }
+
             string spicePath = _paths.GetSpicePath();
 
             if (!File.Exists(spicePath))

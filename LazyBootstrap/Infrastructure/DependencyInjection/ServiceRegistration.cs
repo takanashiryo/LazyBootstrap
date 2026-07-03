@@ -96,6 +96,7 @@ namespace LazyBootstrap.Infrastructure.DependencyInjection
                 provider.GetRequiredService<ISukiDialogManager>(),
                 provider.GetRequiredService<ISukiToastManager>(),
                 provider.GetRequiredService<UiInteractionService>(),
+                provider.GetRequiredService<ConfigHandler>(),
                 provider.GetRequiredService<ILogger<Shell.MainWindow>>()));
 
             return services;

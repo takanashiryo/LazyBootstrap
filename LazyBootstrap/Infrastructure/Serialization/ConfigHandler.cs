@@ -98,6 +98,8 @@ public class ConfigHandler
     private readonly string _path;
     private readonly object _sync = new object();
     private readonly ILogger<ConfigHandler> _logger;
+    private TomlLineDocument _readOnlyDocument;
+    private string _readOnlyReason = string.Empty;
 
     public ConfigHandler(string tomlPath)
         : this(tomlPath, null)
@@ -111,10 +113,90 @@ public class ConfigHandler
         _logger = logger;
     }
 
+    public bool IsReadOnlySession
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _readOnlyDocument != null;
+            }
+        }
+    }
+
+    public string ReadOnlyReason
+    {
+        get
+        {
+            lock (_sync)
+            {
+                return _readOnlyReason;
+            }
+        }
+    }
+
+    internal ConfigFileHealth CheckStartupHealth()
+    {
+        lock (_sync)
+        {
+            if (!File.Exists(_path))
+            {
+                return ConfigFileHealth.Missing();
+            }
+
+            if (!TryReadText(_path, out var text, out var accessError))
+            {
+                return ConfigFileHealth.Inaccessible(accessError);
+            }
+
+            var validationError = ValidateTomlText(text);
+            if (!string.IsNullOrWhiteSpace(validationError))
+            {
+                return ConfigFileHealth.InvalidToml(validationError, text);
+            }
+
+            if (!TryOpenConfigForSaving(_path, out var saveError))
+            {
+                return ConfigFileHealth.Inaccessible(saveError, text);
+            }
+
+            string directory = Path.GetDirectoryName(_path);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return ConfigFileHealth.Inaccessible("Config directory is empty.", text);
+            }
+
+            if (!TryProbeDirectoryWritable(directory, out var directoryError))
+            {
+                return ConfigFileHealth.Inaccessible(directoryError, text);
+            }
+
+            return ConfigFileHealth.Valid(text);
+        }
+    }
+
+    internal void EnterReadOnlySession(string seedText, string reason)
+    {
+        lock (_sync)
+        {
+            _readOnlyDocument = TomlLineDocument.FromText(seedText ?? string.Empty);
+            _readOnlyReason = string.IsNullOrWhiteSpace(reason)
+                ? "Config file is unavailable."
+                : reason;
+            _logger?.LogWarning("Config read-only session enabled. Reason={Reason}", _readOnlyReason);
+        }
+    }
+
     public bool TryValidate(out string error)
     {
         lock (_sync)
         {
+            if (_readOnlyDocument != null)
+            {
+                error = ValidateTomlText(_readOnlyDocument.ToText());
+                return string.IsNullOrWhiteSpace(error);
+            }
+
             if (!File.Exists(_path))
             {
                 error = string.Empty;
@@ -146,6 +228,12 @@ public class ConfigHandler
     {
         lock (_sync)
         {
+            if (_readOnlyDocument != null)
+            {
+                WriteTextUnsafe(replacementContent ?? string.Empty);
+                return string.Empty;
+            }
+
             string backupPath = string.Empty;
             if (File.Exists(_path))
             {
@@ -198,14 +286,21 @@ public class ConfigHandler
     {
         lock (_sync)
         {
-            if (!File.Exists(_path))
+            string sectionName = NormalizeName(section);
+            string keyName = NormalizeName(key);
+            if (string.IsNullOrWhiteSpace(keyName))
             {
                 return defaultValue;
             }
 
-            string sectionName = NormalizeName(section);
-            string keyName = NormalizeName(key);
-            if (string.IsNullOrWhiteSpace(keyName))
+            if (_readOnlyDocument != null)
+            {
+                return _readOnlyDocument.TryReadString(sectionName, keyName, out var readOnlyValue)
+                    ? readOnlyValue
+                    : defaultValue;
+            }
+
+            if (!File.Exists(_path))
             {
                 return defaultValue;
             }
@@ -261,7 +356,11 @@ public class ConfigHandler
             bool hasPresetSection = false;
             string modelError = string.Empty;
 
-            if (File.Exists(_path) && TryLoadModelUnsafe(out var model, out modelError))
+            if (_readOnlyDocument != null)
+            {
+                LoadServerPresetsFromText(_readOnlyDocument.Clone(), presets, ref activePreset, ref hasPresetSection);
+            }
+            else if (File.Exists(_path) && TryLoadModelUnsafe(out var model, out modelError))
             {
                 LoadServerPresetsFromModel(model, presets, ref activePreset, ref hasPresetSection);
             }
@@ -313,6 +412,11 @@ public class ConfigHandler
 
     private TomlLineDocument LoadDocumentUnsafe()
     {
+        if (_readOnlyDocument != null)
+        {
+            return _readOnlyDocument.Clone();
+        }
+
         return File.Exists(_path)
             ? TomlLineDocument.FromLines(File.ReadAllLines(_path, Encoding.UTF8))
             : TomlLineDocument.Empty();
@@ -331,6 +435,12 @@ public class ConfigHandler
         if (!string.IsNullOrWhiteSpace(validationError))
         {
             throw new InvalidDataException($"Serialized TOML failed validation: {validationError}");
+        }
+
+        if (_readOnlyDocument != null)
+        {
+            _readOnlyDocument = TomlLineDocument.FromText(content ?? string.Empty);
+            return;
         }
 
         if (!SafeFileWriter.TryWriteAllText(_path, content ?? string.Empty, ValidateTomlFile, out var error))
@@ -423,6 +533,89 @@ public class ConfigHandler
         catch (Exception ex)
         {
             return ex.Message;
+        }
+    }
+
+    private static bool TryReadText(string path, out string text, out string error)
+    {
+        text = string.Empty;
+        error = string.Empty;
+
+        try
+        {
+            text = File.ReadAllText(path, Encoding.UTF8);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool TryOpenConfigForSaving(string path, out string error)
+    {
+        error = string.Empty;
+
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static bool TryProbeDirectoryWritable(string directory, out string error)
+    {
+        error = string.Empty;
+        string probePath = string.Empty;
+
+        try
+        {
+            Directory.CreateDirectory(directory);
+            probePath = Path.Combine(directory, $".lazybootstrap.{Guid.NewGuid():N}.tmp");
+            using (var stream = new FileStream(
+                       probePath,
+                       FileMode.CreateNew,
+                       FileAccess.Write,
+                       FileShare.None,
+                       1,
+                       FileOptions.WriteThrough))
+            {
+                stream.WriteByte(0);
+                stream.Flush(true);
+            }
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+        finally
+        {
+            DeleteProbeFile(probePath);
+        }
+    }
+
+    private static void DeleteProbeFile(string path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(path);
+        }
+        catch
+        {
         }
     }
 
@@ -640,6 +833,29 @@ public class ConfigHandler
         public static TomlLineDocument FromLines(IEnumerable<string> lines)
         {
             return new TomlLineDocument(lines);
+        }
+
+        public static TomlLineDocument FromText(string text)
+        {
+            if (string.IsNullOrEmpty(text))
+            {
+                return Empty();
+            }
+
+            var lines = new List<string>();
+            using var reader = new StringReader(text);
+            string line;
+            while ((line = reader.ReadLine()) != null)
+            {
+                lines.Add(line);
+            }
+
+            return new TomlLineDocument(lines);
+        }
+
+        public TomlLineDocument Clone()
+        {
+            return new TomlLineDocument(_lines);
         }
 
         public string ToText()
