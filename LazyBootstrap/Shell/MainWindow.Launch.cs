@@ -30,7 +30,7 @@ namespace LazyBootstrap.Shell
             => _ = _launchOrchestrator.OpenLogAsync();
 
         private void OnKillProcessesClick(object sender, RoutedEventArgs e)
-            => _ = _launchOrchestrator.KillProcessesAsync();
+            => _ = _launchOrchestrator.StopAndKillProcessesAsync();
 
         private void OnStartClick(object sender, RoutedEventArgs e)
             => _ = StartLaunchAsync(false);

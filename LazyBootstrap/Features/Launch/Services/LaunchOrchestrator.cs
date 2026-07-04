@@ -37,6 +37,7 @@ namespace LazyBootstrap.Features.Launch.Services
 
         private readonly Queue<string> _logLines = new Queue<string>(MaxLogLines + 64);
         private Process _gameProcess;
+        private CancellationTokenSource _launchWorkflowCts;
         private CancellationTokenSource _gameProcessMonitorCts;
         private bool _suppressGameProcessExitHandling;
         private LaunchState _launchState;
@@ -175,13 +176,34 @@ namespace LazyBootstrap.Features.Launch.Services
             }
         }
 
-        public Task KillProcessesAsync()
+        public Task StopAndKillProcessesAsync()
         {
-            _logger.LogInformation("Manual process termination requested.");
+            _logger.LogInformation("Manual launch stop and process termination requested.");
+            CancelLaunchWorkflow();
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+            _suppressGameProcessExitHandling = true;
+            ClearLaunchMessage(_launchState);
+
+            AppendLaunchOutput(_launchState, "正在停止启动流程并结束所有进程...", NotificationType.Warning);
+
             int killedSpice = KillProcessesByName("spice64");
             int killedAsphyxia = KillProcessesByName("asphyxia-core-x64");
-            _logger.LogInformation("Manual process termination completed. SpiceKilled={SpiceKilled}, AsphyxiaKilled={AsphyxiaKilled}", killedSpice, killedAsphyxia);
-            _uiInteractionService.ShowInfoToast("操作完成", $"结束完成：spice64 {killedSpice} 个，asphyxia-core-x64 {killedAsphyxia} 个");
+
+            DisposeTrackedGameProcess();
+            _gameProcessTracker.ResetManagedAsphyxiaTracking();
+
+            int restored = RestoreAppliedDisplaySettings("停止流程", shouldRestore: true, logToLaunchOutput: true);
+            ResetLaunchRuntimeState("就绪");
+            _uiInteractionService.RestoreAttachedWindow();
+
+            _logger.LogInformation(
+                "Manual launch stop and process termination completed. SpiceKilled={SpiceKilled}, AsphyxiaKilled={AsphyxiaKilled}, DisplayRestored={DisplayRestored}",
+                killedSpice,
+                killedAsphyxia,
+                restored);
+            _uiInteractionService.ShowInfoToast(
+                "操作完成",
+                $"停止完成：spice64 {killedSpice} 个，asphyxia-core-x64 {killedAsphyxia} 个，显示器恢复 {restored} 个");
             return Task.CompletedTask;
         }
 
@@ -210,11 +232,14 @@ namespace LazyBootstrap.Features.Launch.Services
             var settings = request.Settings;
             var display = request.Display;
             bool asphyxiaDevOnly = request.AsphyxiaDevOnly;
+            var launchWorkflowCts = new CancellationTokenSource();
+            var cancellationToken = launchWorkflowCts.Token;
 
             _launchState = launchState;
             _display = display;
             _observer = observer;
             _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+            ReplaceLaunchWorkflowCancellationSource(launchWorkflowCts);
             CancelGameProcessMonitoring(suppressExitHandling: true);
             _suppressGameProcessExitHandling = false;
 
@@ -300,6 +325,7 @@ namespace LazyBootstrap.Features.Launch.Services
                 {
                     AppendLaunchOutput(launchState, "正在检查 Windows Defender 排除项...");
                     var defenderResult = await _windowsDefenderExclusionService.EnsureDirectoryExcludedAsync(_paths.GetContentsDirectoryPath());
+                    cancellationToken.ThrowIfCancellationRequested();
                     _logger.LogInformation("Windows Defender exclusion check completed. Status={Status}", defenderResult.Status);
                     AppendLaunchOutput(launchState, defenderResult.Message, defenderResult.Status == WindowsDefenderExclusionStatus.Failed ? NotificationType.Warning : NotificationType.Information);
                 }
@@ -310,6 +336,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     {
                         AppendLaunchOutput(launchState, "正在准备显示器配置...");
                         await _displayOrchestrator.WarmDeferredAsync(display);
+                        cancellationToken.ThrowIfCancellationRequested();
                     }
 
                     AppendLaunchOutput(launchState, "正在应用显示器配置...");
@@ -334,10 +361,11 @@ namespace LazyBootstrap.Features.Launch.Services
                     if (applySucceeded)
                     {
                         AppendLaunchOutput(launchState, "显示器配置应用完成。");
-                        await Task.Delay(5000);
+                        await Task.Delay(5000, cancellationToken);
                     }
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 if (startAsphyxia)
                 {
                     if (isAsphyxiaCoreAlreadyRunning)
@@ -406,9 +434,10 @@ namespace LazyBootstrap.Features.Launch.Services
                 if (startedAsphyxiaForGame)
                 {
                     // wait 300ms to start spice2x
-                    await Task.Delay(AsphyxiaToSpiceLaunchDelay);
+                    await Task.Delay(AsphyxiaToSpiceLaunchDelay, cancellationToken);
                 }
 
+                cancellationToken.ThrowIfCancellationRequested();
                 var argumentsBuilder = new StringBuilder();
                 string spiceArgLine = Spice64CommandLine.BuildGameLaunchArguments(useSystemSpice);
                 if (!string.IsNullOrWhiteSpace(spiceArgLine))
@@ -434,6 +463,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     EnableRaisingEvents = true
                 };
 
+                cancellationToken.ThrowIfCancellationRequested();
                 if (!_gameProcess.Start())
                 {
                     _logger.LogWarning("spice64 process start returned false.");
@@ -456,6 +486,11 @@ namespace LazyBootstrap.Features.Launch.Services
                 AppendLaunchOutput(launchState, "游戏已启动并进入运行状态。");
                 _ = MinimizeLauncherWindowDelayedAsync();
                 StartGameProcessMonitoring();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Game launch workflow was cancelled. LaunchSessionId={LaunchSessionId}", launchSessionId);
+                AppendLaunchOutput(launchState, "启动流程已停止。", NotificationType.Warning);
             }
             catch (Exception ex)
             {
@@ -483,15 +518,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     && _display.ExitRestore
                     && _displayRestoreStates.Count > 0)
                 {
-                    AppendLaunchOutput(launchState, "启动未完成，正在恢复显示器设置...");
-                    var restoreMessages = new List<string>();
-                    int restored = _displayOrchestrator.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
-                    _logger.LogInformation("Display settings restored after incomplete launch. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
-                    AppendLaunchOutput(launchState, restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。", restored > 0 ? NotificationType.Information : NotificationType.Warning);
-                    foreach (var restoreMessage in restoreMessages)
-                    {
-                        AppendLaunchOutput(launchState, restoreMessage, NotificationType.Warning);
-                    }
+                    RestoreAppliedDisplaySettings("启动未完成", shouldRestore: true, logToLaunchOutput: true);
                 }
 
                 if (!handoffToGameSession)
@@ -504,16 +531,102 @@ namespace LazyBootstrap.Features.Launch.Services
                         _gameProcess = null;
                     }
                 }
+
+                if (ReferenceEquals(_launchWorkflowCts, launchWorkflowCts))
+                {
+                    _launchWorkflowCts = null;
+                }
+
+                launchWorkflowCts.Dispose();
             }
         }
 
         public Task HandleClosingAsync(DisplayConfigurationSnapshot display)
         {
             _logger.LogInformation("Launcher closing cleanup started.");
+            CancelLaunchWorkflow();
             CancelGameProcessMonitoring(suppressExitHandling: true);
             EndLaunchNavigationLock();
             ClearLaunchMessage(_launchState);
 
+            KillTrackedGameProcessDuringClose();
+            DisposeTrackedGameProcess();
+
+            if (_gameProcessTracker.HasManagedAsphyxiaProcess())
+            {
+                _logger.LogInformation("Stopping managed Asphyxia Core process during window close.");
+                _gameProcessTracker.TryStopManagedAsphyxiaProcess(out _);
+            }
+
+            RestoreAppliedDisplaySettings("窗口关闭", shouldRestore: display?.ExitRestore == true, logToLaunchOutput: false);
+            _logger.LogInformation("Launcher closing cleanup completed.");
+            return Task.CompletedTask;
+        }
+
+        private void ReplaceLaunchWorkflowCancellationSource(CancellationTokenSource cancellationTokenSource)
+        {
+            CancelLaunchWorkflow();
+            _launchWorkflowCts = cancellationTokenSource;
+        }
+
+        private void CancelLaunchWorkflow()
+        {
+            if (_launchWorkflowCts == null)
+            {
+                return;
+            }
+
+            try
+            {
+                if (!_launchWorkflowCts.IsCancellationRequested)
+                {
+                    _launchWorkflowCts.Cancel();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Launch workflow cancellation failed.");
+            }
+        }
+
+        private void ResetLaunchRuntimeState(string statusText)
+        {
+            EndLaunchNavigationLock();
+            _shellStateService.StatusText = statusText ?? "就绪";
+
+            if (_launchState == null)
+            {
+                return;
+            }
+
+            _launchState.IsLaunching = false;
+            _launchState.IsGameRunning = false;
+            _launchState.StateText = _shellStateService.StatusText;
+            NotifyLaunchStateChanged(_launchState);
+        }
+
+        private void DisposeTrackedGameProcess()
+        {
+            if (_gameProcess == null)
+            {
+                return;
+            }
+
+            try
+            {
+                _gameProcess.Dispose();
+            }
+            catch
+            {
+            }
+            finally
+            {
+                _gameProcess = null;
+            }
+        }
+
+        private void KillTrackedGameProcessDuringClose()
+        {
             try
             {
                 if (_gameProcess != null && !_gameProcess.HasExited)
@@ -525,31 +638,42 @@ namespace LazyBootstrap.Features.Launch.Services
             {
                 _logger.LogWarning(ex, "Failed to terminate game process during window close.");
             }
-            finally
+        }
+
+        private int RestoreAppliedDisplaySettings(string reason, bool shouldRestore, bool logToLaunchOutput)
+        {
+            if (!shouldRestore || _displayRestoreStates.Count == 0)
             {
-                if (_gameProcess != null)
+                return 0;
+            }
+
+            if (logToLaunchOutput)
+            {
+                AppendLaunchOutput(_launchState, $"{reason}，正在恢复显示器设置...");
+            }
+
+            var restoreMessages = new List<string>();
+            int restored = _displayOrchestrator.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
+            _logger.LogInformation(
+                "Display settings restored. Reason={Reason}, RestoredCount={RestoredCount}, MessageCount={MessageCount}",
+                reason,
+                restored,
+                restoreMessages.Count);
+
+            if (logToLaunchOutput)
+            {
+                AppendLaunchOutput(
+                    _launchState,
+                    restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。",
+                    restored > 0 ? NotificationType.Information : NotificationType.Warning);
+                foreach (var restoreMessage in restoreMessages)
                 {
-                    _gameProcess.Dispose();
-                    _gameProcess = null;
+                    AppendLaunchOutput(_launchState, restoreMessage, NotificationType.Warning);
                 }
             }
 
-            if (_gameProcessTracker.HasManagedAsphyxiaProcess())
-            {
-                _logger.LogInformation("Stopping managed Asphyxia Core process during window close.");
-                _gameProcessTracker.TryStopManagedAsphyxiaProcess(out _);
-            }
-
-            if (display?.ExitRestore == true && _displayRestoreStates.Count > 0)
-            {
-                var restoreMessages = new List<string>();
-                int restored = _displayOrchestrator.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
-                _logger.LogInformation("Display settings restored during window close. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
-            }
-
             _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
-            _logger.LogInformation("Launcher closing cleanup completed.");
-            return Task.CompletedTask;
+            return restored;
         }
 
         private void StartGameProcessMonitoring()
@@ -777,14 +901,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     && _display.ExitRestore
                     && _displayRestoreStates.Count > 0)
                 {
-                    var restoreMessages = new List<string>();
-                    int restored = _displayOrchestrator.RestoreDisplayStates(_displayRestoreStates, restoreMessages);
-                    _logger.LogInformation("Display settings restored after game exit. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
-                    AppendLaunchOutput(_launchState, restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。");
-                    foreach (var restoreMessage in restoreMessages)
-                    {
-                        AppendLaunchOutput(_launchState, restoreMessage, NotificationType.Warning);
-                    }
+                    RestoreAppliedDisplaySettings("游戏退出", shouldRestore: true, logToLaunchOutput: true);
                 }
             }
             catch (Exception ex)

@@ -20,6 +20,7 @@ namespace LazyBootstrap.Features.Settings
         private const string AsphyxiaDefaultUrl = "http://localhost:8083";
         private const string UseSystemConfigKey = "use-system-config";
         private const string DisableFsoConfigKey = "disable-fso";
+        private const string AutoLaunchConfigKey = "auto-launch";
         private const string MissingSpiceConfigMessage = "未找到任何spice2x配置文件";
 
         private readonly ConfigHandler _configHandler;
@@ -178,6 +179,7 @@ namespace LazyBootstrap.Features.Settings
             settings.RunSilently(() =>
             {
                 settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
+                settings.AutoLaunch = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, false);
                 settings.DisableSpiceFso = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false);
                 settings.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
                 settings.GpuCompatLayerRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
@@ -251,13 +253,18 @@ namespace LazyBootstrap.Features.Settings
             try
             {
                 _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, "noasphyxia", settings.NoAsphyxia.ToString().ToLowerInvariant());
+                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, settings.AutoLaunch.ToString().ToLowerInvariant());
                 _logger.LogInformation("Launcher settings persisted.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to persist launcher settings.");
                 _uiInteractionService.ShowErrorToast("保存设置失败", ex.Message);
-                settings.RunSilently(() => settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false));
+                settings.RunSilently(() =>
+                {
+                    settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
+                    settings.AutoLaunch = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, false);
+                });
             }
 
             return Task.CompletedTask;
