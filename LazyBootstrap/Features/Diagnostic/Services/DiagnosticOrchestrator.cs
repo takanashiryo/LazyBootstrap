@@ -136,6 +136,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 NotFoundTitle = "NVIDIA API",
                 FaultRow = vm.NvidiaSkipNoticeRow,
                 Outcomes = [("nvcuda.dll", vm.NvidiaNvcuda), ("nvcuvid.dll", vm.NvidiaNvcuvid), ("nvEncodeAPI64.dll", vm.NvidiaEncodeApi)],
+                HideSuccessFaultBadge = true,
                 OnFault = v => v.NvidiaDetailVisible = false
             });
             PopulateDllGroup(vm, grouped, new DllGroupSpec
@@ -197,6 +198,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             public string NotFoundTitle { get; init; }
             public EnvironmentScanDisplayRow FaultRow { get; init; }
             public (string FileToken, EnvironmentScanLineOutcome Outcome)[] Outcomes { get; init; }
+            public bool HideSuccessFaultBadge { get; init; }
             public Action<EnvironmentScanPresentation> OnFault { get; init; }
         }
 
@@ -225,11 +227,12 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             if (faultItem != null)
             {
                 bool detailVisible = !string.IsNullOrWhiteSpace(faultItem.Detail);
+                bool showBadge = !(spec.HideSuccessFaultBadge && faultItem.Level == EnvironmentScan.ScanResultLevel.Success);
                 spec.FaultRow.ApplyResult(
                     spec.FaultTitle,
                     detailVisible ? faultItem.Detail.Trim() : "检测过程中发生异常。",
                     detailVisible,
-                    true,
+                    showBadge,
                     faultItem.Level,
                     BadgeText(faultItem.Level));
                 foreach (var (token, outcome) in spec.Outcomes)

@@ -94,9 +94,7 @@ namespace LazyBootstrap.Shell
             {
                 EnvironmentOverviewInfoBar.Severity = NotificationType.Error;
                 EnvironmentOverviewInfoBar.Title = "存在未通过的检查项";
-                EnvironmentOverviewInfoBar.Message = string.IsNullOrWhiteSpace(_environmentScanState.EnvironmentSummary)
-                    ? "请对照下方固定检测项查看未通过条目。"
-                    : _environmentScanState.EnvironmentSummary.Trim();
+                EnvironmentOverviewInfoBar.Message = string.Empty;
             }
             else if (_environmentScanState.HasAnyEnvironmentScanWarning())
             {
