@@ -1008,7 +1008,7 @@
                                             <StackPanel Margin="16,14" Spacing="10">
                                                 <TextBlock Text="系统与版本" FontSize="15" FontWeight="SemiBold" />
                                                 <Grid ColumnDefinitions="108,*" ColumnSpacing="12"
-                                                      RowDefinitions="Auto,Auto"
+                                                      RowDefinitions="Auto,Auto,Auto,Auto"
                                                       RowSpacing="8">
                                                     <TextBlock VerticalAlignment="Center"
                                                                Opacity="0.78"
@@ -1027,6 +1027,30 @@
                                                                TextWrapping="Wrap" />
                                                     <TextBox x:Name="GameVersionTextBox"
                                                              Grid.Row="1"
+                                                             Grid.Column="1"
+                                                             Classes="Flat"
+                                                             IsReadOnly="True"
+                                                             Text=""
+                                                             TextWrapping="Wrap" />
+                                                    <TextBlock Grid.Row="2"
+                                                               VerticalAlignment="Center"
+                                                               Opacity="0.78"
+                                                               Text="系统版本"
+                                                               TextWrapping="Wrap" />
+                                                    <TextBox x:Name="OperatingSystemVersionNameTextBox"
+                                                             Grid.Row="2"
+                                                             Grid.Column="1"
+                                                             Classes="Flat"
+                                                             IsReadOnly="True"
+                                                             Text=""
+                                                             TextWrapping="Wrap" />
+                                                    <TextBlock Grid.Row="3"
+                                                               VerticalAlignment="Center"
+                                                               Opacity="0.78"
+                                                               Text="系统版本号"
+                                                               TextWrapping="Wrap" />
+                                                    <TextBox x:Name="OperatingSystemBuildNumberTextBox"
+                                                             Grid.Row="3"
                                                              Grid.Column="1"
                                                              Classes="Flat"
                                                              IsReadOnly="True"

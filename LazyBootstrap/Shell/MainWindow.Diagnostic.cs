@@ -35,6 +35,8 @@ namespace LazyBootstrap.Shell
         {
             SetTextBoxTextIfNeeded(MachinePropertyTextBox, _environmentScanState.MachineProperty);
             SetTextBoxTextIfNeeded(GameVersionTextBox, _environmentScanState.GameVersion);
+            SetTextBoxTextIfNeeded(OperatingSystemVersionNameTextBox, _environmentScanState.OperatingSystemVersionName);
+            SetTextBoxTextIfNeeded(OperatingSystemBuildNumberTextBox, _environmentScanState.OperatingSystemBuildNumber);
 
             if (EnvironmentScanPendingHintTextBlock != null)
             {

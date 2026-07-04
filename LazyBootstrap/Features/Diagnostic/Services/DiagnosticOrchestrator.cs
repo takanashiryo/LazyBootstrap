@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 
 namespace LazyBootstrap.Features.Diagnostic.Services
 {
@@ -38,6 +39,8 @@ namespace LazyBootstrap.Features.Diagnostic.Services
 
             presentation.MachineProperty = ResolveMachineProperty();
             presentation.GameVersion = ResolveCurrentGameVersion();
+            presentation.OperatingSystemVersionName = ResolveOperatingSystemVersionName();
+            presentation.OperatingSystemBuildNumber = ResolveOperatingSystemBuildNumber();
             presentation.LauncherVersion = ResolveLauncherVersion();
             _logger.LogInformation("Environment information initialization completed.");
             return Task.CompletedTask;
@@ -437,6 +440,76 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 var doc = XDocument.Load(bootstrapPath);
                 var releaseCode = doc.Root?.Element("release_code")?.Value?.Trim();
                 return string.IsNullOrWhiteSpace(releaseCode) ? "未知" : releaseCode;
+            }
+            catch
+            {
+                return "未知";
+            }
+        }
+
+        private static string ResolveOperatingSystemVersionName()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return "未知";
+            }
+
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                if (key == null)
+                {
+                    return "未知";
+                }
+
+                var productName = key.GetValue("ProductName")?.ToString()?.Trim();
+                var displayVersion = key.GetValue("DisplayVersion")?.ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(displayVersion))
+                {
+                    displayVersion = key.GetValue("ReleaseId")?.ToString()?.Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(productName))
+                {
+                    return string.IsNullOrWhiteSpace(displayVersion) ? "未知" : displayVersion;
+                }
+
+                return string.IsNullOrWhiteSpace(displayVersion)
+                    ? productName
+                    : $"{productName} {displayVersion}";
+            }
+            catch
+            {
+                return "未知";
+            }
+        }
+
+        private static string ResolveOperatingSystemBuildNumber()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return "未知";
+            }
+
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                if (key == null)
+                {
+                    return "未知";
+                }
+
+                var buildNumber = key.GetValue("CurrentBuildNumber")?.ToString()?.Trim();
+                var ubr = key.GetValue("UBR")?.ToString()?.Trim();
+
+                if (string.IsNullOrWhiteSpace(buildNumber))
+                {
+                    return "未知";
+                }
+
+                return string.IsNullOrWhiteSpace(ubr)
+                    ? buildNumber
+                    : $"{buildNumber}.{ubr}";
             }
             catch
             {
