@@ -352,7 +352,8 @@
                                                                 <Grid ColumnDefinitions="96,*" ColumnSpacing="8"
                                                                       VerticalAlignment="Center">
                                                                     <TextBlock Text="PCBID" VerticalAlignment="Center" />
-                                                                    <TextBox x:Name="PcbIdTextBox" Grid.Column="1" />
+                                                                    <TextBox x:Name="PcbIdTextBox" Grid.Column="1"
+                                                                             Watermark="根据实际需要填写，否则留空" />
                                                                 </Grid>
                                                             </StackPanel>
                                                         </suki:GlassCard>

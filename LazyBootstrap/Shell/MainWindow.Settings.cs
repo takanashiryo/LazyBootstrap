@@ -624,7 +624,7 @@ namespace LazyBootstrap.Shell
             }
             if (PcbIdTextBox != null)
             {
-                PcbIdTextBox.Watermark = string.Empty;
+                PcbIdTextBox.Watermark = "根据实际需要填写，否则留空";
             }
             if (NetworkAdapterIpTextBox != null)
             {
