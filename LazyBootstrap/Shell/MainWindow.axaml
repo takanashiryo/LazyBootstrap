@@ -102,7 +102,7 @@
                                                 <StackPanel Orientation="Horizontal" Spacing="6"
                                                             VerticalAlignment="Center">
                                                     <TextBlock Classes="FaIcon" Text="&#xF00D;" FontSize="14" />
-                                                    <TextBlock Text="结束所有进程" VerticalAlignment="Center" />
+                                                    <TextBlock Text="停止并结束所有进程" VerticalAlignment="Center" />
                                                 </StackPanel>
                                             </Button>
                                             <SplitButton x:Name="StartButton"
@@ -166,6 +166,13 @@
                                                                       VerticalAlignment="Center">
                                                                     <TextBlock Text="不启动氧无" VerticalAlignment="Center" />
                                                                     <ToggleSwitch x:Name="NoAsphyxiaToggleSwitch"
+                                                                            Grid.Column="1" />
+                                                                </Grid>
+                                                                <Grid ColumnDefinitions="*,Auto"
+                                                                      VerticalAlignment="Center">
+                                                                    <TextBlock Text="打开启动器后自动启动"
+                                                                               VerticalAlignment="Center" />
+                                                                    <ToggleSwitch x:Name="AutoLaunchToggleSwitch"
                                                                             Grid.Column="1" />
                                                                 </Grid>
                                                                 <Grid ColumnDefinitions="*,Auto"

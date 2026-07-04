@@ -16,6 +16,7 @@ namespace LazyBootstrap.Infrastructure.Serialization
         private static readonly ConfigDefaultEntry[] Defaults =
         [
             new ConfigDefaultEntry(SettingSectionName, "noasphyxia", "false"),
+            new ConfigDefaultEntry(SettingSectionName, "auto-launch", "false"),
             new ConfigDefaultEntry(SettingSectionName, "disable-fso", "false"),
             new ConfigDefaultEntry(SettingSectionName, "compatlayer", "false"),
             new ConfigDefaultEntry(SettingSectionName, "cl-rendermode", "dx9on12"),

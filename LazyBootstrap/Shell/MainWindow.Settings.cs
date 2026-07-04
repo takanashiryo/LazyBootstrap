@@ -131,6 +131,11 @@ namespace LazyBootstrap.Shell
                     NoAsphyxiaToggleSwitch.IsChecked = _settingsState.NoAsphyxia;
                 }
 
+                if (AutoLaunchToggleSwitch != null)
+                {
+                    AutoLaunchToggleSwitch.IsChecked = _settingsState.AutoLaunch;
+                }
+
                 if (DisableSpiceFsoToggleSwitch != null)
                 {
                     DisableSpiceFsoToggleSwitch.IsChecked = _settingsState.DisableSpiceFso;
@@ -666,6 +671,16 @@ namespace LazyBootstrap.Shell
                 {
                     if (_isLoadingSettings) return;
                     _settingsState.NoAsphyxia = NoAsphyxiaToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.PersistLauncherSettingsAsync(_settingsState);
+                };
+            }
+
+            if (AutoLaunchToggleSwitch != null)
+            {
+                AutoLaunchToggleSwitch.IsCheckedChanged += async (_, _) =>
+                {
+                    if (_isLoadingSettings) return;
+                    _settingsState.AutoLaunch = AutoLaunchToggleSwitch.IsChecked == true;
                     await _settingsWorkflowService.PersistLauncherSettingsAsync(_settingsState);
                 };
             }

@@ -331,11 +331,29 @@ namespace LazyBootstrap.Shell
                     _pendingEnvironmentScanErrorDialog = false;
                     await ShowEnvironmentScanErrorDialogAsync();
                 }
+
+                QueueAutoLaunchIfEnabled();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Startup dialog display failed.");
             }
+        }
+
+        private void QueueAutoLaunchIfEnabled()
+        {
+            if (!_settingsState.AutoLaunch)
+            {
+                return;
+            }
+
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (_settingsState.AutoLaunch && _launchState.CanStartLaunch)
+                {
+                    _ = StartLaunchAsync(false);
+                }
+            }, DispatcherPriority.Background);
         }
 
         private async Task ShowConfigReadOnlyDialogAsync()
