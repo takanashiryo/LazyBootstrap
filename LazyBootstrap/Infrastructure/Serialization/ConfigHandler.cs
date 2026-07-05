@@ -272,6 +272,25 @@ public class ConfigHandler
         }
     }
 
+    public void RemoveKey(string section, string key)
+    {
+        lock (_sync)
+        {
+            string sectionName = NormalizeName(section);
+            string keyName = NormalizeName(key);
+            if (string.IsNullOrWhiteSpace(keyName))
+            {
+                return;
+            }
+
+            var document = LoadDocumentUnsafe();
+            if (document.RemoveKey(sectionName, keyName))
+            {
+                WriteDocumentUnsafe(document);
+            }
+        }
+    }
+
     public void WriteBool(string section, string key, bool value)
     {
         WriteString(section, key, value ? "true" : "false");
@@ -928,6 +947,30 @@ public class ConfigHandler
             {
                 _lines.Insert(insertIndex, valueLine);
             }
+        }
+
+        public bool RemoveKey(string sectionName, string keyName)
+        {
+            if (string.IsNullOrWhiteSpace(keyName)
+                || !TryGetSectionBounds(sectionName, out _, out var contentStart, out var contentEndExclusive))
+            {
+                return false;
+            }
+
+            bool removed = false;
+            for (int i = contentEndExclusive - 1; i >= contentStart; i--)
+            {
+                if (!TrySplitKeyValue(_lines[i], out var parsedKey, out _, out _)
+                    || !string.Equals(parsedKey, keyName, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                _lines.RemoveAt(i);
+                removed = true;
+            }
+
+            return removed;
         }
 
         public void RemoveArrayTableBlocks(string sectionName)

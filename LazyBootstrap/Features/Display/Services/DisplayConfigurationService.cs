@@ -80,6 +80,8 @@ namespace LazyBootstrap.Features.Display.Services
     {
         public string DeviceName { get; init; } = string.Empty;
 
+        internal string PersistentId { get; init; } = string.Empty;
+
         public string FriendlyName { get; init; } = string.Empty;
 
         public bool IsPrimary { get; init; }
@@ -256,12 +258,14 @@ namespace LazyBootstrap.Features.Display.Services
 
                     var activeMonitors = EnumerateActiveMonitors(adapter.DeviceName);
                     string friendly = ResolveFriendlyName(adapter, activeMonitors);
+                    string persistentId = ResolvePersistentId(adapter, activeMonitors);
 
                     if (seen.Add(adapter.DeviceName))
                     {
                         result.Add(new DisplayInfo
                         {
                             DeviceName = adapter.DeviceName,
+                            PersistentId = persistentId,
                             FriendlyName = friendly,
                             IsPrimary = (adapter.StateFlags & DisplayDevicePrimaryDevice) != 0
                         });
@@ -701,6 +705,93 @@ namespace LazyBootstrap.Features.Display.Services
             }
 
             return adapter.DeviceName?.Trim() ?? string.Empty;
+        }
+
+        private static string ResolvePersistentId(DisplayDevice adapter, IReadOnlyList<DisplayDevice> monitors)
+        {
+            foreach (var monitor in monitors)
+            {
+                string registryIdentity = ResolvePersistentIdFromRegistry(monitor);
+                if (!string.IsNullOrWhiteSpace(registryIdentity))
+                {
+                    return registryIdentity;
+                }
+            }
+
+            foreach (var monitor in monitors)
+            {
+                string deviceId = NormalizeMonitorIdentity(monitor.DeviceId);
+                if (!string.IsNullOrWhiteSpace(deviceId))
+                {
+                    return deviceId;
+                }
+            }
+
+            return adapter.DeviceName?.Trim() ?? string.Empty;
+        }
+
+        private static string ResolvePersistentIdFromRegistry(DisplayDevice monitor)
+        {
+            return OperatingSystem.IsWindows()
+                ? ResolvePersistentIdFromRegistryCore(monitor)
+                : string.Empty;
+        }
+
+        [SupportedOSPlatform("windows")]
+        private static string ResolvePersistentIdFromRegistryCore(DisplayDevice monitor)
+        {
+            string hardwareKey = ExtractMonitorHardwareKey(monitor.DeviceId);
+            if (string.IsNullOrWhiteSpace(hardwareKey))
+            {
+                hardwareKey = ExtractMonitorHardwareKey(ExtractEnumIdentityFromRegistryPath(monitor.DeviceKey));
+            }
+
+            if (string.IsNullOrWhiteSpace(hardwareKey))
+            {
+                return string.Empty;
+            }
+
+            try
+            {
+                using var displayKey = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Enum\DISPLAY\{hardwareKey}");
+                if (displayKey == null)
+                {
+                    return string.Empty;
+                }
+
+                string driverKey = ExtractMonitorDriverKey(monitor.DeviceKey);
+                string fallbackIdentity = string.Empty;
+                foreach (string instanceName in displayKey.GetSubKeyNames())
+                {
+                    if (string.IsNullOrWhiteSpace(instanceName))
+                    {
+                        continue;
+                    }
+
+                    string identity = NormalizeMonitorIdentity($@"DISPLAY\{hardwareKey}\{instanceName}");
+                    if (string.IsNullOrWhiteSpace(driverKey))
+                    {
+                        return identity;
+                    }
+
+                    using var instanceKey = displayKey.OpenSubKey(instanceName);
+                    string instanceDriverKey = instanceKey?.GetValue("Driver")?.ToString()?.Trim() ?? string.Empty;
+                    if (string.Equals(instanceDriverKey, driverKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return identity;
+                    }
+
+                    fallbackIdentity = string.IsNullOrWhiteSpace(fallbackIdentity)
+                        ? identity
+                        : fallbackIdentity;
+                }
+
+                return fallbackIdentity;
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
         private static string ResolveFriendlyNameFromRegistry(DisplayDevice monitor)
