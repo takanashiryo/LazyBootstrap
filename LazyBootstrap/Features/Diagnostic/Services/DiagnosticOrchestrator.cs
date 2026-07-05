@@ -463,6 +463,15 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 }
 
                 var productName = key.GetValue("ProductName")?.ToString()?.Trim();
+                var editionId = key.GetValue("EditionID")?.ToString()?.Trim();
+                var buildNumber = key.GetValue("CurrentBuildNumber")?.ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(buildNumber))
+                {
+                    buildNumber = key.GetValue("CurrentBuild")?.ToString()?.Trim();
+                }
+
+                productName = NormalizeWindowsProductName(productName, editionId, buildNumber);
+
                 var displayVersion = key.GetValue("DisplayVersion")?.ToString()?.Trim();
                 if (string.IsNullOrWhiteSpace(displayVersion))
                 {
@@ -482,6 +491,54 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             {
                 return "未知";
             }
+        }
+
+        private static string NormalizeWindowsProductName(string productName, string editionId, string buildNumber)
+        {
+            if (!IsWindows11Build(buildNumber))
+            {
+                return productName;
+            }
+
+            if (string.IsNullOrWhiteSpace(productName))
+            {
+                var editionName = NormalizeWindowsEditionName(editionId);
+                return string.IsNullOrWhiteSpace(editionName)
+                    ? "Windows 11"
+                    : $"Windows 11 {editionName}";
+            }
+
+            const string windows10Prefix = "Windows 10";
+            if (!productName.StartsWith(windows10Prefix, StringComparison.OrdinalIgnoreCase))
+            {
+                return productName;
+            }
+
+            return $"Windows 11{productName.Substring(windows10Prefix.Length)}";
+        }
+
+        private static bool IsWindows11Build(string buildNumber)
+        {
+            return int.TryParse(buildNumber, out var build) && build >= 22000;
+        }
+
+        private static string NormalizeWindowsEditionName(string editionId)
+        {
+            if (string.IsNullOrWhiteSpace(editionId))
+            {
+                return string.Empty;
+            }
+
+            return editionId switch
+            {
+                "Core" => "Home",
+                "CoreSingleLanguage" => "Home Single Language",
+                "Professional" => "Pro",
+                "ProfessionalWorkstation" => "Pro for Workstations",
+                "ProfessionalEducation" => "Pro Education",
+                "EnterpriseS" => "Enterprise LTSC",
+                _ => editionId
+            };
         }
 
         private static string ResolveOperatingSystemBuildNumber()
