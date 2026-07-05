@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 
 using Microsoft.Extensions.Logging;
+using Microsoft.Win32;
 
 namespace LazyBootstrap.Features.Diagnostic.Services
 {
@@ -38,6 +39,8 @@ namespace LazyBootstrap.Features.Diagnostic.Services
 
             presentation.MachineProperty = ResolveMachineProperty();
             presentation.GameVersion = ResolveCurrentGameVersion();
+            presentation.OperatingSystemVersionName = ResolveOperatingSystemVersionName();
+            presentation.OperatingSystemBuildNumber = ResolveOperatingSystemBuildNumber();
             presentation.LauncherVersion = ResolveLauncherVersion();
             _logger.LogInformation("Environment information initialization completed.");
             return Task.CompletedTask;
@@ -136,6 +139,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 NotFoundTitle = "NVIDIA API",
                 FaultRow = vm.NvidiaSkipNoticeRow,
                 Outcomes = [("nvcuda.dll", vm.NvidiaNvcuda), ("nvcuvid.dll", vm.NvidiaNvcuvid), ("nvEncodeAPI64.dll", vm.NvidiaEncodeApi)],
+                HideSuccessFaultBadge = true,
                 OnFault = v => v.NvidiaDetailVisible = false
             });
             PopulateDllGroup(vm, grouped, new DllGroupSpec
@@ -197,6 +201,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             public string NotFoundTitle { get; init; }
             public EnvironmentScanDisplayRow FaultRow { get; init; }
             public (string FileToken, EnvironmentScanLineOutcome Outcome)[] Outcomes { get; init; }
+            public bool HideSuccessFaultBadge { get; init; }
             public Action<EnvironmentScanPresentation> OnFault { get; init; }
         }
 
@@ -225,11 +230,12 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             if (faultItem != null)
             {
                 bool detailVisible = !string.IsNullOrWhiteSpace(faultItem.Detail);
+                bool showBadge = !(spec.HideSuccessFaultBadge && faultItem.Level == EnvironmentScan.ScanResultLevel.Success);
                 spec.FaultRow.ApplyResult(
                     spec.FaultTitle,
                     detailVisible ? faultItem.Detail.Trim() : "检测过程中发生异常。",
                     detailVisible,
-                    true,
+                    showBadge,
                     faultItem.Level,
                     BadgeText(faultItem.Level));
                 foreach (var (token, outcome) in spec.Outcomes)
@@ -434,6 +440,76 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 var doc = XDocument.Load(bootstrapPath);
                 var releaseCode = doc.Root?.Element("release_code")?.Value?.Trim();
                 return string.IsNullOrWhiteSpace(releaseCode) ? "未知" : releaseCode;
+            }
+            catch
+            {
+                return "未知";
+            }
+        }
+
+        private static string ResolveOperatingSystemVersionName()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return "未知";
+            }
+
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                if (key == null)
+                {
+                    return "未知";
+                }
+
+                var productName = key.GetValue("ProductName")?.ToString()?.Trim();
+                var displayVersion = key.GetValue("DisplayVersion")?.ToString()?.Trim();
+                if (string.IsNullOrWhiteSpace(displayVersion))
+                {
+                    displayVersion = key.GetValue("ReleaseId")?.ToString()?.Trim();
+                }
+
+                if (string.IsNullOrWhiteSpace(productName))
+                {
+                    return string.IsNullOrWhiteSpace(displayVersion) ? "未知" : displayVersion;
+                }
+
+                return string.IsNullOrWhiteSpace(displayVersion)
+                    ? productName
+                    : $"{productName} {displayVersion}";
+            }
+            catch
+            {
+                return "未知";
+            }
+        }
+
+        private static string ResolveOperatingSystemBuildNumber()
+        {
+            if (!OperatingSystem.IsWindows())
+            {
+                return "未知";
+            }
+
+            try
+            {
+                using var key = Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion");
+                if (key == null)
+                {
+                    return "未知";
+                }
+
+                var buildNumber = key.GetValue("CurrentBuildNumber")?.ToString()?.Trim();
+                var ubr = key.GetValue("UBR")?.ToString()?.Trim();
+
+                if (string.IsNullOrWhiteSpace(buildNumber))
+                {
+                    return "未知";
+                }
+
+                return string.IsNullOrWhiteSpace(ubr)
+                    ? buildNumber
+                    : $"{buildNumber}.{ubr}";
             }
             catch
             {

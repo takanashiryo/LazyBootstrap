@@ -59,6 +59,10 @@ namespace LazyBootstrap.Features.Diagnostic
 
         public string GameVersion { get; set; } = string.Empty;
 
+        public string OperatingSystemVersionName { get; set; } = string.Empty;
+
+        public string OperatingSystemBuildNumber { get; set; } = string.Empty;
+
         public string LauncherVersion { get; set; } = string.Empty;
 
         public string EnvironmentSummary { get; set; } = string.Empty;
