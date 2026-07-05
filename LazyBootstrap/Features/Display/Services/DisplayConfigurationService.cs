@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Management;
+using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -209,9 +209,6 @@ namespace LazyBootstrap.Features.Display.Services
         {
             var result = new List<DisplayInfo>();
             var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var wmiMonitorNames = OperatingSystem.IsWindows()
-                ? LoadWmiMonitorFriendlyNames()
-                : Array.Empty<WmiMonitorFriendlyName>();
 
             try
             {
@@ -233,7 +230,7 @@ namespace LazyBootstrap.Features.Display.Services
                     }
 
                     var activeMonitors = EnumerateActiveMonitors(adapter.DeviceName);
-                    string friendly = ResolveFriendlyName(adapter, activeMonitors, wmiMonitorNames);
+                    string friendly = ResolveFriendlyName(adapter, activeMonitors);
 
                     if (seen.Add(adapter.DeviceName))
                     {
@@ -616,14 +613,14 @@ namespace LazyBootstrap.Features.Display.Services
             return monitors;
         }
 
-        private static string ResolveFriendlyName(DisplayDevice adapter, IReadOnlyList<DisplayDevice> monitors, IReadOnlyList<WmiMonitorFriendlyName> wmiMonitorNames)
+        private static string ResolveFriendlyName(DisplayDevice adapter, IReadOnlyList<DisplayDevice> monitors)
         {
             foreach (var monitor in monitors)
             {
-                string friendlyName = ResolveFriendlyNameFromWmi(monitor, wmiMonitorNames);
-                if (!string.IsNullOrWhiteSpace(friendlyName))
+                string registryName = ResolveFriendlyNameFromRegistry(monitor);
+                if (!string.IsNullOrWhiteSpace(registryName))
                 {
-                    return friendlyName;
+                    return registryName;
                 }
             }
 
@@ -636,130 +633,171 @@ namespace LazyBootstrap.Features.Display.Services
                 }
             }
 
-            string adapterName = adapter.DeviceString?.Trim() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(adapterName))
-            {
-                return adapterName;
-            }
-
             return adapter.DeviceName?.Trim() ?? string.Empty;
         }
 
-        private static string ResolveFriendlyNameFromWmi(DisplayDevice monitor, IReadOnlyList<WmiMonitorFriendlyName> wmiMonitorNames)
+        private static string ResolveFriendlyNameFromRegistry(DisplayDevice monitor)
         {
-            if (wmiMonitorNames == null || wmiMonitorNames.Count == 0)
+            return OperatingSystem.IsWindows()
+                ? ResolveFriendlyNameFromRegistryCore(monitor)
+                : string.Empty;
+        }
+
+        [SupportedOSPlatform("windows")]
+        private static string ResolveFriendlyNameFromRegistryCore(DisplayDevice monitor)
+        {
+            string hardwareKey = ExtractMonitorHardwareKey(monitor.DeviceId);
+            if (string.IsNullOrWhiteSpace(hardwareKey))
+            {
+                hardwareKey = ExtractMonitorHardwareKey(ExtractEnumIdentityFromRegistryPath(monitor.DeviceKey));
+            }
+
+            if (string.IsNullOrWhiteSpace(hardwareKey))
             {
                 return string.Empty;
             }
 
-            foreach (var candidate in BuildMonitorIdentityCandidates(monitor))
+            try
             {
-                var exactMatch = wmiMonitorNames.FirstOrDefault(entry =>
-                    string.Equals(entry.InstanceName, candidate, StringComparison.OrdinalIgnoreCase));
-                if (exactMatch != null)
+                using var displayKey = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Enum\DISPLAY\{hardwareKey}");
+                if (displayKey == null)
                 {
-                    return exactMatch.FriendlyName;
+                    return string.Empty;
                 }
 
-                var fuzzyMatch = wmiMonitorNames.FirstOrDefault(entry =>
-                    entry.InstanceName.Contains(candidate, StringComparison.OrdinalIgnoreCase)
-                    || candidate.Contains(entry.InstanceName, StringComparison.OrdinalIgnoreCase));
-                if (fuzzyMatch != null)
+                string driverKey = ExtractMonitorDriverKey(monitor.DeviceKey);
+                var fallbackNames = new List<string>();
+                foreach (string instanceName in displayKey.GetSubKeyNames())
                 {
-                    return fuzzyMatch.FriendlyName;
+                    using var instanceKey = displayKey.OpenSubKey(instanceName);
+                    if (instanceKey == null)
+                    {
+                        continue;
+                    }
+
+                    string name = ResolveFriendlyNameFromRegistryInstance(instanceKey);
+                    if (string.IsNullOrWhiteSpace(name))
+                    {
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(driverKey))
+                    {
+                        return name;
+                    }
+
+                    string instanceDriverKey = instanceKey.GetValue("Driver")?.ToString()?.Trim() ?? string.Empty;
+                    if (string.Equals(instanceDriverKey, driverKey, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return name;
+                    }
+
+                    fallbackNames.Add(name);
+                }
+
+                return fallbackNames.FirstOrDefault() ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        [SupportedOSPlatform("windows")]
+        private static string ResolveFriendlyNameFromRegistryInstance(RegistryKey instanceKey)
+        {
+            using var deviceParametersKey = instanceKey.OpenSubKey("Device Parameters");
+            if (deviceParametersKey?.GetValue("EDID") is byte[] edid)
+            {
+                string edidName = DecodeEdidDisplayName(edid);
+                if (!string.IsNullOrWhiteSpace(edidName))
+                {
+                    return edidName;
                 }
             }
 
-            foreach (var hardwareKey in BuildMonitorHardwareKeys(monitor))
+            string friendlyName = CleanRegistryDisplayName(instanceKey.GetValue("FriendlyName")?.ToString());
+            if (!string.IsNullOrWhiteSpace(friendlyName) && !IsGenericMonitorName(friendlyName))
             {
-                var hardwareMatch = wmiMonitorNames.FirstOrDefault(entry =>
-                    string.Equals(entry.HardwareKey, hardwareKey, StringComparison.OrdinalIgnoreCase));
-                if (hardwareMatch != null)
+                return friendlyName;
+            }
+
+            string deviceDesc = CleanRegistryDisplayName(instanceKey.GetValue("DeviceDesc")?.ToString());
+            return IsGenericMonitorName(deviceDesc) ? string.Empty : deviceDesc;
+        }
+
+        private static string DecodeEdidDisplayName(byte[] edid)
+        {
+            if (edid == null || edid.Length < 128)
+            {
+                return string.Empty;
+            }
+
+            const int descriptorStart = 54;
+            const int descriptorLength = 18;
+            const int descriptorCount = 4;
+            for (int descriptorIndex = 0; descriptorIndex < descriptorCount; descriptorIndex++)
+            {
+                int offset = descriptorStart + descriptorIndex * descriptorLength;
+                if (offset + descriptorLength > edid.Length)
                 {
-                    return hardwareMatch.FriendlyName;
+                    break;
+                }
+
+                if (edid[offset] != 0x00
+                    || edid[offset + 1] != 0x00
+                    || edid[offset + 2] != 0x00
+                    || edid[offset + 3] != 0xFC
+                    || edid[offset + 4] != 0x00)
+                {
+                    continue;
+                }
+
+                var characters = new List<char>();
+                for (int index = offset + 5; index < offset + descriptorLength; index++)
+                {
+                    byte value = edid[index];
+                    if (value == 0x00 || value == 0x0A)
+                    {
+                        break;
+                    }
+
+                    if (value >= 0x20 && value <= 0x7E)
+                    {
+                        characters.Add((char)value);
+                    }
+                }
+
+                string name = new string(characters.ToArray()).Trim();
+                if (!string.IsNullOrWhiteSpace(name))
+                {
+                    return name;
                 }
             }
 
             return string.Empty;
         }
 
-        [SupportedOSPlatform("windows")]
-        private static IReadOnlyList<WmiMonitorFriendlyName> LoadWmiMonitorFriendlyNames()
+        private static string CleanRegistryDisplayName(string value)
         {
-            var monitors = new List<WmiMonitorFriendlyName>();
-
-            try
-            {
-                using var searcher = new ManagementObjectSearcher(@"root\wmi", "SELECT InstanceName, UserFriendlyName FROM WmiMonitorID");
-                using var results = searcher.Get();
-
-                foreach (ManagementObject monitor in results)
-                {
-                    string instanceName = NormalizeMonitorIdentity(monitor["InstanceName"]?.ToString());
-                    string friendlyName = DecodeMonitorFriendlyName(monitor["UserFriendlyName"] as ushort[]);
-                    if (string.IsNullOrWhiteSpace(instanceName) || string.IsNullOrWhiteSpace(friendlyName))
-                    {
-                        continue;
-                    }
-
-                    monitors.Add(new WmiMonitorFriendlyName(instanceName, ExtractMonitorHardwareKey(instanceName), friendlyName));
-                }
-            }
-            catch
-            {
-                return Array.Empty<WmiMonitorFriendlyName>();
-            }
-
-            return monitors;
-        }
-
-        private static string DecodeMonitorFriendlyName(ushort[] rawName)
-        {
-            if (rawName == null || rawName.Length == 0)
+            if (string.IsNullOrWhiteSpace(value))
             {
                 return string.Empty;
             }
 
-            var characters = rawName
-                .TakeWhile(value => value != 0)
-                .Select(value => (char)value)
-                .ToArray();
-
-            return new string(characters).Trim();
-        }
-
-        private static IEnumerable<string> BuildMonitorIdentityCandidates(DisplayDevice monitor)
-        {
-            var candidates = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            AddMonitorIdentityCandidate(candidates, monitor.DeviceId);
-            AddMonitorIdentityCandidate(candidates, ConvertMonitorDeviceIdToDisplayIdentity(monitor.DeviceId));
-            AddMonitorIdentityCandidate(candidates, ExtractEnumIdentityFromRegistryPath(monitor.DeviceKey));
-            AddMonitorIdentityCandidate(candidates, monitor.DeviceName);
-            return candidates;
-        }
-
-        private static IEnumerable<string> BuildMonitorHardwareKeys(DisplayDevice monitor)
-        {
-            var hardwareKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var candidate in BuildMonitorIdentityCandidates(monitor))
+            string cleaned = value.Trim();
+            int semicolonIndex = cleaned.LastIndexOf(';');
+            if (semicolonIndex >= 0 && semicolonIndex + 1 < cleaned.Length)
             {
-                string hardwareKey = ExtractMonitorHardwareKey(candidate);
-                if (!string.IsNullOrWhiteSpace(hardwareKey))
-                {
-                    hardwareKeys.Add(hardwareKey);
-                }
+                cleaned = cleaned[(semicolonIndex + 1)..].Trim();
             }
 
-            return hardwareKeys;
-        }
-
-        private static void AddMonitorIdentityCandidate(ISet<string> target, string value)
-        {
-            string normalized = NormalizeMonitorIdentity(value);
-            if (!string.IsNullOrWhiteSpace(normalized))
+            if (cleaned.Length >= 2 && cleaned[0] == '(' && cleaned[^1] == ')')
             {
-                target.Add(normalized);
+                cleaned = cleaned[1..^1].Trim();
             }
+
+            return cleaned;
         }
 
         private static string NormalizeMonitorIdentity(string value)
@@ -773,22 +811,6 @@ namespace LazyBootstrap.Features.Display.Services
             if (normalized.StartsWith(@"MONITOR\", StringComparison.OrdinalIgnoreCase))
             {
                 normalized = $@"DISPLAY\{normalized[8..]}";
-            }
-
-            return normalized;
-        }
-
-        private static string ConvertMonitorDeviceIdToDisplayIdentity(string deviceId)
-        {
-            string normalized = NormalizeMonitorIdentity(deviceId);
-            if (normalized.StartsWith(@"DISPLAY\", StringComparison.OrdinalIgnoreCase))
-            {
-                return normalized;
-            }
-
-            if (normalized.StartsWith(@"MONITOR\", StringComparison.OrdinalIgnoreCase))
-            {
-                return $@"DISPLAY\{normalized[8..]}";
             }
 
             return normalized;
@@ -828,6 +850,28 @@ namespace LazyBootstrap.Features.Display.Services
             return parts[1];
         }
 
+        private static string ExtractMonitorDriverKey(string deviceKey)
+        {
+            if (string.IsNullOrWhiteSpace(deviceKey))
+            {
+                return string.Empty;
+            }
+
+            string normalized = deviceKey.Trim().Replace('/', '\\').Trim('\\');
+            const string marker = @"CONTROL\CLASS\";
+            int markerIndex = normalized.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+            if (markerIndex < 0)
+            {
+                return string.Empty;
+            }
+
+            string driverKey = normalized[(markerIndex + marker.Length)..].Trim('\\');
+            var parts = driverKey.Split('\\', StringSplitOptions.RemoveEmptyEntries);
+            return parts.Length >= 2
+                ? $@"{parts[0]}\{parts[1]}"
+                : string.Empty;
+        }
+
         private static bool IsGenericMonitorName(string monitorName)
         {
             return string.IsNullOrWhiteSpace(monitorName)
@@ -862,7 +906,5 @@ namespace LazyBootstrap.Features.Display.Services
                 _ => -1
             };
         }
-
-        private sealed record WmiMonitorFriendlyName(string InstanceName, string HardwareKey, string FriendlyName);
     }
 }
