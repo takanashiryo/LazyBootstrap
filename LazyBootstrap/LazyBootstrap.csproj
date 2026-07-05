@@ -13,7 +13,7 @@
         <ImplicitUsings>disable</ImplicitUsings>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <InvariantGlobalization>false</InvariantGlobalization>
-        <Version>26.4.1</Version>
+        <Version>26.5</Version>
         <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
         <Description>A tool made for SDVX with spice2x</Description>
         <Company>LazyBootstrap - Lazy SDVX</Company>
