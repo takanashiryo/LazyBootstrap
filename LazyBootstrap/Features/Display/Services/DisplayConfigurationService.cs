@@ -115,6 +115,26 @@ namespace LazyBootstrap.Features.Display.Services
             (1920, 1080)
         };
 
+        private static readonly int[] CommonProbeRefreshRates =
+        {
+            50,
+            59,
+            60,
+            75,
+            85,
+            100,
+            120,
+            144,
+            165,
+            170,
+            180,
+            200,
+            240,
+            280,
+            300,
+            360
+        };
+
         private const int DisplayDeviceActive = 0x1;
         private const int DisplayDevicePrimaryDevice = 0x4;
         private const int DisplayDeviceMirroringDriver = 0x8;
@@ -125,6 +145,8 @@ namespace LazyBootstrap.Features.Display.Services
         private const int Dmdo270 = 3;
 
         private const int EnumCurrentSettings = -1;
+
+        private const int EdsRawMode = 0x2;
 
         private const int CdsUpdateRegistry = 0x01;
         private const int CdsTest = 0x02;
@@ -205,6 +227,9 @@ namespace LazyBootstrap.Features.Display.Services
         [DllImport("user32.dll")]
         private static extern bool EnumDisplaySettings(string lpszDeviceName, int iModeNum, ref DevMode lpDevMode);
 
+        [DllImport("user32.dll")]
+        private static extern bool EnumDisplaySettingsEx(string lpszDeviceName, int iModeNum, ref DevMode lpDevMode, int dwFlags);
+
         public DisplayDiscoveryResult GetDisplays()
         {
             var result = new List<DisplayInfo>();
@@ -264,45 +289,19 @@ namespace LazyBootstrap.Features.Display.Services
             try
             {
                 var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                bool enumeratedAnyMode = false;
+                EnumerateDisplayModes(deviceName, useRawModes: false, modes, seen);
+                EnumerateDisplayModes(deviceName, useRawModes: true, modes, seen);
 
-                for (int index = 0; ; index++)
+                var currentStateResult = GetCurrentState(deviceName);
+                var currentState = currentStateResult.Succeeded ? currentStateResult.State : null;
+                if (currentState != null)
                 {
-                    var current = CreateDevMode();
-                    bool success = TryEnumDisplaySettings(deviceName, index, ref current);
-                    if (!success)
-                    {
-                        if (index == 0)
-                        {
-                            return new DisplayModeQueryResult(modes, $"无法读取 {deviceName} 的显示模式。");
-                        }
-
-                        break;
-                    }
-
-                    enumeratedAnyMode = true;
-                    if (current.PelsWidth <= 0 || current.PelsHeight <= 0 || current.DisplayFrequency <= 0)
-                    {
-                        continue;
-                    }
-
-                    string key = $"{current.PelsWidth}x{current.PelsHeight}@{current.DisplayFrequency}";
-                    if (!seen.Add(key))
-                    {
-                        continue;
-                    }
-
-                    modes.Add(new DisplayMode
-                    {
-                        Width = current.PelsWidth,
-                        Height = current.PelsHeight,
-                        RefreshRate = current.DisplayFrequency
-                    });
+                    AddDisplayMode(modes, seen, currentState.Width, currentState.Height, currentState.RefreshRate);
                 }
 
-                if (enumeratedAnyMode)
+                if (modes.Count > 0)
                 {
-                    SupplementCommonModes(deviceName, modes, seen);
+                    SupplementProbeModes(deviceName, modes, seen, currentState);
                 }
 
                 var orderedModes = modes
@@ -312,7 +311,7 @@ namespace LazyBootstrap.Features.Display.Services
                     .ThenBy(mode => mode.RefreshRate)
                     .ToList();
 
-                return enumeratedAnyMode
+                return orderedModes.Count > 0
                     ? new DisplayModeQueryResult(orderedModes)
                     : new DisplayModeQueryResult(orderedModes, $"未读取到 {deviceName} 的任何显示模式。");
             }
@@ -470,20 +469,61 @@ namespace LazyBootstrap.Features.Display.Services
             return EnumDisplaySettings(deviceName, modeIndex, ref devMode);
         }
 
+        protected virtual bool TryEnumDisplaySettingsEx(string deviceName, int modeIndex, ref DevMode devMode, int flags)
+        {
+            return EnumDisplaySettingsEx(deviceName, modeIndex, ref devMode, flags);
+        }
+
         protected virtual int TryChangeDisplaySettings(string deviceName, ref DevMode devMode, int flags)
         {
             return ChangeDisplaySettingsEx(deviceName, ref devMode, IntPtr.Zero, flags, IntPtr.Zero);
         }
 
-        private void SupplementCommonModes(string deviceName, List<DisplayMode> modes, ISet<string> seen)
+        private void EnumerateDisplayModes(string deviceName, bool useRawModes, List<DisplayMode> modes, ISet<string> seen)
+        {
+            for (int index = 0; ; index++)
+            {
+                var current = CreateDevMode();
+                bool success = useRawModes
+                    ? TryEnumDisplaySettingsEx(deviceName, index, ref current, EdsRawMode)
+                    : TryEnumDisplaySettings(deviceName, index, ref current);
+                if (!success)
+                {
+                    break;
+                }
+
+                AddDisplayMode(modes, seen, current.PelsWidth, current.PelsHeight, current.DisplayFrequency);
+            }
+        }
+
+        private static void AddDisplayMode(List<DisplayMode> modes, ISet<string> seen, int width, int height, int refreshRate)
+        {
+            if (width <= 0 || height <= 0 || refreshRate <= 0)
+            {
+                return;
+            }
+
+            string key = $"{width}x{height}@{refreshRate}";
+            if (!seen.Add(key))
+            {
+                return;
+            }
+
+            modes.Add(new DisplayMode
+            {
+                Width = width,
+                Height = height,
+                RefreshRate = refreshRate
+            });
+        }
+
+        private void SupplementProbeModes(string deviceName, List<DisplayMode> modes, ISet<string> seen, DisplayState currentState)
         {
             if (modes == null || modes.Count == 0)
             {
                 return;
             }
 
-            var currentStateResult = GetCurrentState(deviceName);
-            var currentState = currentStateResult.Succeeded ? currentStateResult.State : null;
             var highestMode = modes
                 .OrderByDescending(mode => mode.Width * mode.Height)
                 .ThenByDescending(mode => mode.Width)
@@ -496,8 +536,9 @@ namespace LazyBootstrap.Features.Display.Services
 
             int maxArea = highestMode.Width * highestMode.Height;
             var refreshCandidates = BuildProbeRefreshCandidates(modes, currentState?.RefreshRate);
+            var resolutionCandidates = BuildProbeResolutionCandidates(modes, currentState);
 
-            foreach (var resolution in CommonProbeResolutions)
+            foreach (var resolution in resolutionCandidates)
             {
                 if (resolution.Width * resolution.Height > maxArea)
                 {
@@ -505,14 +546,6 @@ namespace LazyBootstrap.Features.Display.Services
                 }
 
                 var adjustedResolution = AdjustResolutionForOrientation(resolution.Width, resolution.Height, currentState?.Orientation ?? DmdoDefault);
-                bool resolutionExists = modes.Any(mode =>
-                    mode.Width == adjustedResolution.Width
-                    && mode.Height == adjustedResolution.Height);
-                if (resolutionExists)
-                {
-                    continue;
-                }
-
                 foreach (int refreshRate in refreshCandidates)
                 {
                     if (!TryProbeMode(deviceName, adjustedResolution.Width, adjustedResolution.Height, refreshRate))
@@ -520,21 +553,52 @@ namespace LazyBootstrap.Features.Display.Services
                         continue;
                     }
 
-                    string key = $"{adjustedResolution.Width}x{adjustedResolution.Height}@{refreshRate}";
-                    if (!seen.Add(key))
-                    {
-                        break;
-                    }
-
-                    modes.Add(new DisplayMode
-                    {
-                        Width = adjustedResolution.Width,
-                        Height = adjustedResolution.Height,
-                        RefreshRate = refreshRate
-                    });
-                    break;
+                    AddDisplayMode(modes, seen, adjustedResolution.Width, adjustedResolution.Height, refreshRate);
                 }
             }
+        }
+
+        private static IReadOnlyList<(int Width, int Height)> BuildProbeResolutionCandidates(IEnumerable<DisplayMode> modes, DisplayState currentState)
+        {
+            var candidates = new List<(int Width, int Height)>();
+
+            foreach (var resolution in CommonProbeResolutions)
+            {
+                AddProbeResolutionCandidate(candidates, resolution.Width, resolution.Height);
+            }
+
+            var highestMode = modes
+                .Where(mode => mode.Width > 0 && mode.Height > 0)
+                .OrderByDescending(mode => mode.Width * mode.Height)
+                .ThenByDescending(mode => mode.Width)
+                .ThenByDescending(mode => mode.Height)
+                .FirstOrDefault();
+            if (highestMode != null)
+            {
+                AddProbeResolutionCandidate(candidates, highestMode.Width, highestMode.Height);
+            }
+
+            if (currentState != null)
+            {
+                AddProbeResolutionCandidate(candidates, currentState.Width, currentState.Height);
+            }
+
+            return candidates;
+        }
+
+        private static void AddProbeResolutionCandidate(ICollection<(int Width, int Height)> candidates, int width, int height)
+        {
+            if (width <= 0 || height <= 0)
+            {
+                return;
+            }
+
+            if (candidates.Any(candidate => candidate.Width == width && candidate.Height == height))
+            {
+                return;
+            }
+
+            candidates.Add((width, height));
         }
 
         private List<int> BuildProbeRefreshCandidates(IEnumerable<DisplayMode> modes, int? currentRefreshRate)
@@ -545,9 +609,12 @@ namespace LazyBootstrap.Features.Display.Services
                 candidates.Add(currentRefreshRate.Value);
             }
 
-            if (!candidates.Contains(60))
+            foreach (int refreshRate in CommonProbeRefreshRates)
             {
-                candidates.Add(60);
+                if (!candidates.Contains(refreshRate))
+                {
+                    candidates.Add(refreshRate);
+                }
             }
 
             foreach (int refreshRate in modes
