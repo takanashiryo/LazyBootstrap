@@ -164,13 +164,13 @@
                                                                 </Grid>
                                                                 <Grid ColumnDefinitions="*,Auto"
                                                                       VerticalAlignment="Center">
-                                                                    <TextBlock Text="不启动氧无" VerticalAlignment="Center" />
+                                                                    <TextBlock Text="不启动氧无 (Asphyxia)" VerticalAlignment="Center" />
                                                                     <ToggleSwitch x:Name="NoAsphyxiaToggleSwitch"
                                                                             Grid.Column="1" />
                                                                 </Grid>
                                                                 <Grid ColumnDefinitions="*,Auto"
                                                                       VerticalAlignment="Center">
-                                                                    <TextBlock Text="打开启动器后自动启动"
+                                                                    <TextBlock Text="打开启动器后自动启动游戏"
                                                                                VerticalAlignment="Center" />
                                                                     <ToggleSwitch x:Name="AutoLaunchToggleSwitch"
                                                                             Grid.Column="1" />
@@ -478,13 +478,13 @@
                                                                 </Grid>
                                                                 <Grid ColumnDefinitions="*,Auto"
                                                                       VerticalAlignment="Center">
-                                                                    <TextBlock Text="只使用主屏" VerticalAlignment="Center" />
+                                                                    <TextBlock Text="全屏下只使用主屏" VerticalAlignment="Center" />
                                                                     <ToggleSwitch x:Name="SingleAdapterToggleSwitch"
                                                                             Grid.Column="1" />
                                                                 </Grid>
-                                                                <TextBlock Text="强制多显示器下仅通过主屏输出，释放其他显示器" Opacity="0.7"
+                                                                <TextBlock Text="强制多显示器在全屏下仅输出主屏，释放其他显示器" Opacity="0.7"
                                                                            FontSize="12" Margin="0,-20,0,0" />
-                                                                <TextBlock Text="开启后可能会导致不同步或者掉帧，对笔记本等混合输出设备有奇效"
+                                                                <TextBlock Text="开启后可能会导致画面不同步或者掉帧"
                                                                            Opacity="0.7" FontSize="12"
                                                                            Margin="0,-15,0,0" />
                                                                 <Grid ColumnDefinitions="*,Auto"
