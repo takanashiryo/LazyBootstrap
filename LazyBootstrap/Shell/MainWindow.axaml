@@ -1478,7 +1478,13 @@
                                                        FontSize="14"
                                                        LineHeight="24"
                                                        Opacity="0.88"
-                                                       Text="此启动器的目的是为了让原本比较繁琐的步骤彻底懒人化，而非替代spice2x；包体仅供学习使用，请于下载后24小时内删除，如果你是付费获取的，那你就被骗了" />
+                                                       Text="此启动器的目的是为了让原本比较繁琐的步骤彻底懒人化，而非替代spice2x，请勿在任何公共平台提及此启动器的存在，Bug反馈请通过Github提交Issue" />
+                                            <TextBlock TextWrapping="Wrap"
+                                                       TextAlignment="Center"
+                                                       FontSize="14"
+                                                       LineHeight="24"
+                                                       Opacity="0.88"
+                                                       Text="包体仅供学习使用，请于下载后24小时内删除，如果你是付费获取的，那你就被骗了" />
                                             <TextBlock TextWrapping="Wrap"
                                                        TextAlignment="Center"
                                                        FontSize="14"
