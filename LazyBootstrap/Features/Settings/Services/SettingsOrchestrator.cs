@@ -28,6 +28,7 @@ namespace LazyBootstrap.Features.Settings
         private readonly SpiceConfigFile _spiceConfigFileService;
         private readonly GpuCompatLayerConfigurator _gpuCompatLayerService;
         private readonly WindowsAppCompatLayerService _appCompatLayerService;
+        private readonly WindowsStartupService _windowsStartupService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly AppShellState _shellStateService;
         private readonly ILogger<SettingsOrchestrator> _logger;
@@ -159,6 +160,7 @@ namespace LazyBootstrap.Features.Settings
             SpiceConfigFile spiceConfigFileService,
             GpuCompatLayerConfigurator gpuCompatLayerService,
             WindowsAppCompatLayerService appCompatLayerService,
+            WindowsStartupService windowsStartupService,
             UiInteractionService uiInteractionService,
             AppShellState shellStateService,
             ILogger<SettingsOrchestrator> logger)
@@ -168,6 +170,7 @@ namespace LazyBootstrap.Features.Settings
             _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
             _gpuCompatLayerService = gpuCompatLayerService ?? throw new ArgumentNullException(nameof(gpuCompatLayerService));
             _appCompatLayerService = appCompatLayerService ?? throw new ArgumentNullException(nameof(appCompatLayerService));
+            _windowsStartupService = windowsStartupService ?? throw new ArgumentNullException(nameof(windowsStartupService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
             _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
@@ -180,6 +183,7 @@ namespace LazyBootstrap.Features.Settings
             {
                 settings.NoAsphyxia = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
                 settings.AutoLaunch = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, false);
+                settings.StartWithWindows = _windowsStartupService.IsEnabled(_paths.GetLauncherExecutablePath());
                 settings.DisableSpiceFso = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false);
                 settings.UseSystemSpiceConfig = _configHandler.TryReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
                 settings.GpuCompatLayerRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
@@ -190,6 +194,30 @@ namespace LazyBootstrap.Features.Settings
 
             LoadServerPresets(settings);
             _logger.LogInformation("Settings startup initialization completed. SpiceConfigAvailable={SpiceConfigAvailable}", settings.IsSpiceConfigAvailable);
+            return Task.CompletedTask;
+        }
+
+        public Task SetStartWithWindowsAsync(SettingsState settings, bool requestedValue)
+        {
+            ArgumentNullException.ThrowIfNull(settings);
+
+            bool previousValue = settings.StartWithWindows;
+            string executablePath = _paths.GetLauncherExecutablePath();
+            if (_windowsStartupService.TrySetEnabled(executablePath, requestedValue, out var error))
+            {
+                settings.RunSilently(() => settings.StartWithWindows = requestedValue);
+                _logger.LogInformation("Windows startup setting persisted. Enabled={Enabled}", requestedValue);
+                return Task.CompletedTask;
+            }
+
+            settings.RunSilently(() => settings.StartWithWindows = previousValue);
+            _logger.LogWarning(
+                "Windows startup setting failed. Requested={Requested}, Error={Error}",
+                requestedValue,
+                error);
+            _uiInteractionService.ShowErrorToast(
+                "开机自启动设置失败",
+                string.IsNullOrWhiteSpace(error) ? "无法更新 Windows 计划任务。" : error);
             return Task.CompletedTask;
         }
 

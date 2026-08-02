@@ -1,3 +1,0 @@
-# 7Zip
-
-请将SevenZip里的三个文件随LazyBootstrap分发，build后直接放置在程序的旁边，不需要任何文件夹。LazyBootstrap.Launcher不需要

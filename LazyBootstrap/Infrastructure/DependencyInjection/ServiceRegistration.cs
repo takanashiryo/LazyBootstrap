@@ -51,6 +51,7 @@ namespace LazyBootstrap.Infrastructure.DependencyInjection
             services.AddSingleton<WindowsDisplayConfigurationService>();
             services.AddSingleton<WindowsDefenderExclusionService>();
             services.AddSingleton<WindowsAppCompatLayerService>();
+            services.AddSingleton<WindowsStartupService>();
             services.AddSingleton<GameProcessTracker>();
             services.AddSingleton<AppShellState>();
             services.AddSingleton<SavedataTransferPlanner>();
