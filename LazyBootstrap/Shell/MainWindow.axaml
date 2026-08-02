@@ -177,6 +177,13 @@
                                                                 </Grid>
                                                                 <Grid ColumnDefinitions="*,Auto"
                                                                       VerticalAlignment="Center">
+                                                                    <TextBlock Text="开机自启动"
+                                                                               VerticalAlignment="Center" />
+                                                                    <ToggleSwitch x:Name="StartWithWindowsToggleSwitch"
+                                                                            Grid.Column="1" />
+                                                                </Grid>
+                                                                <Grid ColumnDefinitions="*,Auto"
+                                                                      VerticalAlignment="Center">
                                                                     <TextBlock Text="禁用全屏优化"
                                                                                VerticalAlignment="Center" />
                                                                     <ToggleSwitch x:Name="DisableSpiceFsoToggleSwitch"

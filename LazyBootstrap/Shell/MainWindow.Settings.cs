@@ -136,6 +136,11 @@ namespace LazyBootstrap.Shell
                     AutoLaunchToggleSwitch.IsChecked = _settingsState.AutoLaunch;
                 }
 
+                if (StartWithWindowsToggleSwitch != null)
+                {
+                    StartWithWindowsToggleSwitch.IsChecked = _settingsState.StartWithWindows;
+                }
+
                 if (DisableSpiceFsoToggleSwitch != null)
                 {
                     DisableSpiceFsoToggleSwitch.IsChecked = _settingsState.DisableSpiceFso;
@@ -682,6 +687,17 @@ namespace LazyBootstrap.Shell
                     if (_isLoadingSettings) return;
                     _settingsState.AutoLaunch = AutoLaunchToggleSwitch.IsChecked == true;
                     await _settingsWorkflowService.PersistLauncherSettingsAsync(_settingsState);
+                };
+            }
+
+            if (StartWithWindowsToggleSwitch != null)
+            {
+                StartWithWindowsToggleSwitch.IsCheckedChanged += async (_, _) =>
+                {
+                    if (_isLoadingSettings) return;
+                    bool requestedValue = StartWithWindowsToggleSwitch.IsChecked == true;
+                    await _settingsWorkflowService.SetStartWithWindowsAsync(_settingsState, requestedValue);
+                    ApplyStartupSettingsStateToUi();
                 };
             }
 
