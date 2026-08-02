@@ -42,5 +42,7 @@ coverage*.info
 .claude/
 .codex-tools
 Todo.md
+AGENTS.md
+CLAUDE.md
 
 SukiUI/

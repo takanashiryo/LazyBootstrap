@@ -17,6 +17,8 @@ namespace LazyBootstrap.Features.Settings
 
         public bool AutoLaunch { get; set; }
 
+        public bool StartWithWindows { get; set; }
+
         public bool DisableSpiceFso { get; set; }
 
         public bool UseSystemSpiceConfig { get; set; }
