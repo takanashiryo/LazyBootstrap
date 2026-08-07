@@ -67,7 +67,7 @@ namespace LazyBootstrap.Infrastructure.Paths
 
         public string GetBundledLibsDirectoryPath()
         {
-            return Path.Combine(ApplicationDirectoryPath, "libs");
+            return Path.Combine(ApplicationDirectoryPath, "Libs");
         }
 
         public string GetBundledSevenZipExecutablePath()

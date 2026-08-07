@@ -40,8 +40,6 @@ coverage*.info
 # Agents
 .agents/
 .claude/
-.codex-tools
-Todo.md
-AGENTS.md
-CLAUDE.md
-prompt/
+
+# macOS
+.DS_Store

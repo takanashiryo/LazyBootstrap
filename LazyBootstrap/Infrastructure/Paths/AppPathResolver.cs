@@ -88,7 +88,7 @@ namespace LazyBootstrap.Infrastructure.Paths
                 return normalizedApplicationBaseDirectory;
             }
 
-            if (!Directory.Exists(Path.Combine(trimmedApplicationBaseDirectory, "libs")))
+            if (!Directory.Exists(Path.Combine(trimmedApplicationBaseDirectory, "Libs")))
             {
                 return normalizedApplicationBaseDirectory;
             }
