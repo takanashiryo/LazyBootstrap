@@ -1,5 +1,3 @@
-using System;
-
 namespace LazyBootstrap.Features.Settings
 {
     public sealed class SpiceOptionUpdate

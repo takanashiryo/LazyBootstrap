@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using LazyBootstrap.Infrastructure.Paths;
 
 namespace LazyBootstrap.Features.Tools
 {

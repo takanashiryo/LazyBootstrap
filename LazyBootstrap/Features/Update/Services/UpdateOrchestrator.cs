@@ -5,9 +5,11 @@ using System.IO;
 using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
-using LazyBootstrap.MediaUpdate;
-using LazyBootstrap.Infrastructure.Paths;
 using Microsoft.Extensions.Logging;
+using LazyBootstrap.Infrastructure.Paths;
+using LazyBootstrap.Infrastructure.Processes;
+using LazyBootstrap.MediaUpdate;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap.Features.Update
 {

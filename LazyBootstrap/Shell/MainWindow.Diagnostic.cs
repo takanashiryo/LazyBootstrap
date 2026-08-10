@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,7 +7,9 @@ using Avalonia.Controls.Notifications;
 using Avalonia.Controls.Shapes;
 using Avalonia.Layout;
 using Avalonia.Media;
-using SukiUI.Controls;
+using LazyBootstrap.Features.Diagnostic;
+using LazyBootstrap.Features.Diagnostic.Services;
+using static LazyBootstrap.Shared.Controls.ControlHelpers;
 
 namespace LazyBootstrap.Shell
 {

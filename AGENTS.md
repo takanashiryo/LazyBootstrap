@@ -38,6 +38,7 @@ The launcher relies heavily on Spice2x's functionality
 - Do not use MSBuild, only `dotnet`
 - Do not edit any submodules code
 - Do not separate MainWindow.axaml to standalone AXAMLs
+- Do not use `GlobalUsings.cs`
 
 ## Commands
 

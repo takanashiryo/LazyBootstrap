@@ -1,5 +1,3 @@
-using System;
-using Avalonia.Controls;
 using Avalonia.Interactivity;
 
 namespace LazyBootstrap.Shell

@@ -1,5 +1,6 @@
 using System;
-using Avalonia.Interactivity;
+using Microsoft.Extensions.Logging;
+using LazyBootstrap.Features.Settings;
 
 namespace LazyBootstrap.Shell
 {

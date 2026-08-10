@@ -1,8 +1,8 @@
 using System;
 using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-using LazyBootstrap.Features.Launch;
+using Microsoft.Extensions.Logging;
+using LazyBootstrap.Infrastructure.Paths;
 
 namespace LazyBootstrap.Features.Launch.Services
 {

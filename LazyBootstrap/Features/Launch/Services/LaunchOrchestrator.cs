@@ -14,6 +14,12 @@ using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
 using SukiUI.MessageBox;
+using LazyBootstrap.Features.Display;
+using LazyBootstrap.Features.Display.Services;
+using LazyBootstrap.Infrastructure.Paths;
+using LazyBootstrap.Infrastructure.Platform;
+using LazyBootstrap.Infrastructure.Processes;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap.Features.Launch.Services
 {

@@ -1,6 +1,6 @@
 using System;
-using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Microsoft.Extensions.Logging;
 using LazyBootstrap.Infrastructure.Processes;
 
 namespace LazyBootstrap.Shell

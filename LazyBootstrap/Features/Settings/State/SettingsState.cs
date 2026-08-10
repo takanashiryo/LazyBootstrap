@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using LazyBootstrap.Infrastructure.Serialization;
 
 namespace LazyBootstrap.Features.Settings
 {

@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -10,13 +9,23 @@ using System.Threading.Tasks;
 using Avalonia.Animation;
 using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
-using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
 using SukiUI.Controls;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
-using Avalonia;
+using LazyBootstrap.Features.Diagnostic;
+using LazyBootstrap.Features.Diagnostic.Services;
+using LazyBootstrap.Features.Display;
+using LazyBootstrap.Features.Display.Services;
+using LazyBootstrap.Features.Launch;
+using LazyBootstrap.Features.Launch.Services;
+using LazyBootstrap.Features.Settings;
+using LazyBootstrap.Features.Tools;
+using LazyBootstrap.Features.Update;
+using LazyBootstrap.Infrastructure.Paths;
+using LazyBootstrap.Infrastructure.Serialization;
 
 namespace LazyBootstrap.Shell
 {

@@ -2,6 +2,10 @@ using System;
 using Avalonia;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using LazyBootstrap.Infrastructure.DependencyInjection;
+using LazyBootstrap.Infrastructure.Logging;
+using LazyBootstrap.Infrastructure.Processes;
+using LazyBootstrap.Infrastructure.Serialization;
 
 namespace LazyBootstrap
 {

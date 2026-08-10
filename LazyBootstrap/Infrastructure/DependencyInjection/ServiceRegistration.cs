@@ -1,8 +1,23 @@
 using System;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
+using LazyBootstrap.Features.Diagnostic;
+using LazyBootstrap.Features.Diagnostic.Services;
+using LazyBootstrap.Features.Display;
+using LazyBootstrap.Features.Display.Services;
+using LazyBootstrap.Features.Launch;
+using LazyBootstrap.Features.Launch.Services;
+using LazyBootstrap.Features.Settings;
+using LazyBootstrap.Features.Tools;
+using LazyBootstrap.Features.Update;
+using LazyBootstrap.Infrastructure.Paths;
+using LazyBootstrap.Infrastructure.Platform;
+using LazyBootstrap.Infrastructure.Processes;
+using LazyBootstrap.Infrastructure.Serialization;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap.Infrastructure.DependencyInjection
 {

@@ -9,6 +9,9 @@ using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
 using Avalonia.Layout;
 using Microsoft.Extensions.Logging;
+using LazyBootstrap.Infrastructure.Paths;
+using LazyBootstrap.Infrastructure.Processes;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap.Features.Tools
 {

@@ -1,3 +1,5 @@
+using LazyBootstrap.Features.Display.Services;
+
 namespace LazyBootstrap.Features.Display
 {
     public sealed class DisplayChoiceOption

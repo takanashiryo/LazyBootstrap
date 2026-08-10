@@ -6,6 +6,10 @@ using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
+using LazyBootstrap.Features.Settings;
+using LazyBootstrap.Infrastructure.Serialization;
+using static LazyBootstrap.Shared.Controls.ControlHelpers;
 
 namespace LazyBootstrap.Shell
 {

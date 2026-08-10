@@ -2,12 +2,12 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
+using LazyBootstrap.Infrastructure.Paths;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap.Features.Diagnostic.Services
 {

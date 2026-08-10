@@ -1,11 +1,12 @@
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
+using Microsoft.Extensions.Logging;
+using LazyBootstrap.Features.Display;
+using static LazyBootstrap.Shared.Controls.ControlHelpers;
 
 namespace LazyBootstrap.Shell
 {

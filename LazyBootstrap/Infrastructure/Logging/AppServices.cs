@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Serilog;
+using LazyBootstrap.Infrastructure.DependencyInjection;
 using LazyBootstrap.Infrastructure.Paths;
 
 namespace LazyBootstrap.Infrastructure.Logging

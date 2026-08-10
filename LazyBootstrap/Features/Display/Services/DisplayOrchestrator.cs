@@ -7,6 +7,11 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Avalonia.Controls.Notifications;
 using Microsoft.Extensions.Logging;
+using LazyBootstrap.Features.Settings;
+using LazyBootstrap.Infrastructure.Paths;
+using LazyBootstrap.Infrastructure.Processes;
+using LazyBootstrap.Infrastructure.Serialization;
+using LazyBootstrap.Shell;
 
 namespace LazyBootstrap.Features.Display.Services
 {

@@ -1,4 +1,3 @@
-using Microsoft.Win32;
 using System;
 using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
@@ -6,6 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Win32;
+using LazyBootstrap.Features.Settings;
 
 namespace LazyBootstrap.Features.Diagnostic.Services
 {
