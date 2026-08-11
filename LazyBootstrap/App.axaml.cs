@@ -7,12 +7,14 @@ using Avalonia.Media;
 using Serilog;
 using SukiUI;
 using SukiUI.Models;
-using LazyBootstrap.Infrastructure;
-using LazyBootstrap.Shell;
+using LazyBootstrap.Application;
+using LazyBootstrap.Services;
+using LazyBootstrap.UI;
+using AvaloniaApplication = Avalonia.Application;
 
 namespace LazyBootstrap
 {
-    public partial class App : Application
+    public partial class App : AvaloniaApplication
     {
         private static readonly SukiColorTheme LazyGreenTheme = new SukiColorTheme(
             "Lazy Green",

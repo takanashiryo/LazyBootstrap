@@ -94,4 +94,10 @@
         <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateRunner.cs" Link="MediaUpdate\MediaUpdateRunner.cs"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <Compile Update="UI\MainWindow.*.cs">
+            <DependentUpon>MainWindow.axaml</DependentUpon>
+        </Compile>
+    </ItemGroup>
+
 </Project>

@@ -1,10 +1,9 @@
 using System;
 using Avalonia;
 using Serilog;
-using LazyBootstrap.Infrastructure;
-using LazyBootstrap.Infrastructure.Logging;
-using LazyBootstrap.Infrastructure.Processes;
-using LazyBootstrap.Infrastructure.Serialization;
+using LazyBootstrap.Application;
+using LazyBootstrap.Platform;
+using LazyBootstrap.Serialization;
 
 namespace LazyBootstrap
 {
