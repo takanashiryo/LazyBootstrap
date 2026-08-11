@@ -7,15 +7,14 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Avalonia.Controls.Notifications;
 using Microsoft.Extensions.Logging;
-using LazyBootstrap.Models;
 using LazyBootstrap.Platform;
 using LazyBootstrap.Serialization;
 using LazyBootstrap.Services;
 
-namespace LazyBootstrap.Services
+namespace LazyBootstrap.UI
 {
 
-    internal sealed class DisplayOrchestrator
+    public partial class MainWindow
     {
         private const string MainMonitorOptionName = "mainmonitor";
         private const string SubMonitorOptionName = "sdvxsubmonitor";
@@ -24,33 +23,18 @@ namespace LazyBootstrap.Services
         private const string LegacyMainScreenConfigKey = "mainscreen";
         private const string LegacySubScreenConfigKey = "subscreen";
 
-        private readonly ConfigHandler _configHandler;
-        private readonly LauncherPaths _paths;
-        private readonly SpiceConfigFile _spiceConfigFileService;
-        private readonly WindowsDisplayConfigurationService _displayConfigurationService;
-        private readonly DisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator;
-        private readonly UiInteractionService _uiInteractionService;
-        private readonly ILogger<DisplayOrchestrator> _logger;
+        private WindowsDisplayConfigurationService _displayConfigurationService = null!;
+        private DisplaySettingsTransactionCoordinator _displaySettingsTransactionCoordinator = null!;
 
-        public DisplayOrchestrator(
-            ConfigHandler configHandler,
-            LauncherPaths paths,
-            SpiceConfigFile spiceConfigFileService,
+        private void InitializeDisplayServices(
             WindowsDisplayConfigurationService displayConfigurationService,
-            DisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator,
-            UiInteractionService uiInteractionService,
-            ILogger<DisplayOrchestrator> logger)
+            DisplaySettingsTransactionCoordinator displaySettingsTransactionCoordinator)
         {
-            _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
-            _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
             _displayConfigurationService = displayConfigurationService ?? throw new ArgumentNullException(nameof(displayConfigurationService));
             _displaySettingsTransactionCoordinator = displaySettingsTransactionCoordinator ?? throw new ArgumentNullException(nameof(displaySettingsTransactionCoordinator));
-            _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task WarmDeferredAsync(DisplayConfigurationData state)
+        private Task WarmDisplayStateAsync(DisplayConfigurationData state)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogInformation("Display configuration warm-up started.");
@@ -59,14 +43,13 @@ namespace LazyBootstrap.Services
             if (!discoveryResult.Succeeded)
             {
                 _logger.LogWarning("Display discovery failed during warm-up: {Error}", discoveryResult.ErrorMessage);
-                _uiInteractionService.ShowWarningToast("读取显示器列表失败", discoveryResult.ErrorMessage);
+                ShowWarningToast("读取显示器列表失败", discoveryResult.ErrorMessage);
             }
             else
             {
                 _logger.LogInformation("Display discovery completed. DisplayCount={DisplayCount}", discoveryResult.Displays.Count);
             }
 
-            state.RunSilently(() =>
             {
                 state.Displays.Clear();
                 foreach (var display in discoveryResult.Displays)
@@ -76,9 +59,9 @@ namespace LazyBootstrap.Services
 
                 EnsureRotationOptions(state);
 
-                state.IsDisplayConfigurationEnabled = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", false);
+                state.IsDisplayConfigurationEnabled = _configHandler.ReadBool(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", false);
                 state.IsDualDisplay = !string.Equals(_configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, "mode", "single"), "single", StringComparison.OrdinalIgnoreCase);
-                state.ExitRestore = _configHandler.TryReadBool(AppConfigBootstrapper.DisplaySectionName, "exitrestore", true);
+                state.ExitRestore = _configHandler.ReadBool(AppConfigBootstrapper.DisplaySectionName, "exitrestore", true);
 
                 string mainDisplayId = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, MainDisplayIdConfigKey, string.Empty);
                 string subDisplayId = _configHandler.ReadString(AppConfigBootstrapper.DisplaySectionName, SubDisplayIdConfigKey, string.Empty);
@@ -121,12 +104,12 @@ namespace LazyBootstrap.Services
                     WriteDisplayPersistentId(SubDisplayIdConfigKey, state.SelectedSubDisplay);
                     RemoveLegacyDisplayIndex(LegacySubScreenConfigKey);
                 }
-            });
+            }
 
             return HandleConfigurationChangedAsync(state, refreshMainOptions: true, refreshSubOptions: true);
         }
 
-        public Task PersistGeneralSettingsAsync(DisplayConfigurationData state)
+        private Task PersistGeneralSettingsAsync(DisplayConfigurationData state)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogInformation("Display general settings persistence started.");
@@ -139,14 +122,13 @@ namespace LazyBootstrap.Services
             return Task.CompletedTask;
         }
 
-        public Task HandleConfigurationChangedAsync(DisplayConfigurationData state, bool refreshMainOptions, bool refreshSubOptions)
+        private Task HandleConfigurationChangedAsync(DisplayConfigurationData state, bool refreshMainOptions, bool refreshSubOptions)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogDebug("Display configuration change handling started. RefreshMainOptions={RefreshMainOptions}, RefreshSubOptions={RefreshSubOptions}", refreshMainOptions, refreshSubOptions);
 
             try
             {
-                state.RunSilently(() =>
                 {
                     if (refreshMainOptions)
                     {
@@ -186,7 +168,7 @@ namespace LazyBootstrap.Services
 
                     UpdateDisplayInfo(state, true);
                     UpdateDisplayInfo(state, false);
-                });
+                }
 
                 PersistSelectionState(state);
                 _logger.LogInformation("Display configuration change handled.");
@@ -194,13 +176,13 @@ namespace LazyBootstrap.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Display configuration refresh failed.");
-                _uiInteractionService.ShowErrorToast("显示器配置失败", ex.Message);
+                ShowErrorToast("显示器配置失败", ex.Message);
             }
 
             return Task.CompletedTask;
         }
 
-        public async Task PreviewDisplaySettingsAsync(DisplayConfigurationData state)
+        private async Task PreviewDisplaySettingsAsync(DisplayConfigurationData state)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogInformation("Display configuration preview requested.");
@@ -208,7 +190,7 @@ namespace LazyBootstrap.Services
             if (!state.IsDisplayConfigurationEnabled)
             {
                 _logger.LogWarning("Display configuration preview skipped because display configuration is disabled.");
-                _uiInteractionService.ShowWarningToast("显示器预览", "显示配置未启用，无法预览。");
+                ShowWarningToast("显示器预览", "显示配置未启用，无法预览。");
                 return;
             }
 
@@ -225,19 +207,19 @@ namespace LazyBootstrap.Services
                 state.SelectedMainRefreshRate,
                 state.SelectedSubRefreshRate);
 
-            if (!TryApplyForLaunch(request, out var restoreStates, out var messages))
+            if (!TryApplyDisplayForLaunch(request, out var restoreStates, out var messages))
             {
                 _logger.LogWarning("Display configuration preview failed. RestoreStateCount={RestoreStateCount}, MessageCount={MessageCount}", restoreStates.Count, messages.Count);
                 if (messages.Count > 0)
                 {
-                    _uiInteractionService.ShowWarningToast("显示器预览", BuildDiagnosticsMessage(messages));
+                    ShowWarningToast("显示器预览", BuildDiagnosticsMessage(messages));
                 }
 
                 await HandleConfigurationChangedAsync(state, refreshMainOptions: false, refreshSubOptions: false);
                 return;
             }
 
-            bool keepCurrentState = await _uiInteractionService.ShowDialogAsync(
+            bool keepCurrentState = await ShowDialogAsync(
                 "显示器预览",
                 "已应用当前预览设置。\n\n点击“保持现状”将保留当前结果，点击“还原”将恢复预览前状态。",
                 "保持现状",
@@ -249,15 +231,15 @@ namespace LazyBootstrap.Services
             if (!keepCurrentState)
             {
                 var restoreMessages = new List<string>();
-                int restored = RestoreDisplayStates(restoreStates, restoreMessages);
+                int restored = RestoreAppliedDisplaySettings(restoreStates, restoreMessages);
                 _logger.LogInformation("Display configuration preview restored. RestoredCount={RestoredCount}, MessageCount={MessageCount}", restored, restoreMessages.Count);
                 if (restoreMessages.Count > 0)
                 {
-                    _uiInteractionService.ShowWarningToast("显示器还原", BuildDiagnosticsMessage(restoreMessages));
+                    ShowWarningToast("显示器还原", BuildDiagnosticsMessage(restoreMessages));
                 }
                 else
                 {
-                    _uiInteractionService.ShowInfoToast("显示器还原", restored > 0 ? $"已还原 {restored} 个显示器设置。" : "未还原任何显示器设置。");
+                    ShowInfoToast("显示器还原", restored > 0 ? $"已还原 {restored} 个显示器设置。" : "未还原任何显示器设置。");
                 }
 
                 await HandleConfigurationChangedAsync(state, refreshMainOptions: false, refreshSubOptions: false);
@@ -265,10 +247,10 @@ namespace LazyBootstrap.Services
             }
 
             _logger.LogInformation("Display configuration preview kept by user.");
-            _uiInteractionService.ShowInfoToast("显示器预览", "已保留当前预览设置。");
+            ShowInfoToast("显示器预览", "已保留当前预览设置。");
         }
 
-        public Task OpenTouchPanelAsync()
+        private Task OpenTouchPanelAsync()
         {
             try
             {
@@ -278,16 +260,21 @@ namespace LazyBootstrap.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to open touch panel settings.");
-                _uiInteractionService.ShowErrorToast("打开面板失败", ex.Message);
+                ShowErrorToast("打开面板失败", ex.Message);
             }
 
             return Task.CompletedTask;
         }
 
-        public bool TryApplyForLaunch(DisplayConfigurationRequest state, out Dictionary<string, DisplayState> restoreStates, out List<string> messages)
+        private bool TryApplyDisplayForLaunch(
+            DisplayConfigurationRequest state,
+            out IReadOnlyDictionary<string, DisplayState> restoreStates,
+            out IReadOnlyList<string> messages)
         {
-            restoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
-            messages = new List<string>();
+            var mutableRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+            var mutableMessages = new List<string>();
+            restoreStates = mutableRestoreStates;
+            messages = mutableMessages;
 
             if (!state.IsDisplayConfigurationEnabled)
             {
@@ -298,32 +285,36 @@ namespace LazyBootstrap.Services
             _logger.LogInformation("Applying display configuration for launch.");
             var requests = new List<DisplaySettingsRequest>();
             bool allValid = true;
-            allValid &= TryBuildRequest(state.SelectedMainDisplay, state.SelectedMainRotation?.Angle ?? 0, state.SelectedMainResolution, state.SelectedMainRefreshRate, "主显示器", requests, messages);
+            allValid &= TryBuildRequest(state.SelectedMainDisplay, state.SelectedMainRotation?.Angle ?? 0, state.SelectedMainResolution, state.SelectedMainRefreshRate, "主显示器", requests, mutableMessages);
 
             if (state.IsDualDisplay)
             {
-                allValid &= TryBuildRequest(state.SelectedSubDisplay, state.SelectedSubRotation?.Angle ?? 0, state.SelectedSubResolution, state.SelectedSubRefreshRate, "副显示器", requests, messages);
+                allValid &= TryBuildRequest(state.SelectedSubDisplay, state.SelectedSubRotation?.Angle ?? 0, state.SelectedSubResolution, state.SelectedSubRefreshRate, "副显示器", requests, mutableMessages);
             }
 
             if (!allValid)
             {
-                _logger.LogWarning("Display configuration request validation failed. MessageCount={MessageCount}", messages.Count);
+                _logger.LogWarning("Display configuration request validation failed. MessageCount={MessageCount}", mutableMessages.Count);
                 return false;
             }
 
             var transactionResult = _displaySettingsTransactionCoordinator.Apply(requests);
-            restoreStates = new Dictionary<string, DisplayState>(transactionResult.RestoreStates, StringComparer.OrdinalIgnoreCase);
-            messages.AddRange(transactionResult.Messages);
+            mutableRestoreStates = new Dictionary<string, DisplayState>(transactionResult.RestoreStates, StringComparer.OrdinalIgnoreCase);
+            mutableMessages.AddRange(transactionResult.Messages);
+            restoreStates = mutableRestoreStates;
+            messages = mutableMessages;
             _logger.LogInformation(
                 "Display configuration transaction completed. Succeeded={Succeeded}, RequestCount={RequestCount}, RestoreStateCount={RestoreStateCount}, MessageCount={MessageCount}",
                 transactionResult.Succeeded,
                 requests.Count,
-                restoreStates.Count,
-                messages.Count);
+                mutableRestoreStates.Count,
+                mutableMessages.Count);
             return transactionResult.Succeeded;
         }
 
-        public int RestoreDisplayStates(IReadOnlyDictionary<string, DisplayState> restoreStates, List<string> messages)
+        private int RestoreAppliedDisplaySettings(
+            IReadOnlyDictionary<string, DisplayState> restoreStates,
+            IList<string> messages)
         {
             int restored = 0;
             if (restoreStates == null)

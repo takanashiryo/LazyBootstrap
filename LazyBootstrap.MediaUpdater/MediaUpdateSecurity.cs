@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace LazyBootstrap.MediaUpdate
 {
-    public static class MediaUpdateSecurity
+    internal static class MediaUpdateSecurity
     {
         public const string BlockedNonGamePathMessage =
             "检测到对非游戏路径的改动，疑似恶意文件，请勿下载来源不明的更新包！";

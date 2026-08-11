@@ -67,8 +67,7 @@ New-Item -ItemType Directory -Path $mediaUpdaterPublish -Force | Out-Null
 New-Item -ItemType Directory -Path $launcherBuildDirectory -Force | Out-Null
 
 try {
-    # Launcher + MediaUpdater: Release publishes with Native AOT per each .csproj.
-    # Main LazyBootstrap.exe: self-contained runtime bundle; PublishAot=false matches CLAUDE.md (runtime + branch AOT).
+    # All three executables publish as self-contained win-x64 NativeAOT binaries.
     $launcherProj = Join-Path $root 'LazyBootstrap.Launcher/LazyBootstrap.Launcher.csproj'
     $mainProj = Join-Path $root 'LazyBootstrap/LazyBootstrap.csproj'
     $mediaUpdaterProj = Join-Path $root 'LazyBootstrap.MediaUpdater/LazyBootstrap.MediaUpdater.csproj'

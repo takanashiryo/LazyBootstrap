@@ -6,23 +6,22 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Win32;
-using LazyBootstrap.Models;
 using LazyBootstrap.Platform;
 
 namespace LazyBootstrap.Services
 {
-    public static class EnvironmentScan
+    internal static class EnvironmentScan
     {
         private const int StepCount = 7; // CPU / GPU / NVIDIA API / DirectX9.0c / 系统媒体功能包 / VC2010 x86 / VC2010 x64
 
-        public enum ScanResultLevel
+        internal enum ScanResultLevel
         {
             Success,
             Warning,
             Error
         }
 
-        public sealed class ScanResultItem
+        internal sealed class ScanResultItem
         {
             public string Item { get; set; } = string.Empty;
 
@@ -31,7 +30,7 @@ namespace LazyBootstrap.Services
             public ScanResultLevel Level { get; set; } = ScanResultLevel.Success;
         }
 
-        public sealed class ScanSummary
+        internal sealed class ScanSummary
         {
             public static ScanSummary Empty { get; } = new(false, string.Empty, Array.Empty<ScanResultItem>());
 

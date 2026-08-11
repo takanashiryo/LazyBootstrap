@@ -87,11 +87,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdatePaths.cs" Link="MediaUpdate\MediaUpdatePaths.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateSecurity.cs" Link="MediaUpdate\MediaUpdateSecurity.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateConstants.cs" Link="MediaUpdate\MediaUpdateConstants.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateArguments.cs" Link="MediaUpdate\MediaUpdateArguments.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateRunner.cs" Link="MediaUpdate\MediaUpdateRunner.cs"/>
+        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateProtocol.cs" Link="MediaUpdate\MediaUpdateProtocol.cs"/>
     </ItemGroup>
 
     <ItemGroup>

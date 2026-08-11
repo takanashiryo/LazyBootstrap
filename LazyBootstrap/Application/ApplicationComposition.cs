@@ -4,7 +4,7 @@ using Serilog;
 using Serilog.Extensions.Logging;
 using SukiUI.Dialogs;
 using SukiUI.Toasts;
-using LazyBootstrap.Models;
+using LazyBootstrap.FileSystem;
 using LazyBootstrap.Services;
 using LazyBootstrap.Platform;
 using LazyBootstrap.Serialization;
@@ -23,17 +23,14 @@ namespace LazyBootstrap.Application
         private MainWindow _mainWindow;
         private bool _disposed;
 
-        public ApplicationComposition(LauncherRuntimeContext context)
+        public ApplicationComposition(LauncherPaths paths)
         {
-            ArgumentNullException.ThrowIfNull(context);
+            ArgumentNullException.ThrowIfNull(paths);
 
             _loggerFactory = new SerilogLoggerFactory(Log.Logger, dispose: false);
-            _paths = new LauncherPaths(
-                context.BaseDirectoryPath,
-                context.ApplicationDirectoryPath,
-                context.ConfigFilePath);
+            _paths = paths;
             ConfigHandler = new ConfigHandler(
-                context.ConfigFilePath,
+                paths.ConfigFilePath,
                 CreateLogger<ConfigHandler>());
         }
 
@@ -61,7 +58,7 @@ namespace LazyBootstrap.Application
                 var appCompatLayerService = new WindowsAppCompatLayerService();
                 var startupService = new WindowsStartupService();
                 var gameProcessTracker = new GameProcessTracker();
-                var savedataTransferPlanner = new SavedataTransferPlanner(_paths);
+                var savedataTransferService = new SavedataTransferService(_paths);
                 var displayTransactionCoordinator = new DisplaySettingsTransactionCoordinator(
                     displayConfigurationService);
                 var gpuCompatLayerConfigurator = new GpuCompatLayerConfigurator(
@@ -72,59 +69,22 @@ namespace LazyBootstrap.Application
                 var spiceCrashLogAnalyzer = new SpiceCrashLogAnalyzer(
                     _paths,
                     CreateLogger<SpiceCrashLogAnalyzer>());
-                var uiInteractionService = new UiInteractionService(dialogManager, toastManager);
 
-                var displayOrchestrator = new DisplayOrchestrator(
-                    ConfigHandler,
-                    _paths,
-                    spiceConfigFile,
-                    displayConfigurationService,
-                    displayTransactionCoordinator,
-                    uiInteractionService,
-                    CreateLogger<DisplayOrchestrator>());
-                var launchOrchestrator = new LaunchOrchestrator(
-                    _paths,
-                    spiceCrashLogAnalyzer,
-                    gameProcessTracker,
-                    displayOrchestrator,
-                    defenderExclusionService,
-                    appCompatLayerService,
-                    uiInteractionService,
-                    CreateLogger<LaunchOrchestrator>());
-                var settingsOrchestrator = new SettingsOrchestrator(
-                    ConfigHandler,
-                    _paths,
-                    spiceConfigFile,
-                    gpuCompatLayerConfigurator,
-                    appCompatLayerService,
-                    startupService,
-                    uiInteractionService,
-                    CreateLogger<SettingsOrchestrator>());
-                var toolsOrchestrator = new ToolsOrchestrator(
-                    _paths,
-                    savedataTransferPlanner,
-                    uiInteractionService,
-                    CreateLogger<ToolsOrchestrator>());
-                var updateOrchestrator = new UpdateOrchestrator(
-                    _paths,
-                    uiInteractionService,
-                    CreateLogger<UpdateOrchestrator>());
-                var diagnosticOrchestrator = new DiagnosticOrchestrator(
-                    _paths,
-                    uiInteractionService,
-                    CreateLogger<DiagnosticOrchestrator>());
 
                 _mainWindow = new MainWindow(
                     _paths,
-                    launchOrchestrator,
-                    settingsOrchestrator,
-                    displayOrchestrator,
-                    diagnosticOrchestrator,
-                    toolsOrchestrator,
-                    updateOrchestrator,
+                    spiceCrashLogAnalyzer,
+                    gameProcessTracker,
+                    defenderExclusionService,
+                    appCompatLayerService,
+                    spiceConfigFile,
+                    gpuCompatLayerConfigurator,
+                    startupService,
+                    displayConfigurationService,
+                    displayTransactionCoordinator,
+                    savedataTransferService,
                     dialogManager,
                     toastManager,
-                    uiInteractionService,
                     ConfigHandler,
                     CreateLogger<MainWindow>());
                 _toastManager = toastManager;

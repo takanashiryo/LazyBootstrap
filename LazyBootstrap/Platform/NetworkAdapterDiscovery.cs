@@ -8,7 +8,7 @@ namespace LazyBootstrap.Platform
 {
     internal static class NetworkAdapterDiscovery
     {
-        public sealed class NetworkAdapterInfo
+        internal sealed class NetworkAdapterInfo
         {
             public NetworkAdapterInfo(string displayName, string ipAddress, string subnetMask)
             {

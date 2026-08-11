@@ -1,10 +1,35 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using LazyBootstrap.Models;
 
 namespace LazyBootstrap.Serialization
 {
+    internal enum ConfigFileHealthStatus
+    {
+        Missing,
+        Valid,
+        InvalidToml,
+        Inaccessible
+    }
+
+    internal readonly record struct ConfigFileHealth(
+        ConfigFileHealthStatus Status,
+        string ErrorMessage,
+        string Content)
+    {
+        public static ConfigFileHealth Missing() =>
+            new ConfigFileHealth(ConfigFileHealthStatus.Missing, string.Empty, string.Empty);
+
+        public static ConfigFileHealth Valid(string content) =>
+            new ConfigFileHealth(ConfigFileHealthStatus.Valid, string.Empty, content ?? string.Empty);
+
+        public static ConfigFileHealth InvalidToml(string errorMessage, string content) =>
+            new ConfigFileHealth(ConfigFileHealthStatus.InvalidToml, errorMessage ?? string.Empty, content ?? string.Empty);
+
+        public static ConfigFileHealth Inaccessible(string errorMessage, string content = "") =>
+            new ConfigFileHealth(ConfigFileHealthStatus.Inaccessible, errorMessage ?? string.Empty, content ?? string.Empty);
+    }
+
     internal static class AppConfigBootstrapper
     {
         public const string SettingSectionName = "Setting";

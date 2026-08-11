@@ -1,17 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
-using LazyBootstrap.Models;
+using LazyBootstrap.Services;
 using static LazyBootstrap.Controls.ControlHelpers;
 
 namespace LazyBootstrap.UI
 {
     public partial class MainWindow
     {
+        private readonly DisplayConfigurationData _displayState = new DisplayConfigurationData();
+
         private DisplayConfigurationRequest BuildDisplayConfigurationRequest() => new DisplayConfigurationRequest(
             _displayState.IsDisplayConfigurationEnabled,
             _displayState.IsDualDisplay,
@@ -33,7 +36,7 @@ namespace LazyBootstrap.UI
 
         /// <summary>Warms up the deferred display configuration options (invoked during the startup sequence).</summary>
         private Task WarmDisplayDeferredAsync()
-            => _displayOrchestrator.WarmDeferredAsync(_displayState);
+            => WarmDisplayStateAsync(_displayState);
 
         private void InitializeExitRestoreBinding()
         {
@@ -44,8 +47,7 @@ namespace LazyBootstrap.UI
                     if (_isLoadingDisplaySettings) return;
                     bool enabled = ExitRestoreToggleSwitch.IsChecked == true;
                     _displayState.ExitRestore = enabled;
-                    _settingsState.ExitRestore = enabled;
-                    await _displayOrchestrator.PersistGeneralSettingsAsync(_displayState);
+                    await PersistGeneralSettingsAsync(_displayState);
                 };
             }
         }
@@ -64,18 +66,18 @@ namespace LazyBootstrap.UI
 
         private async void OnOpenTouchPanelClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            await _displayOrchestrator.OpenTouchPanelAsync();
+            await OpenTouchPanelAsync();
         }
 
         private async void OnPreviewDisplaySettingsClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            await _displayOrchestrator.PreviewDisplaySettingsAsync(_displayState);
+            await PreviewDisplaySettingsAsync(_displayState);
             ApplyDisplayStateToUi();
         }
 
         private async Task HandleDisplayConfigurationChangedAsync(bool refreshMainOptions, bool refreshSubOptions)
         {
-            await _displayOrchestrator.HandleConfigurationChangedAsync(_displayState, refreshMainOptions, refreshSubOptions);
+            await HandleConfigurationChangedAsync(_displayState, refreshMainOptions, refreshSubOptions);
             ApplyDisplayStateToUi();
         }
 
@@ -231,7 +233,7 @@ namespace LazyBootstrap.UI
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Display configuration selection failed.");
-                _uiInteractionService.ShowErrorToast("显示器配置失败", ex.Message);
+                ShowErrorToast("显示器配置失败", ex.Message);
                 ApplyDisplayStateToUi();
             }
         }
@@ -246,13 +248,13 @@ namespace LazyBootstrap.UI
             try
             {
                 updateState?.Invoke();
-                await _displayOrchestrator.PersistGeneralSettingsAsync(_displayState);
+                await PersistGeneralSettingsAsync(_displayState);
                 ApplyDisplayStateToUi();
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Persist display configuration option failed.");
-                _uiInteractionService.ShowErrorToast("显示器配置失败", ex.Message);
+                ShowErrorToast("显示器配置失败", ex.Message);
                 ApplyDisplayStateToUi();
             }
         }
@@ -493,6 +495,12 @@ namespace LazyBootstrap.UI
             _displayPulseTimer.Start();
         }
 
+        private void StopDisplayAnimation()
+        {
+            _displayPulseTimer?.Stop();
+            _displayPulseTimer = null;
+        }
+
         private static void ApplyPulseVisual(Control control, double minOpacity, double maxOpacity, double minScale, double maxScale, double t)
         {
             if (control == null)
@@ -521,5 +529,124 @@ namespace LazyBootstrap.UI
             if (DotMainSelectedRing != null) DotMainSelectedRing.IsVisible = target == DisplaySelectionTarget.Main;
             if (DotSubSelectedRing != null) DotSubSelectedRing.IsVisible = isDualDisplay && target == DisplaySelectionTarget.Sub;
         }
+
+        private enum DisplaySelectionTarget
+        {
+            None,
+            Main,
+            Sub
+        }
+
+        private sealed class DisplayChoiceOption
+        {
+            public DisplayChoiceOption(DisplayInfo info, string displayName)
+            {
+                Info = info;
+                DisplayName = displayName ?? string.Empty;
+            }
+
+            public DisplayInfo Info { get; }
+
+            public string DisplayName { get; }
+
+            public override string ToString() => DisplayName;
+        }
+
+        private sealed class RotationOption
+        {
+            public RotationOption(int angle)
+            {
+                Angle = angle;
+                DisplayName = GetDisplayName(angle);
+            }
+
+            public int Angle { get; }
+
+            public string DisplayName { get; }
+
+            public static string GetDisplayName(int angle)
+            {
+                int normalizedAngle = ((angle % 360) + 360) % 360;
+                return normalizedAngle switch
+                {
+                    0 => "横向",
+                    90 => "纵向",
+                    180 => "横向（翻转）",
+                    270 => "纵向（翻转）",
+                    _ => $"{normalizedAngle}°"
+                };
+            }
+
+            public override string ToString() => DisplayName;
+        }
+
+        private sealed class DisplayConfigurationData
+        {
+            public List<DisplayChoiceOption> Displays { get; } = new List<DisplayChoiceOption>();
+            public List<RotationOption> Rotations { get; } = new List<RotationOption>();
+            public List<string> MainResolutions { get; } = new List<string>();
+            public List<string> SubResolutions { get; } = new List<string>();
+            public List<string> MainRefreshRates { get; } = new List<string>();
+            public List<string> SubRefreshRates { get; } = new List<string>();
+            public bool IsDisplayConfigurationEnabled { get; set; }
+            public bool IsDualDisplay { get; set; }
+            public bool ExitRestore { get; set; } = true;
+            public DisplayChoiceOption SelectedMainDisplay { get; set; }
+            public DisplayChoiceOption SelectedSubDisplay { get; set; }
+            public RotationOption SelectedMainRotation { get; set; }
+            public RotationOption SelectedSubRotation { get; set; }
+            public string SelectedMainResolution { get; set; } = string.Empty;
+            public string SelectedSubResolution { get; set; } = string.Empty;
+            public string SelectedMainRefreshRate { get; set; } = string.Empty;
+            public string SelectedSubRefreshRate { get; set; } = string.Empty;
+            public string MainOutputInfo { get; set; } = string.Empty;
+            public string SubOutputInfo { get; set; } = string.Empty;
+            public string MainStartupInfo { get; set; } = string.Empty;
+            public string SubStartupInfo { get; set; } = string.Empty;
+            public string MainDiagnosticsTooltip { get; set; } = string.Empty;
+            public string SubDiagnosticsTooltip { get; set; } = string.Empty;
+            public DisplaySelectionTarget SelectedTarget { get; set; } = DisplaySelectionTarget.None;
+            public bool ShowNoScreenSelected { get; set; } = true;
+            public bool ShowMainScreenConfig { get; set; }
+            public bool ShowSubScreenConfig { get; set; }
+
+            public void SelectMainDisplay()
+            {
+                SelectedTarget = DisplaySelectionTarget.Main;
+                ShowNoScreenSelected = false;
+                ShowMainScreenConfig = true;
+                ShowSubScreenConfig = false;
+            }
+
+            public void SelectSubDisplay()
+            {
+                if (!IsDualDisplay)
+                {
+                    SelectedTarget = DisplaySelectionTarget.None;
+                    ShowNoScreenSelected = true;
+                    ShowMainScreenConfig = false;
+                    ShowSubScreenConfig = false;
+                    return;
+                }
+
+                SelectedTarget = DisplaySelectionTarget.Sub;
+                ShowNoScreenSelected = false;
+                ShowMainScreenConfig = false;
+                ShowSubScreenConfig = true;
+            }
+        }
+
+        private sealed record DisplayConfigurationRequest(
+            bool IsDisplayConfigurationEnabled,
+            bool IsDualDisplay,
+            bool ExitRestore,
+            DisplayChoiceOption SelectedMainDisplay,
+            DisplayChoiceOption SelectedSubDisplay,
+            RotationOption SelectedMainRotation,
+            RotationOption SelectedSubRotation,
+            string SelectedMainResolution,
+            string SelectedSubResolution,
+            string SelectedMainRefreshRate,
+            string SelectedSubRefreshRate);
     }
 }

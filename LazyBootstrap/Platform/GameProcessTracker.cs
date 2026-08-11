@@ -2,12 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using LazyBootstrap.FileSystem;
-using LazyBootstrap.Models;
 
 namespace LazyBootstrap.Platform
 {
 
-    public sealed class GameProcessTracker
+    internal sealed class GameProcessTracker
     {
         private static readonly TimeSpan RestartStartTimeSkewTolerance = TimeSpan.FromSeconds(2);
 

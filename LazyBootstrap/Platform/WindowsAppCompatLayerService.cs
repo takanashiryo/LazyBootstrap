@@ -7,7 +7,7 @@ using Microsoft.Win32;
 
 namespace LazyBootstrap.Platform
 {
-    public sealed class WindowsAppCompatLayerService
+    internal sealed class WindowsAppCompatLayerService
     {
         private const string AppCompatLayersRegistryPath = @"Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers";
         private const string FsoDisabledToken = "DISABLEDXMAXIMIZEDWINDOWEDMODE";

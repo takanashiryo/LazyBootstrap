@@ -7,7 +7,7 @@ using LazyBootstrap.Serialization;
 
 namespace LazyBootstrap
 {
-    public class Program
+    internal static class Program
     {
         [STAThread]
         public static void Main(string[] args)
@@ -18,15 +18,15 @@ namespace LazyBootstrap
             {
                 AppServices.InitializeSerilog(args);
                 Log.Information("LazyBootstrap process started.");
-                MediaUpdaterPendingUpdateService.ApplyPendingUpdate(AppServices.RuntimeContext.ApplicationDirectoryPath);
+                MediaUpdaterPendingUpdateService.ApplyPendingUpdate(AppServices.Paths.ApplicationDirectoryPath);
 
-                composition = new ApplicationComposition(AppServices.RuntimeContext);
+                composition = new ApplicationComposition(AppServices.Paths);
                 App.Composition = composition;
 
                 // Configuration bootstrap/migration must run before the UI starts. ConfigHandler
                 // has no SukiUI dependency, so using it here is safe.
                 AppConfigBootstrapper.InitializeAndMigrate(
-                    AppServices.RuntimeContext.ConfigFilePath,
+                    AppServices.Paths.ConfigFilePath,
                     composition.ConfigHandler);
                 Log.Information("Configuration initialized.");
 

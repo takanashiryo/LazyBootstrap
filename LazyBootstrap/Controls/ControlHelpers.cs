@@ -9,7 +9,7 @@ namespace LazyBootstrap.Controls
     /// Shared helpers for code-behind manipulation of Avalonia controls,
     /// reused across feature views (Settings, Display, ...).
     /// </summary>
-    public static class ControlHelpers
+    internal static class ControlHelpers
     {
         public static void ReplaceComboBoxItems<T>(ComboBox comboBox, IEnumerable<T> items)
         {
@@ -32,7 +32,7 @@ namespace LazyBootstrap.Controls
             }
         }
 
-        public static bool HasSameComboBoxItems(ComboBox comboBox, IReadOnlyList<object> desiredItems)
+        private static bool HasSameComboBoxItems(ComboBox comboBox, IReadOnlyList<object> desiredItems)
         {
             if (comboBox.Items.Count != desiredItems.Count)
             {
@@ -54,7 +54,7 @@ namespace LazyBootstrap.Controls
             return true;
         }
 
-        public static void ClearComboBoxSelection(ComboBox comboBox)
+        private static void ClearComboBoxSelection(ComboBox comboBox)
         {
             try
             {

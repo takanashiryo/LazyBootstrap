@@ -1,12 +1,13 @@
 using System;
 using SystemEnvironment = System.Environment;
 using System.IO;
-
-namespace LazyBootstrap.Models
+namespace LazyBootstrap.FileSystem
 {
 
-    public sealed class LauncherPaths
+    internal sealed class LauncherPaths
     {
+        private const string BaseDirArgumentName = "--basedir";
+        private const string BaseDirEnvironmentVariable = "LAZYBOOTSTRAP_BASEDIR";
         private readonly string _defaultContentsDirectoryPath;
         private readonly string _defaultAsphyxiaDirectoryPath;
 
@@ -21,6 +22,17 @@ namespace LazyBootstrap.Models
             ConfigFilePath = Path.GetFullPath(configFilePath);
             _defaultContentsDirectoryPath = Path.Combine(BaseDir, "contents");
             _defaultAsphyxiaDirectoryPath = Path.Combine(BaseDir, "asphyxia");
+        }
+
+        public static LauncherPaths Create(string[] args)
+        {
+            string applicationDirectoryPath = PathHelper.NormalizePath(AppDomain.CurrentDomain.BaseDirectory);
+            string baseDirectoryPath = ResolveBaseDirectory(
+                args,
+                SystemEnvironment.GetEnvironmentVariable(BaseDirEnvironmentVariable),
+                applicationDirectoryPath);
+            string configFilePath = PathHelper.NormalizePath(Path.Combine(applicationDirectoryPath, "config.toml"));
+            return new LauncherPaths(baseDirectoryPath, applicationDirectoryPath, configFilePath);
         }
 
         public string BaseDir { get; }
@@ -110,6 +122,72 @@ namespace LazyBootstrap.Models
             }
 
             return Path.Combine(BaseDir, "launcher", "7za.exe");
+        }
+
+        private static string ResolveBaseDirectory(
+            string[] args,
+            string environmentBaseDirectory,
+            string applicationDirectoryPath)
+        {
+            string argumentBaseDirectory = TryGetBaseDirectoryFromArguments(args);
+            if (!string.IsNullOrWhiteSpace(argumentBaseDirectory))
+            {
+                return PathHelper.NormalizePath(argumentBaseDirectory);
+            }
+
+            if (!string.IsNullOrWhiteSpace(environmentBaseDirectory))
+            {
+                return PathHelper.NormalizePath(environmentBaseDirectory);
+            }
+
+            string normalizedApplicationDirectory = PathHelper.NormalizePath(applicationDirectoryPath);
+            if (string.IsNullOrWhiteSpace(normalizedApplicationDirectory))
+            {
+                return string.Empty;
+            }
+
+            string trimmedApplicationDirectory = normalizedApplicationDirectory.TrimEnd(
+                Path.DirectorySeparatorChar,
+                Path.AltDirectorySeparatorChar);
+            var applicationDirectoryInfo = new DirectoryInfo(trimmedApplicationDirectory);
+            if (!string.Equals(applicationDirectoryInfo.Name, "launcher", StringComparison.OrdinalIgnoreCase)
+                || applicationDirectoryInfo.Parent == null
+                || !Directory.Exists(Path.Combine(trimmedApplicationDirectory, "Libs")))
+            {
+                return normalizedApplicationDirectory;
+            }
+
+            return PathHelper.NormalizePath(applicationDirectoryInfo.Parent.FullName);
+        }
+
+        private static string TryGetBaseDirectoryFromArguments(string[] args)
+        {
+            if (args == null)
+            {
+                return string.Empty;
+            }
+
+            for (var index = 0; index < args.Length; index++)
+            {
+                string argument = args[index];
+                if (string.IsNullOrWhiteSpace(argument))
+                {
+                    continue;
+                }
+
+                if (argument.StartsWith($"{BaseDirArgumentName}=", StringComparison.OrdinalIgnoreCase))
+                {
+                    return argument.Substring(BaseDirArgumentName.Length + 1).Trim('"');
+                }
+
+                if (string.Equals(argument, BaseDirArgumentName, StringComparison.OrdinalIgnoreCase)
+                    && index + 1 < args.Length)
+                {
+                    return (args[index + 1] ?? string.Empty).Trim('"');
+                }
+            }
+
+            return string.Empty;
         }
 
     }

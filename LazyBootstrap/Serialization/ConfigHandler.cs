@@ -9,9 +9,19 @@ using Tomlyn;
 using Tomlyn.Model;
 using Tomlyn.Parsing;
 using LazyBootstrap.FileSystem;
-using LazyBootstrap.Models;
 
 namespace LazyBootstrap.Serialization;
+
+internal sealed class ServerPresetItem
+{
+    public string Name { get; set; } = string.Empty;
+
+    public string ServerUrl { get; set; } = string.Empty;
+
+    public string PcbId { get; set; } = string.Empty;
+
+    public override string ToString() => Name;
+}
 
 internal static class TomlTextShared
 {
@@ -95,7 +105,7 @@ internal static class TomlTextShared
     }
 }
 
-public class ConfigHandler
+internal class ConfigHandler
 {
     private const string InvalidBackupSuffix = "invalid";
     private readonly string _path;

@@ -1,416 +1,1178 @@
 using System;
+using SystemEnvironment = System.Environment;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using Avalonia;
 using Avalonia.Controls;
-using Avalonia.Controls.Primitives;
-using Avalonia.Input;
-using Avalonia.Interactivity;
-using Avalonia.Media;
+using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
-using SukiUI.Controls;
-using SukiUI.MessageBox;
-using LazyBootstrap.Models;
+using Microsoft.Extensions.Logging;
+using LazyBootstrap.Services;
 using LazyBootstrap.Platform;
 
 namespace LazyBootstrap.UI
 {
     public partial class MainWindow
     {
-        private bool _isLaunchLogVisible;
-        private bool _isLaunchLogAppendAnimating;
-        private bool _isLaunchLogAppendAnimationPending;
+        private const int MaxLogLines = 1200;
+        private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan LauncherAutoMinimizeDelay = TimeSpan.FromSeconds(2);
+        private static readonly TimeSpan AsphyxiaToSpiceLaunchDelay = TimeSpan.FromMilliseconds(300);
 
-        /// <summary>Initializes the launch workflow for the startup sequence (invoked by the shell before showing).</summary>
-        private Task InitializeLaunchStartupAsync()
-            => _launchOrchestrator.InitializeStartupAsync(_launchSnapshot);
+        private readonly SpiceCrashLogAnalyzer _spiceCrashLogAnalyzer = null!;
+        private readonly GameProcessTracker _gameProcessTracker = null!;
+        private readonly WindowsDefenderExclusionService _windowsDefenderExclusionService = null!;
 
-        /// <summary>Runs the launch-related cleanup that must complete before the window closes.</summary>
-        private Task HandleLaunchClosingAsync()
-            => _launchOrchestrator.HandleClosingAsync(BuildDisplayConfigurationRequest());
+        private readonly Queue<string> _logLines = new Queue<string>(MaxLogLines + 64);
+        private Process _gameProcess;
+        private CancellationTokenSource _launchWorkflowCts;
+        private CancellationTokenSource _gameProcessMonitorCts;
+        private bool _suppressGameProcessExitHandling;
+        private readonly LaunchWorkflowSnapshot _launchSnapshot = new LaunchWorkflowSnapshot();
+        private DisplayConfigurationRequest _activeLaunchDisplayConfiguration;
+        private bool _openLogAfterLaunchMessageDismissal;
+        private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
-        private void OnToggleLaunchLogClick(object sender, RoutedEventArgs e)
-            => _ = _launchOrchestrator.ToggleLaunchLogAsync(_launchSnapshot);
-
-        private void OnOpenLogClick(object sender, RoutedEventArgs e) => _ = ShowLaunchLogDialogAsync();
-
-        private void OnOpenLogRequested() => Dispatcher.UIThread.Post(() => _ = ShowLaunchLogDialogAsync());
-
-        private async Task ShowLaunchLogDialogAsync()
+        private Task InitializeLaunchWorkflowAsync(
+            LaunchWorkflowSnapshot launchSnapshot)
         {
-            var document = await _launchOrchestrator.LoadLogAsync();
-            if (document == null)
-            {
-                return;
-            }
-
-            var logViewer = new TextBox
-            {
-                IsReadOnly = true,
-                AcceptsReturn = true,
-                TextWrapping = TextWrapping.NoWrap,
-                Text = document.Content,
-                MinWidth = 960,
-                MinHeight = 520,
-                MaxWidth = 1200,
-                MaxHeight = 680,
-                [ScrollViewer.HorizontalScrollBarVisibilityProperty] = ScrollBarVisibility.Auto,
-                [ScrollViewer.VerticalScrollBarVisibilityProperty] = ScrollBarVisibility.Auto
-            };
-            logViewer.CaretIndex = logViewer.Text?.Length ?? 0;
-
-            var openFolderButton = SukiMessageBoxButtonsFactory.CreateButton(
-                "打开日志文件夹",
-                SukiMessageBoxResult.Yes,
-                "Flat");
-            var result = await SukiMessageBox.ShowDialog(new SukiMessageBoxHost
-            {
-                UseAlternativeHeaderStyle = true,
-                IconPreset = SukiMessageBoxIcons.Information,
-                Header = "log.txt",
-                Content = logViewer,
-                FooterLeftItemsSource = [new SelectableTextBlock { Text = $"路径: {document.Path}" }],
-                ActionButtonsSource = [openFolderButton]
-            });
-
-            if (result is SukiMessageBoxResult.Yes)
-            {
-                ProcessExecutionHelper.OpenLogFolderAndSelectFile(document.Path);
-            }
+            launchSnapshot.ToggleLaunchLogText = launchSnapshot.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
+            NotifyLaunchStateChanged(launchSnapshot);
+            NotifyLaunchLogVisibilityChanged(launchSnapshot);
+            NotifyLaunchMessageChanged(launchSnapshot);
+            return Task.CompletedTask;
         }
 
-        private void OnKillProcessesClick(object sender, RoutedEventArgs e)
-            => _ = _launchOrchestrator.StopAndKillProcessesAsync();
-
-        private void OnStartClick(object sender, RoutedEventArgs e)
-            => _ = StartLaunchAsync(false);
-
-        private void OnStartAsphyxiaDevClick(object sender, RoutedEventArgs e)
-            => _ = StartLaunchAsync(true);
-
-        private Task StartLaunchAsync(bool asphyxiaDevOnly)
+        private Task DismissLaunchMessageAsync(LaunchWorkflowSnapshot launchState)
         {
-            if (!_launchSnapshot.CanStartLaunch)
+            if (launchState == null || !launchState.IsMessageVisible)
             {
                 return Task.CompletedTask;
             }
 
-            return _launchOrchestrator.StartAsync(
-                _launchSnapshot,
-                new LaunchRequest(
-                    _settingsState.NoAsphyxia,
-                    _settingsState.UseSystemSpiceConfig,
-                    _settingsState.DisableSpiceFso,
-                    _settingsState.ServerAddress,
-                    BuildDisplayConfigurationRequest(),
-                    asphyxiaDevOnly));
+            bool shouldOpenLog = _openLogAfterLaunchMessageDismissal;
+            ClearLaunchMessage(launchState);
+
+            if (shouldOpenLog)
+            {
+                _ = ShowLaunchLogDialogAsync();
+            }
+
+            return Task.CompletedTask;
         }
 
-        private void InitializeLaunchControls()
+        private Task ToggleLaunchLogAsync(LaunchWorkflowSnapshot launchState)
         {
-            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed);
-            AddHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed, RoutingStrategies.Tunnel, handledEventsToo: true);
-            ApplyLaunchStateToUi();
-            _ = ApplyLaunchLogVisibilityAsync();
-            _ = ApplyLaunchLogTextAsync();
-            _ = ApplyLaunchMessageOverlayAsync();
+            launchState.IsLaunchLogVisible = !launchState.IsLaunchLogVisible;
+            launchState.ToggleLaunchLogText = launchState.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
+            NotifyLaunchLogVisibilityChanged(launchState);
+            return Task.CompletedTask;
         }
 
-        private void ReleaseLaunchControls()
+        private async Task<LaunchLogDocument> LoadLaunchLogAsync()
         {
-            RemoveHandler(InputElement.PointerPressedEvent, OnLaunchMessageOverlayPointerPressed);
-            ArcadeMessageOverlay?.StopAnimation();
-        }
-
-        private void OnLaunchWorkflowChanged(LaunchWorkflowChange change)
-        {
-            Dispatcher.UIThread.Post(() =>
-            {
-                switch (change.Kind)
-                {
-                    case LaunchWorkflowChangeKind.State:
-                        ApplyLaunchStateToUi();
-                        break;
-                    case LaunchWorkflowChangeKind.LogVisibility:
-                        _ = ApplyLaunchLogVisibilityAsync();
-                        break;
-                    case LaunchWorkflowChangeKind.Log:
-                        _ = ApplyLaunchLogTextAsync();
-                        break;
-                    case LaunchWorkflowChangeKind.Message:
-                        _ = ApplyLaunchMessageOverlayAsync();
-                        break;
-                }
-            });
-        }
-
-        private void ApplyLaunchStateToUi()
-        {
-            bool canStart = _launchSnapshot.CanStartLaunch;
-            SetNavigationLocked(!canStart);
-
-            if (StartButton != null)
-            {
-                StartButton.IsEnabled = canStart;
-            }
-
-            if (StartAsphyxiaDevMenuItem != null)
-            {
-                StartAsphyxiaDevMenuItem.IsEnabled = canStart;
-            }
-        }
-
-        private async Task ApplyLaunchLogVisibilityAsync()
-        {
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                await Dispatcher.UIThread.InvokeAsync(async () => await ApplyLaunchLogVisibilityAsync());
-                return;
-            }
-
-            if (_launchSnapshot.IsLaunchLogVisible)
-            {
-                await ShowLaunchLogAreaWithAnimationAsync(syncState: false);
-                return;
-            }
-
-            HideLaunchLogArea(syncState: false);
-        }
-
-        private async Task ApplyLaunchLogTextAsync()
-        {
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                await Dispatcher.UIThread.InvokeAsync(async () => await ApplyLaunchLogTextAsync());
-                return;
-            }
-
-            if (LogOutputTextBlock == null)
-            {
-                return;
-            }
-
-            LogOutputTextBlock.Text = _launchSnapshot.LaunchLogText ?? string.Empty;
-
-            if (LaunchLogScrollViewer != null)
-            {
-                LaunchLogScrollViewer.Offset = new Vector(LaunchLogScrollViewer.Offset.X, double.MaxValue);
-            }
-
-            if (!string.IsNullOrWhiteSpace(LogOutputTextBlock.Text))
-            {
-                await AnimateLaunchLogAppendAsync();
-            }
-        }
-
-        private async Task AnimateLaunchLogAppendAsync()
-        {
-            if (LogOutputTextBlock == null)
-            {
-                return;
-            }
-
-            if (_isLaunchLogAppendAnimating)
-            {
-                _isLaunchLogAppendAnimationPending = true;
-                return;
-            }
-
-            _isLaunchLogAppendAnimating = true;
             try
             {
-                do
+                string logPath = Path.Combine(_paths.GetContentsDirectoryPath(), "log.txt");
+                _logger.LogInformation("Opening spice2x log viewer.");
+                if (!File.Exists(logPath))
                 {
-                    _isLaunchLogAppendAnimationPending = false;
-                    LogOutputTextBlock.RenderTransformOrigin = Avalonia.RelativePoint.Center;
-                    var scale = LogOutputTextBlock.RenderTransform as ScaleTransform;
-                    if (scale == null)
-                    {
-                        scale = new ScaleTransform(0.985, 0.985);
-                        LogOutputTextBlock.RenderTransform = scale;
-                    }
-
-                    LogOutputTextBlock.Opacity = 0.55;
-                    scale.ScaleX = 0.985;
-                    scale.ScaleY = 0.985;
-
-                    const int steps = 6;
-                    for (int i = 0; i <= steps; i++)
-                    {
-                        double t = (double)i / steps;
-                        double eased = 1 - Math.Pow(1 - t, 3);
-                        LogOutputTextBlock.Opacity = 0.55 + (0.45 * eased);
-                        double currentScale = 0.985 + (0.015 * eased);
-                        scale.ScaleX = currentScale;
-                        scale.ScaleY = currentScale;
-                        await Task.Delay(12);
-                    }
-
-                    LogOutputTextBlock.Opacity = 1;
-                    scale.ScaleX = 1;
-                    scale.ScaleY = 1;
+                    _logger.LogWarning("spice2x log file was not found: {LogPath}", logPath);
+                    ShowErrorToast("查看日志失败", $"未找到日志文件: {logPath}");
+                    return null;
                 }
-                while (_isLaunchLogAppendAnimationPending);
+
+                var content = await File.ReadAllTextAsync(logPath, SpiceLogEncoding.ShiftJis);
+                if (string.IsNullOrWhiteSpace(content))
+                {
+                    content = "(log.txt 为空)";
+                }
+
+                return new LaunchLogDocument(logPath, content);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to open spice2x log viewer.");
+                ShowErrorToast("查看日志失败", ex.Message);
+                return null;
+            }
+        }
+
+        private Task StopAndKillProcessesAsync()
+        {
+            _logger.LogInformation("Manual launch stop and process termination requested.");
+            CancelLaunchWorkflow();
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+            _suppressGameProcessExitHandling = true;
+            ClearLaunchMessage(_launchSnapshot);
+
+            AppendLaunchOutput(_launchSnapshot, "正在停止启动流程并结束所有进程...", NotificationType.Warning);
+
+            int killedSpice = KillProcessesByName("spice64");
+            int killedAsphyxia = KillProcessesByName("asphyxia-core-x64");
+
+            DisposeTrackedGameProcess();
+            _gameProcessTracker.ResetManagedAsphyxiaTracking();
+
+            int restored = RestoreAppliedDisplaySettings("停止流程", shouldRestore: true, logToLaunchOutput: true);
+            ResetLaunchRuntimeState();
+            RestoreLauncherWindow();
+
+            _logger.LogInformation(
+                "Manual launch stop and process termination completed. SpiceKilled={SpiceKilled}, AsphyxiaKilled={AsphyxiaKilled}, DisplayRestored={DisplayRestored}",
+                killedSpice,
+                killedAsphyxia,
+                restored);
+            ShowInfoToast(
+                "操作完成",
+                $"停止完成：spice64 {killedSpice} 个，asphyxia-core-x64 {killedAsphyxia} 个，显示器恢复 {restored} 个");
+            return Task.CompletedTask;
+        }
+
+        private async Task RunLaunchWorkflowAsync(LaunchWorkflowSnapshot launchState, LaunchRequest request)
+        {
+            ArgumentNullException.ThrowIfNull(request);
+
+            string launchSessionId = Guid.NewGuid().ToString("N");
+            using var launchScope = _logger.BeginScope(new Dictionary<string, object>
+            {
+                ["LaunchSessionId"] = launchSessionId
+            });
+
+            var display = request.Display;
+            bool asphyxiaDevOnly = request.AsphyxiaDevOnly;
+            var launchWorkflowCts = new CancellationTokenSource();
+            var cancellationToken = launchWorkflowCts.Token;
+
+            _activeLaunchDisplayConfiguration = display;
+            _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+            ReplaceLaunchWorkflowCancellationSource(launchWorkflowCts);
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+            _suppressGameProcessExitHandling = false;
+
+            ClearLaunchMessage(launchState);
+            _gameProcessTracker.ResetManagedAsphyxiaTracking();
+            launchState.IsLaunching = true;
+            launchState.IsLaunchLogVisible = true;
+            launchState.ToggleLaunchLogText = "隐藏启动日志";
+            NotifyLaunchStateChanged(launchState);
+            NotifyLaunchLogVisibilityChanged(launchState);
+            ClearLaunchLog(launchState);
+            AppendLaunchOutput(launchState, "开始启动...");
+            _logger.LogInformation("Game launch workflow started. LaunchSessionId={LaunchSessionId}, AsphyxiaDevOnly={AsphyxiaDevOnly}", launchSessionId, asphyxiaDevOnly);
+
+            bool handoffToGameSession = false;
+            bool startedAsphyxiaForGame = false;
+
+            try
+            {
+                string spicePath = _paths.GetSpicePath();
+                string asphyxiaPath = _paths.GetAsphyxiaPath();
+                string serverAddress = (request.ServerAddress ?? string.Empty).Trim();
+                bool useSystemSpice = request.UseSystemSpiceConfig;
+                bool displayConfigurationEnabled = display?.IsDisplayConfigurationEnabled == true;
+                _logger.LogInformation(
+                    "Launch prerequisites resolved. SpiceExists={SpiceExists}, AsphyxiaExists={AsphyxiaExists}, DisplayConfigurationEnabled={DisplayConfigurationEnabled}, UseSystemSpiceConfig={UseSystemSpiceConfig}",
+                    File.Exists(spicePath),
+                    File.Exists(asphyxiaPath),
+                    displayConfigurationEnabled,
+                    useSystemSpice);
+
+                if (!asphyxiaDevOnly && string.IsNullOrWhiteSpace(serverAddress))
+                {
+                    _logger.LogWarning("Launch aborted because no server address is configured.");
+                    WarnLaunchAndAbort(
+                        launchState,
+                        "服务器地址异常",
+                        "未检测到任何 e-amusement 服务器地址存在，请前往设置页设置");
+                    return;
+                }
+
+                if (!asphyxiaDevOnly && !File.Exists(spicePath))
+                {
+                    _logger.LogWarning("Launch aborted because spice64.exe was not found: {SpicePath}", spicePath);
+                    FailLaunch(launchState, $"未找到 spice64.exe: {spicePath}", "未找到spice64.exe");
+                    return;
+                }
+
+                if (!asphyxiaDevOnly && request.DisableSpiceFso)
+                {
+                    AppendLaunchOutput(launchState, "正在应用 spice64 全屏优化设置...");
+                    if (_appCompatLayerService.TrySetFsoDisabled(spicePath, true, out var fsoError))
+                    {
+                        _logger.LogInformation("FSO registry setting ensured before launch.");
+                        AppendLaunchOutput(launchState, "已禁用 spice64 全屏优化。");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("FSO registry setting failed before launch: {Error}", fsoError);
+                        AppendLaunchOutput(
+                            launchState,
+                            $"禁用全屏优化设置失败: {(string.IsNullOrWhiteSpace(fsoError) ? "未知错误" : fsoError)}",
+                            NotificationType.Warning);
+                    }
+                }
+
+                bool startAsphyxia = asphyxiaDevOnly || !request.NoAsphyxia;
+                int existingAsphyxiaCount = 0;
+                bool isAsphyxiaCoreAlreadyRunning = startAsphyxia && IsAsphyxiaCoreRunning(out existingAsphyxiaCount);
+                _logger.LogInformation("Asphyxia launch decision resolved. StartAsphyxia={StartAsphyxia}, ExistingProcessCount={ExistingProcessCount}", startAsphyxia, existingAsphyxiaCount);
+
+                if (startAsphyxia && !isAsphyxiaCoreAlreadyRunning && !File.Exists(asphyxiaPath))
+                {
+                    _logger.LogWarning("Launch aborted because asphyxia-core-x64.exe was not found: {AsphyxiaPath}", asphyxiaPath);
+                    FailLaunch(launchState, $"未找到 asphyxia-core-x64.exe: {asphyxiaPath}", "未找到asphyxia-core-x64.exe");
+                    return;
+                }
+
+                if (!asphyxiaDevOnly)
+                {
+                    AppendLaunchOutput(launchState, "正在检查 Windows Defender 排除项...");
+                    var defenderResult = await _windowsDefenderExclusionService.EnsureDirectoryExcludedAsync(_paths.GetContentsDirectoryPath());
+                    cancellationToken.ThrowIfCancellationRequested();
+                    _logger.LogInformation("Windows Defender exclusion check completed. Status={Status}", defenderResult.Status);
+                    AppendLaunchOutput(launchState, defenderResult.Message, defenderResult.Status == WindowsDefenderExclusionStatus.Failed ? NotificationType.Warning : NotificationType.Information);
+                }
+
+                if (!asphyxiaDevOnly && display.IsDisplayConfigurationEnabled)
+                {
+                    AppendLaunchOutput(launchState, "正在应用显示器配置...");
+                    bool applySucceeded = TryApplyDisplayForLaunch(display, out var restoreStates, out var displayMessages);
+                    _logger.LogInformation(
+                        "Display configuration apply for launch completed. Succeeded={Succeeded}, RestoreStateCount={RestoreStateCount}, MessageCount={MessageCount}",
+                        applySucceeded,
+                        restoreStates.Count,
+                        displayMessages.Count);
+                    _displayRestoreStates = restoreStates;
+                    foreach (var displayMessage in displayMessages)
+                    {
+                        AppendLaunchOutput(launchState, displayMessage, NotificationType.Warning);
+                    }
+
+                    if (!applySucceeded && restoreStates.Count > 0)
+                    {
+                        FailLaunch(launchState, "显示器配置未能完整回滚，请检查当前显示器状态后重试。");
+                        return;
+                    }
+
+                    if (applySucceeded)
+                    {
+                        AppendLaunchOutput(launchState, "显示器配置应用完成。");
+                        await Task.Delay(5000, cancellationToken);
+                    }
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+                if (startAsphyxia)
+                {
+                    if (isAsphyxiaCoreAlreadyRunning)
+                    {
+                        AppendLaunchOutput(
+                            launchState,
+                            existingAsphyxiaCount > 1
+                                ? $"检测到已有 {existingAsphyxiaCount} 个 Asphyxia Core 进程，已跳过重复启动。"
+                                : "检测到已有 Asphyxia Core 进程，已跳过重复启动。",
+                            NotificationType.Warning);
+                    }
+                    else
+                    {
+                        AppendLaunchOutput(launchState, "正在启动 Asphyxia Core...");
+                        var asphyxiaStartInfo = asphyxiaDevOnly
+                            ? new ProcessStartInfo
+                            {
+                                FileName = "cmd.exe",
+                                Arguments = $"/k \"\"{asphyxiaPath}\" --dev\"",
+                                UseShellExecute = true,
+                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                            }
+                            : new ProcessStartInfo
+                            {
+                                FileName = asphyxiaPath,
+                                UseShellExecute = true,
+                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                            };
+
+                        var asphyxiaProcess = Process.Start(asphyxiaStartInfo);
+                        if (asphyxiaProcess == null)
+                        {
+                            _logger.LogWarning("Asphyxia Core process creation returned null.");
+                            FailLaunch(launchState, "Asphyxia 启动失败，进程未成功创建。");
+                            return;
+                        }
+
+                        if (!asphyxiaDevOnly)
+                        {
+                            _gameProcessTracker.TrackManagedAsphyxiaProcess(asphyxiaProcess);
+                            startedAsphyxiaForGame = true;
+                        }
+
+                        _logger.LogInformation("Asphyxia Core process started. ProcessId={ProcessId}, DevOnly={DevOnly}", asphyxiaProcess.Id, asphyxiaDevOnly);
+                        AppendLaunchOutput(launchState, "Asphyxia Core 启动成功");
+                    }
+                }
+                else
+                {
+                    AppendLaunchOutput(launchState, "已跳过启动 Asphyxia Core。", NotificationType.Warning);
+                }
+
+                if (asphyxiaDevOnly)
+                {
+                    launchState.IsLaunching = false;
+                    launchState.IsGameRunning = false;
+                    ClearLaunchMessage(launchState);
+                    NotifyLaunchStateChanged(launchState);
+                    AppendLaunchOutput(launchState, "已按调试模式启动 Asphyxia Core（--dev），未启动 spice64。");
+                    return;
+                }
+
+                if (startedAsphyxiaForGame)
+                {
+                    // wait 300ms to start spice2x
+                    await Task.Delay(AsphyxiaToSpiceLaunchDelay, cancellationToken);
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+                var argumentsBuilder = new StringBuilder();
+                string spiceArgLine = Spice64CommandLine.BuildGameLaunchArguments(useSystemSpice);
+                if (!string.IsNullOrWhiteSpace(spiceArgLine))
+                {
+                    argumentsBuilder.Append(spiceArgLine);
+                }
+
+                AppendLaunchOutput(launchState, "正在启动游戏...");
+                AppendLaunchOutput(launchState, $"启动参数: {argumentsBuilder}");
+
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = spicePath,
+                    Arguments = argumentsBuilder.ToString(),
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(spicePath)
+                };
+
+                _gameProcessTracker.PrepareTrackedSpiceSession(spicePath);
+                _gameProcess = new Process
+                {
+                    StartInfo = startInfo,
+                    EnableRaisingEvents = true
+                };
+
+                cancellationToken.ThrowIfCancellationRequested();
+                if (!_gameProcess.Start())
+                {
+                    _logger.LogWarning("spice64 process start returned false.");
+                    FailLaunch(launchState, "spice64 启动失败，进程未成功创建。");
+                    _gameProcess.Dispose();
+                    _gameProcess = null;
+                    return;
+                }
+
+                _gameProcessTracker.RegisterTrackedSpiceProcess(_gameProcess);
+                handoffToGameSession = true;
+                _logger.LogInformation("spice64 process started. ProcessId={ProcessId}", _gameProcess.Id);
+
+                launchState.IsLaunching = false;
+                launchState.IsGameRunning = true;
+                ClearLaunchMessage(launchState);
+                NotifyLaunchStateChanged(launchState);
+                AppendLaunchOutput(launchState, "游戏已启动并进入运行状态。");
+                _ = MinimizeLauncherWindowDelayedAsync();
+                StartGameProcessMonitoring();
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                _logger.LogInformation("Game launch workflow was cancelled. LaunchSessionId={LaunchSessionId}", launchSessionId);
+                AppendLaunchOutput(launchState, "启动流程已停止。", NotificationType.Warning);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Game launch workflow failed.");
+                FailLaunch(launchState, ex.Message);
             }
             finally
             {
-                _isLaunchLogAppendAnimating = false;
+                if (!handoffToGameSession && _gameProcessTracker.HasManagedAsphyxiaProcess())
+                {
+                    _logger.LogInformation("Launch did not hand off to game session. Stopping managed Asphyxia Core process.");
+                    if (_gameProcessTracker.TryStopManagedAsphyxiaProcess(out var stopErrorMessage))
+                    {
+                        AppendLaunchOutput(launchState, "已回收本次启动的 Asphyxia Core。", NotificationType.Warning);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to stop managed Asphyxia Core process after launch abort.");
+                        ShowWarningToast("Asphyxia 关闭提示", stopErrorMessage);
+                    }
+                }
+
+                if (!handoffToGameSession
+                    && _activeLaunchDisplayConfiguration?.IsDisplayConfigurationEnabled == true
+                    && _activeLaunchDisplayConfiguration.ExitRestore
+                    && _displayRestoreStates.Count > 0)
+                {
+                    RestoreAppliedDisplaySettings("启动未完成", shouldRestore: true, logToLaunchOutput: true);
+                }
+
+                if (!handoffToGameSession)
+                {
+                    _logger.LogInformation("Game launch workflow ended without handoff.");
+                    _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+                    if (_gameProcess != null)
+                    {
+                        _gameProcess.Dispose();
+                        _gameProcess = null;
+                    }
+                }
+
+                if (ReferenceEquals(_launchWorkflowCts, launchWorkflowCts))
+                {
+                    _launchWorkflowCts = null;
+                }
+
+                launchWorkflowCts.Dispose();
             }
         }
 
-        private async Task ShowLaunchLogAreaWithAnimationAsync(bool syncState = true)
+        private Task HandleLaunchWorkflowClosingAsync(DisplayConfigurationRequest display)
         {
-            if (LaunchLogContainer == null)
+            _logger.LogInformation("Launcher closing cleanup started.");
+            CancelLaunchWorkflow();
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+            ClearLaunchMessage(_launchSnapshot);
+
+            KillTrackedGameProcessDuringClose();
+            DisposeTrackedGameProcess();
+
+            if (_gameProcessTracker.HasManagedAsphyxiaProcess())
+            {
+                _logger.LogInformation("Stopping managed Asphyxia Core process during window close.");
+                _gameProcessTracker.TryStopManagedAsphyxiaProcess(out _);
+            }
+
+            RestoreAppliedDisplaySettings("窗口关闭", shouldRestore: display?.ExitRestore == true, logToLaunchOutput: false);
+            _logger.LogInformation("Launcher closing cleanup completed.");
+            return Task.CompletedTask;
+        }
+
+        private void ReplaceLaunchWorkflowCancellationSource(CancellationTokenSource cancellationTokenSource)
+        {
+            CancelLaunchWorkflow();
+            _launchWorkflowCts = cancellationTokenSource;
+        }
+
+        private void CancelLaunchWorkflow()
+        {
+            if (_launchWorkflowCts == null)
             {
                 return;
             }
 
-            if (_isLaunchLogVisible && LaunchLogContainer.IsVisible)
+            try
+            {
+                if (!_launchWorkflowCts.IsCancellationRequested)
+                {
+                    _launchWorkflowCts.Cancel();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Launch workflow cancellation failed.");
+            }
+        }
+
+        private void ResetLaunchRuntimeState()
+        {
+            if (_launchSnapshot == null)
             {
                 return;
             }
 
-            _isLaunchLogVisible = true;
-            if (syncState)
-            {
-                _launchSnapshot.IsLaunchLogVisible = true;
-                _launchSnapshot.ToggleLaunchLogText = "隐藏启动日志";
-            }
-
-            if (ToggleLaunchLogButton != null)
-            {
-                ToggleLaunchLogButton.Content = _launchSnapshot.ToggleLaunchLogText;
-            }
-
-            LaunchLogContainer.IsVisible = true;
-            LaunchLogContainer.Opacity = 0;
-            LaunchLogContainer.RenderTransformOrigin = Avalonia.RelativePoint.TopLeft;
-
-            var scale = LaunchLogContainer.RenderTransform as ScaleTransform;
-            if (scale == null)
-            {
-                scale = new ScaleTransform(0.12, 0.12);
-                LaunchLogContainer.RenderTransform = scale;
-            }
-
-            scale.ScaleX = 0.12;
-            scale.ScaleY = 0.12;
-
-            const int steps = 14;
-            for (int i = 0; i <= steps; i++)
-            {
-                double t = (double)i / steps;
-                double eased = 1 - Math.Pow(1 - t, 3);
-                double currentScale = 0.12 + (0.88 * eased);
-                LaunchLogContainer.Opacity = eased;
-                scale.ScaleX = currentScale;
-                scale.ScaleY = currentScale;
-                await Task.Delay(16);
-            }
-
-            LaunchLogContainer.Opacity = 1;
-            scale.ScaleX = 1;
-            scale.ScaleY = 1;
+            _launchSnapshot.IsLaunching = false;
+            _launchSnapshot.IsGameRunning = false;
+            NotifyLaunchStateChanged(_launchSnapshot);
         }
 
-        private void HideLaunchLogArea(bool clearOutput = false, bool syncState = true)
+        private void DisposeTrackedGameProcess()
         {
-            _isLaunchLogVisible = false;
-            if (syncState)
-            {
-                _launchSnapshot.IsLaunchLogVisible = false;
-                _launchSnapshot.ToggleLaunchLogText = "显示启动日志";
-            }
-
-            if (ToggleLaunchLogButton != null)
-            {
-                ToggleLaunchLogButton.Content = _launchSnapshot.ToggleLaunchLogText;
-            }
-
-            if (LaunchLogContainer == null)
+            if (_gameProcess == null)
             {
                 return;
             }
 
-            LaunchLogContainer.IsVisible = false;
-            LaunchLogContainer.Opacity = 0;
-            LaunchLogContainer.RenderTransformOrigin = Avalonia.RelativePoint.TopLeft;
-            LaunchLogContainer.RenderTransform = new ScaleTransform(0.12, 0.12);
-
-            if (clearOutput)
+            try
             {
-                ClearLaunchOutput(syncState);
+                _gameProcess.Dispose();
+            }
+            catch
+            {
+            }
+            finally
+            {
+                _gameProcess = null;
             }
         }
 
-        private void ClearLaunchOutput(bool syncState = true)
+        private void KillTrackedGameProcessDuringClose()
         {
-            if (syncState)
+            try
             {
-                _launchSnapshot.LaunchLogText = string.Empty;
+                if (_gameProcess != null && !_gameProcess.HasExited)
+                {
+                    _gameProcess.Kill();
+                }
             }
-
-            if (LogOutputTextBlock != null)
+            catch (Exception ex)
             {
-                LogOutputTextBlock.Text = _launchSnapshot.LaunchLogText ?? string.Empty;
+                _logger.LogWarning(ex, "Failed to terminate game process during window close.");
             }
         }
 
-        private async Task ApplyLaunchMessageOverlayAsync()
+        private int RestoreAppliedDisplaySettings(string reason, bool shouldRestore, bool logToLaunchOutput)
         {
-            if (!Dispatcher.UIThread.CheckAccess())
+            if (!shouldRestore || _displayRestoreStates.Count == 0)
             {
-                await Dispatcher.UIThread.InvokeAsync(async () => await ApplyLaunchMessageOverlayAsync());
+                return 0;
+            }
+
+            if (logToLaunchOutput)
+            {
+                AppendLaunchOutput(_launchSnapshot, $"{reason}，正在恢复显示器设置...");
+            }
+
+            var restoreMessages = new List<string>();
+            int restored = RestoreAppliedDisplaySettings(_displayRestoreStates, restoreMessages);
+            _logger.LogInformation(
+                "Display settings restored. Reason={Reason}, RestoredCount={RestoredCount}, MessageCount={MessageCount}",
+                reason,
+                restored,
+                restoreMessages.Count);
+
+            if (logToLaunchOutput)
+            {
+                AppendLaunchOutput(
+                    _launchSnapshot,
+                    restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。",
+                    restored > 0 ? NotificationType.Information : NotificationType.Warning);
+                foreach (var restoreMessage in restoreMessages)
+                {
+                    AppendLaunchOutput(_launchSnapshot, restoreMessage, NotificationType.Warning);
+                }
+            }
+
+            _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+            return restored;
+        }
+
+        private void StartGameProcessMonitoring()
+        {
+            CancelGameProcessMonitoring(suppressExitHandling: true);
+            _suppressGameProcessExitHandling = false;
+
+            var monitorCts = new CancellationTokenSource();
+            _gameProcessMonitorCts = monitorCts;
+            _ = MonitorGameProcessLifecycleAsync(monitorCts);
+        }
+
+        private void CancelGameProcessMonitoring(bool suppressExitHandling)
+        {
+            if (suppressExitHandling)
+            {
+                _suppressGameProcessExitHandling = true;
+            }
+
+            if (_gameProcessMonitorCts == null)
+            {
                 return;
             }
 
-            if (_launchSnapshot.IsMessageVisible)
+            try
             {
-                ShowLaunchMessageOverlay();
+                if (!_gameProcessMonitorCts.IsCancellationRequested)
+                {
+                    _gameProcessMonitorCts.Cancel();
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Game process monitor cancellation failed.");
+            }
+            finally
+            {
+                _gameProcessMonitorCts.Dispose();
+                _gameProcessMonitorCts = null;
+            }
+        }
+
+        private async Task MonitorGameProcessLifecycleAsync(CancellationTokenSource monitorCts)
+        {
+            var cancellationToken = monitorCts.Token;
+
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    var currentProcess = _gameProcess;
+                    if (currentProcess == null)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        await currentProcess.WaitForExitAsync(cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+
+                    if (cancellationToken.IsCancellationRequested || _suppressGameProcessExitHandling)
+                    {
+                        return;
+                    }
+
+                    int exitCode = 0;
+                    bool abnormalExit = false;
+                    DateTime exitedAtUtc = DateTime.UtcNow;
+
+                    try
+                    {
+                        exitCode = currentProcess.ExitCode;
+                        abnormalExit = exitCode != 0;
+                    }
+                    catch
+                    {
+                    }
+
+                    try
+                    {
+                        exitedAtUtc = currentProcess.ExitTime.ToUniversalTime();
+                    }
+                    catch
+                    {
+                    }
+
+                    try
+                    {
+                        await Task.Delay(StartupRestartProbeDelay, cancellationToken);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        return;
+                    }
+
+                    if (cancellationToken.IsCancellationRequested || _suppressGameProcessExitHandling)
+                    {
+                        return;
+                    }
+
+                    try
+                    {
+                        var restartedProcess = _gameProcessTracker.TryFindRestartedSpiceProcess(exitedAtUtc);
+                        if (restartedProcess != null)
+                        {
+                            restartedProcess.EnableRaisingEvents = true;
+                            _gameProcess = restartedProcess;
+                            _gameProcessTracker.RegisterTrackedSpiceProcess(restartedProcess);
+                            _logger.LogInformation("Detected restarted spice64 process. ProcessId={ProcessId}", restartedProcess.Id);
+                            AppendLaunchOutput(_launchSnapshot, "检测到 spice64 重新启动，继续监控中...");
+                            currentProcess.Dispose();
+                            continue;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogDebug(ex, "Failed to probe restarted spice64 process.");
+                    }
+
+                    await CompleteGameProcessLifecycleAsync(currentProcess, exitCode, abnormalExit, cancellationToken);
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Game process lifecycle monitor failed.");
+            }
+            finally
+            {
+                if (ReferenceEquals(_gameProcessMonitorCts, monitorCts))
+                {
+                    _gameProcessMonitorCts.Dispose();
+                    _gameProcessMonitorCts = null;
+                }
+                else
+                {
+                    monitorCts.Dispose();
+                }
+            }
+        }
+
+        private async Task CompleteGameProcessLifecycleAsync(Process exitedProcess, int exitCode, bool abnormalExit, CancellationToken cancellationToken)
+        {
+            try
+            {
+                SpiceCrashDiagnostic crashDiagnostic = null;
+                if (abnormalExit)
+                {
+                    crashDiagnostic = await _spiceCrashLogAnalyzer.AnalyzeAsync();
+                    _logger.LogInformation(
+                        "spice64 abnormal exit diagnostic resolved. ExitCode={ExitCode}, CrashSignal={CrashSignal}, CrashReason={CrashReason}, MatchedRuleId={MatchedRuleId}, MatchedLine={MatchedLine}, LogPath={LogPath}, LogReadSucceeded={LogReadSucceeded}",
+                        exitCode,
+                        crashDiagnostic.Signal,
+                        crashDiagnostic.ReasonText,
+                        crashDiagnostic.MatchedRuleId,
+                        crashDiagnostic.MatchedLine,
+                        crashDiagnostic.LogPath,
+                        crashDiagnostic.ReadSucceeded);
+                }
+
+                _logger.LogInformation("spice64 process exited. ExitCode={ExitCode}, AbnormalExit={AbnormalExit}", exitCode, abnormalExit);
+                AppendLaunchOutput(
+                    _launchSnapshot,
+                    abnormalExit
+                        ? $"游戏进程异常退出。错误信号：{crashDiagnostic?.Signal ?? SpiceCrashDiagnostic.UnknownSignal}，崩溃原因：{crashDiagnostic?.ReasonText ?? "未识别具体崩溃原因"}。"
+                        : "游戏进程已正常退出。",
+                    abnormalExit ? NotificationType.Warning : NotificationType.Information);
+
+                if (abnormalExit && !cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
+                {
+                    var diagnostic = crashDiagnostic ?? new SpiceCrashDiagnostic(
+                        SpiceCrashDiagnostic.UnknownSignal,
+                        "未识别具体崩溃原因",
+                        string.Empty,
+                        string.Empty,
+                        Path.Combine(_paths.GetContentsDirectoryPath(), "log.txt"),
+                        readSucceeded: false);
+                    _openLogAfterLaunchMessageDismissal = true;
+
+                    Dispatcher.UIThread.Post(() =>
+                    {
+                        if (_launchSnapshot != null)
+                        {
+                            ShowLaunchMessage(
+                                _launchSnapshot,
+                                NotificationType.Error,
+                                "进程异常退出",
+                                diagnostic.Signal,
+                                BuildCrashOverlayBody(diagnostic));
+                        }
+                        else
+                        {
+                            _openLogAfterLaunchMessageDismissal = false;
+                            _ = ShowLaunchLogDialogAsync();
+                        }
+                    });
+                }
+
+                if (cancellationToken.IsCancellationRequested || _suppressGameProcessExitHandling)
+                {
+                    return;
+                }
+
+                if (_gameProcessTracker.HasManagedAsphyxiaProcess())
+                {
+                    AppendLaunchOutput(_launchSnapshot, "正在关闭 Asphyxia Core...");
+                    if (_gameProcessTracker.TryStopManagedAsphyxiaProcess(out var stopErrorMessage))
+                    {
+                        _logger.LogInformation("Managed Asphyxia Core process stopped after game exit.");
+                        AppendLaunchOutput(_launchSnapshot, "Asphyxia Core 已关闭");
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Failed to stop managed Asphyxia Core process after game exit.");
+                        ShowWarningToast("Asphyxia 关闭提示", stopErrorMessage);
+                    }
+                }
+
+                if (_activeLaunchDisplayConfiguration?.IsDisplayConfigurationEnabled == true
+                    && _activeLaunchDisplayConfiguration.ExitRestore
+                    && _displayRestoreStates.Count > 0)
+                {
+                    RestoreAppliedDisplaySettings("游戏退出", shouldRestore: true, logToLaunchOutput: true);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Launch cleanup after game exit failed.");
+            }
+            finally
+            {
+                if (!cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
+                {
+                    _logger.LogInformation("Game process lifecycle cleanup completed.");
+                    if (_launchSnapshot != null)
+                    {
+                        _launchSnapshot.IsLaunching = false;
+                        _launchSnapshot.IsGameRunning = false;
+                        if (!abnormalExit)
+                        {
+                            ClearLaunchMessage(_launchSnapshot);
+                        }
+
+                        NotifyLaunchStateChanged(_launchSnapshot);
+                    }
+
+                    RestoreLauncherWindow();
+                }
+
+                _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
+
+                if (ReferenceEquals(_gameProcess, exitedProcess))
+                {
+                    _gameProcess.Dispose();
+                    _gameProcess = null;
+                }
+                else
+                {
+                    exitedProcess?.Dispose();
+                }
+            }
+        }
+
+        private async Task MinimizeLauncherWindowDelayedAsync()
+        {
+            try
+            {
+                await Task.Delay(LauncherAutoMinimizeDelay);
+
+                if (_launchSnapshot?.IsGameRunning == true)
+                {
+                    Dispatcher.UIThread.Post(() => WindowState = WindowState.Minimized);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to auto minimize launcher window.");
+            }
+        }
+
+        private void FailLaunch(LaunchWorkflowSnapshot launchState, string logMessage, string displayMessage = null)
+        {
+            StopLaunchWithMessage(
+                launchState,
+                NotificationType.Error,
+                "启动失败",
+                logMessage,
+                displayMessage ?? logMessage);
+        }
+
+        private void WarnLaunchAndAbort(LaunchWorkflowSnapshot launchState, string title, string bodyMessage)
+        {
+            StopLaunchWithMessage(
+                launchState,
+                NotificationType.Warning,
+                title,
+                bodyMessage,
+                bodyMessage);
+        }
+
+        private void StopLaunchWithMessage(
+            LaunchWorkflowSnapshot launchState,
+            NotificationType messageType,
+            string title,
+            string logMessage,
+            string bodyMessage,
+            string accentText = "")
+        {
+            AppendLaunchOutput(launchState, logMessage, messageType);
+            launchState.IsLaunching = false;
+            launchState.IsGameRunning = false;
+            NotifyLaunchStateChanged(launchState);
+            ShowLaunchMessage(launchState, messageType, title, accentText, bodyMessage);
+        }
+
+        private void ShowLaunchMessage(LaunchWorkflowSnapshot launchState, NotificationType messageType, string title, string accentText, string bodyText)
+        {
+            if (launchState == null)
+            {
                 return;
             }
 
-            HideLaunchMessageOverlay();
+            launchState.MessageType = messageType;
+            launchState.MessageTitle = title ?? string.Empty;
+            launchState.MessageAccentText = accentText ?? string.Empty;
+            launchState.MessageBodyText = bodyText ?? string.Empty;
+            launchState.IsMessageVisible = true;
+            NotifyLaunchMessageChanged(launchState);
         }
 
-        private void ShowLaunchMessageOverlay()
+        private static string BuildCrashOverlayBody(SpiceCrashDiagnostic diagnostic)
         {
-            if (ArcadeMessageOverlay == null)
+            string signalHint = diagnostic.Signal == SpiceCrashDiagnostic.UnknownSignal
+                ? $"{SystemEnvironment.NewLine}未捕获到错误信号"
+                : string.Empty;
+
+            return
+                $"检测到游戏进程异常退出{signalHint}{SystemEnvironment.NewLine}" +
+                $"崩溃原因：{diagnostic.ReasonText}{SystemEnvironment.NewLine}" +
+                "请阅读 log.txt";
+        }
+
+        private void ClearLaunchMessage(LaunchWorkflowSnapshot launchState)
+        {
+            if (launchState == null)
             {
                 return;
             }
 
-            ArcadeMessageOverlay.Show(
-                _launchSnapshot.MessageType,
-                _launchSnapshot.MessageTitle,
-                _launchSnapshot.MessageAccentText,
-                _launchSnapshot.MessageBodyText);
+            _openLogAfterLaunchMessageDismissal = false;
+            launchState.IsMessageVisible = false;
+            launchState.MessageType = NotificationType.Error;
+            launchState.MessageTitle = string.Empty;
+            launchState.MessageAccentText = string.Empty;
+            launchState.MessageBodyText = string.Empty;
+            NotifyLaunchMessageChanged(launchState);
         }
 
-        private void DismissLaunchMessageOverlay()
+        private void ClearLaunchLog(LaunchWorkflowSnapshot launchState)
         {
-            if (!_launchSnapshot.IsMessageVisible)
+            _logLines.Clear();
+            launchState.LaunchLogText = string.Empty;
+            NotifyLaunchLogChanged(launchState);
+        }
+
+        private void AppendLaunchOutput(LaunchWorkflowSnapshot launchState, string message, NotificationType type = NotificationType.Information)
+        {
+            if (launchState == null || string.IsNullOrWhiteSpace(message))
             {
                 return;
             }
 
-            HideLaunchMessageOverlay();
-            _ = _launchOrchestrator.DismissLaunchMessageAsync(_launchSnapshot);
-        }
-
-        private void HideLaunchMessageOverlay()
-        {
-            ArcadeMessageOverlay?.Hide();
-        }
-
-        private void OnLaunchMessageOverlayPointerPressed(object sender, PointerPressedEventArgs e)
-        {
-            if (!_launchSnapshot.IsMessageVisible)
+            foreach (var line in message.Replace("\r\n", "\n").Split('\n'))
             {
-                return;
+                _logLines.Enqueue(FormatLogEntry(line, type));
+                while (_logLines.Count > MaxLogLines)
+                {
+                    _logLines.Dequeue();
+                }
             }
 
-            DismissLaunchMessageOverlay();
-            e.Handled = true;
+            launchState.LaunchLogText = string.Join(SystemEnvironment.NewLine, _logLines);
+            NotifyLaunchLogChanged(launchState);
+        }
+
+        private void NotifyLaunchStateChanged(LaunchWorkflowSnapshot launchState)
+        {
+            if (launchState != null)
+            {
+                Dispatcher.UIThread.Post(ApplyLaunchStateToUi);
+            }
+        }
+
+        private void NotifyLaunchLogVisibilityChanged(LaunchWorkflowSnapshot launchState)
+        {
+            if (launchState != null)
+            {
+                Dispatcher.UIThread.Post(() => _ = ApplyLaunchLogVisibilityAsync());
+            }
+        }
+
+        private void NotifyLaunchLogChanged(LaunchWorkflowSnapshot launchState)
+        {
+            if (launchState != null)
+            {
+                Dispatcher.UIThread.Post(() => _ = ApplyLaunchLogTextAsync());
+            }
+        }
+
+        private void NotifyLaunchMessageChanged(LaunchWorkflowSnapshot launchState)
+        {
+            if (launchState != null)
+            {
+                Dispatcher.UIThread.Post(() => _ = ApplyLaunchMessageOverlayAsync());
+            }
+        }
+
+        private void RestoreLauncherWindow()
+        {
+            Dispatcher.UIThread.Post(() =>
+            {
+                if (WindowState == WindowState.Minimized)
+                {
+                    WindowState = WindowState.Normal;
+                }
+
+                Show();
+                Activate();
+            });
+        }
+
+        private static string FormatLogEntry(string line, NotificationType type)
+        {
+            string prefix = type switch
+            {
+                NotificationType.Error => "[错误] ",
+                NotificationType.Warning => "[警告] ",
+                _ => string.Empty
+            };
+
+            return $"[{DateTime.Now:HH:mm:ss}] {prefix}{line}";
+        }
+
+        private int KillProcessesByName(string processName)
+        {
+            int count = 0;
+            Process[] processes;
+            try
+            {
+                processes = Process.GetProcessesByName(processName);
+                _logger.LogInformation("Found processes for termination. ProcessName={ProcessName}, Count={Count}", processName, processes.Length);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to enumerate processes for termination. ProcessName={ProcessName}", processName);
+                ShowErrorToast("结束进程失败", $"获取进程列表 {processName} 时出错：{ex.Message}");
+                return 0;
+            }
+
+            foreach (var process in processes)
+            {
+                try
+                {
+                    int pid = process.Id;
+                    _logger.LogInformation("Killing process. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
+                    process.Kill();
+
+                    if (!process.WaitForExit(3000))
+                    {
+                        _logger.LogWarning("Process did not exit after Kill. Falling back to taskkill. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
+                        ShowWarningToast("进程未响应", $"{processName}.exe (PID: {pid}) 未响应，正在尝试强制终止。");
+                        using var taskKillProcess = Process.Start(new ProcessStartInfo
+                        {
+                            FileName = "taskkill",
+                            Arguments = $"/F /PID {pid}",
+                            CreateNoWindow = true,
+                            UseShellExecute = false,
+                            RedirectStandardOutput = true,
+                            RedirectStandardError = true
+                        });
+                        taskKillProcess?.WaitForExit(2000);
+                    }
+
+                    process.Refresh();
+                    if (!process.HasExited)
+                    {
+                        _logger.LogWarning("Process is still running after termination attempt. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
+                        ShowWarningToast("结束进程未完成", $"{processName}.exe (PID: {pid}) 仍在运行。");
+                        continue;
+                    }
+
+                    _logger.LogInformation("Process terminated. ProcessName={ProcessName}, ProcessId={ProcessId}", processName, pid);
+                    count++;
+                }
+                catch (InvalidOperationException)
+                {
+                }
+                catch (System.ComponentModel.Win32Exception ex)
+                {
+                    _logger.LogWarning(ex, "Permission denied while terminating process. ProcessName={ProcessName}", processName);
+                    ShowErrorToast("结束进程权限不足", ex.Message);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to terminate process. ProcessName={ProcessName}", processName);
+                    ShowErrorToast("结束进程失败", ex.Message);
+                }
+                finally
+                {
+                    process.Dispose();
+                }
+            }
+
+            return count;
+        }
+
+        private bool IsAsphyxiaCoreRunning(out int processCount)
+        {
+            processCount = 0;
+
+            try
+            {
+                var processes = Process.GetProcessesByName("asphyxia-core-x64");
+                try
+                {
+                    processCount = processes.Length;
+                    _logger.LogDebug("Asphyxia Core process inspection completed. Count={Count}", processCount);
+                    return processCount > 0;
+                }
+                finally
+                {
+                    foreach (var process in processes)
+                    {
+                        process.Dispose();
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Failed to inspect existing Asphyxia Core processes.");
+                return false;
+            }
+        }
+
+        private sealed record LaunchRequest(
+            bool NoAsphyxia,
+            bool UseSystemSpiceConfig,
+            bool DisableSpiceFso,
+            string ServerAddress,
+            DisplayConfigurationRequest Display,
+            bool AsphyxiaDevOnly);
+
+        private sealed record LaunchLogDocument(string Path, string Content);
+
+        private sealed class LaunchWorkflowSnapshot
+        {
+            public string LaunchLogText { get; set; } = string.Empty;
+
+            public bool IsLaunchLogVisible { get; set; }
+
+            public string ToggleLaunchLogText { get; set; } = "显示启动日志";
+
+            public bool IsLaunching { get; set; }
+
+            public bool IsGameRunning { get; set; }
+
+            public bool IsMessageVisible { get; set; }
+
+            public NotificationType MessageType { get; set; } = NotificationType.Error;
+
+            public string MessageTitle { get; set; } = string.Empty;
+
+            public string MessageAccentText { get; set; } = string.Empty;
+
+            public string MessageBodyText { get; set; } = string.Empty;
+
+            public bool CanStartLaunch => !IsLaunching && !IsGameRunning;
+        }
+
+    }
+
+    internal static class Spice64CommandLine
+    {
+        private const string LazyCfgRelative = "lazy/spicetools.xml";
+        private const string LazyPatchRelative = "lazy/spicetools_patch_manager.json";
+
+        public static string BuildGameLaunchArguments(bool useSystemConfig)
+        {
+            if (useSystemConfig)
+            {
+                return string.Empty;
+            }
+
+            return $"-cmdoverride -cfgpath {LazyCfgRelative} -patchcfgpath {LazyPatchRelative}";
+        }
+
+        public static string BuildConfigEditorArguments(bool useSystemConfig)
+        {
+            if (useSystemConfig)
+            {
+                return "-cfg -forcesoftware";
+            }
+
+            return $"-cfg -cmdoverride -forcesoftware -cfgpath {LazyCfgRelative} -patchcfgpath {LazyPatchRelative}";
         }
     }
 }

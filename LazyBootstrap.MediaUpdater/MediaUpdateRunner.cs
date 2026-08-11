@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace LazyBootstrap.MediaUpdate
 {
-    public static class MediaUpdateRunner
+    internal static class MediaUpdateRunner
     {
         public const int ExitSecurityBlocked = 4;
 
@@ -29,16 +29,16 @@ namespace LazyBootstrap.MediaUpdate
                 gamePath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gamePath));
                 stagingPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(stagingPath));
 
-                if (!MediaUpdatePaths.IsValidGameRoot(gamePath))
+                if (!MediaUpdateProtocol.IsValidGameRoot(gamePath))
                 {
                     log("错误: 游戏目录中未找到 contents 或 asphyxia。");
                     return 0;
                 }
 
-                string syncBat = MediaUpdatePaths.FindShallowestFile(stagingPath, MediaUpdateConstants.SyncBatchFileName);
+                string syncBat = MediaUpdateProtocol.FindShallowestFile(stagingPath, MediaUpdateProtocol.SyncBatchFileName);
                 if (string.IsNullOrEmpty(syncBat) || !File.Exists(syncBat))
                 {
-                    log($"错误: 在 staging 中未找到 {MediaUpdateConstants.SyncBatchFileName}。");
+                    log($"错误: 在 staging 中未找到 {MediaUpdateProtocol.SyncBatchFileName}。");
                     return 0;
                 }
 
@@ -92,7 +92,7 @@ namespace LazyBootstrap.MediaUpdate
                     }
                 }
 
-                log($"正在清理 {MediaUpdateConstants.UpdateStagingFolderName}…");
+                log($"正在清理 {MediaUpdateProtocol.UpdateStagingFolderName}…");
                 try
                 {
                     if (Directory.Exists(stagingPath))
@@ -109,14 +109,14 @@ namespace LazyBootstrap.MediaUpdate
 
                 await Task.Delay(5000, cancellationToken).ConfigureAwait(true);
 
-                string gameLauncherPath = Path.Combine(gamePath, MediaUpdateConstants.GameLauncherExeName);
-                string outerShellPath = Path.Combine(gamePath, MediaUpdateConstants.LauncherProcessImageFileName);
-                if (!TryStartShellExe(gameLauncherPath, gamePath, log, MediaUpdateConstants.GameLauncherExeName))
+                string gameLauncherPath = Path.Combine(gamePath, MediaUpdateProtocol.GameLauncherExeName);
+                string outerShellPath = Path.Combine(gamePath, MediaUpdateProtocol.LauncherProcessImageFileName);
+                if (!TryStartShellExe(gameLauncherPath, gamePath, log, MediaUpdateProtocol.GameLauncherExeName))
                 {
-                    if (!TryStartShellExe(outerShellPath, gamePath, log, MediaUpdateConstants.LauncherProcessImageFileName))
+                    if (!TryStartShellExe(outerShellPath, gamePath, log, MediaUpdateProtocol.LauncherProcessImageFileName))
                     {
                         log(
-                            $"未找到 {MediaUpdateConstants.GameLauncherExeName} 与 {MediaUpdateConstants.LauncherProcessImageFileName}，请从游戏根目录手动运行启动器。");
+                            $"未找到 {MediaUpdateProtocol.GameLauncherExeName} 与 {MediaUpdateProtocol.LauncherProcessImageFileName}，请从游戏根目录手动运行启动器。");
                     }
                 }
 
@@ -164,7 +164,7 @@ namespace LazyBootstrap.MediaUpdate
         {
             try
             {
-                string name = Path.GetFileNameWithoutExtension(MediaUpdateConstants.LauncherProcessImageFileName);
+                string name = Path.GetFileNameWithoutExtension(MediaUpdateProtocol.LauncherProcessImageFileName);
                 foreach (var p in Process.GetProcessesByName(name))
                 {
                     try
@@ -206,8 +206,8 @@ namespace LazyBootstrap.MediaUpdate
             startInfo.ArgumentList.Add("/c");
             startInfo.ArgumentList.Add("call");
             startInfo.ArgumentList.Add(syncBatPath);
-            startInfo.Environment[MediaUpdateConstants.GamePathVariableName] = gamePath;
-            startInfo.Environment[MediaUpdateConstants.SyncFromLauncherVariableName] = "1";
+            startInfo.Environment[MediaUpdateProtocol.GamePathVariableName] = gamePath;
+            startInfo.Environment[MediaUpdateProtocol.SyncFromLauncherVariableName] = "1";
 
             using var process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 

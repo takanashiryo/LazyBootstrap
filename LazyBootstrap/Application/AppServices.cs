@@ -5,7 +5,6 @@ using System.Reflection;
 using System.Threading.Tasks;
 using Serilog;
 using LazyBootstrap.FileSystem;
-using LazyBootstrap.Models;
 
 namespace LazyBootstrap.Application
 {
@@ -14,23 +13,23 @@ namespace LazyBootstrap.Application
     /// global exception logging. The application object graph is built explicitly by
     /// <see cref="ApplicationComposition"/>.
     /// </summary>
-    public static class AppServices
+    internal static class AppServices
     {
         private static bool _serilogInitialized;
         private static bool _globalExceptionLoggingRegistered;
         private static LegacyConfigMigrationResult _legacyConfigMigrationResult = LegacyConfigMigrationResult.NotRequired();
         private const string LogOutputTemplate = "[{Timestamp:yyyy-MM-dd HH:mm:ss.fff} {Level:u3}] [{ProcessId}] [{SourceContext}] {Message:lj}{NewLine}{Exception}";
 
-        public static LauncherRuntimeContext RuntimeContext { get; private set; }
+        public static LauncherPaths Paths { get; private set; }
 
         public static void InitializeSerilog(string[] args)
         {
             if (_serilogInitialized) return;
 
-            EnsureRuntimeContext(args);
+            EnsurePaths(args);
 
-            Directory.CreateDirectory(RuntimeContext.ApplicationDirectoryPath);
-            string logFilePath = Path.Combine(RuntimeContext.ApplicationDirectoryPath, "LazyBootstrap.log");
+            Directory.CreateDirectory(Paths.ApplicationDirectoryPath);
+            string logFilePath = Path.Combine(Paths.ApplicationDirectoryPath, "LazyBootstrap.log");
             string applicationVersion = ResolveApplicationVersion();
             ResetLogFile(logFilePath);
 
@@ -40,9 +39,9 @@ namespace LazyBootstrap.Application
                 .Enrich.WithProperty("Application", "LazyBootstrap")
                 .Enrich.WithProperty("ApplicationVersion", applicationVersion)
                 .Enrich.WithProperty("ProcessId", SystemEnvironment.ProcessId)
-                .Enrich.WithProperty("BaseDirectory", RuntimeContext.BaseDirectoryPath)
-                .Enrich.WithProperty("ApplicationDirectory", RuntimeContext.ApplicationDirectoryPath)
-                .Enrich.WithProperty("ConfigPath", RuntimeContext.ConfigFilePath)
+                .Enrich.WithProperty("BaseDirectory", Paths.BaseDir)
+                .Enrich.WithProperty("ApplicationDirectory", Paths.ApplicationDirectoryPath)
+                .Enrich.WithProperty("ConfigPath", Paths.ConfigFilePath)
                 .WriteTo.File(logFilePath, outputTemplate: LogOutputTemplate, shared: true)
                 .CreateLogger();
 
@@ -54,9 +53,9 @@ namespace LazyBootstrap.Application
                 "Serilog initialized. Version={Version}, ProcessId={ProcessId}, BaseDir={BaseDirectory}, ApplicationDir={ApplicationDirectory}, ConfigPath={ConfigPath}, LogPath={LogPath}",
                 applicationVersion,
                 SystemEnvironment.ProcessId,
-                RuntimeContext.BaseDirectoryPath,
-                RuntimeContext.ApplicationDirectoryPath,
-                RuntimeContext.ConfigFilePath,
+                Paths.BaseDir,
+                Paths.ApplicationDirectoryPath,
+                Paths.ConfigFilePath,
                 logFilePath);
         }
 
@@ -72,21 +71,13 @@ namespace LazyBootstrap.Application
             }
         }
 
-        private static void EnsureRuntimeContext(string[] args)
+        private static void EnsurePaths(string[] args)
         {
-            if (RuntimeContext != null) return;
+            if (Paths != null) return;
 
-            string baseDirectoryPath = AppPathResolver.ResolveBaseDir(
-                args,
-                SystemEnvironment.GetEnvironmentVariable("LAZYBOOTSTRAP_BASEDIR"),
-                AppDomain.CurrentDomain.BaseDirectory);
-            string applicationDirectoryPath = PathHelper.NormalizePath(AppDomain.CurrentDomain.BaseDirectory);
-            string configFilePath = PathHelper.NormalizePath(Path.Combine(applicationDirectoryPath, "config.toml"));
-            string legacyConfigFilePath = PathHelper.NormalizePath(Path.Combine(baseDirectoryPath, "config.toml"));
-
-            _legacyConfigMigrationResult = MigrateLegacyConfig(legacyConfigFilePath, configFilePath);
-
-            RuntimeContext = new LauncherRuntimeContext(baseDirectoryPath, applicationDirectoryPath, configFilePath);
+            Paths = LauncherPaths.Create(args);
+            string legacyConfigFilePath = PathHelper.NormalizePath(Path.Combine(Paths.BaseDir, "config.toml"));
+            _legacyConfigMigrationResult = MigrateLegacyConfig(legacyConfigFilePath, Paths.ConfigFilePath);
         }
 
         private static LegacyConfigMigrationResult MigrateLegacyConfig(string legacyConfigFilePath, string configFilePath)

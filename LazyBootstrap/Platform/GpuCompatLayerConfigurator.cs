@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using Microsoft.Extensions.Logging;
 using LazyBootstrap.FileSystem;
-using LazyBootstrap.Models;
 using LazyBootstrap.Serialization;
 
 namespace LazyBootstrap.Platform
@@ -15,7 +14,7 @@ namespace LazyBootstrap.Platform
         string DetectedRenderMode,
         bool HasInconsistentFiles);
 
-    public sealed class GpuCompatLayerConfigurator
+    internal sealed class GpuCompatLayerConfigurator
     {
         private static readonly string[] BaseGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
         private static readonly string[] ManagedGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
@@ -460,7 +459,7 @@ namespace LazyBootstrap.Platform
         }
     }
 
-    public sealed class FileStateSnapshot
+    internal sealed class FileStateSnapshot
     {
         private readonly byte[] _content;
 

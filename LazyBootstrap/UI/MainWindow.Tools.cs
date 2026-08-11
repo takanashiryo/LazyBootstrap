@@ -9,30 +9,29 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using LazyBootstrap.FileSystem;
 using LazyBootstrap.Services;
-using LazyBootstrap.Models;
 
 namespace LazyBootstrap.UI
 {
     public partial class MainWindow
     {
         private async void OnClearCacheClick(object sender, RoutedEventArgs e) =>
-                    await _toolsWorkflowService.ClearCacheAsync();
+                    await ClearCacheAsync();
         private async void OnAddFirewallRuleClick(object sender, RoutedEventArgs e) =>
-            await _toolsWorkflowService.AddFirewallRuleAsync();
+            await AddFirewallRuleAsync();
         private async void OnOpenAudioPanelClick(object sender, RoutedEventArgs e) =>
-            await _toolsWorkflowService.OpenAudioPanelAsync();
+            await OpenAudioPanelAsync();
         private async void OnInstallRuntimeClick(object sender, RoutedEventArgs e)
         {
             using var busy = BeginBusy(
                 BusyPresentation.RuntimeProgress,
                 "正在准备安装运行库...",
                 5d);
-            await _toolsWorkflowService.InstallRuntimeAsync(busy.UpdateProgress);
+            await InstallRuntimeAsync(busy.UpdateProgress);
         }
         private async void OnBackupSavedataClick(object sender, RoutedEventArgs e) =>
-            await _toolsWorkflowService.BackupSavedataAsync();
+            await BackupSavedataAsync();
         private async void OnImportSavedataClick(object sender, RoutedEventArgs e) =>
-            await _toolsWorkflowService.ImportSavedataAsync();
+            await ImportSavedataAsync();
         private async void OnMigrateSavedataClick(object sender, RoutedEventArgs e)
         {
             var directories = await PromptForMigrationDirectoriesAsync();
@@ -41,12 +40,12 @@ namespace LazyBootstrap.UI
                 return;
             }
 
-            var entries = _toolsWorkflowService.GetMigrationEntries(
+            var entries = GetMigrationEntries(
                 directories.Value.GameDirectory,
                 directories.Value.AsphyxiaDirectory);
             if (entries.Count == 0)
             {
-                _uiInteractionService.ShowWarningToast("存档迁移", "在指定目录中未找到可迁移的数据");
+                ShowWarningToast("存档迁移", "在指定目录中未找到可迁移的数据");
                 return;
             }
 
@@ -62,7 +61,7 @@ namespace LazyBootstrap.UI
                     : File.Exists(entry.DestinationPath))
                 .ToList();
             if (overwriteEntries.Count > 0
-                && !await _uiInteractionService.ShowDialogAsync(
+                && !await ShowDialogAsync(
                     "存档迁移覆盖提示",
                     "检测到以下目标文件已存在，是否覆盖？\n" +
                     string.Join("\n", overwriteEntries.Select(entry => $"• {entry.DisplayName}")),
@@ -73,7 +72,7 @@ namespace LazyBootstrap.UI
                 return;
             }
 
-            await _toolsWorkflowService.MigrateSavedataAsync(selectedEntries);
+            await MigrateSavedataAsync(selectedEntries);
         }
 
         private async Task<(string GameDirectory, string AsphyxiaDirectory)?> PromptForMigrationDirectoriesAsync()
@@ -100,7 +99,7 @@ namespace LazyBootstrap.UI
                     }
                 };
 
-                if (!await _uiInteractionService.ShowDialogAsync("存档迁移", content, "下一步", "取消"))
+                if (!await ShowDialogAsync("存档迁移", content, "下一步", "取消"))
                 {
                     return null;
                 }
@@ -109,7 +108,7 @@ namespace LazyBootstrap.UI
                 string asphyxiaDirectory = PathHelper.NormalizePath(asphyxiaDirectoryBox.Text);
                 if (!Directory.Exists(gameDirectory) || !Directory.Exists(asphyxiaDirectory))
                 {
-                    _uiInteractionService.ShowWarningToast("存档迁移", "请选择有效的旧游戏目录和旧氧无目录。");
+                    ShowWarningToast("存档迁移", "请选择有效的旧游戏目录和旧氧无目录。");
                     continue;
                 }
 
@@ -123,7 +122,7 @@ namespace LazyBootstrap.UI
             button.Classes.Add("Basic");
             button.Click += async (_, _) =>
             {
-                string path = await _uiInteractionService.PickFolderAsync(title);
+                string path = await PickFolderAsync(title);
                 if (!string.IsNullOrWhiteSpace(path))
                 {
                     target.Text = path;
@@ -166,7 +165,7 @@ namespace LazyBootstrap.UI
                     new ScrollViewer { MaxHeight = 320, Content = panel }
                 }
             };
-            if (!await _uiInteractionService.ShowDialogAsync("选择迁移内容", content, "开始迁移", "取消"))
+            if (!await ShowDialogAsync("选择迁移内容", content, "开始迁移", "取消"))
             {
                 return null;
             }
@@ -177,7 +176,7 @@ namespace LazyBootstrap.UI
                 .ToList();
             if (selected.Count == 0)
             {
-                _uiInteractionService.ShowWarningToast("存档迁移", "请至少选择一个要迁移的项目。");
+                ShowWarningToast("存档迁移", "请至少选择一个要迁移的项目。");
                 return null;
             }
 

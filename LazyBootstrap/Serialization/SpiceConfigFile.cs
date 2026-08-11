@@ -7,11 +7,28 @@ using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
 using LazyBootstrap.FileSystem;
-using LazyBootstrap.Models;
 
 namespace LazyBootstrap.Serialization
 {
-    public sealed class SpiceConfigFile
+    internal sealed class SpiceOptionUpdate
+    {
+        public SpiceOptionUpdate(string name, string value, bool removeWhenEmpty = false)
+        {
+            Name = name ?? string.Empty;
+            Value = value ?? string.Empty;
+            RemoveWhenEmpty = removeWhenEmpty;
+        }
+
+        public string Name { get; }
+
+        public string Value { get; }
+
+        public bool RemoveWhenEmpty { get; }
+
+        public bool ShouldRemove => RemoveWhenEmpty && string.IsNullOrEmpty(Value);
+    }
+
+    internal sealed class SpiceConfigFile
     {
         private readonly object _sync = new object();
 
@@ -370,7 +387,7 @@ namespace LazyBootstrap.Serialization
         }
     }
 
-    public sealed class SpiceOptionsContext
+    internal sealed class SpiceOptionsContext
     {
         public SpiceOptionsContext(string filePath, XDocument document, XElement soundVoltex, XElement optionsElement, Dictionary<string, XElement> optionLookup)
         {

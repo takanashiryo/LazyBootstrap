@@ -4,12 +4,32 @@ using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using LazyBootstrap.Models;
 
 namespace LazyBootstrap.Platform
 {
 
-    public sealed class WindowsDefenderExclusionService
+    internal enum WindowsDefenderExclusionStatus
+    {
+        Added,
+        AlreadyExcluded,
+        Skipped,
+        Failed
+    }
+
+    internal sealed class WindowsDefenderExclusionResult
+    {
+        public WindowsDefenderExclusionResult(WindowsDefenderExclusionStatus status, string message)
+        {
+            Status = status;
+            Message = message ?? string.Empty;
+        }
+
+        public WindowsDefenderExclusionStatus Status { get; }
+
+        public string Message { get; }
+    }
+
+    internal sealed class WindowsDefenderExclusionService
     {
         private readonly ILogger<WindowsDefenderExclusionService> _logger;
 

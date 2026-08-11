@@ -6,32 +6,21 @@ using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls.Notifications;
 using Microsoft.Extensions.Logging;
-using LazyBootstrap.Models;
 using LazyBootstrap.Platform;
 using LazyBootstrap.Services;
 
-namespace LazyBootstrap.Services
+namespace LazyBootstrap.UI
 {
-    public sealed class ToolsOrchestrator
+    public partial class MainWindow
     {
-        private readonly LauncherPaths _paths;
-        private readonly SavedataTransferPlanner _savedataTransferPlanner;
-        private readonly UiInteractionService _uiInteractionService;
-        private readonly ILogger<ToolsOrchestrator> _logger;
+        private SavedataTransferService _savedataTransferService = null!;
 
-        public ToolsOrchestrator(
-            LauncherPaths paths,
-            SavedataTransferPlanner savedataTransferPlanner,
-            UiInteractionService uiInteractionService,
-            ILogger<ToolsOrchestrator> logger)
+        private void InitializeToolsServices(SavedataTransferService savedataTransferService)
         {
-            _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _savedataTransferPlanner = savedataTransferPlanner ?? throw new ArgumentNullException(nameof(savedataTransferPlanner));
-            _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _savedataTransferService = savedataTransferService ?? throw new ArgumentNullException(nameof(savedataTransferService));
         }
 
-        public Task ClearCacheAsync()
+        private Task ClearCacheAsync()
         {
             string cachePath = Path.Combine(_paths.GetContentsDirectoryPath(), "data_mods", "_cache");
             _logger.LogInformation("Cache cleanup requested. CachePath={CachePath}", cachePath);
@@ -41,30 +30,30 @@ namespace LazyBootstrap.Services
                 {
                     Directory.Delete(cachePath, true);
                     _logger.LogInformation("Cache cleanup completed.");
-                    _uiInteractionService.ShowInfoToast("清理缓存", "缓存已成功清理。");
+                    ShowInfoToast("清理缓存", "缓存已成功清理。");
                 }
                 else
                 {
                     _logger.LogWarning("Cache cleanup skipped because the cache directory does not exist.");
-                    _uiInteractionService.ShowWarningToast("清理缓存", "缓存文件夹不存在。");
+                    ShowWarningToast("清理缓存", "缓存文件夹不存在。");
                 }
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Cache cleanup failed.");
-                _uiInteractionService.ShowErrorToast("清理缓存失败", ex.Message);
+                ShowErrorToast("清理缓存失败", ex.Message);
             }
 
             return Task.CompletedTask;
         }
 
-        public async Task AddFirewallRuleAsync()
+        private async Task AddFirewallRuleAsync()
         {
             const string ruleName = "SpiceTools";
             string spicePath = _paths.GetSpicePath();
             _logger.LogInformation("Firewall rule creation requested.");
 
-            bool confirmed = await _uiInteractionService.ShowDialogAsync(
+            bool confirmed = await ShowDialogAsync(
                 "添加防火墙规则",
                 "确认要执行吗？\n如果之前已经添加过规则，将会重复添加。",
                 "确认",
@@ -79,7 +68,7 @@ namespace LazyBootstrap.Services
             if (!File.Exists(spicePath))
             {
                 _logger.LogWarning("Firewall rule creation failed because spice64.exe was not found: {SpicePath}", spicePath);
-                _uiInteractionService.ShowErrorToast("添加防火墙规则失败", $"未找到目标程序：{spicePath}");
+                ShowErrorToast("添加防火墙规则失败", $"未找到目标程序：{spicePath}");
                 return;
             }
 
@@ -97,7 +86,7 @@ namespace LazyBootstrap.Services
                 if (process == null)
                 {
                     _logger.LogWarning("Firewall rule creation failed because netsh process creation returned null.");
-                    _uiInteractionService.ShowErrorToast("添加防火墙规则失败", "未能启动 netsh。");
+                    ShowErrorToast("添加防火墙规则失败", "未能启动 netsh。");
                     return;
                 }
 
@@ -105,25 +94,25 @@ namespace LazyBootstrap.Services
                 _logger.LogInformation("Firewall rule netsh process exited. ExitCode={ExitCode}", process.ExitCode);
                 if (process.ExitCode != 0)
                 {
-                    _uiInteractionService.ShowErrorToast("添加防火墙规则失败", $"netsh 退出代码：{process.ExitCode}");
+                    ShowErrorToast("添加防火墙规则失败", $"netsh 退出代码：{process.ExitCode}");
                     return;
                 }
 
-                _uiInteractionService.ShowInfoToast("防火墙规则", "防火墙规则添加完成。");
+                ShowInfoToast("防火墙规则", "防火墙规则添加完成。");
             }
             catch (System.ComponentModel.Win32Exception ex) when (ex.NativeErrorCode == 1223)
             {
                 _logger.LogWarning("Firewall rule creation cancelled at UAC prompt.");
-                _uiInteractionService.ShowWarningToast("防火墙规则", "用户取消了 UAC 提示，未添加规则。");
+                ShowWarningToast("防火墙规则", "用户取消了 UAC 提示，未添加规则。");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Firewall rule creation failed.");
-                _uiInteractionService.ShowErrorToast("添加防火墙规则失败", ex.Message);
+                ShowErrorToast("添加防火墙规则失败", ex.Message);
             }
         }
 
-        public Task OpenAudioPanelAsync()
+        private Task OpenAudioPanelAsync()
         {
             try
             {
@@ -133,13 +122,13 @@ namespace LazyBootstrap.Services
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to open audio control panel.");
-                _uiInteractionService.ShowErrorToast("打开音频面板失败", ex.Message);
+                ShowErrorToast("打开音频面板失败", ex.Message);
             }
 
             return Task.CompletedTask;
         }
 
-        public async Task InstallRuntimeAsync(Action<string, double> reportProgress)
+        private async Task InstallRuntimeAsync(Action<string, double> reportProgress)
         {
             string runtimePath = _paths.GetRuntimeDirectoryPath();
             string dxSetupPath = Path.Combine(runtimePath, "directx", "DXSETUP.exe");
@@ -153,7 +142,7 @@ namespace LazyBootstrap.Services
             if (!hasDirectXInstaller && !hasVcRedistInstaller)
             {
                 _logger.LogWarning("Runtime installation failed because no installer was found.");
-                _uiInteractionService.ShowErrorToast("安装运行库失败", "未找到运行库安装程序。请确保文件存在。");
+                ShowErrorToast("安装运行库失败", "未找到运行库安装程序。请确保文件存在。");
                 return;
             }
 
@@ -179,13 +168,13 @@ namespace LazyBootstrap.Services
                     if (dxResult == -1223)
                     {
                         Report("DirectX 安装已取消", lastProgress);
-                        _uiInteractionService.ShowWarningToast("安装运行库", "用户取消了 DirectX 安装授权。");
+                        ShowWarningToast("安装运行库", "用户取消了 DirectX 安装授权。");
                         return;
                     }
 
                     if (dxResult != 0)
                     {
-                        _uiInteractionService.ShowWarningToast("DirectX 安装", $"DirectX 安装返回代码: {dxResult}");
+                        ShowWarningToast("DirectX 安装", $"DirectX 安装返回代码: {dxResult}");
                     }
 
                     completedInstallers++;
@@ -204,13 +193,13 @@ namespace LazyBootstrap.Services
                     if (vcResult == -1223)
                     {
                         Report("Visual C++ Redistributable 安装已取消", lastProgress);
-                        _uiInteractionService.ShowWarningToast("安装运行库", "用户取消了 Visual C++ Redistributable 安装授权。");
+                        ShowWarningToast("安装运行库", "用户取消了 Visual C++ Redistributable 安装授权。");
                         return;
                     }
 
                     if (vcResult != 0)
                     {
-                        _uiInteractionService.ShowWarningToast("VC++ Redist 安装", $"Visual C++ Redistributable 安装返回代码: {vcResult}");
+                        ShowWarningToast("VC++ Redist 安装", $"Visual C++ Redistributable 安装返回代码: {vcResult}");
                     }
 
                     completedInstallers++;
@@ -222,12 +211,12 @@ namespace LazyBootstrap.Services
                 Report("运行库安装完成", 100d);
                 await Task.Delay(250);
                 _logger.LogInformation("Runtime installation workflow completed.");
-                _uiInteractionService.ShowInfoToast("运行库安装完成", "DirectX 和 Visual C++ Redistributable 安装完成。");
+                ShowInfoToast("运行库安装完成", "DirectX 和 Visual C++ Redistributable 安装完成。");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Runtime installation failed.");
-                _uiInteractionService.ShowErrorToast("安装运行库失败", ex.Message);
+                ShowErrorToast("安装运行库失败", ex.Message);
             }
         }
 
@@ -244,34 +233,34 @@ namespace LazyBootstrap.Services
             return startProgress + ((maxProgressBeforeCompletion - startProgress) * (units / totalInstallers));
         }
 
-        public async Task BackupSavedataAsync()
+        private async Task BackupSavedataAsync()
         {
             _logger.LogInformation("Savedata backup requested.");
             string sevenZipPath = _paths.ResolveSevenZipExecutablePath();
             if (!File.Exists(sevenZipPath))
             {
                 _logger.LogWarning("Savedata backup failed because 7za.exe was not found: {SevenZipPath}", sevenZipPath);
-                _uiInteractionService.ShowErrorToast("存档备份失败", $"未找到 7za.exe：{sevenZipPath}");
+                ShowErrorToast("存档备份失败", $"未找到 7za.exe：{sevenZipPath}");
                 return;
             }
 
-            var entries = _savedataTransferPlanner.GetCurrentSavedataEntries();
+            var entries = _savedataTransferService.GetCurrentSavedataEntries();
             _logger.LogInformation("Savedata backup entries resolved. EntryCount={EntryCount}", entries.Count);
             if (entries.Count == 0)
             {
                 _logger.LogWarning("Savedata backup skipped because no entries were found.");
-                _uiInteractionService.ShowWarningToast("存档备份", "未找到可备份的数据");
+                ShowWarningToast("存档备份", "未找到可备份的数据");
                 return;
             }
 
             string backupDirectory = _paths.GetSavedataBackupDirectoryPath();
             Directory.CreateDirectory(backupDirectory);
             string backupFilePath = Path.Combine(backupDirectory, $"savedata_{DateTime.Now:yyyyMMdd_HHmmss}.7z");
-            string stagingDirectory = SavedataTransferOperations.CreateTemporaryWorkingDirectory("backup");
+            string stagingDirectory = _savedataTransferService.CreateTemporaryWorkingDirectory("backup");
 
             try
             {
-                SavedataTransferOperations.StageEntries(entries, stagingDirectory);
+                _savedataTransferService.StageEntries(entries, stagingDirectory);
                 var stagedTopLevelEntries = Directory.GetFileSystemEntries(stagingDirectory)
                     .Select(Path.GetFileName)
                     .Where(name => !string.IsNullOrWhiteSpace(name))
@@ -279,7 +268,7 @@ namespace LazyBootstrap.Services
                 if (stagedTopLevelEntries.Count == 0)
                 {
                     _logger.LogWarning("Savedata backup staging generated no compressible entries.");
-                    _uiInteractionService.ShowWarningToast("存档备份", "未生成可压缩的备份内容。");
+                    ShowWarningToast("存档备份", "未生成可压缩的备份内容。");
                     return;
                 }
 
@@ -289,32 +278,32 @@ namespace LazyBootstrap.Services
                 if (result.ExitCode != 0)
                 {
                     _logger.LogWarning("Savedata backup failed during archive creation.");
-                    _uiInteractionService.ShowErrorToast("存档备份失败", ProcessExecutionHelper.GetProcessErrorDetail(result));
+                    ShowErrorToast("存档备份失败", ProcessExecutionHelper.GetProcessErrorDetail(result));
                     return;
                 }
 
                 _logger.LogInformation("Savedata backup completed. BackupPath={BackupPath}", backupFilePath);
-                _uiInteractionService.ShowInfoToast("存档备份完成", $"已备份到：{backupFilePath}");
+                ShowInfoToast("存档备份完成", $"已备份到：{backupFilePath}");
             }
             finally
             {
                 _logger.LogDebug("Deleting savedata backup staging directory.");
-                SavedataTransferOperations.DeleteDirectoryIfExists(stagingDirectory);
+                _savedataTransferService.DeleteDirectoryIfExists(stagingDirectory);
             }
         }
 
-        public async Task ImportSavedataAsync()
+        private async Task ImportSavedataAsync()
         {
             _logger.LogInformation("Savedata import requested.");
             string sevenZipPath = _paths.ResolveSevenZipExecutablePath();
             if (!File.Exists(sevenZipPath))
             {
                 _logger.LogWarning("Savedata import failed because 7za.exe was not found: {SevenZipPath}", sevenZipPath);
-                _uiInteractionService.ShowErrorToast("存档导入失败", $"未找到 7za.exe：{sevenZipPath}");
+                ShowErrorToast("存档导入失败", $"未找到 7za.exe：{sevenZipPath}");
                 return;
             }
 
-            string archivePath = await _uiInteractionService.PickFileAsync("选择存档备份文件", new[] { "*.7z" });
+            string archivePath = await PickFileAsync("选择存档备份文件", new[] { "*.7z" });
             if (string.IsNullOrWhiteSpace(archivePath))
             {
                 _logger.LogInformation("Savedata import cancelled before archive selection.");
@@ -322,10 +311,10 @@ namespace LazyBootstrap.Services
             }
             _logger.LogInformation("Savedata import archive selected: {ArchivePath}", archivePath);
 
-            var targetEntries = _savedataTransferPlanner.GetCurrentSavedataTargets();
-            if (SavedataTransferPlanner.HasExistingTargets(targetEntries))
+            var targetEntries = _savedataTransferService.GetCurrentSavedataTargets();
+            if (SavedataTransferService.HasExistingTargets(targetEntries))
             {
-                bool confirmed = await _uiInteractionService.ShowDialogAsync(
+                bool confirmed = await ShowDialogAsync(
                     "存档导入覆盖提示",
                     "检测到当前游戏目录或氧无目录中已有存档文件，是否覆盖？",
                     "覆盖",
@@ -338,7 +327,7 @@ namespace LazyBootstrap.Services
                 }
             }
 
-            string extractionDirectory = SavedataTransferOperations.CreateTemporaryWorkingDirectory("import");
+            string extractionDirectory = _savedataTransferService.CreateTemporaryWorkingDirectory("import");
             try
             {
                 string arguments = $"x \"{archivePath}\" -o\"{extractionDirectory}\" -y";
@@ -347,53 +336,53 @@ namespace LazyBootstrap.Services
                 if (extractionResult.ExitCode != 0)
                 {
                     _logger.LogWarning("Savedata import failed during extraction.");
-                    _uiInteractionService.ShowErrorToast("存档导入失败", ProcessExecutionHelper.GetProcessErrorDetail(extractionResult));
+                    ShowErrorToast("存档导入失败", ProcessExecutionHelper.GetProcessErrorDetail(extractionResult));
                     return;
                 }
 
-                var extractedEntries = _savedataTransferPlanner.BuildArchiveEntriesFromDirectory(extractionDirectory);
+                var extractedEntries = _savedataTransferService.BuildArchiveEntriesFromDirectory(extractionDirectory);
                 _logger.LogInformation("Savedata import extracted entries resolved. EntryCount={EntryCount}", extractedEntries.Count);
                 if (extractedEntries.Count == 0)
                 {
                     _logger.LogWarning("Savedata import skipped because the archive contained no importable entries.");
-                    _uiInteractionService.ShowWarningToast("存档导入", "备份文件中未找到可导入的数据");
+                    ShowWarningToast("存档导入", "备份文件中未找到可导入的数据");
                     return;
                 }
 
-                await Task.Run(() => SavedataTransferOperations.CopyEntries(extractedEntries));
+                await Task.Run(() => _savedataTransferService.CopyEntries(extractedEntries));
                 _logger.LogInformation("Savedata import completed.");
-                _uiInteractionService.ShowInfoToast("存档导入完成", "已导入到当前设置的游戏目录和氧无目录。");
+                ShowInfoToast("存档导入完成", "已导入到当前设置的游戏目录和氧无目录。");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Savedata import failed.");
-                _uiInteractionService.ShowErrorToast("存档导入失败", ex.Message);
+                ShowErrorToast("存档导入失败", ex.Message);
             }
             finally
             {
                 _logger.LogDebug("Deleting savedata import extraction directory.");
-                SavedataTransferOperations.DeleteDirectoryIfExists(extractionDirectory);
+                _savedataTransferService.DeleteDirectoryIfExists(extractionDirectory);
             }
         }
 
-        public IReadOnlyList<SavedataTransferEntry> GetMigrationEntries(string gameDirectory, string asphyxiaDirectory)
+        private IReadOnlyList<SavedataTransferEntry> GetMigrationEntries(string gameDirectory, string asphyxiaDirectory)
         {
-            return _savedataTransferPlanner.BuildMigrationEntries(gameDirectory, asphyxiaDirectory);
+            return _savedataTransferService.BuildMigrationEntries(gameDirectory, asphyxiaDirectory);
         }
 
-        public async Task MigrateSavedataAsync(IReadOnlyList<SavedataTransferEntry> selectedEntries)
+        private async Task MigrateSavedataAsync(IReadOnlyList<SavedataTransferEntry> selectedEntries)
         {
             ArgumentNullException.ThrowIfNull(selectedEntries);
             try
             {
-                await Task.Run(() => SavedataTransferOperations.CopyEntries(selectedEntries));
+                await Task.Run(() => _savedataTransferService.CopyEntries(selectedEntries));
                 _logger.LogInformation("Savedata migration completed.");
-                _uiInteractionService.ShowInfoToast("存档迁移完成", "已迁移到当前设置的游戏目录和氧无目录。");
+                ShowInfoToast("存档迁移完成", "已迁移到当前设置的游戏目录和氧无目录。");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Savedata migration failed.");
-                _uiInteractionService.ShowErrorToast("存档迁移失败", ex.Message);
+                ShowErrorToast("存档迁移失败", ex.Message);
             }
         }
 

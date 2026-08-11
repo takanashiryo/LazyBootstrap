@@ -6,7 +6,7 @@ using System.Xml.Linq;
 
 namespace LazyBootstrap.Platform
 {
-    public sealed class WindowsStartupService
+    internal sealed class WindowsStartupService
     {
         private const string StartupTaskName = "LazyBootstrap Startup";
         private const string SchtasksExecutableName = "schtasks.exe";

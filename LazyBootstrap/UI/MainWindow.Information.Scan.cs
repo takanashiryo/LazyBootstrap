@@ -6,30 +6,15 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.Extensions.Logging;
 using Microsoft.Win32;
-using LazyBootstrap.Models;
 using LazyBootstrap.Services;
 
-namespace LazyBootstrap.Services
+namespace LazyBootstrap.UI
 {
 
-    internal sealed class DiagnosticOrchestrator
+    public partial class MainWindow
     {
         private static readonly List<EnvironmentScan.ScanResultItem> EmptyScanBucket = [];
-        private readonly LauncherPaths _paths;
-        private readonly UiInteractionService _uiInteractionService;
-        private readonly ILogger<DiagnosticOrchestrator> _logger;
-
-        public DiagnosticOrchestrator(
-            LauncherPaths paths,
-            UiInteractionService uiInteractionService,
-            ILogger<DiagnosticOrchestrator> logger)
-        {
-            _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
-
-        public Task InitializeInfoAsync(EnvironmentScanResult presentation)
+        private Task InitializeInfoAsync(EnvironmentScanResult presentation)
         {
             ArgumentNullException.ThrowIfNull(presentation);
             _logger.LogInformation("Environment information initialization started.");
@@ -43,7 +28,7 @@ namespace LazyBootstrap.Services
             return Task.CompletedTask;
         }
 
-        public async Task RunScanAsync(EnvironmentScanResult presentation)
+        private async Task RunScanAsync(EnvironmentScanResult presentation)
         {
             ArgumentNullException.ThrowIfNull(presentation);
             _logger.LogInformation("Environment scan started.");
@@ -59,7 +44,6 @@ namespace LazyBootstrap.Services
                     _paths.GetContentsDirectoryPath(),
                     _paths.GetBundledLibsDirectoryPath());
 
-                presentation.EnvironmentSummary = summary.ErrorSummary ?? string.Empty;
                 presentation.HasEnvironmentScanErrors = summary.HadError;
                 PopulateScanSlots(presentation, summary);
                 stopwatch.Stop();
@@ -77,7 +61,7 @@ namespace LazyBootstrap.Services
             {
                 stopwatch.Stop();
                 _logger.LogError(ex, "Environment scan failed.");
-                _uiInteractionService.ShowErrorToast("环境检查失败", ex.Message);
+                ShowErrorToast("环境检查失败", ex.Message);
             }
         }
 
@@ -181,7 +165,6 @@ namespace LazyBootstrap.Services
 
             vm.HasScanRootAlerts = vm.ScanRootAlerts.Count > 0;
             vm.ScanUiReady = true;
-            vm.NotifyScanPresentationChanged();
         }
 
         private sealed class DllGroupSpec

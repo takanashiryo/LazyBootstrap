@@ -2,7 +2,7 @@ using System.Text;
 
 namespace LazyBootstrap.Services
 {
-    public static class SpiceLogEncoding
+    internal static class SpiceLogEncoding
     {
         private static readonly Encoding ShiftJisEncoding = CreateShiftJisEncoding();
 

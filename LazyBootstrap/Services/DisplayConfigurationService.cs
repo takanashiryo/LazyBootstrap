@@ -8,7 +8,7 @@ using System.Runtime.Versioning;
 namespace LazyBootstrap.Services
 {
 
-    public sealed class DisplayDiscoveryResult
+    internal sealed class DisplayDiscoveryResult
     {
         public DisplayDiscoveryResult(IReadOnlyList<DisplayInfo> displays, string errorMessage = "")
         {
@@ -23,7 +23,7 @@ namespace LazyBootstrap.Services
         public bool Succeeded => string.IsNullOrWhiteSpace(ErrorMessage);
     }
 
-    public sealed class DisplayModeQueryResult
+    internal sealed class DisplayModeQueryResult
     {
         public DisplayModeQueryResult(IReadOnlyList<DisplayMode> modes, string errorMessage = "")
         {
@@ -38,7 +38,7 @@ namespace LazyBootstrap.Services
         public bool Succeeded => string.IsNullOrWhiteSpace(ErrorMessage);
     }
 
-    public sealed class DisplayStateQueryResult
+    internal sealed class DisplayStateQueryResult
     {
         public DisplayStateQueryResult(DisplayState state, string errorMessage = "")
         {
@@ -53,7 +53,7 @@ namespace LazyBootstrap.Services
         public bool Succeeded => State != null && string.IsNullOrWhiteSpace(ErrorMessage);
     }
 
-    public sealed class DisplayConfigurationResult
+    internal sealed class DisplayConfigurationResult
     {
         public DisplayConfigurationResult(bool succeeded, string errorMessage = "")
         {
@@ -76,7 +76,7 @@ namespace LazyBootstrap.Services
         }
     }
 
-    public sealed class DisplayInfo
+    internal sealed class DisplayInfo
     {
         public string DeviceName { get; init; } = string.Empty;
 
@@ -87,7 +87,7 @@ namespace LazyBootstrap.Services
         public bool IsPrimary { get; init; }
     }
 
-    public sealed class DisplayMode
+    internal sealed class DisplayMode
     {
         public int Width { get; init; }
 
@@ -96,7 +96,7 @@ namespace LazyBootstrap.Services
         public int RefreshRate { get; init; }
     }
 
-    public sealed class DisplayState
+    internal sealed class DisplayState
     {
         public string DeviceName { get; init; } = string.Empty;
 
@@ -109,7 +109,7 @@ namespace LazyBootstrap.Services
         public int RefreshRate { get; init; }
     }
 
-    public class WindowsDisplayConfigurationService
+    internal class WindowsDisplayConfigurationService
     {
         private static readonly (int Width, int Height)[] CommonProbeResolutions =
         {

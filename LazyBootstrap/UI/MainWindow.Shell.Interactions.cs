@@ -11,55 +11,30 @@ using SukiUI.Dialogs;
 using SukiUI.Toasts;
 using LazyBootstrap.FileSystem;
 
-namespace LazyBootstrap.Services
+namespace LazyBootstrap.UI
 {
-
-    public sealed class UiInteractionService
+    public partial class MainWindow
     {
-        private readonly ISukiDialogManager _dialogManager;
-        private readonly ISukiToastManager _toastManager;
         private static Bitmap _informationDialogIconCache;
         private static Bitmap _warningDialogIconCache;
         private static Bitmap _errorDialogIconCache;
-        private Window _window;
 
-        public UiInteractionService(
-            ISukiDialogManager dialogManager,
-            ISukiToastManager toastManager)
-        {
-            _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
-            _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
-        }
-
-        public void AttachWindow(Window window)
-        {
-            _window = window;
-        }
-
-        public void DetachWindow(Window window)
-        {
-            if (ReferenceEquals(_window, window))
-            {
-                _window = null;
-            }
-        }
-
-        public void ShowInfoToast(string title, string content)
+        private void ShowInfoToast(string title, string content)
         {
             CreateToast(title, content, NotificationType.Information, 3);
         }
 
-        public void ShowWarningToast(string title, string content)
+        private void ShowWarningToast(string title, string content)
         {
             CreateToast(title, content, NotificationType.Warning, 4);
         }
 
-        public void ShowErrorToast(string title, string content)
+        private void ShowErrorToast(string title, string content)
         {
             CreateToast(title, content, NotificationType.Error, 4);
         }
 
-        public Task<bool> ShowDialogAsync(
+        private Task<bool> ShowDialogAsync(
             string title,
             object content,
             string confirmText,
@@ -87,12 +62,11 @@ namespace LazyBootstrap.Services
             }
 
             builder.Dismiss().ByClickingBackground();
-
             ApplyDialogNotificationIcon(builder, type, customIconAssetName);
             return builder.TryShowAsync();
         }
 
-        public Task ShowMessageDialogAsync(
+        private Task ShowMessageDialogAsync(
             string title,
             object content,
             string buttonText,
@@ -117,30 +91,27 @@ namespace LazyBootstrap.Services
             return builder.TryShowAsync();
         }
 
-        public async Task<string> PickFolderAsync(string title)
+        private async Task<string> PickFolderAsync(string title)
         {
-            if (_window?.StorageProvider == null)
+            if (StorageProvider == null)
             {
                 return string.Empty;
             }
 
-            var folders = await _window.StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+            var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
             {
                 Title = title ?? string.Empty,
                 AllowMultiple = false
             });
 
-            if (folders == null || folders.Count == 0)
-            {
-                return string.Empty;
-            }
-
-            return PathHelper.NormalizePath(folders[0].TryGetLocalPath());
+            return folders == null || folders.Count == 0
+                ? string.Empty
+                : PathHelper.NormalizePath(folders[0].TryGetLocalPath());
         }
 
-        public async Task<string> PickFileAsync(string title, IReadOnlyList<string> patterns)
+        private async Task<string> PickFileAsync(string title, IReadOnlyList<string> patterns)
         {
-            if (_window?.StorageProvider == null)
+            if (StorageProvider == null)
             {
                 return string.Empty;
             }
@@ -151,7 +122,7 @@ namespace LazyBootstrap.Services
                 AllowMultiple = false
             };
 
-            if (patterns != null && patterns.Count > 0)
+            if (patterns is { Count: > 0 })
             {
                 options.FileTypeFilter =
                 [
@@ -162,42 +133,10 @@ namespace LazyBootstrap.Services
                 ];
             }
 
-            var files = await _window.StorageProvider.OpenFilePickerAsync(options);
-            if (files == null || files.Count == 0)
-            {
-                return string.Empty;
-            }
-
-            return PathHelper.NormalizePath(files[0].TryGetLocalPath());
-        }
-
-        public void MinimizeAttachedWindow()
-        {
-            if (_window == null)
-            {
-                return;
-            }
-
-            Dispatcher.UIThread.Post(() => _window.WindowState = WindowState.Minimized);
-        }
-
-        public void RestoreAttachedWindow()
-        {
-            if (_window == null)
-            {
-                return;
-            }
-
-            Dispatcher.UIThread.Post(() =>
-            {
-                if (_window.WindowState == WindowState.Minimized)
-                {
-                    _window.WindowState = WindowState.Normal;
-                }
-
-                _window.Show();
-                _window.Activate();
-            });
+            var files = await StorageProvider.OpenFilePickerAsync(options);
+            return files == null || files.Count == 0
+                ? string.Empty
+                : PathHelper.NormalizePath(files[0].TryGetLocalPath());
         }
 
         private void CreateToast(string title, string content, NotificationType type, int seconds)
@@ -211,7 +150,10 @@ namespace LazyBootstrap.Services
                 .Queue();
         }
 
-        private static void ApplyDialogNotificationIcon(SukiDialogBuilder builder, NotificationType type, string customIconAssetName = null)
+        private static void ApplyDialogNotificationIcon(
+            SukiDialogBuilder builder,
+            NotificationType type,
+            string customIconAssetName = null)
         {
             if (builder?.Dialog == null)
             {
@@ -230,7 +172,6 @@ namespace LazyBootstrap.Services
             }
 
             var iconBitmap = ResolveDefaultDialogIcon(type);
-
             if (iconBitmap == null)
             {
                 return;
@@ -245,20 +186,12 @@ namespace LazyBootstrap.Services
             switch (type)
             {
                 case NotificationType.Information:
-                    if (_informationDialogIconCache == null)
-                    {
-                        _informationDialogIconCache = TryLoadDialogNotificationBitmap("info.png")
-                            ?? (_warningDialogIconCache ??= TryLoadDialogNotificationBitmap("warning.png"));
-                    }
-
-                    return _informationDialogIconCache;
-
+                    return _informationDialogIconCache ??= TryLoadDialogNotificationBitmap("info.png")
+                        ?? (_warningDialogIconCache ??= TryLoadDialogNotificationBitmap("warning.png"));
                 case NotificationType.Warning:
                     return _warningDialogIconCache ??= TryLoadDialogNotificationBitmap("warning.png");
-
                 case NotificationType.Error:
                     return _errorDialogIconCache ??= TryLoadDialogNotificationBitmap("error.png");
-
                 default:
                     return null;
             }
@@ -277,7 +210,6 @@ namespace LazyBootstrap.Services
                 return null;
             }
         }
-
 
         private static string[] SplitClasses(string classes)
         {
