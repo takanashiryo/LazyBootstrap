@@ -6,14 +6,9 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
-using Avalonia.Controls.Primitives;
-using Avalonia.Media;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
-using SukiUI.Controls;
-using SukiUI.MessageBox;
 using LazyBootstrap.Features.Display;
 using LazyBootstrap.Features.Display.Services;
 using LazyBootstrap.Infrastructure.Paths;
@@ -24,7 +19,7 @@ using LazyBootstrap.Shell;
 namespace LazyBootstrap.Features.Launch.Services
 {
 
-    public sealed class LaunchOrchestrator
+    internal sealed class LaunchOrchestrator
     {
         private const int MaxLogLines = 1200;
         private static readonly TimeSpan StartupRestartProbeDelay = TimeSpan.FromSeconds(3);
@@ -38,7 +33,6 @@ namespace LazyBootstrap.Features.Launch.Services
         private readonly WindowsDefenderExclusionService _windowsDefenderExclusionService;
         private readonly WindowsAppCompatLayerService _appCompatLayerService;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly AppShellState _shellStateService;
         private readonly ILogger<LaunchOrchestrator> _logger;
 
         private readonly Queue<string> _logLines = new Queue<string>(MaxLogLines + 64);
@@ -46,10 +40,8 @@ namespace LazyBootstrap.Features.Launch.Services
         private CancellationTokenSource _launchWorkflowCts;
         private CancellationTokenSource _gameProcessMonitorCts;
         private bool _suppressGameProcessExitHandling;
-        private LaunchState _launchState;
-        private DisplayConfigurationSnapshot _display;
-        private ILaunchWorkflowObserver _observer;
-        private AppShellState.ShellBusyLease _launchNavigationLock;
+        private LaunchWorkflowSnapshot _launchSnapshot;
+        private DisplayConfigurationRequest _display;
         private bool _openLogAfterLaunchMessageDismissal;
         private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
@@ -61,7 +53,6 @@ namespace LazyBootstrap.Features.Launch.Services
             WindowsDefenderExclusionService windowsDefenderExclusionService,
             WindowsAppCompatLayerService appCompatLayerService,
             UiInteractionService uiInteractionService,
-            AppShellState shellStateService,
             ILogger<LaunchOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
@@ -71,31 +62,28 @@ namespace LazyBootstrap.Features.Launch.Services
             _windowsDefenderExclusionService = windowsDefenderExclusionService ?? throw new ArgumentNullException(nameof(windowsDefenderExclusionService));
             _appCompatLayerService = appCompatLayerService ?? throw new ArgumentNullException(nameof(appCompatLayerService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
-            _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
+        internal event Action<LaunchWorkflowChange> WorkflowChanged;
+        internal event Action OpenLogRequested;
+
         public Task InitializeStartupAsync(
-            LaunchState launchState,
-            DisplayConfigurationSnapshot display,
-            ILaunchWorkflowObserver observer)
+            LaunchWorkflowSnapshot launchSnapshot)
         {
-            _launchState = launchState;
-            _display = display;
-            _observer = observer;
-            launchState.ToggleLaunchLogText = launchState.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
-            launchState.StateText = _shellStateService.StatusText;
-            NotifyLaunchStateChanged(launchState);
-            NotifyLaunchLogVisibilityChanged(launchState);
-            NotifyLaunchMessageChanged(launchState);
+            _launchSnapshot = launchSnapshot;
+            launchSnapshot.ToggleLaunchLogText = launchSnapshot.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
+            NotifyLaunchStateChanged(launchSnapshot);
+            NotifyLaunchLogVisibilityChanged(launchSnapshot);
+            NotifyLaunchMessageChanged(launchSnapshot);
             return Task.CompletedTask;
         }
 
-        public async Task DismissLaunchMessageAsync(LaunchState launchState)
+        public Task DismissLaunchMessageAsync(LaunchWorkflowSnapshot launchState)
         {
             if (launchState == null || !launchState.IsMessageVisible)
             {
-                return;
+                return Task.CompletedTask;
             }
 
             bool shouldOpenLog = _openLogAfterLaunchMessageDismissal;
@@ -103,27 +91,22 @@ namespace LazyBootstrap.Features.Launch.Services
 
             if (shouldOpenLog)
             {
-                await OpenLogAsync();
+                OpenLogRequested?.Invoke();
             }
+
+            return Task.CompletedTask;
         }
 
-        public Task ToggleLaunchLogAsync(LaunchState launchState, ILaunchWorkflowObserver observer)
+        public Task ToggleLaunchLogAsync(LaunchWorkflowSnapshot launchState)
         {
-            _launchState = launchState;
-            _observer = observer;
+            _launchSnapshot = launchState;
             launchState.IsLaunchLogVisible = !launchState.IsLaunchLogVisible;
             launchState.ToggleLaunchLogText = launchState.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
             NotifyLaunchLogVisibilityChanged(launchState);
             return Task.CompletedTask;
         }
 
-        public Task NavigateToSettingsAsync()
-        {
-            _shellStateService.SelectedPage = ShellPage.Settings;
-            return Task.CompletedTask;
-        }
-
-        public async Task OpenLogAsync()
+        public async Task<LaunchLogDocument> LoadLogAsync()
         {
             try
             {
@@ -133,7 +116,7 @@ namespace LazyBootstrap.Features.Launch.Services
                 {
                     _logger.LogWarning("spice2x log file was not found: {LogPath}", logPath);
                     _uiInteractionService.ShowErrorToast("查看日志失败", $"未找到日志文件: {logPath}");
-                    return;
+                    return null;
                 }
 
                 var content = await File.ReadAllTextAsync(logPath, SpiceLogEncoding.ShiftJis);
@@ -142,43 +125,13 @@ namespace LazyBootstrap.Features.Launch.Services
                     content = "(log.txt 为空)";
                 }
 
-                var logViewer = new TextBox
-                {
-                    IsReadOnly = true,
-                    AcceptsReturn = true,
-                    TextWrapping = TextWrapping.NoWrap,
-                    Text = content,
-                    MinWidth = 960,
-                    MinHeight = 520,
-                    MaxWidth = 1200,
-                    MaxHeight = 680,
-                    [ScrollViewer.HorizontalScrollBarVisibilityProperty] = ScrollBarVisibility.Auto,
-                    [ScrollViewer.VerticalScrollBarVisibilityProperty] = ScrollBarVisibility.Auto
-                };
-                logViewer.CaretIndex = logViewer.Text?.Length ?? 0;
-
-                var openFolderButton = SukiMessageBoxButtonsFactory.CreateButton("打开日志文件夹", SukiMessageBoxResult.Yes, "Flat");
-
-                var result = await SukiMessageBox.ShowDialog(new SukiMessageBoxHost
-                {
-                    UseAlternativeHeaderStyle = true,
-                    IconPreset = SukiMessageBoxIcons.Information,
-                    Header = "log.txt",
-                    Content = logViewer,
-                    FooterLeftItemsSource = [new SelectableTextBlock { Text = $"路径: {logPath}" }],
-                    ActionButtonsSource = [openFolderButton]
-                });
-
-                if (result is SukiMessageBoxResult.Yes)
-                {
-                    _logger.LogInformation("Opening spice2x log folder from log viewer.");
-                    ProcessExecutionHelper.OpenLogFolderAndSelectFile(logPath);
-                }
+                return new LaunchLogDocument(logPath, content);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to open spice2x log viewer.");
                 _uiInteractionService.ShowErrorToast("查看日志失败", ex.Message);
+                return null;
             }
         }
 
@@ -188,9 +141,9 @@ namespace LazyBootstrap.Features.Launch.Services
             CancelLaunchWorkflow();
             CancelGameProcessMonitoring(suppressExitHandling: true);
             _suppressGameProcessExitHandling = true;
-            ClearLaunchMessage(_launchState);
+            ClearLaunchMessage(_launchSnapshot);
 
-            AppendLaunchOutput(_launchState, "正在停止启动流程并结束所有进程...", NotificationType.Warning);
+            AppendLaunchOutput(_launchSnapshot, "正在停止启动流程并结束所有进程...", NotificationType.Warning);
 
             int killedSpice = KillProcessesByName("spice64");
             int killedAsphyxia = KillProcessesByName("asphyxia-core-x64");
@@ -213,19 +166,7 @@ namespace LazyBootstrap.Features.Launch.Services
             return Task.CompletedTask;
         }
 
-        private void BeginLaunchNavigationLock()
-        {
-            EndLaunchNavigationLock();
-            _launchNavigationLock = _shellStateService.BeginBusy(ShellBusyPresentation.NavigationLock);
-        }
-
-        private void EndLaunchNavigationLock()
-        {
-            _launchNavigationLock?.Dispose();
-            _launchNavigationLock = null;
-        }
-
-        public async Task StartAsync(LaunchState launchState, LaunchRequest request, ILaunchWorkflowObserver observer)
+        public async Task StartAsync(LaunchWorkflowSnapshot launchState, LaunchRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);
 
@@ -235,15 +176,13 @@ namespace LazyBootstrap.Features.Launch.Services
                 ["LaunchSessionId"] = launchSessionId
             });
 
-            var settings = request.Settings;
             var display = request.Display;
             bool asphyxiaDevOnly = request.AsphyxiaDevOnly;
             var launchWorkflowCts = new CancellationTokenSource();
             var cancellationToken = launchWorkflowCts.Token;
 
-            _launchState = launchState;
+            _launchSnapshot = launchState;
             _display = display;
-            _observer = observer;
             _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
             ReplaceLaunchWorkflowCancellationSource(launchWorkflowCts);
             CancelGameProcessMonitoring(suppressExitHandling: true);
@@ -251,9 +190,6 @@ namespace LazyBootstrap.Features.Launch.Services
 
             ClearLaunchMessage(launchState);
             _gameProcessTracker.ResetManagedAsphyxiaTracking();
-            BeginLaunchNavigationLock();
-            _shellStateService.StatusText = "启动中...";
-            launchState.StateText = _shellStateService.StatusText;
             launchState.IsLaunching = true;
             launchState.IsLaunchLogVisible = true;
             launchState.ToggleLaunchLogText = "隐藏启动日志";
@@ -270,8 +206,8 @@ namespace LazyBootstrap.Features.Launch.Services
             {
                 string spicePath = _paths.GetSpicePath();
                 string asphyxiaPath = _paths.GetAsphyxiaPath();
-                string serverAddress = (settings?.ServerAddress ?? string.Empty).Trim();
-                bool useSystemSpice = settings?.UseSystemSpiceConfig ?? false;
+                string serverAddress = (request.ServerAddress ?? string.Empty).Trim();
+                bool useSystemSpice = request.UseSystemSpiceConfig;
                 bool displayConfigurationEnabled = display?.IsDisplayConfigurationEnabled == true;
                 _logger.LogInformation(
                     "Launch prerequisites resolved. SpiceExists={SpiceExists}, AsphyxiaExists={AsphyxiaExists}, DisplayConfigurationEnabled={DisplayConfigurationEnabled}, UseSystemSpiceConfig={UseSystemSpiceConfig}",
@@ -297,7 +233,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     return;
                 }
 
-                if (!asphyxiaDevOnly && settings?.DisableSpiceFso == true)
+                if (!asphyxiaDevOnly && request.DisableSpiceFso)
                 {
                     AppendLaunchOutput(launchState, "正在应用 spice64 全屏优化设置...");
                     if (_appCompatLayerService.TrySetFsoDisabled(spicePath, true, out var fsoError))
@@ -315,7 +251,7 @@ namespace LazyBootstrap.Features.Launch.Services
                     }
                 }
 
-                bool startAsphyxia = asphyxiaDevOnly || !settings.NoAsphyxia;
+                bool startAsphyxia = asphyxiaDevOnly || !request.NoAsphyxia;
                 int existingAsphyxiaCount = 0;
                 bool isAsphyxiaCoreAlreadyRunning = startAsphyxia && IsAsphyxiaCoreRunning(out existingAsphyxiaCount);
                 _logger.LogInformation("Asphyxia launch decision resolved. StartAsphyxia={StartAsphyxia}, ExistingProcessCount={ExistingProcessCount}", startAsphyxia, existingAsphyxiaCount);
@@ -338,13 +274,6 @@ namespace LazyBootstrap.Features.Launch.Services
 
                 if (!asphyxiaDevOnly && display.IsDisplayConfigurationEnabled)
                 {
-                    if (display.Displays.Count == 0)
-                    {
-                        AppendLaunchOutput(launchState, "正在准备显示器配置...");
-                        await _displayOrchestrator.WarmDeferredAsync(display);
-                        cancellationToken.ThrowIfCancellationRequested();
-                    }
-
                     AppendLaunchOutput(launchState, "正在应用显示器配置...");
                     bool applySucceeded = _displayOrchestrator.TryApplyForLaunch(display, out var restoreStates, out var displayMessages);
                     _logger.LogInformation(
@@ -429,9 +358,6 @@ namespace LazyBootstrap.Features.Launch.Services
                     launchState.IsLaunching = false;
                     launchState.IsGameRunning = false;
                     ClearLaunchMessage(launchState);
-                    EndLaunchNavigationLock();
-                    _shellStateService.StatusText = "调试模式就绪";
-                    launchState.StateText = _shellStateService.StatusText;
                     NotifyLaunchStateChanged(launchState);
                     AppendLaunchOutput(launchState, "已按调试模式启动 Asphyxia Core（--dev），未启动 spice64。");
                     return;
@@ -486,8 +412,6 @@ namespace LazyBootstrap.Features.Launch.Services
                 launchState.IsLaunching = false;
                 launchState.IsGameRunning = true;
                 ClearLaunchMessage(launchState);
-                _shellStateService.StatusText = "游戏运行中";
-                launchState.StateText = _shellStateService.StatusText;
                 NotifyLaunchStateChanged(launchState);
                 AppendLaunchOutput(launchState, "游戏已启动并进入运行状态。");
                 _ = MinimizeLauncherWindowDelayedAsync();
@@ -547,13 +471,12 @@ namespace LazyBootstrap.Features.Launch.Services
             }
         }
 
-        public Task HandleClosingAsync(DisplayConfigurationSnapshot display)
+        public Task HandleClosingAsync(DisplayConfigurationRequest display)
         {
             _logger.LogInformation("Launcher closing cleanup started.");
             CancelLaunchWorkflow();
             CancelGameProcessMonitoring(suppressExitHandling: true);
-            EndLaunchNavigationLock();
-            ClearLaunchMessage(_launchState);
+            ClearLaunchMessage(_launchSnapshot);
 
             KillTrackedGameProcessDuringClose();
             DisposeTrackedGameProcess();
@@ -597,18 +520,14 @@ namespace LazyBootstrap.Features.Launch.Services
 
         private void ResetLaunchRuntimeState(string statusText)
         {
-            EndLaunchNavigationLock();
-            _shellStateService.StatusText = statusText ?? "就绪";
-
-            if (_launchState == null)
+            if (_launchSnapshot == null)
             {
                 return;
             }
 
-            _launchState.IsLaunching = false;
-            _launchState.IsGameRunning = false;
-            _launchState.StateText = _shellStateService.StatusText;
-            NotifyLaunchStateChanged(_launchState);
+            _launchSnapshot.IsLaunching = false;
+            _launchSnapshot.IsGameRunning = false;
+            NotifyLaunchStateChanged(_launchSnapshot);
         }
 
         private void DisposeTrackedGameProcess()
@@ -655,7 +574,7 @@ namespace LazyBootstrap.Features.Launch.Services
 
             if (logToLaunchOutput)
             {
-                AppendLaunchOutput(_launchState, $"{reason}，正在恢复显示器设置...");
+                AppendLaunchOutput(_launchSnapshot, $"{reason}，正在恢复显示器设置...");
             }
 
             var restoreMessages = new List<string>();
@@ -669,12 +588,12 @@ namespace LazyBootstrap.Features.Launch.Services
             if (logToLaunchOutput)
             {
                 AppendLaunchOutput(
-                    _launchState,
+                    _launchSnapshot,
                     restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。",
                     restored > 0 ? NotificationType.Information : NotificationType.Warning);
                 foreach (var restoreMessage in restoreMessages)
                 {
-                    AppendLaunchOutput(_launchState, restoreMessage, NotificationType.Warning);
+                    AppendLaunchOutput(_launchSnapshot, restoreMessage, NotificationType.Warning);
                 }
             }
 
@@ -794,7 +713,7 @@ namespace LazyBootstrap.Features.Launch.Services
                             _gameProcess = restartedProcess;
                             _gameProcessTracker.RegisterTrackedSpiceProcess(restartedProcess);
                             _logger.LogInformation("Detected restarted spice64 process. ProcessId={ProcessId}", restartedProcess.Id);
-                            AppendLaunchOutput(_launchState, "检测到 spice64 重新启动，继续监控中...");
+                            AppendLaunchOutput(_launchSnapshot, "检测到 spice64 重新启动，继续监控中...");
                             currentProcess.Dispose();
                             continue;
                         }
@@ -847,7 +766,7 @@ namespace LazyBootstrap.Features.Launch.Services
 
                 _logger.LogInformation("spice64 process exited. ExitCode={ExitCode}, AbnormalExit={AbnormalExit}", exitCode, abnormalExit);
                 AppendLaunchOutput(
-                    _launchState,
+                    _launchSnapshot,
                     abnormalExit
                         ? $"游戏进程异常退出。错误信号：{crashDiagnostic?.Signal ?? SpiceCrashDiagnostic.UnknownSignal}，崩溃原因：{crashDiagnostic?.ReasonText ?? "未识别具体崩溃原因"}。"
                         : "游戏进程已正常退出。",
@@ -866,10 +785,10 @@ namespace LazyBootstrap.Features.Launch.Services
 
                     Dispatcher.UIThread.Post(() =>
                     {
-                        if (_launchState != null)
+                        if (_launchSnapshot != null)
                         {
                             ShowLaunchMessage(
-                                _launchState,
+                                _launchSnapshot,
                                 NotificationType.Error,
                                 "进程异常退出",
                                 diagnostic.Signal,
@@ -878,7 +797,7 @@ namespace LazyBootstrap.Features.Launch.Services
                         else
                         {
                             _openLogAfterLaunchMessageDismissal = false;
-                            _ = OpenLogAsync();
+                            OpenLogRequested?.Invoke();
                         }
                     });
                 }
@@ -890,11 +809,11 @@ namespace LazyBootstrap.Features.Launch.Services
 
                 if (_gameProcessTracker.HasManagedAsphyxiaProcess())
                 {
-                    AppendLaunchOutput(_launchState, "正在关闭 Asphyxia Core...");
+                    AppendLaunchOutput(_launchSnapshot, "正在关闭 Asphyxia Core...");
                     if (_gameProcessTracker.TryStopManagedAsphyxiaProcess(out var stopErrorMessage))
                     {
                         _logger.LogInformation("Managed Asphyxia Core process stopped after game exit.");
-                        AppendLaunchOutput(_launchState, "Asphyxia Core 已关闭");
+                        AppendLaunchOutput(_launchSnapshot, "Asphyxia Core 已关闭");
                     }
                     else
                     {
@@ -919,21 +838,16 @@ namespace LazyBootstrap.Features.Launch.Services
                 if (!cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
                 {
                     _logger.LogInformation("Game process lifecycle cleanup completed.");
-                    EndLaunchNavigationLock();
-                    _shellStateService.StatusText = "就绪";
-
-                    if (_launchState != null)
+                    if (_launchSnapshot != null)
                     {
-                        _launchState.IsLaunching = false;
-                        _launchState.IsGameRunning = false;
-                        _launchState.StateText = _shellStateService.StatusText;
-
+                        _launchSnapshot.IsLaunching = false;
+                        _launchSnapshot.IsGameRunning = false;
                         if (!abnormalExit)
                         {
-                            ClearLaunchMessage(_launchState);
+                            ClearLaunchMessage(_launchSnapshot);
                         }
 
-                        NotifyLaunchStateChanged(_launchState);
+                        NotifyLaunchStateChanged(_launchSnapshot);
                     }
 
                     _uiInteractionService.RestoreAttachedWindow();
@@ -959,7 +873,7 @@ namespace LazyBootstrap.Features.Launch.Services
             {
                 await Task.Delay(LauncherAutoMinimizeDelay);
 
-                if (_launchState?.IsGameRunning == true)
+                if (_launchSnapshot?.IsGameRunning == true)
                 {
                     _uiInteractionService.MinimizeAttachedWindow();
                 }
@@ -970,7 +884,7 @@ namespace LazyBootstrap.Features.Launch.Services
             }
         }
 
-        private void FailLaunch(LaunchState launchState, string logMessage, string displayMessage = null)
+        private void FailLaunch(LaunchWorkflowSnapshot launchState, string logMessage, string displayMessage = null)
         {
             StopLaunchWithMessage(
                 launchState,
@@ -981,7 +895,7 @@ namespace LazyBootstrap.Features.Launch.Services
                 displayMessage ?? logMessage);
         }
 
-        private void WarnLaunchAndAbort(LaunchState launchState, string title, string bodyMessage)
+        private void WarnLaunchAndAbort(LaunchWorkflowSnapshot launchState, string title, string bodyMessage)
         {
             StopLaunchWithMessage(
                 launchState,
@@ -993,7 +907,7 @@ namespace LazyBootstrap.Features.Launch.Services
         }
 
         private void StopLaunchWithMessage(
-            LaunchState launchState,
+            LaunchWorkflowSnapshot launchState,
             NotificationType messageType,
             string statusText,
             string title,
@@ -1004,14 +918,11 @@ namespace LazyBootstrap.Features.Launch.Services
             AppendLaunchOutput(launchState, logMessage, messageType);
             launchState.IsLaunching = false;
             launchState.IsGameRunning = false;
-            EndLaunchNavigationLock();
-            _shellStateService.StatusText = statusText;
-            launchState.StateText = _shellStateService.StatusText;
             NotifyLaunchStateChanged(launchState);
             ShowLaunchMessage(launchState, messageType, title, accentText, bodyMessage);
         }
 
-        private void ShowLaunchMessage(LaunchState launchState, NotificationType messageType, string title, string accentText, string bodyText)
+        private void ShowLaunchMessage(LaunchWorkflowSnapshot launchState, NotificationType messageType, string title, string accentText, string bodyText)
         {
             if (launchState == null)
             {
@@ -1038,7 +949,7 @@ namespace LazyBootstrap.Features.Launch.Services
                 "请阅读 log.txt";
         }
 
-        private void ClearLaunchMessage(LaunchState launchState)
+        private void ClearLaunchMessage(LaunchWorkflowSnapshot launchState)
         {
             if (launchState == null)
             {
@@ -1054,14 +965,14 @@ namespace LazyBootstrap.Features.Launch.Services
             NotifyLaunchMessageChanged(launchState);
         }
 
-        private void ClearLaunchLog(LaunchState launchState)
+        private void ClearLaunchLog(LaunchWorkflowSnapshot launchState)
         {
             _logLines.Clear();
             launchState.LaunchLogText = string.Empty;
             NotifyLaunchLogChanged(launchState);
         }
 
-        private void AppendLaunchOutput(LaunchState launchState, string message, NotificationType type = NotificationType.Information)
+        private void AppendLaunchOutput(LaunchWorkflowSnapshot launchState, string message, NotificationType type = NotificationType.Information)
         {
             if (launchState == null || string.IsNullOrWhiteSpace(message))
             {
@@ -1081,33 +992,32 @@ namespace LazyBootstrap.Features.Launch.Services
             NotifyLaunchLogChanged(launchState);
         }
 
-        private void NotifyLaunchStateChanged(LaunchState launchState)
+        private void NotifyLaunchStateChanged(LaunchWorkflowSnapshot launchState)
         {
-            if (launchState != null)
-            {
-                _observer?.OnLaunchStateChanged(launchState);
-            }
+            NotifyWorkflowChanged(launchState, LaunchWorkflowChangeKind.State);
         }
 
-        private void NotifyLaunchLogVisibilityChanged(LaunchState launchState)
+        private void NotifyLaunchLogVisibilityChanged(LaunchWorkflowSnapshot launchState)
         {
-            if (launchState != null)
-            {
-                _observer?.OnLaunchLogVisibilityChanged(launchState);
-            }
+            NotifyWorkflowChanged(launchState, LaunchWorkflowChangeKind.LogVisibility);
         }
 
-        private void NotifyLaunchLogChanged(LaunchState launchState)
+        private void NotifyLaunchLogChanged(LaunchWorkflowSnapshot launchState)
         {
-            if (launchState != null)
-            {
-                _observer?.OnLaunchLogChanged(launchState);
-            }
+            NotifyWorkflowChanged(launchState, LaunchWorkflowChangeKind.Log);
         }
 
-        private void NotifyLaunchMessageChanged(LaunchState launchState)
+        private void NotifyLaunchMessageChanged(LaunchWorkflowSnapshot launchState)
         {
-            _observer?.OnLaunchMessageChanged(launchState?.ToMessage() ?? LaunchMessage.Hidden);
+            NotifyWorkflowChanged(launchState, LaunchWorkflowChangeKind.Message);
+        }
+
+        private void NotifyWorkflowChanged(LaunchWorkflowSnapshot snapshot, LaunchWorkflowChangeKind kind)
+        {
+            if (snapshot != null)
+            {
+                WorkflowChanged?.Invoke(new LaunchWorkflowChange(snapshot, kind));
+            }
         }
 
         private static string FormatLogEntry(string line, NotificationType type)

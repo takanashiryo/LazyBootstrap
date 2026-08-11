@@ -1,13 +1,10 @@
 using System;
-using SystemEnvironment = System.Environment;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Avalonia.Controls;
 using Avalonia.Controls.Notifications;
-using Avalonia.Layout;
 using Microsoft.Extensions.Logging;
 using LazyBootstrap.Infrastructure.Paths;
 using LazyBootstrap.Infrastructure.Processes;
@@ -20,20 +17,17 @@ namespace LazyBootstrap.Features.Tools
         private readonly LauncherPaths _paths;
         private readonly SavedataTransferPlanner _savedataTransferPlanner;
         private readonly UiInteractionService _uiInteractionService;
-        private readonly AppShellState _shellStateService;
         private readonly ILogger<ToolsOrchestrator> _logger;
 
         public ToolsOrchestrator(
             LauncherPaths paths,
             SavedataTransferPlanner savedataTransferPlanner,
             UiInteractionService uiInteractionService,
-            AppShellState shellStateService,
             ILogger<ToolsOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
             _savedataTransferPlanner = savedataTransferPlanner ?? throw new ArgumentNullException(nameof(savedataTransferPlanner));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
-            _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
@@ -145,7 +139,7 @@ namespace LazyBootstrap.Features.Tools
             return Task.CompletedTask;
         }
 
-        public async Task InstallRuntimeAsync()
+        public async Task InstallRuntimeAsync(Action<string, double> reportProgress)
         {
             string runtimePath = _paths.GetRuntimeDirectoryPath();
             string dxSetupPath = Path.Combine(runtimePath, "directx", "DXSETUP.exe");
@@ -165,14 +159,10 @@ namespace LazyBootstrap.Features.Tools
 
             // Track the most recent progress value so cancellation messages keep the current bar position.
             double lastProgress = 5d;
-            using var busy = _shellStateService.BeginBusy(
-                ShellBusyPresentation.RuntimeProgress,
-                "正在准备安装运行库...",
-                lastProgress);
             void Report(string text, double value)
             {
                 lastProgress = value;
-                busy.UpdateProgress(text, value);
+                reportProgress?.Invoke(text, value);
             }
 
             Report("正在准备安装运行库...", 5d);
@@ -386,50 +376,14 @@ namespace LazyBootstrap.Features.Tools
             }
         }
 
-        public async Task MigrateSavedataAsync()
+        public IReadOnlyList<SavedataTransferEntry> GetMigrationEntries(string gameDirectory, string asphyxiaDirectory)
         {
-            _logger.LogInformation("Savedata migration requested.");
-            var directories = await PromptForMigrationDirectoriesAsync();
-            if (directories == null)
-            {
-                _logger.LogInformation("Savedata migration cancelled before directory selection.");
-                return;
-            }
+            return _savedataTransferPlanner.BuildMigrationEntries(gameDirectory, asphyxiaDirectory);
+        }
 
-            var migrationEntries = _savedataTransferPlanner.BuildMigrationEntries(directories.Value.GameDirectory, directories.Value.AsphyxiaDirectory);
-            _logger.LogInformation("Savedata migration entries resolved. EntryCount={EntryCount}", migrationEntries.Count);
-            if (migrationEntries.Count == 0)
-            {
-                _uiInteractionService.ShowWarningToast("存档迁移", "在指定目录中未找到可迁移的数据");
-                return;
-            }
-
-            var selectedEntries = await PromptForMigrationSelectionAsync(migrationEntries);
-            if (selectedEntries == null || selectedEntries.Count == 0)
-            {
-                _logger.LogInformation("Savedata migration cancelled before copy.");
-                return;
-            }
-            _logger.LogInformation("Savedata migration selection completed. SelectedEntryCount={SelectedEntryCount}", selectedEntries.Count);
-
-            var overwriteEntries = selectedEntries
-                .Where(entry => entry.IsDirectory ? Directory.Exists(entry.DestinationPath) : File.Exists(entry.DestinationPath))
-                .ToList();
-            if (overwriteEntries.Count > 0)
-            {
-                bool confirmed = await _uiInteractionService.ShowDialogAsync(
-                    "存档迁移覆盖提示",
-                    "检测到以下目标文件已存在，是否覆盖？" + SystemEnvironment.NewLine + string.Join(SystemEnvironment.NewLine, overwriteEntries.Select(entry => $"• {entry.DisplayName}")),
-                    "覆盖",
-                    "取消",
-                    NotificationType.Warning);
-                if (!confirmed)
-                {
-                    _logger.LogInformation("Savedata migration cancelled at overwrite confirmation.");
-                    return;
-                }
-            }
-
+        public async Task MigrateSavedataAsync(IReadOnlyList<SavedataTransferEntry> selectedEntries)
+        {
+            ArgumentNullException.ThrowIfNull(selectedEntries);
             try
             {
                 await Task.Run(() => SavedataTransferOperations.CopyEntries(selectedEntries));
@@ -441,176 +395,6 @@ namespace LazyBootstrap.Features.Tools
                 _logger.LogError(ex, "Savedata migration failed.");
                 _uiInteractionService.ShowErrorToast("存档迁移失败", ex.Message);
             }
-        }
-
-        private async Task<(string GameDirectory, string AsphyxiaDirectory)?> PromptForMigrationDirectoriesAsync()
-        {
-            while (true)
-            {
-                var gameDirectoryBox = new TextBox { Watermark = "旧游戏目录" };
-                var asphyxiaDirectoryBox = new TextBox { Watermark = "旧氧无目录" };
-
-                var selectGameDirectoryButton = new Button { Content = "选择", MinWidth = 72 };
-                selectGameDirectoryButton.Classes.Add("Basic");
-                selectGameDirectoryButton.Click += async (_, _) =>
-                {
-                    var path = await _uiInteractionService.PickFolderAsync("选择旧游戏目录");
-                    if (!string.IsNullOrWhiteSpace(path))
-                    {
-                        gameDirectoryBox.Text = path;
-                    }
-                };
-
-                var selectAsphyxiaDirectoryButton = new Button { Content = "选择", MinWidth = 72 };
-                selectAsphyxiaDirectoryButton.Classes.Add("Basic");
-                selectAsphyxiaDirectoryButton.Click += async (_, _) =>
-                {
-                    var path = await _uiInteractionService.PickFolderAsync("选择旧氧无目录");
-                    if (!string.IsNullOrWhiteSpace(path))
-                    {
-                        asphyxiaDirectoryBox.Text = path;
-                    }
-                };
-
-                var content = new StackPanel
-                {
-                    Spacing = 10,
-                    Children =
-                    {
-                        BuildFolderPickerRow("游戏目录", gameDirectoryBox, selectGameDirectoryButton),
-                        BuildFolderPickerRow("氧无目录", asphyxiaDirectoryBox, selectAsphyxiaDirectoryButton),
-                        new TextBlock
-                        {
-                            Text = "点击下一步后将扫描可迁移数据",
-                            Opacity = 0.72,
-                            TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                        }
-                    }
-                };
-
-                bool confirmed = await _uiInteractionService.ShowDialogAsync(
-                    "存档迁移",
-                    content,
-                    "下一步",
-                    "取消");
-                if (!confirmed)
-                {
-                    return null;
-                }
-
-                string gameDirectory = PathHelper.NormalizePath(gameDirectoryBox.Text);
-                string asphyxiaDirectory = PathHelper.NormalizePath(asphyxiaDirectoryBox.Text);
-                if (!Directory.Exists(gameDirectory))
-                {
-                    _uiInteractionService.ShowWarningToast("存档迁移", "请选择有效的旧游戏目录。");
-                    continue;
-                }
-
-                if (!Directory.Exists(asphyxiaDirectory))
-                {
-                    _uiInteractionService.ShowWarningToast("存档迁移", "请选择有效的旧氧无目录。");
-                    continue;
-                }
-
-                return (gameDirectory, asphyxiaDirectory);
-            }
-        }
-
-        private async Task<List<SavedataTransferEntry>> PromptForMigrationSelectionAsync(IReadOnlyList<SavedataTransferEntry> entries)
-        {
-            while (true)
-            {
-                var selectionPanel = new StackPanel { Spacing = 10 };
-                var selections = new List<(SavedataTransferEntry Entry, CheckBox CheckBox)>();
-
-                foreach (var entry in entries)
-                {
-                    var checkBox = new CheckBox
-                    {
-                        IsChecked = true,
-                        Content = entry.DisplayName
-                    };
-
-                    selectionPanel.Children.Add(new StackPanel
-                    {
-                        Spacing = 4,
-                        Children =
-                        {
-                            checkBox,
-                            new TextBlock
-                            {
-                                Text = entry.SourcePath,
-                                Opacity = 0.68,
-                                TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                            }
-                        }
-                    });
-
-                    selections.Add((entry, checkBox));
-                }
-
-                var content = new StackPanel
-                {
-                    Spacing = 10,
-                    Children =
-                    {
-                        new TextBlock
-                        {
-                            Text = "默认已勾选全部项目；取消勾选的项目不会迁移。",
-                            TextWrapping = Avalonia.Media.TextWrapping.Wrap
-                        },
-                        new ScrollViewer
-                        {
-                            MaxHeight = 320,
-                            Content = selectionPanel
-                        }
-                    }
-                };
-
-                bool confirmed = await _uiInteractionService.ShowDialogAsync(
-                    "选择迁移内容",
-                    content,
-                    "开始迁移",
-                    "取消");
-                if (!confirmed)
-                {
-                    return null;
-                }
-
-                var selectedEntries = selections
-                    .Where(selection => selection.CheckBox.IsChecked == true)
-                    .Select(selection => selection.Entry)
-                    .ToList();
-                if (selectedEntries.Count > 0)
-                {
-                    return selectedEntries;
-                }
-
-                _uiInteractionService.ShowWarningToast("存档迁移", "请至少选择一个要迁移的项目。");
-            }
-        }
-
-        private static Grid BuildFolderPickerRow(string label, TextBox textBox, Button button)
-        {
-            var grid = new Grid
-            {
-                ColumnDefinitions = new ColumnDefinitions("Auto,*,Auto"),
-                ColumnSpacing = 8,
-                Children =
-                {
-                    new TextBlock
-                    {
-                        Text = label,
-                        VerticalAlignment = VerticalAlignment.Center
-                    },
-                    textBox,
-                    button
-                }
-            };
-
-            Grid.SetColumn(textBox, 1);
-            Grid.SetColumn(button, 2);
-            return grid;
         }
 
         // Path normalization delegated to PathHelper.NormalizePath

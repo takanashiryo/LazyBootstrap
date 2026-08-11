@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -31,16 +30,16 @@ namespace LazyBootstrap.Shell
 {
     public partial class MainWindow : SukiWindow
     {
-        private readonly AppShellState _shellStateService = null!;
-
         private readonly LauncherPaths _paths = null!;
-        private readonly LaunchState _launchState = null!;
+        private readonly LaunchWorkflowSnapshot _launchSnapshot = new LaunchWorkflowSnapshot();
         private readonly LaunchOrchestrator _launchOrchestrator = null!;
-        private readonly SettingsState _settingsState = null!;
+        private readonly SettingsData _settingsData = new SettingsData();
         private readonly SettingsOrchestrator _settingsWorkflowService = null!;
-        private readonly DisplayConfigurationSnapshot _displayState = null!;
+        private readonly DisplayConfigurationData _displayData = new DisplayConfigurationData();
         private readonly DisplayOrchestrator _displayOrchestrator = null!;
-        private readonly EnvironmentScanPresentation _environmentScanState = null!;
+        private readonly EnvironmentScanResult _environmentScanResult = new EnvironmentScanResult();
+        private SettingsData _settingsState => _settingsData;
+        private DisplayConfigurationData _displayState => _displayData;
         private readonly DiagnosticOrchestrator _diagnosticOrchestrator = null!;
         private readonly ToolsOrchestrator _toolsWorkflowService = null!;
         private readonly UpdateOrchestrator _updateWorkflowService = null!;
@@ -56,7 +55,12 @@ namespace LazyBootstrap.Shell
         private bool _allowImmediateWindowClose;
         private bool _pendingEnvironmentScanErrorDialog;
         private bool _isRestoringSideMenuSelection;
+        private bool _isNavigationLocked;
+        private ShellPage _selectedPage = ShellPage.Launch;
         private SukiSideMenuItem _lastUnlockedSideMenuItem;
+        private readonly object _busySync = new object();
+        private readonly List<BusyEntry> _busyEntries = new List<BusyEntry>();
+        private int _nextBusyId;
         private const int WindowFadeDurationMs = 480;
         private const int WindowFadeFrameDelayMs = 8;
         private const int ExStyleIndex = -20;
@@ -90,15 +94,10 @@ namespace LazyBootstrap.Shell
         }
 
         internal MainWindow(
-            AppShellState shellStateService,
             LauncherPaths paths,
-            LaunchState launchState,
             LaunchOrchestrator launchOrchestrator,
-            SettingsState settingsState,
             SettingsOrchestrator settingsOrchestrator,
-            DisplayConfigurationSnapshot displayState,
             DisplayOrchestrator displayOrchestrator,
-            EnvironmentScanPresentation environmentScanState,
             DiagnosticOrchestrator diagnosticOrchestrator,
             ToolsOrchestrator toolsOrchestrator,
             UpdateOrchestrator updateOrchestrator,
@@ -110,15 +109,10 @@ namespace LazyBootstrap.Shell
         {
             InitializeComponent();
 
-            _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _launchState = launchState ?? throw new ArgumentNullException(nameof(launchState));
             _launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
-            _settingsState = settingsState ?? throw new ArgumentNullException(nameof(settingsState));
             _settingsWorkflowService = settingsOrchestrator ?? throw new ArgumentNullException(nameof(settingsOrchestrator));
-            _displayState = displayState ?? throw new ArgumentNullException(nameof(displayState));
             _displayOrchestrator = displayOrchestrator ?? throw new ArgumentNullException(nameof(displayOrchestrator));
-            _environmentScanState = environmentScanState ?? throw new ArgumentNullException(nameof(environmentScanState));
             _diagnosticOrchestrator = diagnosticOrchestrator ?? throw new ArgumentNullException(nameof(diagnosticOrchestrator));
             _toolsWorkflowService = toolsOrchestrator ?? throw new ArgumentNullException(nameof(toolsOrchestrator));
             _updateWorkflowService = updateOrchestrator ?? throw new ArgumentNullException(nameof(updateOrchestrator));
@@ -138,9 +132,10 @@ namespace LazyBootstrap.Shell
             }
 
             _uiInteractionService.AttachWindow(this);
+            _launchOrchestrator.WorkflowChanged += OnLaunchWorkflowChanged;
+            _launchOrchestrator.OpenLogRequested += OnOpenLogRequested;
             Opened += OnWindowOpened;
             Closed += OnWindowClosed;
-            _shellStateService.PropertyChanged += OnShellStatePropertyChanged;
             if (MainSideMenu != null)
             {
                 MainSideMenu.SelectionChanged += OnMainSideMenuSelectionChanged;
@@ -150,15 +145,11 @@ namespace LazyBootstrap.Shell
             _logger.LogInformation("Main window initialized for base directory {BaseDirectory}.", _paths.BaseDir);
         }
 
-        private void UpdateStatusText(string statusText)
-        {
-            _shellStateService.StatusText = statusText ?? string.Empty;
-        }
-
         private void OnWindowClosed(object sender, EventArgs e)
         {
             Opened -= OnWindowOpened;
-            _shellStateService.PropertyChanged -= OnShellStatePropertyChanged;
+            _launchOrchestrator.WorkflowChanged -= OnLaunchWorkflowChanged;
+            _launchOrchestrator.OpenLogRequested -= OnOpenLogRequested;
             if (MainSideMenu != null)
             {
                 MainSideMenu.SelectionChanged -= OnMainSideMenuSelectionChanged;
@@ -166,66 +157,26 @@ namespace LazyBootstrap.Shell
             _uiInteractionService.DetachWindow(this);
         }
 
-        private void OnShellStatePropertyChanged(object sender, PropertyChangedEventArgs e)
-        {
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                Dispatcher.UIThread.Post(() => OnShellStatePropertyChanged(sender, e));
-                return;
-            }
-
-            string propertyName = e?.PropertyName ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(AppShellState.IsGlobalBusy), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(AppShellState.GlobalBusyText), StringComparison.Ordinal))
-            {
-                ApplyGlobalBusyStateToUi();
-            }
-
-            if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(AppShellState.IsRuntimeProgressBusy), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(AppShellState.RuntimeProgressText), StringComparison.Ordinal)
-                || string.Equals(propertyName, nameof(AppShellState.RuntimeProgressValue), StringComparison.Ordinal))
-            {
-                ApplyRuntimeProgressStateToUi();
-            }
-
-            if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(AppShellState.IsNavigationLocked), StringComparison.Ordinal))
-            {
-                ApplySideMenuNavigationLock();
-            }
-
-            if (string.IsNullOrWhiteSpace(propertyName)
-                || string.Equals(propertyName, nameof(AppShellState.SelectedPage), StringComparison.Ordinal))
-            {
-                OnSettingsShellStateChanged(sender, e);
-            }
-        }
-
-        private void ApplyGlobalBusyStateToUi()
+        private void ApplyGlobalBusyStateToUi(bool isBusy, string text)
         {
             if (GlobalBusyArea == null)
             {
                 return;
             }
 
-            GlobalBusyArea.IsBusy = _shellStateService.IsGlobalBusy;
-            GlobalBusyArea.BusyText = _shellStateService.GlobalBusyText;
+            GlobalBusyArea.IsBusy = isBusy;
+            GlobalBusyArea.BusyText = text ?? string.Empty;
         }
 
-        private void ApplyRuntimeProgressStateToUi()
+        private void ApplyRuntimeProgressStateToUi(bool isBusy, string text, double progressValue)
         {
-            bool visible = _shellStateService.IsRuntimeProgressBusy;
             if (RuntimeInstallOverlay != null)
             {
-                RuntimeInstallOverlay.IsVisible = visible;
-                RuntimeInstallOverlay.Opacity = visible ? 1 : 0;
+                RuntimeInstallOverlay.IsVisible = isBusy;
+                RuntimeInstallOverlay.Opacity = isBusy ? 1 : 0;
             }
 
-            SetRuntimeInstallProgress(
-                _shellStateService.RuntimeProgressText,
-                _shellStateService.RuntimeProgressValue);
+            SetRuntimeInstallProgress(text, progressValue);
         }
 
         private void OnMainSideMenuSelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -240,14 +191,15 @@ namespace LazyBootstrap.Shell
                 return;
             }
 
-            if (_shellStateService.IsNavigationLocked)
+            if (_isNavigationLocked)
             {
                 RestoreLockedSideMenuSelection();
                 return;
             }
 
             _lastUnlockedSideMenuItem = selectedItem;
-            _shellStateService.SelectedPage = ResolveShellPage(selectedItem);
+            _selectedPage = ResolveShellPage(selectedItem);
+            OnSelectedPageChanged();
         }
 
         private void ApplySideMenuNavigationLock()
@@ -261,7 +213,7 @@ namespace LazyBootstrap.Shell
                 .OfType<SukiSideMenuItem>()
                 .ToList() ?? new List<SukiSideMenuItem>();
 
-            if (!_shellStateService.IsNavigationLocked)
+            if (!_isNavigationLocked)
             {
                 foreach (var item in items)
                 {
@@ -271,7 +223,7 @@ namespace LazyBootstrap.Shell
                 if (MainSideMenu.SelectedItem is SukiSideMenuItem selectedItem)
                 {
                     _lastUnlockedSideMenuItem = selectedItem;
-                    _shellStateService.SelectedPage = ResolveShellPage(selectedItem);
+                    _selectedPage = ResolveShellPage(selectedItem);
                 }
 
                 return;
@@ -321,7 +273,7 @@ namespace LazyBootstrap.Shell
                 return page;
             }
 
-            return _shellStateService.SelectedPage;
+            return _selectedPage;
         }
 
         private async void OnWindowOpened(object sender, EventArgs e)
@@ -351,14 +303,14 @@ namespace LazyBootstrap.Shell
 
         private void QueueAutoLaunchIfEnabled()
         {
-            if (!_settingsState.AutoLaunch)
+            if (!_settingsData.AutoLaunch)
             {
                 return;
             }
 
             Dispatcher.UIThread.Post(() =>
             {
-                if (_settingsState.AutoLaunch && _launchState.CanStartLaunch)
+                if (_settingsData.AutoLaunch && _launchSnapshot.CanStartLaunch)
                 {
                     _ = StartLaunchAsync(false);
                 }
@@ -446,11 +398,9 @@ namespace LazyBootstrap.Shell
 
             try
             {
-                UpdateStatusText("正在读取启动配置...");
                 await InitializeSettingsStartupAsync();
                 await InitializeLaunchStartupAsync();
 
-                UpdateStatusText("正在预热页面内容...");
                 await WarmSettingsDeferredAsync();
                 await WarmDisplayDeferredAsync();
                 await InitializeDiagnosticStartupAsync();
@@ -464,7 +414,6 @@ namespace LazyBootstrap.Shell
                 throw;
             }
 
-            UpdateStatusText("就绪");
         }
 
         internal async Task PlayWindowFadeOutAndCloseAsync()
@@ -635,9 +584,8 @@ namespace LazyBootstrap.Shell
 
         private void FinalizeInitialViewState()
         {
-            UpdateStatusText("就绪");
-            ApplyGlobalBusyStateToUi();
-            ApplyRuntimeProgressStateToUi();
+            ApplyGlobalBusyStateToUi(false, string.Empty);
+            ApplyRuntimeProgressStateToUi(false, string.Empty, 0d);
             ApplySideMenuNavigationLock();
 
             Closing += OnWindowClosing;
@@ -646,6 +594,142 @@ namespace LazyBootstrap.Shell
         private string GetContentsDirectoryPath()
         {
             return _paths.GetContentsDirectoryPath();
+        }
+
+        private BusyLease BeginBusy(BusyPresentation presentation, string text = "", double progressValue = 0d)
+        {
+            BusyEntry entry;
+            lock (_busySync)
+            {
+                entry = new BusyEntry(++_nextBusyId, presentation, text, progressValue);
+                _busyEntries.Add(entry);
+            }
+
+            RefreshBusyState();
+            return new BusyLease(this, entry.Id);
+        }
+
+        private void SetNavigationLocked(bool locked)
+        {
+            if (_isNavigationLocked == locked)
+            {
+                return;
+            }
+
+            _isNavigationLocked = locked;
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                ApplySideMenuNavigationLock();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(ApplySideMenuNavigationLock);
+            }
+        }
+
+        private void UpdateBusy(int id, string text, double? progressValue)
+        {
+            lock (_busySync)
+            {
+                var entry = _busyEntries.FirstOrDefault(candidate => candidate.Id == id);
+                if (entry == null)
+                {
+                    return;
+                }
+
+                entry.Text = text ?? string.Empty;
+                if (progressValue.HasValue)
+                {
+                    entry.ProgressValue = Math.Clamp(progressValue.Value, 0d, 100d);
+                }
+            }
+
+            RefreshBusyState();
+        }
+
+        private void EndBusy(int id)
+        {
+            lock (_busySync)
+            {
+                _busyEntries.RemoveAll(entry => entry.Id == id);
+            }
+
+            RefreshBusyState();
+        }
+
+        private void RefreshBusyState()
+        {
+            BusyEntry global;
+            BusyEntry runtime;
+            bool navigationLocked;
+            lock (_busySync)
+            {
+                global = _busyEntries.LastOrDefault(entry => entry.Presentation == BusyPresentation.GlobalOverlay);
+                runtime = _busyEntries.LastOrDefault(entry => entry.Presentation == BusyPresentation.RuntimeProgress);
+                navigationLocked = _busyEntries.Any(entry => entry.Presentation == BusyPresentation.NavigationLock);
+            }
+
+            void Apply()
+            {
+                ApplyGlobalBusyStateToUi(global != null, global?.Text ?? string.Empty);
+                ApplyRuntimeProgressStateToUi(runtime != null, runtime?.Text ?? string.Empty, runtime?.ProgressValue ?? 0d);
+                SetNavigationLocked(navigationLocked);
+            }
+
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                Apply();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(Apply);
+            }
+        }
+
+        private enum BusyPresentation
+        {
+            GlobalOverlay,
+            NavigationLock,
+            RuntimeProgress
+        }
+
+        private sealed class BusyEntry
+        {
+            public BusyEntry(int id, BusyPresentation presentation, string text, double progressValue)
+            {
+                Id = id;
+                Presentation = presentation;
+                Text = text ?? string.Empty;
+                ProgressValue = Math.Clamp(progressValue, 0d, 100d);
+            }
+
+            public int Id { get; }
+            public BusyPresentation Presentation { get; }
+            public string Text { get; set; }
+            public double ProgressValue { get; set; }
+        }
+
+        private sealed class BusyLease : IDisposable
+        {
+            private MainWindow _owner;
+            private readonly int _id;
+
+            public BusyLease(MainWindow owner, int id)
+            {
+                _owner = owner;
+                _id = id;
+            }
+
+            public void UpdateText(string text) => _owner?.UpdateBusy(_id, text, null);
+
+            public void UpdateProgress(string text, double progressValue) =>
+                _owner?.UpdateBusy(_id, text, progressValue);
+
+            public void Dispose()
+            {
+                var owner = Interlocked.Exchange(ref _owner, null);
+                owner?.EndBusy(_id);
+            }
         }
     }
 }

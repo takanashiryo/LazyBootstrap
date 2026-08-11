@@ -1,18 +1,18 @@
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using LazyBootstrap.Infrastructure.Serialization;
 
 namespace LazyBootstrap.Features.Settings
 {
-    public sealed class SettingsState
+    internal sealed class SettingsData
     {
         private bool _suspendPersistence;
 
-        public ObservableCollection<ServerPresetItem> ServerPresets { get; } = new ObservableCollection<ServerPresetItem>();
+        public List<ServerPresetItem> ServerPresets { get; } = new List<ServerPresetItem>();
 
-        public ObservableCollection<NetworkAdapterOption> NetworkAdapters { get; } = new ObservableCollection<NetworkAdapterOption>();
+        public List<NetworkAdapterOption> NetworkAdapters { get; } = new List<NetworkAdapterOption>();
 
-        public ObservableCollection<AsioDriverOption> AsioDrivers { get; } = new ObservableCollection<AsioDriverOption>();
+        public List<AsioDriverOption> AsioDrivers { get; } = new List<AsioDriverOption>();
 
         public bool NoAsphyxia { get; set; }
 
@@ -118,5 +118,4 @@ namespace LazyBootstrap.Features.Settings
         }
     }
 
-    public sealed record SettingsPersistRequest(SettingsState Settings);
 }

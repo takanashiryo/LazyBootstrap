@@ -1,54 +1,52 @@
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using LazyBootstrap.Features.Diagnostic.Services;
 
 namespace LazyBootstrap.Features.Diagnostic
 {
-    public sealed class EnvironmentScanPresentation
+    internal sealed class EnvironmentScanResult
     {
-        public EnvironmentScanDisplayRow CpuPrimaryRow { get; } = new EnvironmentScanDisplayRow();
+        public EnvironmentScanResultRow CpuPrimaryRow { get; } = new EnvironmentScanResultRow();
 
-        public ObservableCollection<EnvironmentScanDisplayRow> GpuAdapterRows { get; } =
-            new ObservableCollection<EnvironmentScanDisplayRow>();
+        public List<EnvironmentScanResultRow> GpuAdapterRows { get; } = new List<EnvironmentScanResultRow>();
 
-        public EnvironmentScanDisplayRow NvidiaSkipNoticeRow { get; } = new EnvironmentScanDisplayRow();
+        public EnvironmentScanResultRow NvidiaSkipNoticeRow { get; } = new EnvironmentScanResultRow();
 
-        public EnvironmentScanLineOutcome NvidiaNvcuda { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome NvidiaNvcuda { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanLineOutcome NvidiaNvcuvid { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome NvidiaNvcuvid { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanLineOutcome NvidiaEncodeApi { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome NvidiaEncodeApi { get; } = new EnvironmentScanResultOutcome();
 
         public bool NvidiaDetailVisible { get; set; }
 
-        public EnvironmentScanDisplayRow DirectXRuntimeFaultRow { get; } = new EnvironmentScanDisplayRow();
+        public EnvironmentScanResultRow DirectXRuntimeFaultRow { get; } = new EnvironmentScanResultRow();
 
-        public EnvironmentScanLineOutcome DirectXD3d9 { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome DirectXD3d9 { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanLineOutcome DirectXD3Dx43 { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome DirectXD3Dx43 { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanDisplayRow MediaPackRuntimeFaultRow { get; } = new EnvironmentScanDisplayRow();
+        public EnvironmentScanResultRow MediaPackRuntimeFaultRow { get; } = new EnvironmentScanResultRow();
 
-        public EnvironmentScanLineOutcome MediaPackMf { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome MediaPackMf { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanLineOutcome MediaPackMfplat { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome MediaPackMfplat { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanLineOutcome MediaPackWmvCore { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome MediaPackWmvCore { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanDisplayRow Vc2010X86RuntimeFaultRow { get; } = new EnvironmentScanDisplayRow();
+        public EnvironmentScanResultRow Vc2010X86RuntimeFaultRow { get; } = new EnvironmentScanResultRow();
 
-        public EnvironmentScanLineOutcome Vc2010X86Msvcr { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome Vc2010X86Msvcr { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanLineOutcome Vc2010X86Msvcp { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome Vc2010X86Msvcp { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanDisplayRow Vc2010X64RuntimeFaultRow { get; } = new EnvironmentScanDisplayRow();
+        public EnvironmentScanResultRow Vc2010X64RuntimeFaultRow { get; } = new EnvironmentScanResultRow();
 
-        public EnvironmentScanLineOutcome Vc2010X64Msvcr { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome Vc2010X64Msvcr { get; } = new EnvironmentScanResultOutcome();
 
-        public EnvironmentScanLineOutcome Vc2010X64Msvcp { get; } = new EnvironmentScanLineOutcome();
+        public EnvironmentScanResultOutcome Vc2010X64Msvcp { get; } = new EnvironmentScanResultOutcome();
 
-        public ObservableCollection<string> ScanRootAlerts { get; } = new ObservableCollection<string>();
+        public List<string> ScanRootAlerts { get; } = new List<string>();
 
         public bool HasScanRootAlerts { get; set; }
 
@@ -70,11 +68,11 @@ namespace LazyBootstrap.Features.Diagnostic
 
         public bool HasEnvironmentScanErrors { get; set; }
 
-        public int EnvironmentScanPresentationRevision { get; private set; }
+        public int Revision { get; private set; }
 
         public void NotifyScanPresentationChanged()
         {
-            EnvironmentScanPresentationRevision++;
+            Revision++;
         }
 
         public bool HasAnyEnvironmentScanWarning()
@@ -84,7 +82,7 @@ namespace LazyBootstrap.Features.Diagnostic
                 || WarningOutcomes().Any(o => o is { OutcomeVisible: true, BadgeLevel: EnvironmentScan.ScanResultLevel.Warning });
         }
 
-        private IEnumerable<EnvironmentScanDisplayRow> WarningRows()
+        private IEnumerable<EnvironmentScanResultRow> WarningRows()
         {
             yield return CpuPrimaryRow;
             yield return NvidiaSkipNoticeRow;
@@ -94,7 +92,7 @@ namespace LazyBootstrap.Features.Diagnostic
             yield return Vc2010X64RuntimeFaultRow;
         }
 
-        private IEnumerable<EnvironmentScanLineOutcome> WarningOutcomes()
+        private IEnumerable<EnvironmentScanResultOutcome> WarningOutcomes()
         {
             yield return NvidiaNvcuda;
             yield return NvidiaNvcuvid;
@@ -111,7 +109,7 @@ namespace LazyBootstrap.Features.Diagnostic
         }
     }
 
-    public sealed class EnvironmentScanDisplayRow
+    internal sealed class EnvironmentScanResultRow
     {
         public string PrimaryText { get; set; } = string.Empty;
 
@@ -156,7 +154,7 @@ namespace LazyBootstrap.Features.Diagnostic
         }
     }
 
-    public sealed class EnvironmentScanLineOutcome
+    internal sealed class EnvironmentScanResultOutcome
     {
         public EnvironmentScan.ScanResultLevel BadgeLevel { get; set; } = EnvironmentScan.ScanResultLevel.Success;
 

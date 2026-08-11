@@ -6,7 +6,6 @@
         <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
         <RootNamespace>LazyBootstrap</RootNamespace>
         <AssemblyName>LazyBootstrap</AssemblyName>
-        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
         <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
         <Nullable>disable</Nullable>

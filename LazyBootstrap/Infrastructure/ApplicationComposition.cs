@@ -70,7 +70,6 @@ namespace LazyBootstrap.Infrastructure
                 var appCompatLayerService = new WindowsAppCompatLayerService();
                 var startupService = new WindowsStartupService();
                 var gameProcessTracker = new GameProcessTracker();
-                var shellState = new AppShellState();
                 var savedataTransferPlanner = new SavedataTransferPlanner(_paths);
                 var displayTransactionCoordinator = new DisplaySettingsTransactionCoordinator(
                     displayConfigurationService);
@@ -100,7 +99,6 @@ namespace LazyBootstrap.Infrastructure
                     defenderExclusionService,
                     appCompatLayerService,
                     uiInteractionService,
-                    shellState,
                     CreateLogger<LaunchOrchestrator>());
                 var settingsOrchestrator = new SettingsOrchestrator(
                     ConfigHandler,
@@ -110,40 +108,26 @@ namespace LazyBootstrap.Infrastructure
                     appCompatLayerService,
                     startupService,
                     uiInteractionService,
-                    shellState,
                     CreateLogger<SettingsOrchestrator>());
                 var toolsOrchestrator = new ToolsOrchestrator(
                     _paths,
                     savedataTransferPlanner,
                     uiInteractionService,
-                    shellState,
                     CreateLogger<ToolsOrchestrator>());
                 var updateOrchestrator = new UpdateOrchestrator(
                     _paths,
                     uiInteractionService,
-                    shellState,
                     CreateLogger<UpdateOrchestrator>());
                 var diagnosticOrchestrator = new DiagnosticOrchestrator(
                     _paths,
-                    shellState,
                     uiInteractionService,
                     CreateLogger<DiagnosticOrchestrator>());
 
-                var launchState = new LaunchState();
-                var settingsState = new SettingsState();
-                var displayState = new DisplayConfigurationSnapshot();
-                var environmentScanState = new EnvironmentScanPresentation();
-
                 _mainWindow = new MainWindow(
-                    shellState,
                     _paths,
-                    launchState,
                     launchOrchestrator,
-                    settingsState,
                     settingsOrchestrator,
-                    displayState,
                     displayOrchestrator,
-                    environmentScanState,
                     diagnosticOrchestrator,
                     toolsOrchestrator,
                     updateOrchestrator,

@@ -12,27 +12,24 @@ using LazyBootstrap.Shell;
 namespace LazyBootstrap.Features.Diagnostic.Services
 {
 
-    public sealed class DiagnosticOrchestrator
+    internal sealed class DiagnosticOrchestrator
     {
         private static readonly List<EnvironmentScan.ScanResultItem> EmptyScanBucket = [];
         private readonly LauncherPaths _paths;
-        private readonly AppShellState _shellStateService;
         private readonly UiInteractionService _uiInteractionService;
         private readonly ILogger<DiagnosticOrchestrator> _logger;
 
         public DiagnosticOrchestrator(
             LauncherPaths paths,
-            AppShellState shellStateService,
             UiInteractionService uiInteractionService,
             ILogger<DiagnosticOrchestrator> logger)
         {
             _paths = paths ?? throw new ArgumentNullException(nameof(paths));
-            _shellStateService = shellStateService ?? throw new ArgumentNullException(nameof(shellStateService));
             _uiInteractionService = uiInteractionService ?? throw new ArgumentNullException(nameof(uiInteractionService));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task InitializeInfoAsync(EnvironmentScanPresentation presentation)
+        public Task InitializeInfoAsync(EnvironmentScanResult presentation)
         {
             ArgumentNullException.ThrowIfNull(presentation);
             _logger.LogInformation("Environment information initialization started.");
@@ -46,19 +43,17 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             return Task.CompletedTask;
         }
 
-        public async Task RunScanAsync(EnvironmentScanPresentation presentation)
+        public async Task RunScanAsync(EnvironmentScanResult presentation)
         {
             ArgumentNullException.ThrowIfNull(presentation);
             _logger.LogInformation("Environment scan started.");
             var stopwatch = Stopwatch.StartNew();
 
             presentation.HasEnvironmentScanErrors = false;
-            ResetScanPresentation(presentation);
+            ResetScanResult(presentation);
 
             try
             {
-                _shellStateService.StatusText = "正在进行环境检查...";
-
                 var summary = await EnvironmentScan.RunAsync(
                     (_, _) => { },
                     _paths.GetContentsDirectoryPath(),
@@ -84,13 +79,9 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 _logger.LogError(ex, "Environment scan failed.");
                 _uiInteractionService.ShowErrorToast("环境检查失败", ex.Message);
             }
-            finally
-            {
-                _shellStateService.StatusText = "就绪";
-            }
         }
 
-        private static void ResetScanPresentation(EnvironmentScanPresentation vm)
+        private static void ResetScanResult(EnvironmentScanResult vm)
         {
             vm.CpuPrimaryRow.ApplyResult(
                 "—",
@@ -124,7 +115,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             vm.ScanUiReady = false;
         }
 
-        private static void PopulateScanSlots(EnvironmentScanPresentation vm, EnvironmentScan.ScanSummary summary)
+        private static void PopulateScanSlots(EnvironmentScanResult vm, EnvironmentScan.ScanSummary summary)
         {
             PartitionSummaryItems(summary.Items, out var roots, out var grouped);
 
@@ -199,14 +190,14 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             public string FaultToken { get; init; }
             public string FaultTitle { get; init; }
             public string NotFoundTitle { get; init; }
-            public EnvironmentScanDisplayRow FaultRow { get; init; }
-            public (string FileToken, EnvironmentScanLineOutcome Outcome)[] Outcomes { get; init; }
+            public EnvironmentScanResultRow FaultRow { get; init; }
+            public (string FileToken, EnvironmentScanResultOutcome Outcome)[] Outcomes { get; init; }
             public bool HideSuccessFaultBadge { get; init; }
-            public Action<EnvironmentScanPresentation> OnFault { get; init; }
+            public Action<EnvironmentScanResult> OnFault { get; init; }
         }
 
         private static void PopulateDllGroup(
-            EnvironmentScanPresentation vm,
+            EnvironmentScanResult vm,
             Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped,
             DllGroupSpec spec)
         {
@@ -319,7 +310,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             return Rank(a) >= Rank(b) ? a : b;
         }
 
-        private static void ApplyCpuSlots(EnvironmentScanPresentation vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
+        private static void ApplyCpuSlots(EnvironmentScanResult vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
         {
             if (!grouped.TryGetValue("CPU", out List<EnvironmentScan.ScanResultItem> bucket) || bucket.Count == 0)
             {
@@ -347,13 +338,13 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 string.Empty);
         }
 
-        private static void ApplyGpuSlots(EnvironmentScanPresentation vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
+        private static void ApplyGpuSlots(EnvironmentScanResult vm, Dictionary<string, List<EnvironmentScan.ScanResultItem>> grouped)
         {
             vm.GpuAdapterRows.Clear();
 
             if (!grouped.TryGetValue("GPU", out List<EnvironmentScan.ScanResultItem> bucket) || bucket.Count == 0)
             {
-                var row = new EnvironmentScanDisplayRow();
+                var row = new EnvironmentScanResultRow();
                 row.ApplyResult(
                     "未发现可用的显示适配器",
                     string.Empty,
@@ -370,7 +361,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
                 string slug = ChildSegment(entry.Item);
                 EnvironmentScan.ScanResultLevel rowLevel = entry.Level;
 
-                var row = new EnvironmentScanDisplayRow();
+                var row = new EnvironmentScanResultRow();
                 row.ApplyResult(
                     slug,
                     string.Empty,
@@ -382,9 +373,9 @@ namespace LazyBootstrap.Features.Diagnostic.Services
             }
         }
 
-        private static EnvironmentScanDisplayRow CreateDashPlaceholderRow()
+        private static EnvironmentScanResultRow CreateDashPlaceholderRow()
         {
-            var row = new EnvironmentScanDisplayRow();
+            var row = new EnvironmentScanResultRow();
             row.ApplyResult(
                 "—",
                 string.Empty,
@@ -398,7 +389,7 @@ namespace LazyBootstrap.Features.Diagnostic.Services
         private static void MapLibraryOutcome(
             List<EnvironmentScan.ScanResultItem> bucket,
             string fileToken,
-            EnvironmentScanLineOutcome outcome)
+            EnvironmentScanResultOutcome outcome)
         {
             EnvironmentScan.ScanResultItem hit = bucket.Find(value =>
                 value.Item.IndexOf(fileToken, StringComparison.OrdinalIgnoreCase) >= 0);

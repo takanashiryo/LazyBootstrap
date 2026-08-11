@@ -1,10 +1,12 @@
 using LazyBootstrap.Features.Display;
-using LazyBootstrap.Features.Settings;
 
 namespace LazyBootstrap.Features.Launch
 {
-    public sealed record LaunchRequest(
-        SettingsState Settings,
-        DisplayConfigurationSnapshot Display,
+    internal sealed record LaunchRequest(
+        bool NoAsphyxia,
+        bool UseSystemSpiceConfig,
+        bool DisableSpiceFso,
+        string ServerAddress,
+        DisplayConfigurationRequest Display,
         bool AsphyxiaDevOnly);
 }

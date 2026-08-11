@@ -1,23 +1,23 @@
 using System;
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 
 namespace LazyBootstrap.Features.Display
 {
-    public sealed class DisplayConfigurationSnapshot
+    internal sealed class DisplayConfigurationData
     {
         private bool _suspendUpdates;
 
-        public ObservableCollection<DisplayChoiceOption> Displays { get; } = new ObservableCollection<DisplayChoiceOption>();
+        public List<DisplayChoiceOption> Displays { get; } = new List<DisplayChoiceOption>();
 
-        public ObservableCollection<RotationOption> Rotations { get; } = new ObservableCollection<RotationOption>();
+        public List<RotationOption> Rotations { get; } = new List<RotationOption>();
 
-        public ObservableCollection<string> MainResolutions { get; } = new ObservableCollection<string>();
+        public List<string> MainResolutions { get; } = new List<string>();
 
-        public ObservableCollection<string> SubResolutions { get; } = new ObservableCollection<string>();
+        public List<string> SubResolutions { get; } = new List<string>();
 
-        public ObservableCollection<string> MainRefreshRates { get; } = new ObservableCollection<string>();
+        public List<string> MainRefreshRates { get; } = new List<string>();
 
-        public ObservableCollection<string> SubRefreshRates { get; } = new ObservableCollection<string>();
+        public List<string> SubRefreshRates { get; } = new List<string>();
 
         public bool IsDisplayConfigurationEnabled { get; set; }
 
@@ -113,4 +113,17 @@ namespace LazyBootstrap.Features.Display
             ShowSubScreenConfig = true;
         }
     }
+
+    internal sealed record DisplayConfigurationRequest(
+        bool IsDisplayConfigurationEnabled,
+        bool IsDualDisplay,
+        bool ExitRestore,
+        DisplayChoiceOption SelectedMainDisplay,
+        DisplayChoiceOption SelectedSubDisplay,
+        RotationOption SelectedMainRotation,
+        RotationOption SelectedSubRotation,
+        string SelectedMainResolution,
+        string SelectedSubResolution,
+        string SelectedMainRefreshRate,
+        string SelectedSubRefreshRate);
 }

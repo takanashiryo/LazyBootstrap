@@ -2,15 +2,13 @@ using Avalonia.Controls.Notifications;
 
 namespace LazyBootstrap.Features.Launch
 {
-    public sealed class LaunchState
+    internal sealed class LaunchWorkflowSnapshot
     {
         public string LaunchLogText { get; set; } = string.Empty;
 
         public bool IsLaunchLogVisible { get; set; }
 
         public string ToggleLaunchLogText { get; set; } = "显示启动日志";
-
-        public string StateText { get; set; } = "就绪";
 
         public bool IsLaunching { get; set; }
 
@@ -31,4 +29,16 @@ namespace LazyBootstrap.Features.Launch
         public LaunchMessage ToMessage() =>
             new LaunchMessage(IsMessageVisible, MessageType, MessageTitle, MessageAccentText, MessageBodyText);
     }
+
+    internal enum LaunchWorkflowChangeKind
+    {
+        State,
+        LogVisibility,
+        Log,
+        Message
+    }
+
+    internal sealed record LaunchWorkflowChange(
+        LaunchWorkflowSnapshot Snapshot,
+        LaunchWorkflowChangeKind Kind);
 }

@@ -2,6 +2,8 @@ using Avalonia.Controls.Notifications;
 
 namespace LazyBootstrap.Features.Launch
 {
+    internal sealed record LaunchLogDocument(string Path, string Content);
+
     public sealed record LaunchMessage(
         bool IsVisible,
         NotificationType MessageType,

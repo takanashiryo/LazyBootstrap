@@ -1,11 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Controls;
+using Avalonia.Controls.Notifications;
 using Avalonia.Interactivity;
-using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
 using LazyBootstrap.Features.Settings;
 using LazyBootstrap.Infrastructure.Serialization;
@@ -26,14 +25,14 @@ namespace LazyBootstrap.Shell
         private async Task InitializeSettingsStartupAsync()
         {
             await _settingsWorkflowService.InitializeStartupAsync(_settingsState);
-            ApplyStartupSettingsStateToUi();
+            ApplyStartupSettingsDataToUi();
         }
 
         /// <summary>Warms up deferred settings options (ASIO/network/...) and applies them.</summary>
         private async Task WarmSettingsDeferredAsync()
         {
             await _settingsWorkflowService.WarmDeferredAsync(_settingsState);
-            ApplyDeferredSettingsStateToUi();
+            ApplyDeferredSettingsDataToUi();
         }
 
         private void InitializeSettingsComponents()
@@ -45,18 +44,9 @@ namespace LazyBootstrap.Shell
             InitializeServerPresetBindings();
         }
 
-        private void OnSettingsShellStateChanged(object sender, PropertyChangedEventArgs e)
+        private void OnSelectedPageChanged()
         {
-            if (!Dispatcher.UIThread.CheckAccess())
-            {
-                Dispatcher.UIThread.Post(() => OnSettingsShellStateChanged(sender, e));
-                return;
-            }
-
-            string propertyName = e?.PropertyName ?? string.Empty;
-            if ((string.IsNullOrWhiteSpace(propertyName)
-                 || string.Equals(propertyName, nameof(AppShellState.SelectedPage), StringComparison.Ordinal))
-                && _shellStateService.SelectedPage == ShellPage.Settings)
+            if (_selectedPage == ShellPage.Settings)
             {
                 ApplyServerPresetStateToUi();
             }
@@ -66,9 +56,10 @@ namespace LazyBootstrap.Shell
         {
             try
             {
+                using var busy = BeginBusy(BusyPresentation.GlobalOverlay, "spicecfg 运行中...");
                 await _settingsWorkflowService.EditConfigAsync(_settingsState);
-                ApplyStartupSettingsStateToUi();
-                ApplyDeferredSettingsStateToUi();
+                ApplyStartupSettingsDataToUi();
+                ApplyDeferredSettingsDataToUi();
             }
             catch (Exception ex)
             {
@@ -102,19 +93,97 @@ namespace LazyBootstrap.Shell
 
         private async void OnAddServerPresetClick(object sender, RoutedEventArgs e)
         {
-            await _settingsWorkflowService.AddServerPresetAsync(_settingsState);
+            var nameBox = new TextBox { Watermark = "预设名" };
+            var urlBox = new TextBox { Watermark = "http://SERVERURL:PORT" };
+            var pcbBox = new TextBox { Watermark = "PCBID" };
+            var content = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock { Text = "请填写预设信息" },
+                    nameBox,
+                    urlBox,
+                    pcbBox
+                }
+            };
+
+            if (!await _uiInteractionService.ShowDialogAsync("新建服务器预设", content, "创建", "取消"))
+            {
+                return;
+            }
+
+            await _settingsWorkflowService.AddServerPresetAsync(
+                _settingsState,
+                nameBox.Text,
+                urlBox.Text,
+                pcbBox.Text);
             ApplyServerPresetStateToUi();
         }
 
         private async void OnDeleteServerPresetClick(object sender, RoutedEventArgs e)
         {
+            string validationError = _settingsWorkflowService.GetServerPresetDeletionError(_settingsState);
+            if (!string.IsNullOrEmpty(validationError))
+            {
+                _uiInteractionService.ShowWarningToast("删除预设", validationError);
+                return;
+            }
+
+            var preset = _settingsState.SelectedServerPreset;
+            if (!await _uiInteractionService.ShowDialogAsync(
+                    "删除服务器预设",
+                    $"确定删除预设「{preset.Name}」？",
+                    "删除",
+                    "取消",
+                    NotificationType.Warning))
+            {
+                return;
+            }
+
             await _settingsWorkflowService.DeleteServerPresetAsync(_settingsState);
             ApplyServerPresetStateToUi();
         }
 
         private async void OnOpenNetworkAdapterPickerClick(object sender, RoutedEventArgs e)
         {
-            await _settingsWorkflowService.OpenNetworkAdapterPickerAsync(_settingsState);
+            var choices = _settingsWorkflowService.GetNetworkAdapterChoices(_settingsState);
+            var selectedChoice = choices.FirstOrDefault(choice =>
+                                     string.Equals(choice.IpAddress, _settingsState.NetworkAdapterIp ?? string.Empty, StringComparison.OrdinalIgnoreCase)
+                                     && string.Equals(choice.SubnetMask, _settingsState.NetworkAdapterSubnet ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+                                 ?? choices.FirstOrDefault();
+            var adapterListBox = new ListBox
+            {
+                ItemsSource = choices,
+                SelectedItem = selectedChoice,
+                MinHeight = 240,
+                MaxHeight = 360
+            };
+            var content = new StackPanel
+            {
+                Spacing = 8,
+                Children =
+                {
+                    new TextBlock { Text = "请选择要读取参数的网卡。" },
+                    adapterListBox
+                }
+            };
+
+            if (!await _uiInteractionService.ShowDialogAsync("选择网卡", content, "确定", "取消"))
+            {
+                return;
+            }
+
+            if (adapterListBox.SelectedItem is not NetworkAdapterOption choice)
+            {
+                _uiInteractionService.ShowWarningToast("选择网卡", "请选择一个网卡。");
+                return;
+            }
+
+            _settingsState.SelectedNetworkAdapter = choice;
+            _settingsState.NetworkAdapterIp = choice.IpAddress;
+            _settingsState.NetworkAdapterSubnet = choice.SubnetMask;
+            await _settingsWorkflowService.PersistNetworkSettingsAsync(_settingsState);
             ApplyNetworkAdapterStateFromState();
         }
 
@@ -123,7 +192,7 @@ namespace LazyBootstrap.Shell
             await _settingsWorkflowService.OpenAsioControlPanelAsync(_settingsState);
         }
 
-        private void ApplyStartupSettingsStateToUi()
+        private void ApplyStartupSettingsDataToUi()
         {
             bool previousLoadingState = _isLoadingSettings;
             _isLoadingSettings = true;
@@ -165,7 +234,7 @@ namespace LazyBootstrap.Shell
             }
         }
 
-        private void ApplyDeferredSettingsStateToUi()
+        private void ApplyDeferredSettingsDataToUi()
         {
             bool previousLoadingState = _isLoadingSettings;
             _isLoadingSettings = true;
@@ -701,7 +770,7 @@ namespace LazyBootstrap.Shell
                     if (_isLoadingSettings) return;
                     bool requestedValue = StartWithWindowsToggleSwitch.IsChecked == true;
                     await _settingsWorkflowService.SetStartWithWindowsAsync(_settingsState, requestedValue);
-                    ApplyStartupSettingsStateToUi();
+                    ApplyStartupSettingsDataToUi();
                 };
             }
 
@@ -712,7 +781,7 @@ namespace LazyBootstrap.Shell
                     if (_isLoadingSettings) return;
                     _settingsState.DisableSpiceFso = DisableSpiceFsoToggleSwitch.IsChecked == true;
                     await _settingsWorkflowService.PersistFsoToggleAsync(_settingsState);
-                    ApplyStartupSettingsStateToUi();
+                    ApplyStartupSettingsDataToUi();
                 };
             }
 
@@ -725,14 +794,14 @@ namespace LazyBootstrap.Shell
                     {
                         bool requestedValue = UseSystemSpiceConfigToggleSwitch.IsChecked == true;
                         await _settingsWorkflowService.SetUseSystemSpiceConfigAsync(_settingsState, requestedValue);
-                        ApplyStartupSettingsStateToUi();
-                        ApplyDeferredSettingsStateToUi();
+                        ApplyStartupSettingsDataToUi();
+                        ApplyDeferredSettingsDataToUi();
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Persist use system spice config toggle failed.");
-                        ApplyStartupSettingsStateToUi();
-                        ApplyDeferredSettingsStateToUi();
+                        ApplyStartupSettingsDataToUi();
+                        ApplyDeferredSettingsDataToUi();
                     }
                 };
             }

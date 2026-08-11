@@ -12,6 +12,19 @@ namespace LazyBootstrap.Shell
 {
     public partial class MainWindow
     {
+        private DisplayConfigurationRequest BuildDisplayConfigurationRequest() => new DisplayConfigurationRequest(
+            _displayState.IsDisplayConfigurationEnabled,
+            _displayState.IsDualDisplay,
+            _displayState.ExitRestore,
+            _displayState.SelectedMainDisplay,
+            _displayState.SelectedSubDisplay,
+            _displayState.SelectedMainRotation,
+            _displayState.SelectedSubRotation,
+            _displayState.SelectedMainResolution,
+            _displayState.SelectedSubResolution,
+            _displayState.SelectedMainRefreshRate,
+            _displayState.SelectedSubRefreshRate);
+
         private DispatcherTimer _displayPulseTimer;
         private double _displayPulsePhase = 0d;
         private bool _isUpdatingDisplayLayoutUi;

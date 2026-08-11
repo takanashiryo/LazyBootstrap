@@ -14,7 +14,7 @@ namespace LazyBootstrap.Shell
         {
             if (LauncherVersionTextBlock != null)
             {
-                LauncherVersionTextBlock.Text = _environmentScanState.LauncherVersion;
+                LauncherVersionTextBlock.Text = _environmentScanResult.LauncherVersion;
             }
         }
 

@@ -16,7 +16,7 @@ using LazyBootstrap.Shell;
 namespace LazyBootstrap.Features.Display.Services
 {
 
-    public sealed class DisplayOrchestrator
+    internal sealed class DisplayOrchestrator
     {
         private const string MainMonitorOptionName = "mainmonitor";
         private const string SubMonitorOptionName = "sdvxsubmonitor";
@@ -51,7 +51,7 @@ namespace LazyBootstrap.Features.Display.Services
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
-        public Task WarmDeferredAsync(DisplayConfigurationSnapshot state)
+        public Task WarmDeferredAsync(DisplayConfigurationData state)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogInformation("Display configuration warm-up started.");
@@ -127,7 +127,7 @@ namespace LazyBootstrap.Features.Display.Services
             return HandleConfigurationChangedAsync(state, refreshMainOptions: true, refreshSubOptions: true);
         }
 
-        public Task PersistGeneralSettingsAsync(DisplayConfigurationSnapshot state)
+        public Task PersistGeneralSettingsAsync(DisplayConfigurationData state)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogInformation("Display general settings persistence started.");
@@ -140,7 +140,7 @@ namespace LazyBootstrap.Features.Display.Services
             return Task.CompletedTask;
         }
 
-        public Task HandleConfigurationChangedAsync(DisplayConfigurationSnapshot state, bool refreshMainOptions, bool refreshSubOptions)
+        public Task HandleConfigurationChangedAsync(DisplayConfigurationData state, bool refreshMainOptions, bool refreshSubOptions)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogDebug("Display configuration change handling started. RefreshMainOptions={RefreshMainOptions}, RefreshSubOptions={RefreshSubOptions}", refreshMainOptions, refreshSubOptions);
@@ -201,7 +201,7 @@ namespace LazyBootstrap.Features.Display.Services
             return Task.CompletedTask;
         }
 
-        public async Task PreviewDisplaySettingsAsync(DisplayConfigurationSnapshot state)
+        public async Task PreviewDisplaySettingsAsync(DisplayConfigurationData state)
         {
             ArgumentNullException.ThrowIfNull(state);
             _logger.LogInformation("Display configuration preview requested.");
@@ -213,7 +213,20 @@ namespace LazyBootstrap.Features.Display.Services
                 return;
             }
 
-            if (!TryApplyForLaunch(state, out var restoreStates, out var messages))
+            var request = new DisplayConfigurationRequest(
+                state.IsDisplayConfigurationEnabled,
+                state.IsDualDisplay,
+                state.ExitRestore,
+                state.SelectedMainDisplay,
+                state.SelectedSubDisplay,
+                state.SelectedMainRotation,
+                state.SelectedSubRotation,
+                state.SelectedMainResolution,
+                state.SelectedSubResolution,
+                state.SelectedMainRefreshRate,
+                state.SelectedSubRefreshRate);
+
+            if (!TryApplyForLaunch(request, out var restoreStates, out var messages))
             {
                 _logger.LogWarning("Display configuration preview failed. RestoreStateCount={RestoreStateCount}, MessageCount={MessageCount}", restoreStates.Count, messages.Count);
                 if (messages.Count > 0)
@@ -272,7 +285,7 @@ namespace LazyBootstrap.Features.Display.Services
             return Task.CompletedTask;
         }
 
-        public bool TryApplyForLaunch(DisplayConfigurationSnapshot state, out Dictionary<string, DisplayState> restoreStates, out List<string> messages)
+        public bool TryApplyForLaunch(DisplayConfigurationRequest state, out Dictionary<string, DisplayState> restoreStates, out List<string> messages)
         {
             restoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
             messages = new List<string>();
@@ -414,7 +427,7 @@ namespace LazyBootstrap.Features.Display.Services
             target.Add(resolution);
         }
 
-        private void UpdateDisplayInfo(DisplayConfigurationSnapshot state, bool isMainTarget)
+        private void UpdateDisplayInfo(DisplayConfigurationData state, bool isMainTarget)
         {
             var selectedDisplay = isMainTarget ? state.SelectedMainDisplay : state.SelectedSubDisplay;
             var rotation = isMainTarget ? state.SelectedMainRotation?.Angle ?? 0 : state.SelectedSubRotation?.Angle ?? 0;
@@ -454,7 +467,7 @@ namespace LazyBootstrap.Features.Display.Services
             }
         }
 
-        private void PersistSelectionState(DisplayConfigurationSnapshot state)
+        private void PersistSelectionState(DisplayConfigurationData state)
         {
             _logger.LogDebug("Persisting display selection state.");
             _configHandler.WriteString(AppConfigBootstrapper.DisplaySectionName, "displayconfigure", state.IsDisplayConfigurationEnabled.ToString().ToLowerInvariant());
@@ -483,7 +496,7 @@ namespace LazyBootstrap.Features.Display.Services
             return _paths.ResolveSpiceXmlPath(useSystem);
         }
 
-        private void SyncSpiceMonitorOverrides(DisplayConfigurationSnapshot state)
+        private void SyncSpiceMonitorOverrides(DisplayConfigurationData state)
         {
             string mainMonitorValue = string.Empty;
             string subMonitorValue = string.Empty;
@@ -556,7 +569,7 @@ namespace LazyBootstrap.Features.Display.Services
             }
         }
 
-        private static void EnsureRotationOptions(DisplayConfigurationSnapshot state)
+        private static void EnsureRotationOptions(DisplayConfigurationData state)
         {
             if (state.Rotations.Count > 0)
             {
@@ -569,7 +582,7 @@ namespace LazyBootstrap.Features.Display.Services
             state.Rotations.Add(new RotationOption(270));
         }
 
-        private static DisplayChoiceOption GetDisplayByIndex(DisplayConfigurationSnapshot state, int index)
+        private static DisplayChoiceOption GetDisplayByIndex(DisplayConfigurationData state, int index)
         {
             if (state.Displays.Count == 0)
             {
@@ -585,7 +598,7 @@ namespace LazyBootstrap.Features.Display.Services
         }
 
         private static DisplayChoiceOption ResolveConfiguredDisplay(
-            DisplayConfigurationSnapshot state,
+            DisplayConfigurationData state,
             string persistentId,
             string legacyIndexText,
             int defaultIndex,
@@ -612,7 +625,7 @@ namespace LazyBootstrap.Features.Display.Services
             return GetDisplayByIndex(state, defaultIndex);
         }
 
-        private static DisplayChoiceOption GetDisplayByPersistentId(DisplayConfigurationSnapshot state, string persistentId)
+        private static DisplayChoiceOption GetDisplayByPersistentId(DisplayConfigurationData state, string persistentId)
         {
             if (state?.Displays == null || string.IsNullOrWhiteSpace(persistentId))
             {
@@ -636,7 +649,7 @@ namespace LazyBootstrap.Features.Display.Services
             _configHandler.RemoveKey(AppConfigBootstrapper.DisplaySectionName, key);
         }
 
-        private static void ReplaceCollection(System.Collections.ObjectModel.ObservableCollection<string> target, IReadOnlyList<string> source)
+        private static void ReplaceCollection(List<string> target, IReadOnlyList<string> source)
         {
             target.Clear();
             foreach (var item in source)
