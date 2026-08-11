@@ -4,15 +4,14 @@ using System.IO;
 using System.Reflection;
 using System.Threading.Tasks;
 using Serilog;
-using LazyBootstrap.Infrastructure.DependencyInjection;
 using LazyBootstrap.Infrastructure.Paths;
 
 namespace LazyBootstrap.Infrastructure.Logging
 {
     /// <summary>
     /// Startup bootstrap helpers: Serilog configuration, runtime-context resolution and
-    /// global exception logging. The application object graph is built by the
-    /// dependency-injection container (see <see cref="ServiceRegistration"/>), not here.
+    /// global exception logging. The application object graph is built explicitly by
+    /// <see cref="ApplicationComposition"/>.
     /// </summary>
     public static class AppServices
     {

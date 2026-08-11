@@ -1,8 +1,7 @@
 using System;
 using Avalonia;
-using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-using LazyBootstrap.Infrastructure.DependencyInjection;
+using LazyBootstrap.Infrastructure;
 using LazyBootstrap.Infrastructure.Logging;
 using LazyBootstrap.Infrastructure.Processes;
 using LazyBootstrap.Infrastructure.Serialization;
@@ -14,24 +13,22 @@ namespace LazyBootstrap
         [STAThread]
         public static void Main(string[] args)
         {
+            ApplicationComposition composition = null;
+
             try
             {
                 AppServices.InitializeSerilog(args);
                 Log.Information("LazyBootstrap process started.");
                 MediaUpdaterPendingUpdateService.ApplyPendingUpdate(AppServices.RuntimeContext.ApplicationDirectoryPath);
 
-                // Build the DI container. Lazy singletons keep SukiUI managers uncreated until
-                // MainWindow is resolved (after SukiTheme loads); do NOT enable ValidateOnBuild.
-                var serviceProvider = new ServiceCollection()
-                    .AddLazyBootstrapServices(AppServices.RuntimeContext)
-                    .BuildServiceProvider();
-                App.Services = serviceProvider;
+                composition = new ApplicationComposition(AppServices.RuntimeContext);
+                App.Composition = composition;
 
                 // Configuration bootstrap/migration must run before the UI starts. ConfigHandler
-                // has no SukiUI dependency, so resolving it here is safe.
+                // has no SukiUI dependency, so using it here is safe.
                 AppConfigBootstrapper.InitializeAndMigrate(
                     AppServices.RuntimeContext.ConfigFilePath,
-                    serviceProvider.GetRequiredService<ConfigHandler>());
+                    composition.ConfigHandler);
                 Log.Information("Configuration initialized.");
 
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
@@ -44,7 +41,8 @@ namespace LazyBootstrap
             }
             finally
             {
-                (App.Services as IDisposable)?.Dispose();
+                App.Composition = null;
+                composition?.Dispose();
                 AppServices.Dispose();
             }
         }

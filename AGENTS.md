@@ -36,6 +36,7 @@ The launcher relies heavily on Spice2x's functionality
 ## Anti
 
 - Do not use MSBuild, only `dotnet`
+- Do not create or introduce a dependency injection (DI) system or container; construct the fixed application object graph explicitly in `ApplicationComposition`
 - Do not edit any submodules code
 - Do not separate MainWindow.axaml to standalone AXAMLs
 - Do not use `GlobalUsings.cs`
