@@ -8,6 +8,7 @@ using Avalonia.Animation;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using Microsoft.Extensions.Logging;
+using LazyBootstrap.Controls;
 using LazyBootstrap.Platform;
 
 namespace LazyBootstrap.UI
@@ -134,7 +135,7 @@ namespace LazyBootstrap.UI
             while (true)
             {
                 var progress = Math.Clamp(start.Elapsed.TotalMilliseconds / WindowFadeDurationMs, 0d, 1d);
-                var easedProgress = EaseInOutCubic(progress);
+                var easedProgress = ControlHelpers.EaseInOutCubic(progress);
                 var currentAlpha = (byte)Math.Round(fromAlpha + ((toAlpha - fromAlpha) * easedProgress));
                 SetWindowAlpha(hwnd, currentAlpha);
 
@@ -145,13 +146,6 @@ namespace LazyBootstrap.UI
 
                 await Task.Delay(WindowFadeFrameDelayMs);
             }
-        }
-
-        private static double EaseInOutCubic(double progress)
-        {
-            return progress < 0.5d
-                ? 4d * progress * progress * progress
-                : 1d - Math.Pow(-2d * progress + 2d, 3d) / 2d;
         }
 
         private bool TryGetWindowHandle(out IntPtr hwnd)

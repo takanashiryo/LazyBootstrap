@@ -19,7 +19,7 @@
               MinWidth="420"
               MaxWidth="520"
               HorizontalAlignment="Stretch">
-            <Image x:Name="ArcadeMessageIcon"
+            <Image
                    Width="36"
                    Height="36"
                    VerticalAlignment="Center">
@@ -55,7 +55,7 @@
                            FontWeight="Bold"
                            IsVisible="False" />
             </Grid>
-            <Border x:Name="ArcadeMessageDivider"
+            <Border
                     Grid.Row="1" Grid.Column="1"
                     Height="1"
                     Margin="0,14,0,0"

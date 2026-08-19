@@ -74,7 +74,7 @@ namespace LazyBootstrap.Serialization
             }
             catch (Exception ex)
             {
-                EnterReadOnlySession(config, defaultConfigText, $"读取 config.toml 失败：{ex.Message}");
+                config.EnterReadOnlySession(defaultConfigText, $"读取 config.toml 失败：{ex.Message}");
                 EnsureDefaults(config);
                 return;
             }
@@ -84,7 +84,7 @@ namespace LazyBootstrap.Serialization
                 string seedText = string.IsNullOrWhiteSpace(health.Content)
                     ? defaultConfigText
                     : health.Content;
-                EnterReadOnlySession(config, seedText, $"config.toml 无法读取或保存：{health.ErrorMessage}");
+                config.EnterReadOnlySession(seedText, $"config.toml 无法读取或保存：{health.ErrorMessage}");
                 EnsureDefaults(config);
                 return;
             }
@@ -95,7 +95,7 @@ namespace LazyBootstrap.Serialization
                         () => config.ReplaceWithText(defaultConfigText),
                         out var createError))
                 {
-                    EnterReadOnlySession(config, defaultConfigText, $"创建 config.toml 失败：{createError}");
+                    config.EnterReadOnlySession(defaultConfigText, $"创建 config.toml 失败：{createError}");
                     EnsureDefaults(config);
                     return;
                 }
@@ -106,7 +106,7 @@ namespace LazyBootstrap.Serialization
                         () => config.BackupInvalidAndReplace(defaultConfigText),
                         out var repairError))
                 {
-                    EnterReadOnlySession(config, defaultConfigText, $"config.toml 损坏且无法重建：{repairError}");
+                    config.EnterReadOnlySession(defaultConfigText, $"config.toml 损坏且无法重建：{repairError}");
                     EnsureDefaults(config);
                     return;
                 }
@@ -117,7 +117,7 @@ namespace LazyBootstrap.Serialization
                 string readOnlySeed = health.Status == ConfigFileHealthStatus.Valid
                     ? health.Content
                     : defaultConfigText;
-                EnterReadOnlySession(config, readOnlySeed, $"config.toml 无法保存设置：{defaultsError}");
+                config.EnterReadOnlySession(readOnlySeed, $"config.toml 无法保存设置：{defaultsError}");
                 EnsureDefaults(config);
             }
         }
@@ -135,11 +135,6 @@ namespace LazyBootstrap.Serialization
                 error = ex.Message;
                 return false;
             }
-        }
-
-        private static void EnterReadOnlySession(ConfigHandler config, string seedText, string reason)
-        {
-            config.EnterReadOnlySession(seedText, reason);
         }
 
         private static void EnsureDefaults(ConfigHandler config)

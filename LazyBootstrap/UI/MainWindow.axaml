@@ -63,7 +63,7 @@
                                 <TextBlock Classes="FaIcon" Text="&#xF04B;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
                             <suki:SukiSideMenuItem.PageContent>
-                                <Grid x:Name="LaunchPageView" Margin="14" RowDefinitions="Auto,*,Auto" RowSpacing="12">
+                                <Grid Margin="14" RowDefinitions="Auto,*,Auto" RowSpacing="12">
                                     <Grid ColumnDefinitions="Auto,*">
                                         <Button x:Name="ToggleLaunchLogButton"
                                                 Grid.Column="0"
@@ -86,7 +86,7 @@
 
                                     <Grid Grid.Row="2" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10"
                                           VerticalAlignment="Bottom">
-                                        <Button x:Name="OpenLogButton" Grid.Column="0" Classes="Basic"
+                                        <Button Grid.Column="0" Classes="Basic"
                                                 HorizontalContentAlignment="Left" Click="OnOpenLogClick">
                                             <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                                                 <TextBlock Classes="FaIcon" Text="&#xF15C;" FontSize="14" />
@@ -97,7 +97,7 @@
                                         <Grid Grid.Column="1" />
 
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="10">
-                                            <Button x:Name="KillProcessesButton" Classes="Danger"
+                                            <Button Classes="Danger"
                                                     Click="OnKillProcessesClick">
                                                 <StackPanel Orientation="Horizontal" Spacing="6"
                                                             VerticalAlignment="Center">
@@ -149,7 +149,7 @@
                                                     <suki:SettingsLayoutItem.Content>
                                                         <suki:GlassCard Margin="0,18,0,0" Padding="18">
                                                             <StackPanel Spacing="12">
-                                                                <Button x:Name="EditConfigButton" Classes="Flat"
+                                                                <Button Classes="Flat"
                                                                         HorizontalAlignment="Stretch"
                                                                         Content="编辑 spicecfg"
                                                                         Click="OnEditConfigClick" />
@@ -336,13 +336,13 @@
                                                                                 Width="220"
                                                                                 HorizontalAlignment="Left"
                                                                                 SelectionChanged="OnServerPresetSelectionChanged" />
-                                                                        <Button x:Name="AddServerPresetButton"
+                                                                        <Button
                                                                                 Grid.Column="1" Content="新建"
                                                                                 Padding="10,4"
                                                                                 Classes="Basic"
                                                                                 VerticalAlignment="Center"
                                                                                 Click="OnAddServerPresetClick" />
-                                                                        <Button x:Name="DeleteServerPresetButton"
+                                                                        <Button
                                                                                 Grid.Column="2" Content="删除"
                                                                                 Padding="10,4"
                                                                                 Classes="Basic"
@@ -693,7 +693,7 @@
                                                    TextWrapping="Wrap"
                                                    FontSize="24"
                                                    FontWeight="SemiBold" />
-                                        <Button x:Name="EmptyStateEditConfigButton"
+                                        <Button
                                                 Classes="Flat"
                                                 HorizontalAlignment="Center"
                                                 MinWidth="180"
@@ -709,7 +709,7 @@
                                 <TextBlock Classes="FaIcon" Text="&#xF390;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
                             <suki:SukiSideMenuItem.PageContent>
-                                <Grid x:Name="DisplayPageView" Margin="14" RowDefinitions="Auto,*,Auto"
+                                <Grid Margin="14" RowDefinitions="Auto,*,Auto"
                                       ColumnDefinitions="360,*" ColumnSpacing="14" RowSpacing="10">
                                     <Grid Grid.ColumnSpan="2" ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10"
                                           Margin="0,0,0,10">
@@ -740,7 +740,7 @@
                                                         <Ellipse x:Name="DotMainGlow" Canvas.Left="124"
                                                                  Canvas.Top="157"
                                                                  Width="52" Height="52" Fill="#35FFFFFF" />
-                                                        <Ellipse x:Name="DotMainCore" Canvas.Left="139"
+                                                        <Ellipse Canvas.Left="139"
                                                                  Canvas.Top="172"
                                                                  Width="22" Height="22" Fill="White" />
                                                         <Ellipse x:Name="DotMainSelectedRing" Canvas.Left="127"
@@ -778,7 +778,7 @@
                                                 </Grid>
                                                 <Grid ColumnDefinitions="*,Auto" VerticalAlignment="Center">
                                                     <TextBlock Text="Windows触控屏设置" VerticalAlignment="Center" />
-                                                    <Button x:Name="TouchPanelButton" Grid.Column="1" Content="打开"
+                                                    <Button Grid.Column="1" Content="打开"
                                                             MinWidth="86" Click="OnOpenTouchPanelClick" />
                                                 </Grid>
                                             </StackPanel>
@@ -874,7 +874,7 @@
                                 <TextBlock Classes="FaIcon" Text="&#xF552;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
                             <suki:SukiSideMenuItem.PageContent>
-                                <ScrollViewer x:Name="ToolsPageView" Margin="14" VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel Spacing="10">
                                         <TextBlock Text="常用工具" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6" />
@@ -889,7 +889,7 @@
                                                         Text="清除 data_mods 下的模组缓存，更新游戏后必须清除以重建缓存（注：使用“更新”功能时会自动清除）"
                                                         Opacity="0.72" TextWrapping="Wrap" />
                                                 </StackPanel>
-                                                <Button x:Name="ClearCacheButton" Grid.Column="2" Classes="Flat"
+                                                <Button Grid.Column="2" Classes="Flat"
                                                         MinWidth="88"
                                                         Content="执行" Click="OnClearCacheClick" />
                                             </Grid>
@@ -905,7 +905,7 @@
                                                                Opacity="0.72"
                                                                TextWrapping="Wrap" />
                                                 </StackPanel>
-                                                <Button x:Name="AddFirewallRuleButton" Grid.Column="2" Classes="Flat"
+                                                <Button Grid.Column="2" Classes="Flat"
                                                         MinWidth="88" Content="执行" Click="OnAddFirewallRuleClick" />
                                             </Grid>
                                         </suki:GlassCard>
@@ -918,7 +918,7 @@
                                                     <TextBlock Text="打开音频控制面板" FontWeight="SemiBold" />
                                                     <TextBlock Text="快捷打开旧版音频控制面板" Opacity="0.72" TextWrapping="Wrap" />
                                                 </StackPanel>
-                                                <Button x:Name="AudioPanelButton" Grid.Column="2" Classes="Flat"
+                                                <Button Grid.Column="2" Classes="Flat"
                                                         MinWidth="88"
                                                         Content="执行" Click="OnOpenAudioPanelClick" />
                                             </Grid>
@@ -934,7 +934,7 @@
                                                                Opacity="0.72"
                                                                TextWrapping="Wrap" />
                                                 </StackPanel>
-                                                <Button x:Name="InstallRuntimeButton" Grid.Column="2" Classes="Flat"
+                                                <Button Grid.Column="2" Classes="Flat"
                                                         MinWidth="88" Content="执行" Click="OnInstallRuntimeClick" />
                                             </Grid>
                                         </suki:GlassCard>
@@ -949,11 +949,11 @@
                                                                TextWrapping="Wrap" />
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
-                                                    <Button x:Name="SavedataBackupButton" Classes="Flat" MinWidth="88"
+                                                    <Button Classes="Flat" MinWidth="88"
                                                             Content="备份" Click="OnBackupSavedataClick" />
-                                                    <Button x:Name="SavedataImportButton" Classes="Flat" MinWidth="88"
+                                                    <Button Classes="Flat" MinWidth="88"
                                                             Content="导入" Click="OnImportSavedataClick" />
-                                                    <Button x:Name="SavedataMigrateButton" Classes="Flat" MinWidth="88"
+                                                    <Button Classes="Flat" MinWidth="88"
                                                             Content="迁移" Click="OnMigrateSavedataClick" />
                                                 </StackPanel>
                                             </Grid>
@@ -968,7 +968,7 @@
                                 <TextBlock Classes="FaIcon" Text="&#xF2F1;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
                             <suki:SukiSideMenuItem.PageContent>
-                                <ScrollViewer x:Name="UpdatePageView" Margin="14" VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled">
                                     <Grid MinHeight="520" VerticalAlignment="Center">
                                         <StackPanel HorizontalAlignment="Center"
@@ -991,7 +991,7 @@
                                                            FontSize="14"
                                                            LineHeight="24" />
                                             </StackPanel>
-                                            <Button x:Name="SelectUpdatePackageButton"
+                                            <Button
                                                     Classes="Flat"
                                                     MinWidth="180"
                                                     HorizontalAlignment="Center"
@@ -1008,7 +1008,7 @@
                                 <TextBlock Classes="FaIcon" Text="&#xF05A;" FontSize="14" />
                             </suki:SukiSideMenuItem.Icon>
                             <suki:SukiSideMenuItem.PageContent>
-                                <ScrollViewer x:Name="DiagPageView" Margin="14" VerticalScrollBarVisibility="Auto"
+                                <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled">
                                     <StackPanel Spacing="12">
                                         <suki:GlassCard IsAnimated="False">
@@ -1460,7 +1460,7 @@
                                 <ScrollViewer Margin="14" VerticalScrollBarVisibility="Auto"
                                               HorizontalScrollBarVisibility="Disabled">
                                     <Grid MinHeight="520" VerticalAlignment="Center">
-                                        <StackPanel x:Name="AboutPageContentStack"
+                                        <StackPanel
                                                     MaxWidth="720"
                                                     HorizontalAlignment="Center"
                                                     VerticalAlignment="Center"

@@ -114,11 +114,6 @@ internal class ConfigHandler
     private TomlLineDocument _readOnlyDocument;
     private string _readOnlyReason = string.Empty;
 
-    public ConfigHandler(string tomlPath)
-        : this(tomlPath, null)
-    {
-    }
-
     public ConfigHandler(string tomlPath, ILogger<ConfigHandler> logger)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tomlPath);
@@ -200,35 +195,6 @@ internal class ConfigHandler
         }
     }
 
-    public bool TryValidate(out string error)
-    {
-        lock (_sync)
-        {
-            if (_readOnlyDocument != null)
-            {
-                error = ValidateTomlText(_readOnlyDocument.ToText());
-                return string.IsNullOrWhiteSpace(error);
-            }
-
-            if (!File.Exists(_path))
-            {
-                error = string.Empty;
-                return true;
-            }
-
-            try
-            {
-                error = ValidateTomlText(File.ReadAllText(_path, Encoding.UTF8));
-                return string.IsNullOrWhiteSpace(error);
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-                return false;
-            }
-        }
-    }
-
     public void ReplaceWithText(string content)
     {
         lock (_sync)
@@ -302,16 +268,6 @@ internal class ConfigHandler
                 WriteDocumentUnsafe(document);
             }
         }
-    }
-
-    public void WriteBool(string section, string key, bool value)
-    {
-        WriteString(section, key, value ? "true" : "false");
-    }
-
-    public void WriteInt(string section, string key, int value)
-    {
-        WriteString(section, key, value.ToString(CultureInfo.InvariantCulture));
     }
 
     public string ReadString(string section, string key, string defaultValue = "")
@@ -390,7 +346,10 @@ internal class ConfigHandler
 
             if (_readOnlyDocument != null)
             {
-                LoadServerPresetsFromText(_readOnlyDocument.Clone(), presets, ref activePreset, ref hasPresetSection);
+                _readOnlyDocument.Clone().LoadServerPresetsFromText(
+                    presets,
+                    ref activePreset,
+                    ref hasPresetSection);
             }
             else if (File.Exists(_path) && TryLoadModelUnsafe(out var model, out modelError))
             {
@@ -403,7 +362,10 @@ internal class ConfigHandler
                     _logger?.LogWarning("Falling back to text-level server preset read because TOML model loading failed: {Error}", modelError);
                 }
 
-                LoadServerPresetsFromText(LoadDocumentUnsafe(), presets, ref activePreset, ref hasPresetSection);
+                LoadDocumentUnsafe().LoadServerPresetsFromText(
+                    presets,
+                    ref activePreset,
+                    ref hasPresetSection);
             }
 
             bool mutated = EnsureServerPresetDefaults(presets, asphyxiaPresetName, asphyxiaDefaultUrl);
@@ -806,15 +768,6 @@ internal class ConfigHandler
             ServerUrl = TryGetValue(table, "serverurl", out var serverUrl) ? ConvertTomlValue(serverUrl) : string.Empty,
             PcbId = TryGetValue(table, "pcbid", out var pcbId) ? ConvertTomlValue(pcbId) : string.Empty
         });
-    }
-
-    private static void LoadServerPresetsFromText(
-        TomlLineDocument document,
-        List<ServerPresetItem> presets,
-        ref string activePreset,
-        ref bool hasPresetSection)
-    {
-        document.LoadServerPresetsFromText(presets, ref activePreset, ref hasPresetSection);
     }
 
     private static bool EnsureServerPresetDefaults(

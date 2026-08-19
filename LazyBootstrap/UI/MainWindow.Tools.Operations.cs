@@ -365,11 +365,6 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private IReadOnlyList<SavedataTransferEntry> GetMigrationEntries(string gameDirectory, string asphyxiaDirectory)
-        {
-            return _savedataTransferService.BuildMigrationEntries(gameDirectory, asphyxiaDirectory);
-        }
-
         private async Task MigrateSavedataAsync(IReadOnlyList<SavedataTransferEntry> selectedEntries)
         {
             ArgumentNullException.ThrowIfNull(selectedEntries);

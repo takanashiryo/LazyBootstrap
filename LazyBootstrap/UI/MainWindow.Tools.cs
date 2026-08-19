@@ -40,7 +40,7 @@ namespace LazyBootstrap.UI
                 return;
             }
 
-            var entries = GetMigrationEntries(
+            var entries = _savedataTransferService.BuildMigrationEntries(
                 directories.Value.GameDirectory,
                 directories.Value.AsphyxiaDirectory);
             if (entries.Count == 0)

@@ -118,7 +118,7 @@ namespace LazyBootstrap.Controls
 
             double cycleProgress = (_animationStopwatch.Elapsed.TotalMilliseconds / durationMilliseconds) % 2d;
             double pingPongProgress = cycleProgress <= 1d ? cycleProgress : 2d - cycleProgress;
-            double easedProgress = EaseInOutCubic(Math.Clamp(pingPongProgress, 0d, 1d));
+            double easedProgress = ControlHelpers.EaseInOutCubic(Math.Clamp(pingPongProgress, 0d, 1d));
             _borderBrush.Color = InterpolateColor(_startColor, BorderEndColor, easedProgress);
         }
 
@@ -137,13 +137,6 @@ namespace LazyBootstrap.Controls
                 NotificationType.Warning => WarningStartColor,
                 _ => ErrorStartColor
             };
-        }
-
-        private static double EaseInOutCubic(double progress)
-        {
-            return progress < 0.5d
-                ? 4d * progress * progress * progress
-                : 1d - Math.Pow(-2d * progress + 2d, 3d) / 2d;
         }
 
         private static Color InterpolateColor(Color from, Color to, double progress)
