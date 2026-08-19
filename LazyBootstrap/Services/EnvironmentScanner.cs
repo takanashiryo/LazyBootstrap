@@ -10,45 +10,45 @@ using LazyBootstrap.Platform;
 
 namespace LazyBootstrap.Services
 {
-    internal static class EnvironmentScan
+    internal static class EnvironmentScanner
     {
         private const int StepCount = 7; // CPU / GPU / NVIDIA API / DirectX9.0c / 系统媒体功能包 / VC2010 x86 / VC2010 x64
 
-        internal enum ScanResultLevel
+        internal enum EnvironmentCheckLevel
         {
             Success,
             Warning,
             Error
         }
 
-        internal sealed class ScanResultItem
+        internal sealed class EnvironmentCheckResult
         {
             public string Item { get; set; } = string.Empty;
 
             public string Detail { get; set; } = string.Empty;
 
-            public ScanResultLevel Level { get; set; } = ScanResultLevel.Success;
+            public EnvironmentCheckLevel Level { get; set; } = EnvironmentCheckLevel.Success;
         }
 
-        internal sealed class ScanSummary
+        internal sealed class EnvironmentScanSummary
         {
-            public static ScanSummary Empty { get; } = new(false, string.Empty, Array.Empty<ScanResultItem>());
+            public static EnvironmentScanSummary Empty { get; } = new(false, string.Empty, Array.Empty<EnvironmentCheckResult>());
 
-            public ScanSummary(bool hadError, string errorSummary, IReadOnlyList<ScanResultItem> items)
+            public EnvironmentScanSummary(bool hadError, string errorSummary, IReadOnlyList<EnvironmentCheckResult> items)
             {
                 HadError = hadError;
                 ErrorSummary = errorSummary ?? string.Empty;
-                Items = items ?? Array.Empty<ScanResultItem>();
+                Items = items ?? Array.Empty<EnvironmentCheckResult>();
             }
 
             public bool HadError { get; }
 
             public string ErrorSummary { get; }
 
-            public IReadOnlyList<ScanResultItem> Items { get; }
+            public IReadOnlyList<EnvironmentCheckResult> Items { get; }
         }
 
-        public static Task<ScanSummary> RunAsync(
+        public static Task<EnvironmentScanSummary> RunAsync(
             Action<int, string> progress,
             string contentsDirectoryPath,
             string bundledLibsDirectoryPath)
@@ -60,18 +60,18 @@ namespace LazyBootstrap.Services
 
             bool hadError = false; // 仅 Error
             var errorSummary = new StringBuilder();
-            var items = new List<ScanResultItem>();
+            var items = new List<EnvironmentCheckResult>();
 
-            void AddResult(string item, string detail, ScanResultLevel level)
+            void AddResult(string item, string detail, EnvironmentCheckLevel level)
             {
-                items.Add(new ScanResultItem
+                items.Add(new EnvironmentCheckResult
                 {
                     Item = item,
                     Detail = detail,
                     Level = level
                 });
 
-                if (level == ScanResultLevel.Error)
+                if (level == EnvironmentCheckLevel.Error)
                 {
                     hadError = true;
                     errorSummary.AppendLine(item);
@@ -143,12 +143,12 @@ namespace LazyBootstrap.Services
                     foreach (var dll in dllNames)
                     {
                         bool ok = File.Exists(Path.Combine(dllDirectory, dll));
-                        AddResult($"{groupName}/{dll}", string.Empty, ok ? ScanResultLevel.Success : ScanResultLevel.Error);
+                        AddResult($"{groupName}/{dll}", string.Empty, ok ? EnvironmentCheckLevel.Success : EnvironmentCheckLevel.Error);
                     }
                 }
                 catch (Exception)
                 {
-                    AddResult($"{groupName}/{faultLabel}", string.Empty, ScanResultLevel.Error);
+                    AddResult($"{groupName}/{faultLabel}", string.Empty, EnvironmentCheckLevel.Error);
                 }
             }
 
@@ -158,7 +158,7 @@ namespace LazyBootstrap.Services
             void LogCpu()
             {
                 var cpuName = GetCpuName();
-                AddResult("CPU/处理器", cpuName, string.Equals(cpuName, "未知处理器", StringComparison.Ordinal) ? ScanResultLevel.Warning : ScanResultLevel.Success);
+                AddResult("CPU/处理器", cpuName, string.Equals(cpuName, "未知处理器", StringComparison.Ordinal) ? EnvironmentCheckLevel.Warning : EnvironmentCheckLevel.Success);
             }
 
             void LogGpu()
@@ -166,13 +166,13 @@ namespace LazyBootstrap.Services
                 var gpus = GetGpuNames();
                 if (gpus.Count == 0)
                 {
-                    AddResult("GPU/显示适配器", string.Empty, ScanResultLevel.Warning);
+                    AddResult("GPU/显示适配器", string.Empty, EnvironmentCheckLevel.Warning);
                     return;
                 }
 
                 foreach (var gpu in gpus)
                 {
-                    AddResult($"GPU/{gpu}", string.Empty, ScanResultLevel.Success);
+                    AddResult($"GPU/{gpu}", string.Empty, EnvironmentCheckLevel.Success);
                 }
             }
 
@@ -182,7 +182,7 @@ namespace LazyBootstrap.Services
                 {
                     if (GpuCompatLayerConfigurator.DetectRuntimeState(contentsDirectoryPath, bundledLibsDirectoryPath).IsFullyApplied)
                     {
-                        AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", ScanResultLevel.Success);
+                        AddResult("NVIDIA API/系统库检测", "已启用兼容层，自动跳过 NVIDIA API 检测", EnvironmentCheckLevel.Success);
                         return;
                     }
                 }
@@ -227,12 +227,12 @@ namespace LazyBootstrap.Services
             for (int i = 0; i < steps.Length; i++)
             {
                 try { steps[i](); }
-                catch (Exception) { AddResult($"步骤{i + 1}", string.Empty, ScanResultLevel.Error); }
+                catch (Exception) { AddResult($"步骤{i + 1}", string.Empty, EnvironmentCheckLevel.Error); }
                 Report(i + 1);
             }
 
             Report(StepCount);
-            return new ScanSummary(hadError, errorSummary.ToString(), items.ToArray());
+            return new EnvironmentScanSummary(hadError, errorSummary.ToString(), items.ToArray());
             });
         }
     }

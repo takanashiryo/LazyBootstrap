@@ -36,11 +36,11 @@ namespace LazyBootstrap.UI
         {
             _logger.LogInformation("KFC update workflow requested.");
 
-            string sevenZip = _paths.ResolveSevenZipExecutablePath();
-            if (!File.Exists(sevenZip))
+            string sevenZipExecutablePath = _paths.ResolveSevenZipExecutablePath();
+            if (!File.Exists(sevenZipExecutablePath))
             {
-                _logger.LogWarning("KFC update aborted because 7za was not found: {SevenZipPath}", sevenZip);
-                ShowErrorToast("更新失败", $"未找到 7za：{sevenZip}");
+                _logger.LogWarning("KFC update aborted because 7za was not found: {SevenZipPath}", sevenZipExecutablePath);
+                ShowErrorToast("更新失败", $"未找到 7za：{sevenZipExecutablePath}");
                 return;
             }
 
@@ -53,10 +53,10 @@ namespace LazyBootstrap.UI
                 return;
             }
 
-            string mediaUpdater = Path.Combine(_paths.ApplicationDirectoryPath, MediaUpdateProtocol.MediaUpdaterExecutableFileName);
-            if (!File.Exists(mediaUpdater))
+            string mediaUpdaterExecutablePath = Path.Combine(_paths.ApplicationDirectoryPath, MediaUpdateProtocol.MediaUpdaterExecutableFileName);
+            if (!File.Exists(mediaUpdaterExecutablePath))
             {
-                _logger.LogWarning("KFC update aborted because MediaUpdater was not found: {MediaUpdaterPath}", mediaUpdater);
+                _logger.LogWarning("KFC update aborted because MediaUpdater was not found: {MediaUpdaterPath}", mediaUpdaterExecutablePath);
                 ShowErrorToast(
                     "更新失败",
                     $"未找到 {MediaUpdateProtocol.MediaUpdaterExecutableFileName}。请与 LazyBootstrap 一并部署。");
@@ -86,23 +86,23 @@ namespace LazyBootstrap.UI
 
             _logger.LogInformation("KFC update archive selected: {ArchivePath}", archivePath);
 
-            string staging = _paths.GetUpdateStagingDirectoryPath();
+            string stagingDirectoryPath = _paths.GetUpdateStagingDirectoryPath();
             reportProgress?.Invoke("正在准备更新...");
-            bool updateDetached = false;
+            bool mediaUpdaterStarted = false;
             try
             {
                 reportProgress?.Invoke("正在清理更新临时目录...");
-                _logger.LogInformation("Clearing update staging directory: {StagingDirectory}", staging);
-                ClearStagingDirectory(staging);
+                _logger.LogInformation("Clearing update staging directory: {StagingDirectory}", stagingDirectoryPath);
+                ClearStagingDirectory(stagingDirectoryPath);
 
                 reportProgress?.Invoke("正在解压更新压缩包...");
-                if (!await RunSevenZipExtractAsync(sevenZip, archivePath, staging).ConfigureAwait(true))
+                if (!await RunSevenZipExtractAsync(sevenZipExecutablePath, archivePath, stagingDirectoryPath).ConfigureAwait(true))
                 {
                     _logger.LogWarning("KFC update aborted because archive extraction failed.");
                     return;
                 }
 
-                if (string.IsNullOrEmpty(MediaUpdateProtocol.FindShallowestFile(staging, MediaUpdateProtocol.SyncBatchFileName)))
+                if (string.IsNullOrEmpty(MediaUpdateProtocol.FindShallowestFile(stagingDirectoryPath, MediaUpdateProtocol.SyncBatchFileName)))
                 {
                     _logger.LogWarning("KFC update aborted because sync batch was not found in staging.");
                     ShowErrorToast("更新失败", $"压缩包中未找到 {MediaUpdateProtocol.SyncBatchFileName}。");
@@ -111,9 +111,9 @@ namespace LazyBootstrap.UI
 
                 reportProgress?.Invoke("正在启动更新程序...");
                 var updaterStartResult = TryStartMediaUpdater(
-                    mediaUpdater,
+                    mediaUpdaterExecutablePath,
                     _paths.BaseDir,
-                    staging,
+                    stagingDirectoryPath,
                     _paths.ApplicationDirectoryPath,
                     out string updaterStartError);
 
@@ -135,7 +135,7 @@ namespace LazyBootstrap.UI
                     return;
                 }
 
-                updateDetached = true;
+                mediaUpdaterStarted = true;
                 _logger.LogInformation("MediaUpdater started successfully. Main application will exit.");
                 ShowInfoToast(
                     "开始更新",
@@ -148,11 +148,11 @@ namespace LazyBootstrap.UI
             }
             finally
             {
-                if (!updateDetached)
+                if (!mediaUpdaterStarted)
                 {
                     try
                     {
-                        ClearStagingDirectory(staging);
+                        ClearStagingDirectory(stagingDirectoryPath);
                     }
                     catch (Exception ex)
                     {
@@ -161,11 +161,11 @@ namespace LazyBootstrap.UI
                 }
             }
 
-            if (updateDetached)
+            if (mediaUpdaterStarted)
             {
-                if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime life)
+                if (Avalonia.Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktopLifetime)
                 {
-                    life.Shutdown(0);
+                    desktopLifetime.Shutdown(0);
                 }
                 else
                 {
@@ -174,11 +174,11 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private static void ClearStagingDirectory(string staging)
+        private static void ClearStagingDirectory(string stagingDirectoryPath)
         {
-            if (Directory.Exists(staging))
+            if (Directory.Exists(stagingDirectoryPath))
             {
-                Directory.Delete(staging, true);
+                Directory.Delete(stagingDirectoryPath, true);
             }
         }
 
@@ -287,8 +287,8 @@ namespace LazyBootstrap.UI
                     return MediaUpdaterStartResult.Failed;
                 }
 
-                string g = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gamePath));
-                string s = Path.TrimEndingDirectorySeparator(Path.GetFullPath(stagingPath));
+                string normalizedGamePath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(gamePath));
+                string normalizedStagingPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(stagingPath));
 
                 using var process = ProcessExecutionHelper.StartShellProcess(
                     mediaUpdaterPath,
@@ -297,9 +297,9 @@ namespace LazyBootstrap.UI
                     startInfo =>
                     {
                         startInfo.ArgumentList.Add("--game");
-                        startInfo.ArgumentList.Add(g);
+                        startInfo.ArgumentList.Add(normalizedGamePath);
                         startInfo.ArgumentList.Add("--staging");
-                        startInfo.ArgumentList.Add(s);
+                        startInfo.ArgumentList.Add(normalizedStagingPath);
                     });
 
                 if (process == null)

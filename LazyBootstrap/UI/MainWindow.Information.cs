@@ -18,72 +18,72 @@ namespace LazyBootstrap.UI
     public partial class MainWindow
     {
         private const string ProjectRepositoryUrl = "https://github.com/takanashiryo/LazyBootstrap";
-        private readonly EnvironmentScanResult _environmentScanResult = new EnvironmentScanResult();
+        private readonly EnvironmentScanViewState _environmentScanViewState = new EnvironmentScanViewState();
 
         /// <summary>True when the most recent scan found environment errors (queried by the shell startup flow).</summary>
-        private bool HasEnvironmentScanErrors => _environmentScanResult.HasEnvironmentScanErrors;
+        private bool HasEnvironmentScanErrors => _environmentScanViewState.HasEnvironmentScanErrors;
 
         /// <summary>Runs the initial environment scan and renders it (invoked during the startup sequence).</summary>
         private async Task InitializeDiagnosticStartupAsync()
         {
-            await InitializeInfoAsync(_environmentScanResult);
-            await RunScanAsync(_environmentScanResult);
+            await InitializeInfoAsync(_environmentScanViewState);
+            await RunScanAsync(_environmentScanViewState);
             ApplyInfoStateToUi();
         }
 
         private async void OnRefreshEnvironmentScanClick(object sender, Avalonia.Interactivity.RoutedEventArgs e)
         {
-            await RunScanAsync(_environmentScanResult);
+            await RunScanAsync(_environmentScanViewState);
             ApplyInfoStateToUi();
         }
 
         private void ApplyInfoStateToUi()
         {
-            SetTextBoxTextIfNeeded(MachinePropertyTextBox, _environmentScanResult.MachineProperty);
-            SetTextBoxTextIfNeeded(GameVersionTextBox, _environmentScanResult.GameVersion);
-            SetTextBoxTextIfNeeded(OperatingSystemVersionNameTextBox, _environmentScanResult.OperatingSystemVersionName);
-            SetTextBoxTextIfNeeded(OperatingSystemBuildNumberTextBox, _environmentScanResult.OperatingSystemBuildNumber);
+            SetTextBoxTextIfNeeded(MachinePropertyTextBox, _environmentScanViewState.MachineProperty);
+            SetTextBoxTextIfNeeded(GameVersionTextBox, _environmentScanViewState.GameVersion);
+            SetTextBoxTextIfNeeded(OperatingSystemVersionNameTextBox, _environmentScanViewState.OperatingSystemVersionName);
+            SetTextBoxTextIfNeeded(OperatingSystemBuildNumberTextBox, _environmentScanViewState.OperatingSystemBuildNumber);
 
             if (EnvironmentScanPendingHintTextBlock != null)
             {
-                EnvironmentScanPendingHintTextBlock.IsVisible = _environmentScanResult.ScanUiPendingHintVisible;
+                EnvironmentScanPendingHintTextBlock.IsVisible = _environmentScanViewState.ScanUiPendingHintVisible;
             }
 
-            SetContent(CpuPrimaryRowHost, CreateCpuGpuTextRow(_environmentScanResult.CpuPrimaryRow));
-            ReplacePanelChildren(GpuAdapterRowsHost, _environmentScanResult.GpuAdapterRows.Select(CreateCpuGpuTextRow));
-            SetContent(NvidiaSkipNoticeRowHost, CreateEnvironmentScanResultRow(_environmentScanResult.NvidiaSkipNoticeRow));
-            SetContent(NvidiaNvcudaOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.NvidiaNvcuda));
-            SetContent(NvidiaNvcuvidOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.NvidiaNvcuvid));
-            SetContent(NvidiaEncodeApiOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.NvidiaEncodeApi));
+            SetContent(CpuPrimaryRowHost, CreateCpuGpuTextRow(_environmentScanViewState.CpuPrimaryRow));
+            ReplacePanelChildren(GpuAdapterRowsHost, _environmentScanViewState.GpuAdapterRows.Select(CreateCpuGpuTextRow));
+            SetContent(NvidiaSkipNoticeRowHost, CreateEnvironmentCheckRow(_environmentScanViewState.NvidiaSkipNoticeRow));
+            SetContent(NvidiaNvcudaOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.NvidiaNvcuda));
+            SetContent(NvidiaNvcuvidOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.NvidiaNvcuvid));
+            SetContent(NvidiaEncodeApiOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.NvidiaEncodeApi));
 
             if (NvidiaDetailPanel != null)
             {
-                NvidiaDetailPanel.IsVisible = _environmentScanResult.NvidiaDetailVisible;
+                NvidiaDetailPanel.IsVisible = _environmentScanViewState.NvidiaDetailVisible;
             }
 
-            SetContent(DirectXRuntimeFaultRowHost, CreateEnvironmentScanResultRow(_environmentScanResult.DirectXRuntimeFaultRow));
-            SetContent(DirectXD3d9OutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.DirectXD3d9));
-            SetContent(DirectXD3Dx43OutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.DirectXD3Dx43));
+            SetContent(DirectXRuntimeFaultRowHost, CreateEnvironmentCheckRow(_environmentScanViewState.DirectXRuntimeFaultRow));
+            SetContent(DirectXD3d9OutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.DirectXD3d9));
+            SetContent(DirectXD3Dx43OutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.DirectXD3Dx43));
 
-            SetContent(MediaPackRuntimeFaultRowHost, CreateEnvironmentScanResultRow(_environmentScanResult.MediaPackRuntimeFaultRow));
-            SetContent(MediaPackMfOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.MediaPackMf));
-            SetContent(MediaPackMfplatOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.MediaPackMfplat));
-            SetContent(MediaPackWmvCoreOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.MediaPackWmvCore));
+            SetContent(MediaPackRuntimeFaultRowHost, CreateEnvironmentCheckRow(_environmentScanViewState.MediaPackRuntimeFaultRow));
+            SetContent(MediaPackMfOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.MediaPackMf));
+            SetContent(MediaPackMfplatOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.MediaPackMfplat));
+            SetContent(MediaPackWmvCoreOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.MediaPackWmvCore));
 
-            SetContent(Vc2010X86RuntimeFaultRowHost, CreateEnvironmentScanResultRow(_environmentScanResult.Vc2010X86RuntimeFaultRow));
-            SetContent(Vc2010X86MsvcrOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.Vc2010X86Msvcr));
-            SetContent(Vc2010X86MsvcpOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.Vc2010X86Msvcp));
+            SetContent(Vc2010X86RuntimeFaultRowHost, CreateEnvironmentCheckRow(_environmentScanViewState.Vc2010X86RuntimeFaultRow));
+            SetContent(Vc2010X86MsvcrOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.Vc2010X86Msvcr));
+            SetContent(Vc2010X86MsvcpOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.Vc2010X86Msvcp));
 
-            SetContent(Vc2010X64RuntimeFaultRowHost, CreateEnvironmentScanResultRow(_environmentScanResult.Vc2010X64RuntimeFaultRow));
-            SetContent(Vc2010X64MsvcrOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.Vc2010X64Msvcr));
-            SetContent(Vc2010X64MsvcpOutcomeHost, CreateEnvironmentScanOutcomeBadge(_environmentScanResult.Vc2010X64Msvcp));
+            SetContent(Vc2010X64RuntimeFaultRowHost, CreateEnvironmentCheckRow(_environmentScanViewState.Vc2010X64RuntimeFaultRow));
+            SetContent(Vc2010X64MsvcrOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.Vc2010X64Msvcr));
+            SetContent(Vc2010X64MsvcpOutcomeHost, CreateEnvironmentCheckOutcomeBadge(_environmentScanViewState.Vc2010X64Msvcp));
 
             if (ScanRootAlertsCard != null)
             {
-                ScanRootAlertsCard.IsVisible = _environmentScanResult.HasScanRootAlerts;
+                ScanRootAlertsCard.IsVisible = _environmentScanViewState.HasScanRootAlerts;
             }
 
-            ReplacePanelChildren(ScanRootAlertsPanel, _environmentScanResult.ScanRootAlerts.Select(CreateRootAlertRow));
+            ReplacePanelChildren(ScanRootAlertsPanel, _environmentScanViewState.ScanRootAlerts.Select(CreateRootAlertRow));
             RefreshEnvironmentOverviewChrome();
         }
 
@@ -98,13 +98,13 @@ namespace LazyBootstrap.UI
             EnvironmentOverviewInfoBar.IsClosable = false;
             EnvironmentOverviewInfoBar.IsVisible = true;
 
-            if (_environmentScanResult.HasEnvironmentScanErrors)
+            if (_environmentScanViewState.HasEnvironmentScanErrors)
             {
                 EnvironmentOverviewInfoBar.Severity = NotificationType.Error;
                 EnvironmentOverviewInfoBar.Title = "存在未通过的检查项";
                 EnvironmentOverviewInfoBar.Message = string.Empty;
             }
-            else if (_environmentScanResult.HasAnyEnvironmentScanWarning())
+            else if (_environmentScanViewState.HasAnyEnvironmentScanWarning())
             {
                 EnvironmentOverviewInfoBar.Severity = NotificationType.Warning;
                 EnvironmentOverviewInfoBar.Title = "存在警告";
@@ -140,7 +140,7 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private static Control CreateCpuGpuTextRow(EnvironmentScanResultRow row)
+        private static Control CreateCpuGpuTextRow(EnvironmentCheckRowState row)
         {
             var grid = new Grid
             {
@@ -171,7 +171,7 @@ namespace LazyBootstrap.UI
             return grid;
         }
 
-        private static Control CreateEnvironmentScanResultRow(EnvironmentScanResultRow row)
+        private static Control CreateEnvironmentCheckRow(EnvironmentCheckRowState row)
         {
             if (row == null || !row.IsShown)
             {
@@ -232,7 +232,7 @@ namespace LazyBootstrap.UI
             };
         }
 
-        private static Control CreateEnvironmentScanOutcomeBadge(EnvironmentScanResultOutcome outcome)
+        private static Control CreateEnvironmentCheckOutcomeBadge(EnvironmentCheckOutcomeState outcome)
         {
             if (outcome == null || !outcome.OutcomeVisible)
             {
@@ -274,7 +274,7 @@ namespace LazyBootstrap.UI
             return grid;
         }
 
-        private static Border CreateBadge(EnvironmentScan.ScanResultLevel level, string text, bool isVisible)
+        private static Border CreateBadge(EnvironmentScanner.EnvironmentCheckLevel level, string text, bool isVisible)
         {
             return new Border
             {
@@ -298,12 +298,12 @@ namespace LazyBootstrap.UI
             };
         }
 
-        private static IBrush GetEnvironmentScanBrush(EnvironmentScan.ScanResultLevel level, EnvironmentScanBrushRole role)
+        private static IBrush GetEnvironmentScanBrush(EnvironmentScanner.EnvironmentCheckLevel level, EnvironmentScanBrushRole role)
         {
             Color accent = level switch
             {
-                EnvironmentScan.ScanResultLevel.Success => Color.FromRgb(82, 196, 26),
-                EnvironmentScan.ScanResultLevel.Warning => Color.FromRgb(250, 140, 22),
+                EnvironmentScanner.EnvironmentCheckLevel.Success => Color.FromRgb(82, 196, 26),
+                EnvironmentScanner.EnvironmentCheckLevel.Warning => Color.FromRgb(250, 140, 22),
                 _ => Color.FromRgb(245, 34, 45)
             };
 
@@ -313,7 +313,7 @@ namespace LazyBootstrap.UI
                 EnvironmentScanBrushRole.Border => 200,
                 EnvironmentScanBrushRole.RowFill => 24,
                 EnvironmentScanBrushRole.RowStroke => 96,
-                EnvironmentScanBrushRole.BadgeBackground => level == EnvironmentScan.ScanResultLevel.Success ? (byte)28 : level == EnvironmentScan.ScanResultLevel.Warning ? (byte)26 : (byte)30,
+                EnvironmentScanBrushRole.BadgeBackground => level == EnvironmentScanner.EnvironmentCheckLevel.Success ? (byte)28 : level == EnvironmentScanner.EnvironmentCheckLevel.Warning ? (byte)26 : (byte)30,
                 _ => 0
             };
 
@@ -324,7 +324,7 @@ namespace LazyBootstrap.UI
         {
             if (LauncherVersionTextBlock != null)
             {
-                LauncherVersionTextBlock.Text = _environmentScanResult.LauncherVersion;
+                LauncherVersionTextBlock.Text = _environmentScanViewState.LauncherVersion;
             }
         }
 
@@ -344,28 +344,28 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private sealed class EnvironmentScanResult
+        private sealed class EnvironmentScanViewState
         {
-            public EnvironmentScanResultRow CpuPrimaryRow { get; } = new EnvironmentScanResultRow();
-            public List<EnvironmentScanResultRow> GpuAdapterRows { get; } = new List<EnvironmentScanResultRow>();
-            public EnvironmentScanResultRow NvidiaSkipNoticeRow { get; } = new EnvironmentScanResultRow();
-            public EnvironmentScanResultOutcome NvidiaNvcuda { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultOutcome NvidiaNvcuvid { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultOutcome NvidiaEncodeApi { get; } = new EnvironmentScanResultOutcome();
+            public EnvironmentCheckRowState CpuPrimaryRow { get; } = new EnvironmentCheckRowState();
+            public List<EnvironmentCheckRowState> GpuAdapterRows { get; } = new List<EnvironmentCheckRowState>();
+            public EnvironmentCheckRowState NvidiaSkipNoticeRow { get; } = new EnvironmentCheckRowState();
+            public EnvironmentCheckOutcomeState NvidiaNvcuda { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckOutcomeState NvidiaNvcuvid { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckOutcomeState NvidiaEncodeApi { get; } = new EnvironmentCheckOutcomeState();
             public bool NvidiaDetailVisible { get; set; }
-            public EnvironmentScanResultRow DirectXRuntimeFaultRow { get; } = new EnvironmentScanResultRow();
-            public EnvironmentScanResultOutcome DirectXD3d9 { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultOutcome DirectXD3Dx43 { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultRow MediaPackRuntimeFaultRow { get; } = new EnvironmentScanResultRow();
-            public EnvironmentScanResultOutcome MediaPackMf { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultOutcome MediaPackMfplat { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultOutcome MediaPackWmvCore { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultRow Vc2010X86RuntimeFaultRow { get; } = new EnvironmentScanResultRow();
-            public EnvironmentScanResultOutcome Vc2010X86Msvcr { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultOutcome Vc2010X86Msvcp { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultRow Vc2010X64RuntimeFaultRow { get; } = new EnvironmentScanResultRow();
-            public EnvironmentScanResultOutcome Vc2010X64Msvcr { get; } = new EnvironmentScanResultOutcome();
-            public EnvironmentScanResultOutcome Vc2010X64Msvcp { get; } = new EnvironmentScanResultOutcome();
+            public EnvironmentCheckRowState DirectXRuntimeFaultRow { get; } = new EnvironmentCheckRowState();
+            public EnvironmentCheckOutcomeState DirectXD3d9 { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckOutcomeState DirectXD3Dx43 { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckRowState MediaPackRuntimeFaultRow { get; } = new EnvironmentCheckRowState();
+            public EnvironmentCheckOutcomeState MediaPackMf { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckOutcomeState MediaPackMfplat { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckOutcomeState MediaPackWmvCore { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckRowState Vc2010X86RuntimeFaultRow { get; } = new EnvironmentCheckRowState();
+            public EnvironmentCheckOutcomeState Vc2010X86Msvcr { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckOutcomeState Vc2010X86Msvcp { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckRowState Vc2010X64RuntimeFaultRow { get; } = new EnvironmentCheckRowState();
+            public EnvironmentCheckOutcomeState Vc2010X64Msvcr { get; } = new EnvironmentCheckOutcomeState();
+            public EnvironmentCheckOutcomeState Vc2010X64Msvcp { get; } = new EnvironmentCheckOutcomeState();
             public List<string> ScanRootAlerts { get; } = new List<string>();
             public bool HasScanRootAlerts { get; set; }
             public bool ScanUiReady { get; set; }
@@ -379,12 +379,12 @@ namespace LazyBootstrap.UI
 
             public bool HasAnyEnvironmentScanWarning()
             {
-                return WarningRows().Any(row => row is { IsShown: true, BadgeLevel: EnvironmentScan.ScanResultLevel.Warning })
-                    || GpuAdapterRows.Any(row => row is { IsShown: true, BadgeLevel: EnvironmentScan.ScanResultLevel.Warning })
-                    || WarningOutcomes().Any(outcome => outcome is { OutcomeVisible: true, BadgeLevel: EnvironmentScan.ScanResultLevel.Warning });
+                return WarningRows().Any(row => row is { IsShown: true, BadgeLevel: EnvironmentScanner.EnvironmentCheckLevel.Warning })
+                    || GpuAdapterRows.Any(row => row is { IsShown: true, BadgeLevel: EnvironmentScanner.EnvironmentCheckLevel.Warning })
+                    || WarningOutcomes().Any(outcome => outcome is { OutcomeVisible: true, BadgeLevel: EnvironmentScanner.EnvironmentCheckLevel.Warning });
             }
 
-            private IEnumerable<EnvironmentScanResultRow> WarningRows()
+            private IEnumerable<EnvironmentCheckRowState> WarningRows()
             {
                 yield return CpuPrimaryRow;
                 yield return NvidiaSkipNoticeRow;
@@ -394,7 +394,7 @@ namespace LazyBootstrap.UI
                 yield return Vc2010X64RuntimeFaultRow;
             }
 
-            private IEnumerable<EnvironmentScanResultOutcome> WarningOutcomes()
+            private IEnumerable<EnvironmentCheckOutcomeState> WarningOutcomes()
             {
                 yield return NvidiaNvcuda;
                 yield return NvidiaNvcuvid;
@@ -411,14 +411,14 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private sealed class EnvironmentScanResultRow
+        private sealed class EnvironmentCheckRowState
         {
             public string PrimaryText { get; set; } = string.Empty;
             public string SecondaryText { get; set; } = string.Empty;
             public bool SecondaryVisible { get; set; }
             public bool ShowStatusBadge { get; set; } = true;
             public string StatusText { get; set; } = string.Empty;
-            public EnvironmentScan.ScanResultLevel BadgeLevel { get; set; } = EnvironmentScan.ScanResultLevel.Success;
+            public EnvironmentScanner.EnvironmentCheckLevel BadgeLevel { get; set; } = EnvironmentScanner.EnvironmentCheckLevel.Success;
             public bool IsShown { get; set; }
 
             public void ApplyResult(
@@ -426,7 +426,7 @@ namespace LazyBootstrap.UI
                 string secondary,
                 bool secondaryShown,
                 bool showBadge,
-                EnvironmentScan.ScanResultLevel level,
+                EnvironmentScanner.EnvironmentCheckLevel level,
                 string badgeText)
             {
                 PrimaryText = primary ?? string.Empty;
@@ -446,17 +446,17 @@ namespace LazyBootstrap.UI
                 PrimaryText = string.Empty;
                 SecondaryText = string.Empty;
                 StatusText = string.Empty;
-                BadgeLevel = EnvironmentScan.ScanResultLevel.Success;
+                BadgeLevel = EnvironmentScanner.EnvironmentCheckLevel.Success;
             }
         }
 
-        private sealed class EnvironmentScanResultOutcome
+        private sealed class EnvironmentCheckOutcomeState
         {
-            public EnvironmentScan.ScanResultLevel BadgeLevel { get; set; } = EnvironmentScan.ScanResultLevel.Success;
+            public EnvironmentScanner.EnvironmentCheckLevel BadgeLevel { get; set; } = EnvironmentScanner.EnvironmentCheckLevel.Success;
             public string StatusText { get; set; } = string.Empty;
             public bool OutcomeVisible { get; set; }
 
-            public void Apply(EnvironmentScan.ScanResultLevel level, string badgeText)
+            public void Apply(EnvironmentScanner.EnvironmentCheckLevel level, string badgeText)
             {
                 BadgeLevel = level;
                 StatusText = badgeText ?? string.Empty;
@@ -467,7 +467,7 @@ namespace LazyBootstrap.UI
             {
                 OutcomeVisible = false;
                 StatusText = string.Empty;
-                BadgeLevel = EnvironmentScan.ScanResultLevel.Success;
+                BadgeLevel = EnvironmentScanner.EnvironmentCheckLevel.Success;
             }
         }
 

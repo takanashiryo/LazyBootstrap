@@ -28,7 +28,7 @@ namespace LazyBootstrap.Serialization
         public bool ShouldRemove => RemoveWhenEmpty && string.IsNullOrEmpty(Value);
     }
 
-    internal sealed class SpiceConfigFile
+    internal sealed class SpiceXmlConfigEditor
     {
         private readonly object _sync = new object();
 

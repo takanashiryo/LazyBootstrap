@@ -135,7 +135,7 @@ namespace LazyBootstrap.UI
             while (true)
             {
                 var progress = Math.Clamp(start.Elapsed.TotalMilliseconds / WindowFadeDurationMs, 0d, 1d);
-                var easedProgress = ControlHelpers.EaseInOutCubic(progress);
+                var easedProgress = AnimationEasing.EaseInOutCubic(progress);
                 var currentAlpha = (byte)Math.Round(fromAlpha + ((toAlpha - fromAlpha) * easedProgress));
                 SetWindowAlpha(hwnd, currentAlpha);
 

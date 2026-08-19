@@ -13,7 +13,7 @@ namespace LazyBootstrap.UI
 {
     public partial class MainWindow
     {
-        private readonly DisplayConfigurationData _displayState = new DisplayConfigurationData();
+        private readonly DisplayConfigurationState _displayState = new DisplayConfigurationState();
 
         private DisplayConfigurationRequest BuildDisplayConfigurationRequest() => new DisplayConfigurationRequest(
             _displayState.IsDisplayConfigurationEnabled,
@@ -539,13 +539,13 @@ namespace LazyBootstrap.UI
 
         private sealed class DisplayChoiceOption
         {
-            public DisplayChoiceOption(DisplayInfo info, string displayName)
+            public DisplayChoiceOption(DisplayInfo display, string displayName)
             {
-                Info = info;
+                Display = display;
                 DisplayName = displayName ?? string.Empty;
             }
 
-            public DisplayInfo Info { get; }
+            public DisplayInfo Display { get; }
 
             public string DisplayName { get; }
 
@@ -580,7 +580,7 @@ namespace LazyBootstrap.UI
             public override string ToString() => DisplayName;
         }
 
-        private sealed class DisplayConfigurationData
+        private sealed class DisplayConfigurationState
         {
             public List<DisplayChoiceOption> Displays { get; } = new List<DisplayChoiceOption>();
             public List<RotationOption> Rotations { get; } = new List<RotationOption>();

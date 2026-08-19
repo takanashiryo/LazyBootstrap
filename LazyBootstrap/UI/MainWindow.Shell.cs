@@ -155,7 +155,7 @@ namespace LazyBootstrap.UI
             {
                 Opened -= OnWindowOpened;
 
-                if (_configHandler.IsReadOnlySession)
+                if (_appConfig.IsReadOnlySession)
                 {
                     await ShowConfigReadOnlyDialogAsync();
                 }
@@ -183,7 +183,7 @@ namespace LazyBootstrap.UI
 
             Dispatcher.UIThread.Post(() =>
             {
-                if (_settingsState.AutoLaunch && _launchSnapshot.CanStartLaunch)
+                if (_settingsState.AutoLaunch && _launchUiState.CanStartLaunch)
                 {
                     _ = StartLaunchAsync(false);
                 }
@@ -192,7 +192,7 @@ namespace LazyBootstrap.UI
 
         private async Task ShowConfigReadOnlyDialogAsync()
         {
-            string reason = _configHandler.ReadOnlyReason;
+            string reason = _appConfig.ReadOnlyReason;
             string content =
                 "config.toml 被占用或无法读取，当前会话将使用临时内存配置。\n\n" +
                 "你仍可继续使用程序，但所有修改将无法保存。";

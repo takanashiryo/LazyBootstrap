@@ -29,12 +29,12 @@ namespace LazyBootstrap.Application
 
             _loggerFactory = new SerilogLoggerFactory(Log.Logger, dispose: false);
             _paths = paths;
-            ConfigHandler = new ConfigHandler(
+            AppConfig = new AppConfigStore(
                 paths.ConfigFilePath,
-                CreateLogger<ConfigHandler>());
+                CreateLogger<AppConfigStore>());
         }
 
-        public ConfigHandler ConfigHandler { get; }
+        public AppConfigStore AppConfig { get; }
 
         public MainWindow CreateMainWindow()
         {
@@ -51,7 +51,7 @@ namespace LazyBootstrap.Application
 
             try
             {
-                var spiceConfigFile = new SpiceConfigFile();
+                var spiceXmlConfigEditor = new SpiceXmlConfigEditor();
                 var displayConfigurationService = new WindowsDisplayConfigurationService();
                 var defenderExclusionService = new WindowsDefenderExclusionService(
                     CreateLogger<WindowsDefenderExclusionService>());
@@ -62,9 +62,9 @@ namespace LazyBootstrap.Application
                 var displayTransactionCoordinator = new DisplaySettingsTransactionCoordinator(
                     displayConfigurationService);
                 var gpuCompatLayerConfigurator = new GpuCompatLayerConfigurator(
-                    ConfigHandler,
+                    AppConfig,
                     _paths,
-                    spiceConfigFile,
+                    spiceXmlConfigEditor,
                     CreateLogger<GpuCompatLayerConfigurator>());
                 var spiceCrashLogAnalyzer = new SpiceCrashLogAnalyzer(
                     _paths,
@@ -77,7 +77,7 @@ namespace LazyBootstrap.Application
                     gameProcessTracker,
                     defenderExclusionService,
                     appCompatLayerService,
-                    spiceConfigFile,
+                    spiceXmlConfigEditor,
                     gpuCompatLayerConfigurator,
                     startupService,
                     displayConfigurationService,
@@ -85,7 +85,7 @@ namespace LazyBootstrap.Application
                     savedataTransferService,
                     dialogManager,
                     toastManager,
-                    ConfigHandler,
+                    AppConfig,
                     CreateLogger<MainWindow>());
                 _toastManager = toastManager;
 

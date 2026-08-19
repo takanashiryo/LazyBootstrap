@@ -19,25 +19,25 @@ namespace LazyBootstrap.Platform
         private static readonly string[] BaseGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll" };
         private static readonly string[] ManagedGpuCompatLayerFiles = { "nvcuda.dll", "nvcuvid.dll", "nvEncodeAPI64.dll", "d3d9.dll" };
 
-        private readonly ConfigHandler _configFile;
+        private readonly AppConfigStore _appConfig;
         private readonly LauncherPaths _paths;
-        private readonly SpiceConfigFile _spiceConfigFileService;
+        private readonly SpiceXmlConfigEditor _spiceXmlConfigEditor;
         private readonly ILogger<GpuCompatLayerConfigurator> _logger;
 
         public GpuCompatLayerConfigurator(
-            ConfigHandler configFile,
+            AppConfigStore appConfig,
             LauncherPaths paths,
-            SpiceConfigFile spiceConfigFileService,
+            SpiceXmlConfigEditor spiceXmlConfigEditor,
             ILogger<GpuCompatLayerConfigurator> logger)
         {
-            ArgumentNullException.ThrowIfNull(configFile);
+            ArgumentNullException.ThrowIfNull(appConfig);
             ArgumentNullException.ThrowIfNull(paths);
-            ArgumentNullException.ThrowIfNull(spiceConfigFileService);
+            ArgumentNullException.ThrowIfNull(spiceXmlConfigEditor);
             ArgumentNullException.ThrowIfNull(logger);
 
-            _configFile = configFile;
+            _appConfig = appConfig;
             _paths = paths;
-            _spiceConfigFileService = spiceConfigFileService;
+            _spiceXmlConfigEditor = spiceXmlConfigEditor;
             _logger = logger;
         }
 
@@ -72,10 +72,10 @@ namespace LazyBootstrap.Platform
                     return false;
                 }
 
-                _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "compatlayer", enable ? "true" : "false");
-                _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
+                _appConfig.WriteString(AppConfigBootstrapper.SettingSectionName, "compatlayer", enable ? "true" : "false");
+                _appConfig.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
 
-                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(enable, renderMode), out var spiceError))
+                if (!_spiceXmlConfigEditor.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(enable, renderMode), out var spiceError))
                 {
                     _logger.LogWarning("GPU compatibility layer XML update failed. Rolling back.");
                     error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));
@@ -102,7 +102,7 @@ namespace LazyBootstrap.Platform
 
             try
             {
-                _configFile.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
+                _appConfig.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", renderMode);
 
                 if (!gpuCompatLayerEnabled)
                 {
@@ -117,7 +117,7 @@ namespace LazyBootstrap.Platform
                     return false;
                 }
 
-                if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(true, renderMode), out var spiceError))
+                if (!_spiceXmlConfigEditor.ApplySpiceOptions(spiceXmlPath, BuildDxModeUpdates(true, renderMode), out var spiceError))
                 {
                     _logger.LogWarning("GPU compatibility layer XML refresh failed. Rolling back.");
                     error = CombineErrors($"写入 spicetools.xml 失败: {spiceError}", RestoreSnapshots(snapshots));

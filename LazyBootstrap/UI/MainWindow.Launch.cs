@@ -31,22 +31,22 @@ namespace LazyBootstrap.UI
         private CancellationTokenSource _launchWorkflowCts;
         private CancellationTokenSource _gameProcessMonitorCts;
         private bool _suppressGameProcessExitHandling;
-        private readonly LaunchWorkflowSnapshot _launchSnapshot = new LaunchWorkflowSnapshot();
+        private readonly LaunchUiState _launchUiState = new LaunchUiState();
         private DisplayConfigurationRequest _activeLaunchDisplayConfiguration;
         private bool _openLogAfterLaunchMessageDismissal;
         private IReadOnlyDictionary<string, DisplayState> _displayRestoreStates = new Dictionary<string, DisplayState>(StringComparer.OrdinalIgnoreCase);
 
         private Task InitializeLaunchWorkflowAsync(
-            LaunchWorkflowSnapshot launchSnapshot)
+            LaunchUiState launchState)
         {
-            launchSnapshot.ToggleLaunchLogText = launchSnapshot.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
-            NotifyLaunchStateChanged(launchSnapshot);
-            NotifyLaunchLogVisibilityChanged(launchSnapshot);
-            NotifyLaunchMessageChanged(launchSnapshot);
+            launchState.ToggleLaunchLogText = launchState.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
+            NotifyLaunchStateChanged(launchState);
+            NotifyLaunchLogVisibilityChanged(launchState);
+            NotifyLaunchMessageChanged(launchState);
             return Task.CompletedTask;
         }
 
-        private Task DismissLaunchMessageAsync(LaunchWorkflowSnapshot launchState)
+        private Task DismissLaunchMessageAsync(LaunchUiState launchState)
         {
             if (launchState == null || !launchState.IsMessageVisible)
             {
@@ -64,7 +64,7 @@ namespace LazyBootstrap.UI
             return Task.CompletedTask;
         }
 
-        private Task ToggleLaunchLogAsync(LaunchWorkflowSnapshot launchState)
+        private Task ToggleLaunchLogAsync(LaunchUiState launchState)
         {
             launchState.IsLaunchLogVisible = !launchState.IsLaunchLogVisible;
             launchState.ToggleLaunchLogText = launchState.IsLaunchLogVisible ? "隐藏启动日志" : "显示启动日志";
@@ -107,9 +107,9 @@ namespace LazyBootstrap.UI
             CancelLaunchWorkflow();
             CancelGameProcessMonitoring(suppressExitHandling: true);
             _suppressGameProcessExitHandling = true;
-            ClearLaunchMessage(_launchSnapshot);
+            ClearLaunchMessage(_launchUiState);
 
-            AppendLaunchOutput(_launchSnapshot, "正在停止启动流程并结束所有进程...", NotificationType.Warning);
+            AppendLaunchOutput(_launchUiState, "正在停止启动流程并结束所有进程...", NotificationType.Warning);
 
             int killedSpice = KillProcessesByName("spice64");
             int killedAsphyxia = KillProcessesByName("asphyxia-core-x64");
@@ -132,7 +132,7 @@ namespace LazyBootstrap.UI
             return Task.CompletedTask;
         }
 
-        private async Task RunLaunchWorkflowAsync(LaunchWorkflowSnapshot launchState, LaunchRequest request)
+        private async Task RunLaunchWorkflowAsync(LaunchUiState launchState, LaunchRequest request)
         {
             ArgumentNullException.ThrowIfNull(request);
 
@@ -441,7 +441,7 @@ namespace LazyBootstrap.UI
             _logger.LogInformation("Launcher closing cleanup started.");
             CancelLaunchWorkflow();
             CancelGameProcessMonitoring(suppressExitHandling: true);
-            ClearLaunchMessage(_launchSnapshot);
+            ClearLaunchMessage(_launchUiState);
 
             KillTrackedGameProcessDuringClose();
             DisposeTrackedGameProcess();
@@ -485,14 +485,14 @@ namespace LazyBootstrap.UI
 
         private void ResetLaunchRuntimeState()
         {
-            if (_launchSnapshot == null)
+            if (_launchUiState == null)
             {
                 return;
             }
 
-            _launchSnapshot.IsLaunching = false;
-            _launchSnapshot.IsGameRunning = false;
-            NotifyLaunchStateChanged(_launchSnapshot);
+            _launchUiState.IsLaunching = false;
+            _launchUiState.IsGameRunning = false;
+            NotifyLaunchStateChanged(_launchUiState);
         }
 
         private void DisposeTrackedGameProcess()
@@ -539,7 +539,7 @@ namespace LazyBootstrap.UI
 
             if (logToLaunchOutput)
             {
-                AppendLaunchOutput(_launchSnapshot, $"{reason}，正在恢复显示器设置...");
+                AppendLaunchOutput(_launchUiState, $"{reason}，正在恢复显示器设置...");
             }
 
             var restoreMessages = new List<string>();
@@ -553,12 +553,12 @@ namespace LazyBootstrap.UI
             if (logToLaunchOutput)
             {
                 AppendLaunchOutput(
-                    _launchSnapshot,
+                    _launchUiState,
                     restored > 0 ? $"已恢复 {restored} 个显示器设置。" : "未恢复任何显示器设置。",
                     restored > 0 ? NotificationType.Information : NotificationType.Warning);
                 foreach (var restoreMessage in restoreMessages)
                 {
-                    AppendLaunchOutput(_launchSnapshot, restoreMessage, NotificationType.Warning);
+                    AppendLaunchOutput(_launchUiState, restoreMessage, NotificationType.Warning);
                 }
             }
 
@@ -678,7 +678,7 @@ namespace LazyBootstrap.UI
                             _gameProcess = restartedProcess;
                             _gameProcessTracker.RegisterTrackedSpiceProcess(restartedProcess);
                             _logger.LogInformation("Detected restarted spice64 process. ProcessId={ProcessId}", restartedProcess.Id);
-                            AppendLaunchOutput(_launchSnapshot, "检测到 spice64 重新启动，继续监控中...");
+                            AppendLaunchOutput(_launchUiState, "检测到 spice64 重新启动，继续监控中...");
                             currentProcess.Dispose();
                             continue;
                         }
@@ -731,7 +731,7 @@ namespace LazyBootstrap.UI
 
                 _logger.LogInformation("spice64 process exited. ExitCode={ExitCode}, AbnormalExit={AbnormalExit}", exitCode, abnormalExit);
                 AppendLaunchOutput(
-                    _launchSnapshot,
+                    _launchUiState,
                     abnormalExit
                         ? $"游戏进程异常退出。错误信号：{crashDiagnostic?.Signal ?? SpiceCrashDiagnostic.UnknownSignal}，崩溃原因：{crashDiagnostic?.ReasonText ?? "未识别具体崩溃原因"}。"
                         : "游戏进程已正常退出。",
@@ -750,10 +750,10 @@ namespace LazyBootstrap.UI
 
                     Dispatcher.UIThread.Post(() =>
                     {
-                        if (_launchSnapshot != null)
+                        if (_launchUiState != null)
                         {
                             ShowLaunchMessage(
-                                _launchSnapshot,
+                                _launchUiState,
                                 NotificationType.Error,
                                 "进程异常退出",
                                 diagnostic.Signal,
@@ -774,11 +774,11 @@ namespace LazyBootstrap.UI
 
                 if (_gameProcessTracker.HasManagedAsphyxiaProcess())
                 {
-                    AppendLaunchOutput(_launchSnapshot, "正在关闭 Asphyxia Core...");
+                    AppendLaunchOutput(_launchUiState, "正在关闭 Asphyxia Core...");
                     if (_gameProcessTracker.TryStopManagedAsphyxiaProcess(out var stopErrorMessage))
                     {
                         _logger.LogInformation("Managed Asphyxia Core process stopped after game exit.");
-                        AppendLaunchOutput(_launchSnapshot, "Asphyxia Core 已关闭");
+                        AppendLaunchOutput(_launchUiState, "Asphyxia Core 已关闭");
                     }
                     else
                     {
@@ -803,16 +803,16 @@ namespace LazyBootstrap.UI
                 if (!cancellationToken.IsCancellationRequested && !_suppressGameProcessExitHandling)
                 {
                     _logger.LogInformation("Game process lifecycle cleanup completed.");
-                    if (_launchSnapshot != null)
+                    if (_launchUiState != null)
                     {
-                        _launchSnapshot.IsLaunching = false;
-                        _launchSnapshot.IsGameRunning = false;
+                        _launchUiState.IsLaunching = false;
+                        _launchUiState.IsGameRunning = false;
                         if (!abnormalExit)
                         {
-                            ClearLaunchMessage(_launchSnapshot);
+                            ClearLaunchMessage(_launchUiState);
                         }
 
-                        NotifyLaunchStateChanged(_launchSnapshot);
+                        NotifyLaunchStateChanged(_launchUiState);
                     }
 
                     RestoreLauncherWindow();
@@ -838,7 +838,7 @@ namespace LazyBootstrap.UI
             {
                 await Task.Delay(LauncherAutoMinimizeDelay);
 
-                if (_launchSnapshot?.IsGameRunning == true)
+                if (_launchUiState?.IsGameRunning == true)
                 {
                     Dispatcher.UIThread.Post(() => WindowState = WindowState.Minimized);
                 }
@@ -849,7 +849,7 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private void FailLaunch(LaunchWorkflowSnapshot launchState, string logMessage, string displayMessage = null)
+        private void FailLaunch(LaunchUiState launchState, string logMessage, string displayMessage = null)
         {
             StopLaunchWithMessage(
                 launchState,
@@ -859,7 +859,7 @@ namespace LazyBootstrap.UI
                 displayMessage ?? logMessage);
         }
 
-        private void WarnLaunchAndAbort(LaunchWorkflowSnapshot launchState, string title, string bodyMessage)
+        private void WarnLaunchAndAbort(LaunchUiState launchState, string title, string bodyMessage)
         {
             StopLaunchWithMessage(
                 launchState,
@@ -870,7 +870,7 @@ namespace LazyBootstrap.UI
         }
 
         private void StopLaunchWithMessage(
-            LaunchWorkflowSnapshot launchState,
+            LaunchUiState launchState,
             NotificationType messageType,
             string title,
             string logMessage,
@@ -884,7 +884,7 @@ namespace LazyBootstrap.UI
             ShowLaunchMessage(launchState, messageType, title, accentText, bodyMessage);
         }
 
-        private void ShowLaunchMessage(LaunchWorkflowSnapshot launchState, NotificationType messageType, string title, string accentText, string bodyText)
+        private void ShowLaunchMessage(LaunchUiState launchState, NotificationType messageType, string title, string accentText, string bodyText)
         {
             if (launchState == null)
             {
@@ -911,7 +911,7 @@ namespace LazyBootstrap.UI
                 "请阅读 log.txt";
         }
 
-        private void ClearLaunchMessage(LaunchWorkflowSnapshot launchState)
+        private void ClearLaunchMessage(LaunchUiState launchState)
         {
             if (launchState == null)
             {
@@ -927,14 +927,14 @@ namespace LazyBootstrap.UI
             NotifyLaunchMessageChanged(launchState);
         }
 
-        private void ClearLaunchLog(LaunchWorkflowSnapshot launchState)
+        private void ClearLaunchLog(LaunchUiState launchState)
         {
             _logLines.Clear();
             launchState.LaunchLogText = string.Empty;
             NotifyLaunchLogChanged(launchState);
         }
 
-        private void AppendLaunchOutput(LaunchWorkflowSnapshot launchState, string message, NotificationType type = NotificationType.Information)
+        private void AppendLaunchOutput(LaunchUiState launchState, string message, NotificationType type = NotificationType.Information)
         {
             if (launchState == null || string.IsNullOrWhiteSpace(message))
             {
@@ -954,7 +954,7 @@ namespace LazyBootstrap.UI
             NotifyLaunchLogChanged(launchState);
         }
 
-        private void NotifyLaunchStateChanged(LaunchWorkflowSnapshot launchState)
+        private void NotifyLaunchStateChanged(LaunchUiState launchState)
         {
             if (launchState != null)
             {
@@ -962,7 +962,7 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private void NotifyLaunchLogVisibilityChanged(LaunchWorkflowSnapshot launchState)
+        private void NotifyLaunchLogVisibilityChanged(LaunchUiState launchState)
         {
             if (launchState != null)
             {
@@ -970,7 +970,7 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private void NotifyLaunchLogChanged(LaunchWorkflowSnapshot launchState)
+        private void NotifyLaunchLogChanged(LaunchUiState launchState)
         {
             if (launchState != null)
             {
@@ -978,7 +978,7 @@ namespace LazyBootstrap.UI
             }
         }
 
-        private void NotifyLaunchMessageChanged(LaunchWorkflowSnapshot launchState)
+        private void NotifyLaunchMessageChanged(LaunchUiState launchState)
         {
             if (launchState != null)
             {
@@ -1123,7 +1123,7 @@ namespace LazyBootstrap.UI
 
         private sealed record LaunchLogDocument(string Path, string Content);
 
-        private sealed class LaunchWorkflowSnapshot
+        private sealed class LaunchUiState
         {
             public string LaunchLogText { get; set; } = string.Empty;
 

@@ -90,7 +90,7 @@ namespace LazyBootstrap.UI
 
             public bool NativeTouch { get; set; }
 
-            public string AsioDriverValue { get; set; } = string.Empty;
+            public string ConfiguredAsioDriverName { get; set; } = string.Empty;
 
             public AsioDriverOption SelectedAsioDriver { get; set; }
 
@@ -111,15 +111,15 @@ namespace LazyBootstrap.UI
 
         private sealed class AsioDriverOption
         {
-            public AsioDriverOption(string displayName, string value)
+            public AsioDriverOption(string displayName, string driverName)
             {
                 DisplayName = displayName ?? string.Empty;
-                Value = value ?? string.Empty;
+                DriverName = driverName ?? string.Empty;
             }
 
             public string DisplayName { get; }
 
-            public string Value { get; }
+            public string DriverName { get; }
 
             public override string ToString() => DisplayName;
         }
@@ -532,12 +532,12 @@ namespace LazyBootstrap.UI
                 ? _settingsState.AsioDrivers.ToList()
                 : new List<AsioDriverOption> { new("无", string.Empty) };
 
-            var selectedValue = _settingsState.SelectedAsioDriver?.Value
-                ?? _settingsState.AsioDriverValue
+            var selectedDriverName = _settingsState.SelectedAsioDriver?.DriverName
+                ?? _settingsState.ConfiguredAsioDriverName
                 ?? string.Empty;
 
             var targetChoice = choices.FirstOrDefault(choice =>
-                string.Equals(choice.Value, selectedValue, StringComparison.OrdinalIgnoreCase))
+                string.Equals(choice.DriverName, selectedDriverName, StringComparison.OrdinalIgnoreCase))
                 ?? choices.FirstOrDefault()
                 ?? new AsioDriverOption("无", string.Empty);
 
@@ -767,12 +767,12 @@ namespace LazyBootstrap.UI
                 return;
             }
 
-            var selectedDriverValue = _settingsState.SelectedAsioDriver?.Value
-                ?? _settingsState.AsioDriverValue
+            var selectedDriverName = _settingsState.SelectedAsioDriver?.DriverName
+                ?? _settingsState.ConfiguredAsioDriverName
                 ?? string.Empty;
 
             OpenAsioControlPanelButton.IsEnabled = OperatingSystem.IsWindows()
-                && !string.IsNullOrWhiteSpace(selectedDriverValue);
+                && !string.IsNullOrWhiteSpace(selectedDriverName);
         }
 
         private Task PersistSpice() => PersistSpiceSettingsAsync(_settingsState);
@@ -996,12 +996,12 @@ namespace LazyBootstrap.UI
                     if (AsioDriverComboBox.SelectedItem is AsioDriverOption choice)
                     {
                         _settingsState.SelectedAsioDriver = choice;
-                        _settingsState.AsioDriverValue = choice.Value;
+                        _settingsState.ConfiguredAsioDriverName = choice.DriverName;
                     }
                     else
                     {
                         _settingsState.SelectedAsioDriver = null;
-                        _settingsState.AsioDriverValue = string.Empty;
+                        _settingsState.ConfiguredAsioDriverName = string.Empty;
                     }
 
                     await PersistSpice();
@@ -1065,8 +1065,8 @@ namespace LazyBootstrap.UI
         private const string AutoLaunchConfigKey = "auto-launch";
         private const string MissingSpiceConfigMessage = "未找到任何spice2x配置文件";
 
-        private SpiceConfigFile _spiceConfigFileService = null!;
-        private GpuCompatLayerConfigurator _gpuCompatLayerService = null!;
+        private SpiceXmlConfigEditor _spiceXmlConfigEditor = null!;
+        private GpuCompatLayerConfigurator _gpuCompatLayerConfigurator = null!;
         private WindowsAppCompatLayerService _appCompatLayerService = null!;
         private WindowsStartupService _windowsStartupService = null!;
 
@@ -1075,43 +1075,43 @@ namespace LazyBootstrap.UI
             Func<SettingsState, string> GetXmlValue,
             Action<SettingsState, string> ApplyXmlValue);
 
-        private static SpiceOptionDescriptor B(string name,
+        private static SpiceOptionDescriptor CreateBooleanOptionDescriptor(string name,
             Func<SettingsState, bool> getter,
             Action<SettingsState, bool> setter,
             string enabledValue) => new(name,
-                vm => getter(vm) ? enabledValue : string.Empty,
-                (vm, xmlValue) => setter(vm, string.Equals(xmlValue, enabledValue, StringComparison.OrdinalIgnoreCase)));
+                state => getter(state) ? enabledValue : string.Empty,
+                (state, xmlValue) => setter(state, string.Equals(xmlValue, enabledValue, StringComparison.OrdinalIgnoreCase)));
 
-        private static SpiceOptionDescriptor S(string name,
+        private static SpiceOptionDescriptor CreateStringOptionDescriptor(string name,
             Func<SettingsState, string> getter,
             Action<SettingsState, string> setter) => new(name,
-                vm => getter(vm) ?? string.Empty,
-                (vm, xmlValue) => setter(vm, xmlValue ?? string.Empty));
+                state => getter(state) ?? string.Empty,
+                (state, xmlValue) => setter(state, xmlValue ?? string.Empty));
 
         private static readonly SpiceOptionDescriptor[] GeneralSpiceOptions =
         [
-            B("w", vm => vm.Windowed, (vm, v) => vm.Windowed = v, "/ENABLED"),
-            S("k", vm => vm.DllInjection, (vm, v) => vm.DllInjection = v),
-            B("sp2x-processefficiency", vm => vm.PCoreOptimization, (vm, v) => vm.PCoreOptimization = v, "pcores"),
-            B("sp2x-sdvxnosub", vm => vm.DisableSubDisplay, (vm, v) => vm.DisableSubDisplay = v, "/ENABLED"),
+            CreateBooleanOptionDescriptor("w", state => state.Windowed, (state, value) => state.Windowed = value, "/ENABLED"),
+            CreateStringOptionDescriptor("k", state => state.DllInjection, (state, value) => state.DllInjection = value),
+            CreateBooleanOptionDescriptor("sp2x-processefficiency", state => state.PCoreOptimization, (state, value) => state.PCoreOptimization = value, "pcores"),
+            CreateBooleanOptionDescriptor("sp2x-sdvxnosub", state => state.DisableSubDisplay, (state, value) => state.DisableSubDisplay = value, "/ENABLED"),
             new("sp2x-windowborder",
-                vm => vm.WindowModeIndex switch { 1 => "1", 2 => "2", _ => "" },
-                (vm, v) => vm.WindowModeIndex = v switch { "1" => 1, "2" => 2, _ => 0 }),
-            B("sdvxwsubborderless", vm => vm.SubBorderless, (vm, v) => vm.SubBorderless = v, "/ENABLED"),
-            B("s", vm => vm.ShowCursorTouchSim, (vm, v) => vm.ShowCursorTouchSim = v, "/ENABLED"),
-            B("sp2x-windowalwaysontop", vm => vm.WindowTopMost, (vm, v) => vm.WindowTopMost = v, "/ENABLED"),
-            S("sp2x-windowsize", vm => vm.WindowSize, (vm, v) => vm.WindowSize = v),
-            B("graphics-force-single-adapter", vm => vm.SingleAdapter, (vm, v) => vm.SingleAdapter = v, "/ENABLED"),
-            B("sp2x-nvprofile", vm => vm.NvidiaPerformanceProfile, (vm, v) => vm.NvidiaPerformanceProfile = v, "/ENABLED"),
-            B("sdvxwsubtop", vm => vm.SubWindowTopMost, (vm, v) => vm.SubWindowTopMost = v, "/ENABLED"),
-            B("sp2x-sdvxsubredraw", vm => vm.SubForceRender, (vm, v) => vm.SubForceRender = v, "/ENABLED"),
-            B("sdvxnativetouch", vm => vm.NativeTouch, (vm, v) => vm.NativeTouch = v, "/ENABLED"),
+                state => state.WindowModeIndex switch { 1 => "1", 2 => "2", _ => "" },
+                (state, value) => state.WindowModeIndex = value switch { "1" => 1, "2" => 2, _ => 0 }),
+            CreateBooleanOptionDescriptor("sdvxwsubborderless", state => state.SubBorderless, (state, value) => state.SubBorderless = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("s", state => state.ShowCursorTouchSim, (state, value) => state.ShowCursorTouchSim = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("sp2x-windowalwaysontop", state => state.WindowTopMost, (state, value) => state.WindowTopMost = value, "/ENABLED"),
+            CreateStringOptionDescriptor("sp2x-windowsize", state => state.WindowSize, (state, value) => state.WindowSize = value),
+            CreateBooleanOptionDescriptor("graphics-force-single-adapter", state => state.SingleAdapter, (state, value) => state.SingleAdapter = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("sp2x-nvprofile", state => state.NvidiaPerformanceProfile, (state, value) => state.NvidiaPerformanceProfile = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("sdvxwsubtop", state => state.SubWindowTopMost, (state, value) => state.SubWindowTopMost = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("sp2x-sdvxsubredraw", state => state.SubForceRender, (state, value) => state.SubForceRender = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("sdvxnativetouch", state => state.NativeTouch, (state, value) => state.NativeTouch = value, "/ENABLED"),
             new("sp2x-sdvxasio",
-                vm => vm.SelectedAsioDriver?.Value ?? vm.AsioDriverValue ?? "",
-                (vm, v) => vm.AsioDriverValue = v ?? ""),
-            B("sdvxasio2ch", vm => vm.Asio2Ch, (vm, v) => vm.Asio2Ch = v, "/ENABLED"),
+                state => state.SelectedAsioDriver?.DriverName ?? state.ConfiguredAsioDriverName ?? "",
+                (state, value) => state.ConfiguredAsioDriverName = value ?? ""),
+            CreateBooleanOptionDescriptor("sdvxasio2ch", state => state.Asio2Ch, (state, value) => state.Asio2Ch = value, "/ENABLED"),
             new("volumeboost",
-                vm => vm.VolumeBoostIndex switch
+                state => state.VolumeBoostIndex switch
                 {
                     1 => "3",
                     2 => "6",
@@ -1123,7 +1123,7 @@ namespace LazyBootstrap.UI
                     8 => "30",
                     _ => ""
                 },
-                (vm, v) => vm.VolumeBoostIndex = v switch
+                (state, value) => state.VolumeBoostIndex = value switch
                 {
                     "3" => 1,
                     "6" => 2,
@@ -1136,7 +1136,7 @@ namespace LazyBootstrap.UI
                     _ => 0
                 }),
             new("resample",
-                vm => vm.ResampleIndex switch
+                state => state.ResampleIndex switch
                 {
                     1 => "44100",
                     2 => "48000",
@@ -1146,7 +1146,7 @@ namespace LazyBootstrap.UI
                     6 => "192000",
                     _ => ""
                 },
-                (vm, v) => vm.ResampleIndex = v switch
+                (state, value) => state.ResampleIndex = value switch
                 {
                     "44100" => 1,
                     "48000" => 2,
@@ -1156,23 +1156,23 @@ namespace LazyBootstrap.UI
                     "192000" => 6,
                     _ => 0
                 }),
-            B("wasapishared", vm => vm.WasapiShared, (vm, v) => vm.WasapiShared = v, "/ENABLED"),
-            B("sp2x-lowlatencysharedaudio", vm => vm.LowLatencySharedAudio, (vm, v) => vm.LowLatencySharedAudio = v, "/ENABLED"),
-            B("cardio", vm => vm.CardIo, (vm, v) => vm.CardIo = v, "/ENABLED"),
-            B("scard", vm => vm.HidSmartCard, (vm, v) => vm.HidSmartCard = v, "/ENABLED"),
-            B("netdump", vm => vm.NetDump, (vm, v) => vm.NetDump = v, "/ENABLED"),
+            CreateBooleanOptionDescriptor("wasapishared", state => state.WasapiShared, (state, value) => state.WasapiShared = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("sp2x-lowlatencysharedaudio", state => state.LowLatencySharedAudio, (state, value) => state.LowLatencySharedAudio = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("cardio", state => state.CardIo, (state, value) => state.CardIo = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("scard", state => state.HidSmartCard, (state, value) => state.HidSmartCard = value, "/ENABLED"),
+            CreateBooleanOptionDescriptor("netdump", state => state.NetDump, (state, value) => state.NetDump = value, "/ENABLED"),
         ];
 
         private static readonly SpiceOptionDescriptor[] ExtraSpiceOptions =
         [
             new("network",
-                vm => vm.NetworkAdapterIp ?? "",
-                (vm, v) => vm.NetworkAdapterIp = NormalizeNetworkValue(v)),
+                state => state.NetworkAdapterIp ?? "",
+                (state, value) => state.NetworkAdapterIp = NormalizeNetworkValue(value)),
             new("subnet",
-                vm => vm.NetworkAdapterSubnet ?? "",
-                (vm, v) => vm.NetworkAdapterSubnet = NormalizeNetworkValue(v)),
-            S("url", vm => vm.ServerAddress, (vm, v) => vm.ServerAddress = v),
-            S("p", vm => vm.PcbId, (vm, v) => vm.PcbId = v),
+                state => state.NetworkAdapterSubnet ?? "",
+                (state, value) => state.NetworkAdapterSubnet = NormalizeNetworkValue(value)),
+            CreateStringOptionDescriptor("url", state => state.ServerAddress, (state, value) => state.ServerAddress = value),
+            CreateStringOptionDescriptor("p", state => state.PcbId, (state, value) => state.PcbId = value),
         ];
 
         private static readonly SpiceOptionDescriptor[] SpiceOptions =
@@ -1192,25 +1192,25 @@ namespace LazyBootstrap.UI
         }
 
         private void InitializeSettingsServices(
-            SpiceConfigFile spiceConfigFileService,
-            GpuCompatLayerConfigurator gpuCompatLayerService,
+            SpiceXmlConfigEditor spiceXmlConfigEditor,
+            GpuCompatLayerConfigurator gpuCompatLayerConfigurator,
             WindowsAppCompatLayerService appCompatLayerService,
             WindowsStartupService windowsStartupService)
         {
-            _spiceConfigFileService = spiceConfigFileService ?? throw new ArgumentNullException(nameof(spiceConfigFileService));
-            _gpuCompatLayerService = gpuCompatLayerService ?? throw new ArgumentNullException(nameof(gpuCompatLayerService));
+            _spiceXmlConfigEditor = spiceXmlConfigEditor ?? throw new ArgumentNullException(nameof(spiceXmlConfigEditor));
+            _gpuCompatLayerConfigurator = gpuCompatLayerConfigurator ?? throw new ArgumentNullException(nameof(gpuCompatLayerConfigurator));
             _appCompatLayerService = appCompatLayerService ?? throw new ArgumentNullException(nameof(appCompatLayerService));
             _windowsStartupService = windowsStartupService ?? throw new ArgumentNullException(nameof(windowsStartupService));
         }
         private Task LoadSettingsStateAsync(SettingsState settings)
         {
             _logger.LogInformation("Settings startup initialization started.");
-            settings.NoAsphyxia = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
-            settings.AutoLaunch = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, false);
+            settings.NoAsphyxia = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
+            settings.AutoLaunch = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, false);
             settings.StartWithWindows = _windowsStartupService.IsEnabled(_paths.GetLauncherExecutablePath());
-            settings.DisableSpiceFso = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false);
-            settings.UseSystemSpiceConfig = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
-            settings.GpuCompatLayerRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(_configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
+            settings.DisableSpiceFso = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false);
+            settings.UseSystemSpiceConfig = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
+            settings.GpuCompatLayerRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(_appConfig.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
             settings.IsSpiceConfigAvailable = IsSpiceConfigAvailable(settings.UseSystemSpiceConfig);
             settings.SpiceConfigEmptyStateMessage = MissingSpiceConfigMessage;
             RefreshGpuCompatLayerState(settings);
@@ -1257,7 +1257,7 @@ namespace LazyBootstrap.UI
                 return;
             }
 
-            var currentAsioDriverValue = settings.AsioDriverValue;
+            var currentConfiguredAsioDriverName = settings.ConfiguredAsioDriverName;
             var currentNetworkIp = settings.NetworkAdapterIp;
             var currentNetworkSubnet = settings.NetworkAdapterSubnet;
 
@@ -1269,7 +1269,7 @@ namespace LazyBootstrap.UI
                 var asioDriverValue = optionValues.TryGetValue("sp2x-sdvxasio", out var asioVal) ? asioVal : string.Empty;
                 var asioDrivers = BuildAsioDriverOptions(asioDriverValue);
                 var selectedAsioDriver = asioDrivers.FirstOrDefault(choice =>
-                                             string.Equals(choice.Value, asioDriverValue, StringComparison.OrdinalIgnoreCase))
+                                             string.Equals(choice.DriverName, asioDriverValue, StringComparison.OrdinalIgnoreCase))
                                          ?? asioDrivers.FirstOrDefault()
                                          ?? new AsioDriverOption("无", string.Empty);
 
@@ -1292,7 +1292,7 @@ namespace LazyBootstrap.UI
                 };
             });
 
-            ApplyDeferredSettingsResult(settings, deferredState, currentAsioDriverValue, currentNetworkIp, currentNetworkSubnet);
+            ApplyDeferredSettingsResult(settings, deferredState, currentConfiguredAsioDriverName, currentNetworkIp, currentNetworkSubnet);
             _logger.LogInformation(
                 "Deferred settings warm-up completed. AsioDriverCount={AsioDriverCount}, NetworkAdapterCount={NetworkAdapterCount}",
                 settings.AsioDrivers.Count,
@@ -1303,16 +1303,16 @@ namespace LazyBootstrap.UI
         {
             try
             {
-                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, "noasphyxia", settings.NoAsphyxia.ToString().ToLowerInvariant());
-                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, settings.AutoLaunch.ToString().ToLowerInvariant());
+                _appConfig.WriteString(AppConfigBootstrapper.SettingSectionName, "noasphyxia", settings.NoAsphyxia.ToString().ToLowerInvariant());
+                _appConfig.WriteString(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, settings.AutoLaunch.ToString().ToLowerInvariant());
                 _logger.LogInformation("Launcher settings persisted.");
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to persist launcher settings.");
                 ShowErrorToast("保存设置失败", ex.Message);
-                settings.NoAsphyxia = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
-                settings.AutoLaunch = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, false);
+                settings.NoAsphyxia = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, "noasphyxia", false);
+                settings.AutoLaunch = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, AutoLaunchConfigKey, false);
             }
 
             return Task.CompletedTask;
@@ -1380,7 +1380,7 @@ namespace LazyBootstrap.UI
 
             try
             {
-                _configHandler.WriteString(
+                _appConfig.WriteString(
                     AppConfigBootstrapper.SettingSectionName,
                     DisableFsoConfigKey,
                     settings.DisableSpiceFso.ToString().ToLowerInvariant());
@@ -1389,7 +1389,7 @@ namespace LazyBootstrap.UI
             {
                 _logger.LogError(ex, "Failed to persist FSO setting.");
                 ShowErrorToast("保存设置失败", ex.Message);
-                settings.DisableSpiceFso = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false);
+                settings.DisableSpiceFso = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, false);
                 return Task.CompletedTask;
             }
 
@@ -1413,7 +1413,7 @@ namespace LazyBootstrap.UI
             settings.DisableSpiceFso = actualDisabled;
             try
             {
-                _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, actualDisabled.ToString().ToLowerInvariant());
+                _appConfig.WriteString(AppConfigBootstrapper.SettingSectionName, DisableFsoConfigKey, actualDisabled.ToString().ToLowerInvariant());
             }
             catch (Exception ex)
             {
@@ -1454,7 +1454,7 @@ namespace LazyBootstrap.UI
 
             var renderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
-            if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
+            if (_gpuCompatLayerConfigurator.TryToggleGpuCompatLayer(
                     settings.GpuCompatLayerEnabled,
                     renderMode,
                     spiceXmlPath,
@@ -1480,7 +1480,7 @@ namespace LazyBootstrap.UI
             var renderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
 
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
-            if (_gpuCompatLayerService.TryPersistGpuCompatLayerRenderMode(
+            if (_gpuCompatLayerConfigurator.TryPersistGpuCompatLayerRenderMode(
                     renderMode,
                     settings.GpuCompatLayerEnabled,
                     spiceXmlPath,
@@ -1503,7 +1503,7 @@ namespace LazyBootstrap.UI
             ArgumentNullException.ThrowIfNull(settings);
             _logger.LogInformation("spicecfg editor launch requested.");
 
-            if (_configHandler.IsReadOnlySession)
+            if (_appConfig.IsReadOnlySession)
             {
                 _logger.LogWarning("spicecfg editor launch skipped because config.toml is in a read-only session.");
                 ShowWarningToast("配置文件无法保存", "config.toml 当前无法读取，本次会话的配置修改仅保存在内存中。");
@@ -1590,7 +1590,7 @@ namespace LazyBootstrap.UI
 
             try
             {
-                _configHandler.WriteString(
+                _appConfig.WriteString(
                     AppConfigBootstrapper.SettingSectionName,
                     UseSystemConfigKey,
                     settings.UseSystemSpiceConfig.ToString().ToLowerInvariant());
@@ -1601,7 +1601,7 @@ namespace LazyBootstrap.UI
             {
                 _logger.LogError(ex, "Failed to persist use-system-config.");
                 ShowErrorToast("保存设置失败", ex.Message);
-                settings.UseSystemSpiceConfig = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
+                settings.UseSystemSpiceConfig = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, UseSystemConfigKey, false);
             }
 
             return Task.CompletedTask;
@@ -1626,7 +1626,7 @@ namespace LazyBootstrap.UI
 
             var renderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(settings.GpuCompatLayerRenderMode);
             string spiceXmlPath = _paths.ResolveSpiceXmlPath(settings.UseSystemSpiceConfig);
-            if (_gpuCompatLayerService.TryToggleGpuCompatLayer(
+            if (_gpuCompatLayerConfigurator.TryToggleGpuCompatLayer(
                     true,
                     renderMode,
                     spiceXmlPath,
@@ -1652,7 +1652,7 @@ namespace LazyBootstrap.UI
         {
             ArgumentNullException.ThrowIfNull(settings);
 
-            var driverName = settings.SelectedAsioDriver?.Value ?? settings.AsioDriverValue;
+            var driverName = settings.SelectedAsioDriver?.DriverName ?? settings.ConfiguredAsioDriverName;
             if (string.IsNullOrWhiteSpace(driverName))
             {
                 _logger.LogInformation("ASIO control panel open skipped because no driver is selected.");
@@ -1776,10 +1776,10 @@ namespace LazyBootstrap.UI
 
         private void LoadServerPresets(SettingsState settings)
         {
-            var result = _configHandler.LoadServerPresets(NonePresetName, AsphyxiaPresetName, AsphyxiaDefaultUrl);
+            var result = _appConfig.LoadServerPresets(NonePresetName, AsphyxiaPresetName, AsphyxiaDefaultUrl);
             if (result.Mutated)
             {
-                _configHandler.SaveServerPresets(result.Presets, result.ActivePreset, NonePresetName);
+                _appConfig.SaveServerPresets(result.Presets, result.ActivePreset, NonePresetName);
             }
 
             settings.ServerPresets.Clear();
@@ -1824,7 +1824,7 @@ namespace LazyBootstrap.UI
 
             RefreshGpuCompatLayerState(settings);
             LoadSpiceSettings(settings);
-            RefreshAsioDrivers(settings, settings.AsioDriverValue);
+            RefreshAsioDrivers(settings, settings.ConfiguredAsioDriverName);
             RefreshNetworkAdapters(settings, settings.NetworkAdapterIp, settings.NetworkAdapterSubnet);
             _logger.LogInformation("Settings runtime state reload completed.");
         }
@@ -1870,16 +1870,16 @@ namespace LazyBootstrap.UI
             settings.ActiveServerPreset = selectedPreset?.Name ?? NonePresetName;
         }
 
-        private void RefreshAsioDrivers(SettingsState settings, string selectedValue)
+        private void RefreshAsioDrivers(SettingsState settings, string selectedDriverName)
         {
-            var choices = BuildAsioDriverOptions(selectedValue);
+            var choices = BuildAsioDriverOptions(selectedDriverName);
             settings.AsioDrivers.Clear();
             foreach (var choice in choices)
             {
                 settings.AsioDrivers.Add(choice);
             }
 
-            var selectedOption = settings.AsioDrivers.FirstOrDefault(choice => string.Equals(choice.Value, selectedValue ?? string.Empty, StringComparison.OrdinalIgnoreCase))
+            var selectedOption = settings.AsioDrivers.FirstOrDefault(choice => string.Equals(choice.DriverName, selectedDriverName ?? string.Empty, StringComparison.OrdinalIgnoreCase))
                 ?? settings.AsioDrivers.FirstOrDefault();
             settings.SelectedAsioDriver = selectedOption;
         }
@@ -1922,7 +1922,7 @@ namespace LazyBootstrap.UI
         {
             var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
-            if (!_spiceConfigFileService.TryLoadOptionsContext(
+            if (!_spiceXmlConfigEditor.TryLoadOptionsContext(
                     spiceXmlPath, LoadOptions.PreserveWhitespace, false, out var context, out _, out _))
             {
                 _logger.LogWarning("Failed to load active spice config options.");
@@ -1955,7 +1955,7 @@ namespace LazyBootstrap.UI
         private void ApplyDeferredSettingsResult(
             SettingsState settings,
             DeferredSettingsResult deferredState,
-            string currentAsioDriverValue,
+            string currentConfiguredAsioDriverName,
             string currentNetworkIp,
             string currentNetworkSubnet)
         {
@@ -1975,9 +1975,9 @@ namespace LazyBootstrap.UI
 
             settings.SelectedAsioDriver = deferredState.SelectedAsioDriver;
             settings.SelectedNetworkAdapter = deferredState.SelectedNetworkAdapter;
-            if (!string.IsNullOrWhiteSpace(currentAsioDriverValue))
+            if (!string.IsNullOrWhiteSpace(currentConfiguredAsioDriverName))
             {
-                settings.AsioDriverValue = currentAsioDriverValue;
+                settings.ConfiguredAsioDriverName = currentConfiguredAsioDriverName;
             }
 
             if (!string.IsNullOrWhiteSpace(currentNetworkIp) || !string.IsNullOrWhiteSpace(currentNetworkSubnet))
@@ -1989,7 +1989,7 @@ namespace LazyBootstrap.UI
             SyncSelectedServerPresetFromCurrentFields(settings);
         }
 
-        private static List<AsioDriverOption> BuildAsioDriverOptions(string selectedValue)
+        private static List<AsioDriverOption> BuildAsioDriverOptions(string selectedDriverName)
         {
             var choices = new List<AsioDriverOption> { new("无", string.Empty) };
             foreach (var driverName in AsioDriverRegistry.GetInstalledDriverNames())
@@ -1997,10 +1997,10 @@ namespace LazyBootstrap.UI
                 choices.Add(new AsioDriverOption(driverName, driverName));
             }
 
-            if (!string.IsNullOrWhiteSpace(selectedValue)
-                && choices.All(choice => !string.Equals(choice.Value, selectedValue, StringComparison.OrdinalIgnoreCase)))
+            if (!string.IsNullOrWhiteSpace(selectedDriverName)
+                && choices.All(choice => !string.Equals(choice.DriverName, selectedDriverName, StringComparison.OrdinalIgnoreCase)))
             {
-                choices.Add(new AsioDriverOption($"{selectedValue}（当前配置）", selectedValue));
+                choices.Add(new AsioDriverOption($"{selectedDriverName}（当前配置）", selectedDriverName));
             }
 
             return choices;
@@ -2066,7 +2066,7 @@ namespace LazyBootstrap.UI
 
             try
             {
-                return _spiceConfigFileService.TryLoadOptionsContext(
+                return _spiceXmlConfigEditor.TryLoadOptionsContext(
                     spiceXmlPath,
                     LoadOptions.None,
                     false,
@@ -2084,7 +2084,7 @@ namespace LazyBootstrap.UI
         private string SyncGpuCompatLayerConfigToRuntimeState(GpuCompatLayerRuntimeState runtimeState)
         {
             var configuredRenderMode = GpuCompatLayerConfigurator.NormalizeRenderMode(
-                _configHandler.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
+                _appConfig.ReadString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", "dx9on12"));
             var detectedRenderMode = string.IsNullOrWhiteSpace(runtimeState.DetectedRenderMode)
                 ? string.Empty
                 : GpuCompatLayerConfigurator.NormalizeRenderMode(runtimeState.DetectedRenderMode);
@@ -2092,10 +2092,10 @@ namespace LazyBootstrap.UI
 
             try
             {
-                var currentCompatEnabled = _configHandler.ReadBool(AppConfigBootstrapper.SettingSectionName, "compatlayer", false);
+                var currentCompatEnabled = _appConfig.ReadBool(AppConfigBootstrapper.SettingSectionName, "compatlayer", false);
                 if (currentCompatEnabled != targetCompatEnabled)
                 {
-                    _configHandler.WriteString(
+                    _appConfig.WriteString(
                         AppConfigBootstrapper.SettingSectionName,
                         "compatlayer",
                         targetCompatEnabled ? "true" : "false");
@@ -2104,7 +2104,7 @@ namespace LazyBootstrap.UI
                 if (!string.IsNullOrWhiteSpace(detectedRenderMode)
                     && !string.Equals(configuredRenderMode, detectedRenderMode, StringComparison.OrdinalIgnoreCase))
                 {
-                    _configHandler.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", detectedRenderMode);
+                    _appConfig.WriteString(AppConfigBootstrapper.SettingSectionName, "cl-rendermode", detectedRenderMode);
                     configuredRenderMode = detectedRenderMode;
                 }
             }
@@ -2118,7 +2118,7 @@ namespace LazyBootstrap.UI
 
         private void SaveServerPresets(SettingsState settings)
         {
-            _configHandler.SaveServerPresets(settings.ServerPresets, settings.ActiveServerPreset, NonePresetName);
+            _appConfig.SaveServerPresets(settings.ServerPresets, settings.ActiveServerPreset, NonePresetName);
         }
 
         private bool TryApplySpiceUpdates(
@@ -2129,7 +2129,7 @@ namespace LazyBootstrap.UI
         {
             int updateCount = updates?.Length ?? 0;
             _logger.LogDebug("Applying spice option updates. UpdateCount={UpdateCount}", updateCount);
-            if (!_spiceConfigFileService.ApplySpiceOptions(spiceXmlPath, updates, out var error))
+            if (!_spiceXmlConfigEditor.ApplySpiceOptions(spiceXmlPath, updates, out var error))
             {
                 _logger.LogWarning("Failed to apply spice option updates. UpdateCount={UpdateCount}", updateCount);
                 ShowErrorToast("写入配置失败", error);

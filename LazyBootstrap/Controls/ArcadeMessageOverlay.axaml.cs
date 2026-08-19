@@ -118,7 +118,7 @@ namespace LazyBootstrap.Controls
 
             double cycleProgress = (_animationStopwatch.Elapsed.TotalMilliseconds / durationMilliseconds) % 2d;
             double pingPongProgress = cycleProgress <= 1d ? cycleProgress : 2d - cycleProgress;
-            double easedProgress = ControlHelpers.EaseInOutCubic(Math.Clamp(pingPongProgress, 0d, 1d));
+            double easedProgress = AnimationEasing.EaseInOutCubic(Math.Clamp(pingPongProgress, 0d, 1d));
             _borderBrush.Color = InterpolateColor(_startColor, BorderEndColor, easedProgress);
         }
 

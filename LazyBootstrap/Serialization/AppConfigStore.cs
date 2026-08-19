@@ -105,16 +105,16 @@ internal static class TomlTextShared
     }
 }
 
-internal class ConfigHandler
+internal class AppConfigStore
 {
     private const string InvalidBackupSuffix = "invalid";
     private readonly string _path;
     private readonly object _sync = new object();
-    private readonly ILogger<ConfigHandler> _logger;
+    private readonly ILogger<AppConfigStore> _logger;
     private TomlLineDocument _readOnlyDocument;
     private string _readOnlyReason = string.Empty;
 
-    public ConfigHandler(string tomlPath, ILogger<ConfigHandler> logger)
+    public AppConfigStore(string tomlPath, ILogger<AppConfigStore> logger)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(tomlPath);
         _path = new FileInfo(tomlPath).FullName;
@@ -143,43 +143,43 @@ internal class ConfigHandler
         }
     }
 
-    internal ConfigFileHealth CheckStartupHealth()
+    internal AppConfigHealth CheckStartupHealth()
     {
         lock (_sync)
         {
             if (!File.Exists(_path))
             {
-                return ConfigFileHealth.Missing();
+                return AppConfigHealth.Missing();
             }
 
             if (!TryReadText(_path, out var text, out var accessError))
             {
-                return ConfigFileHealth.Inaccessible(accessError);
+                return AppConfigHealth.Inaccessible(accessError);
             }
 
             var validationError = ValidateTomlText(text);
             if (!string.IsNullOrWhiteSpace(validationError))
             {
-                return ConfigFileHealth.InvalidToml(validationError, text);
+                return AppConfigHealth.InvalidToml(validationError, text);
             }
 
             if (!TryOpenConfigForSaving(_path, out var saveError))
             {
-                return ConfigFileHealth.Inaccessible(saveError, text);
+                return AppConfigHealth.Inaccessible(saveError, text);
             }
 
             string directory = Path.GetDirectoryName(_path);
             if (string.IsNullOrWhiteSpace(directory))
             {
-                return ConfigFileHealth.Inaccessible("Config directory is empty.", text);
+                return AppConfigHealth.Inaccessible("Config directory is empty.", text);
             }
 
             if (!TryProbeDirectoryWritable(directory, out var directoryError))
             {
-                return ConfigFileHealth.Inaccessible(directoryError, text);
+                return AppConfigHealth.Inaccessible(directoryError, text);
             }
 
-            return ConfigFileHealth.Valid(text);
+            return AppConfigHealth.Valid(text);
         }
     }
 
@@ -199,7 +199,7 @@ internal class ConfigHandler
     {
         lock (_sync)
         {
-            WriteTextUnsafe(content ?? string.Empty);
+            WriteTextLocked(content ?? string.Empty);
         }
     }
 
@@ -209,7 +209,7 @@ internal class ConfigHandler
         {
             if (_readOnlyDocument != null)
             {
-                WriteTextUnsafe(replacementContent ?? string.Empty);
+                WriteTextLocked(replacementContent ?? string.Empty);
                 return string.Empty;
             }
 
@@ -223,7 +223,7 @@ internal class ConfigHandler
 
             try
             {
-                WriteTextUnsafe(replacementContent ?? string.Empty);
+                WriteTextLocked(replacementContent ?? string.Empty);
                 return backupPath;
             }
             catch
@@ -245,9 +245,9 @@ internal class ConfigHandler
                 return;
             }
 
-            var document = LoadDocumentUnsafe();
+            var document = LoadDocumentLocked();
             document.UpsertString(sectionName, keyName, value ?? string.Empty);
-            WriteDocumentUnsafe(document);
+            WriteDocumentLocked(document);
         }
     }
 
@@ -262,10 +262,10 @@ internal class ConfigHandler
                 return;
             }
 
-            var document = LoadDocumentUnsafe();
+            var document = LoadDocumentLocked();
             if (document.RemoveKey(sectionName, keyName))
             {
-                WriteDocumentUnsafe(document);
+                WriteDocumentLocked(document);
             }
         }
     }
@@ -293,7 +293,7 @@ internal class ConfigHandler
                 return defaultValue;
             }
 
-            if (TryLoadModelUnsafe(out var model, out var error)
+            if (TryLoadModelLocked(out var model, out var error)
                 && TryReadModelValue(model, sectionName, keyName, out var modelValue))
             {
                 return modelValue;
@@ -304,7 +304,7 @@ internal class ConfigHandler
                 _logger?.LogWarning("Falling back to text-level config read because TOML model loading failed: {Error}", error);
             }
 
-            var document = LoadDocumentUnsafe();
+            var document = LoadDocumentLocked();
             return document.TryReadString(sectionName, keyName, out var textValue)
                 ? textValue
                 : defaultValue;
@@ -351,7 +351,7 @@ internal class ConfigHandler
                     ref activePreset,
                     ref hasPresetSection);
             }
-            else if (File.Exists(_path) && TryLoadModelUnsafe(out var model, out modelError))
+            else if (File.Exists(_path) && TryLoadModelLocked(out var model, out modelError))
             {
                 LoadServerPresetsFromModel(model, presets, ref activePreset, ref hasPresetSection);
             }
@@ -362,7 +362,7 @@ internal class ConfigHandler
                     _logger?.LogWarning("Falling back to text-level server preset read because TOML model loading failed: {Error}", modelError);
                 }
 
-                LoadDocumentUnsafe().LoadServerPresetsFromText(
+                LoadDocumentLocked().LoadServerPresetsFromText(
                     presets,
                     ref activePreset,
                     ref hasPresetSection);
@@ -388,7 +388,7 @@ internal class ConfigHandler
 
         lock (_sync)
         {
-            var document = LoadDocumentUnsafe();
+            var document = LoadDocumentLocked();
             document.RemoveArrayTableBlocks("Server.Presets");
             document.UpsertString("Server", "activepreset", activePreset ?? nonePresetName);
 
@@ -400,11 +400,11 @@ internal class ConfigHandler
                 document.AppendServerPreset(preset);
             }
 
-            WriteDocumentUnsafe(document, preserveSectionSeparator: false);
+            WriteDocumentLocked(document, preserveSectionSeparator: false);
         }
     }
 
-    private TomlLineDocument LoadDocumentUnsafe()
+    private TomlLineDocument LoadDocumentLocked()
     {
         if (_readOnlyDocument != null)
         {
@@ -416,14 +416,14 @@ internal class ConfigHandler
             : TomlLineDocument.Empty();
     }
 
-    private void WriteDocumentUnsafe(TomlLineDocument document, bool preserveSectionSeparator = true)
+    private void WriteDocumentLocked(TomlLineDocument document, bool preserveSectionSeparator = true)
     {
         ArgumentNullException.ThrowIfNull(document);
         document.NormalizeBlankLines(preserveSectionSeparator);
-        WriteTextUnsafe(document.ToText());
+        WriteTextLocked(document.ToText());
     }
 
-    private void WriteTextUnsafe(string content)
+    private void WriteTextLocked(string content)
     {
         var validationError = ValidateTomlText(content ?? string.Empty);
         if (!string.IsNullOrWhiteSpace(validationError))
@@ -443,7 +443,7 @@ internal class ConfigHandler
         }
     }
 
-    private bool TryLoadModelUnsafe(out TomlTable model, out string error)
+    private bool TryLoadModelLocked(out TomlTable model, out string error)
     {
         model = null;
         error = string.Empty;

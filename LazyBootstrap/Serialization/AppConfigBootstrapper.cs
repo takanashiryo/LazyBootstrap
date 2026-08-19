@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace LazyBootstrap.Serialization
 {
-    internal enum ConfigFileHealthStatus
+    internal enum AppConfigHealthStatus
     {
         Missing,
         Valid,
@@ -12,22 +12,22 @@ namespace LazyBootstrap.Serialization
         Inaccessible
     }
 
-    internal readonly record struct ConfigFileHealth(
-        ConfigFileHealthStatus Status,
+    internal readonly record struct AppConfigHealth(
+        AppConfigHealthStatus Status,
         string ErrorMessage,
         string Content)
     {
-        public static ConfigFileHealth Missing() =>
-            new ConfigFileHealth(ConfigFileHealthStatus.Missing, string.Empty, string.Empty);
+        public static AppConfigHealth Missing() =>
+            new AppConfigHealth(AppConfigHealthStatus.Missing, string.Empty, string.Empty);
 
-        public static ConfigFileHealth Valid(string content) =>
-            new ConfigFileHealth(ConfigFileHealthStatus.Valid, string.Empty, content ?? string.Empty);
+        public static AppConfigHealth Valid(string content) =>
+            new AppConfigHealth(AppConfigHealthStatus.Valid, string.Empty, content ?? string.Empty);
 
-        public static ConfigFileHealth InvalidToml(string errorMessage, string content) =>
-            new ConfigFileHealth(ConfigFileHealthStatus.InvalidToml, errorMessage ?? string.Empty, content ?? string.Empty);
+        public static AppConfigHealth InvalidToml(string errorMessage, string content) =>
+            new AppConfigHealth(AppConfigHealthStatus.InvalidToml, errorMessage ?? string.Empty, content ?? string.Empty);
 
-        public static ConfigFileHealth Inaccessible(string errorMessage, string content = "") =>
-            new ConfigFileHealth(ConfigFileHealthStatus.Inaccessible, errorMessage ?? string.Empty, content ?? string.Empty);
+        public static AppConfigHealth Inaccessible(string errorMessage, string content = "") =>
+            new AppConfigHealth(AppConfigHealthStatus.Inaccessible, errorMessage ?? string.Empty, content ?? string.Empty);
     }
 
     internal static class AppConfigBootstrapper
@@ -61,13 +61,13 @@ namespace LazyBootstrap.Serialization
             new ConfigDefaultEntry(DisplaySectionName, "subrefresh", "59")
         ];
 
-        public static void InitializeAndMigrate(string configPath, ConfigHandler config)
+        public static void InitializeAndMigrate(string configPath, AppConfigStore config)
         {
             ArgumentException.ThrowIfNullOrWhiteSpace(configPath);
             ArgumentNullException.ThrowIfNull(config);
 
             string defaultConfigText = CreateDefaultConfigText();
-            ConfigFileHealth health;
+            AppConfigHealth health;
             try
             {
                 health = config.CheckStartupHealth();
@@ -79,7 +79,7 @@ namespace LazyBootstrap.Serialization
                 return;
             }
 
-            if (health.Status == ConfigFileHealthStatus.Inaccessible)
+            if (health.Status == AppConfigHealthStatus.Inaccessible)
             {
                 string seedText = string.IsNullOrWhiteSpace(health.Content)
                     ? defaultConfigText
@@ -89,7 +89,7 @@ namespace LazyBootstrap.Serialization
                 return;
             }
 
-            if (health.Status == ConfigFileHealthStatus.Missing)
+            if (health.Status == AppConfigHealthStatus.Missing)
             {
                 if (!TryRunStartupConfigOperation(
                         () => config.ReplaceWithText(defaultConfigText),
@@ -100,7 +100,7 @@ namespace LazyBootstrap.Serialization
                     return;
                 }
             }
-            else if (health.Status == ConfigFileHealthStatus.InvalidToml)
+            else if (health.Status == AppConfigHealthStatus.InvalidToml)
             {
                 if (!TryRunStartupConfigOperation(
                         () => config.BackupInvalidAndReplace(defaultConfigText),
@@ -114,7 +114,7 @@ namespace LazyBootstrap.Serialization
 
             if (!TryRunStartupConfigOperation(() => EnsureDefaults(config), out var defaultsError))
             {
-                string readOnlySeed = health.Status == ConfigFileHealthStatus.Valid
+                string readOnlySeed = health.Status == AppConfigHealthStatus.Valid
                     ? health.Content
                     : defaultConfigText;
                 config.EnterReadOnlySession(readOnlySeed, $"config.toml 无法保存设置：{defaultsError}");
@@ -137,7 +137,7 @@ namespace LazyBootstrap.Serialization
             }
         }
 
-        private static void EnsureDefaults(ConfigHandler config)
+        private static void EnsureDefaults(AppConfigStore config)
         {
             foreach (var entry in Defaults)
             {
@@ -145,7 +145,7 @@ namespace LazyBootstrap.Serialization
             }
         }
 
-        private static void EnsureDefault(ConfigHandler config, string section, string key, string defaultValue)
+        private static void EnsureDefault(AppConfigStore config, string section, string key, string defaultValue)
         {
             var existing = config.ReadString(section, key, string.Empty);
             if (string.IsNullOrWhiteSpace(existing))

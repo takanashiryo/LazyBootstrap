@@ -27,7 +27,7 @@ namespace LazyBootstrap.UI
         private readonly LauncherPaths _paths = null!;
         private readonly ISukiDialogManager _dialogManager = null!;
         private readonly ISukiToastManager _toastManager = null!;
-        private readonly ConfigHandler _configHandler = null!;
+        private readonly AppConfigStore _appConfig = null!;
         private readonly ILogger<MainWindow> _logger = null!;
 
         public MainWindow()
@@ -46,7 +46,7 @@ namespace LazyBootstrap.UI
             GameProcessTracker gameProcessTracker,
             WindowsDefenderExclusionService windowsDefenderExclusionService,
             WindowsAppCompatLayerService appCompatLayerService,
-            SpiceConfigFile spiceConfigFile,
+            SpiceXmlConfigEditor spiceXmlConfigEditor,
             GpuCompatLayerConfigurator gpuCompatLayerConfigurator,
             WindowsStartupService windowsStartupService,
             WindowsDisplayConfigurationService displayConfigurationService,
@@ -54,7 +54,7 @@ namespace LazyBootstrap.UI
             SavedataTransferService savedataTransferService,
             ISukiDialogManager dialogManager,
             ISukiToastManager toastManager,
-            ConfigHandler configHandler,
+            AppConfigStore appConfig,
             ILogger<MainWindow> logger)
         {
             InitializeComponent();
@@ -63,12 +63,12 @@ namespace LazyBootstrap.UI
             _spiceCrashLogAnalyzer = spiceCrashLogAnalyzer ?? throw new ArgumentNullException(nameof(spiceCrashLogAnalyzer));
             _gameProcessTracker = gameProcessTracker ?? throw new ArgumentNullException(nameof(gameProcessTracker));
             _windowsDefenderExclusionService = windowsDefenderExclusionService ?? throw new ArgumentNullException(nameof(windowsDefenderExclusionService));
-            InitializeSettingsServices(spiceConfigFile, gpuCompatLayerConfigurator, appCompatLayerService, windowsStartupService);
+            InitializeSettingsServices(spiceXmlConfigEditor, gpuCompatLayerConfigurator, appCompatLayerService, windowsStartupService);
             InitializeDisplayServices(displayConfigurationService, displaySettingsTransactionCoordinator);
             InitializeToolsServices(savedataTransferService);
             _dialogManager = dialogManager ?? throw new ArgumentNullException(nameof(dialogManager));
             _toastManager = toastManager ?? throw new ArgumentNullException(nameof(toastManager));
-            _configHandler = configHandler ?? throw new ArgumentNullException(nameof(configHandler));
+            _appConfig = appConfig ?? throw new ArgumentNullException(nameof(appConfig));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
 
             if (DialogHost != null)
