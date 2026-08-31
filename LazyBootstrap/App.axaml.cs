@@ -1,30 +1,27 @@
 using System;
-using System.Threading.Tasks;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls;
 using Avalonia.Markup.Xaml;
 using Avalonia.Media;
-using Microsoft.Extensions.DependencyInjection;
 using Serilog;
 using SukiUI;
 using SukiUI.Models;
-using LazyBootstrap.Shell;
+using LazyBootstrap.Application;
+using LazyBootstrap.Services;
+using LazyBootstrap.UI;
+using AvaloniaApplication = Avalonia.Application;
 
 namespace LazyBootstrap
 {
-    public partial class App : Application
+    public partial class App : AvaloniaApplication
     {
         private static readonly SukiColorTheme LazyGreenTheme = new SukiColorTheme(
             "Lazy Green",
             Color.Parse("#8CCF43"),
             Color.Parse("#D8FF8C"));
 
-        /// <summary>
-        /// Application composition root. Set from <c>Program.Main</c> before the Avalonia
-        /// lifetime starts and used to resolve the main window after the theme is loaded.
-        /// </summary>
-        public static IServiceProvider Services { get; set; }
+        internal static ApplicationComposition Composition { get; set; }
 
         public override void Initialize()
         {
@@ -56,10 +53,10 @@ namespace LazyBootstrap
                 Log.Information("Framework initialization completed. Preparing main window.");
                 desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
-                // SukiTheme is loaded by Initialize() above, so resolving MainWindow here is the
-                // first time the SukiUI dialog/toast managers are instantiated. This satisfies the
-                // SukiUI initialization-order constraint.
-                var mainWindow = Services.GetRequiredService<MainWindow>();
+                // Create the UI object graph only after Initialize() has loaded SukiTheme.
+                var composition = Composition
+                    ?? throw new InvalidOperationException("Application composition has not been initialized.");
+                var mainWindow = composition.CreateMainWindow();
 
                 ShowPreparedMainWindowAsync(desktop, mainWindow);
             }

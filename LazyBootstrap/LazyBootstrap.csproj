@@ -3,15 +3,13 @@
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
         <TargetFramework>net10.0</TargetFramework>
-        <RuntimeIdentifiers>win-x64</RuntimeIdentifiers>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         <RootNamespace>LazyBootstrap</RootNamespace>
         <AssemblyName>LazyBootstrap</AssemblyName>
-        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationIcon>..\Resources\vii\vii_icon.ico</ApplicationIcon>
         <ApplicationManifest>Properties\app.manifest</ApplicationManifest>
         <Nullable>disable</Nullable>
         <ImplicitUsings>disable</ImplicitUsings>
-        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <InvariantGlobalization>false</InvariantGlobalization>
         <Version>26.5</Version>
         <AssemblyTitle>Launcher for Lazy SDVX</AssemblyTitle>
@@ -26,7 +24,6 @@
         <PublishTrimmed>true</PublishTrimmed>
         <PublishSingleFile>false</PublishSingleFile>
         <SelfContained>true</SelfContained>
-        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
         
         <!--keep it false, otherwise it will crash on old Windows 10-->
         <CETCompat>false</CETCompat>
@@ -44,8 +41,6 @@
     <ItemGroup>
         <PackageReference Include="Avalonia" Version="11.3.17"/>
         <PackageReference Include="Avalonia.Desktop" Version="11.3.17"/>
-        <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.17"/>
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="10.0.7"/>
         <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.7"/>
         <PackageReference Include="NAudio.Asio" Version="2.3.0"/>
         <PackageReference Include="Serilog" Version="4.3.1"/>
@@ -66,34 +61,36 @@
         <None Include="..\Resources\vii\vii_icon.ico">
             <Link>vii_icon.ico</Link>
         </None>
-        <None Include="Public\7z\7za.exe">
+        <None Include="7Zip\7za.exe">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <CopyToPublishDirectory>Always</CopyToPublishDirectory>
             <TargetPath>7za.exe</TargetPath>
         </None>
-        <None Include="Public\7z\7za.dll">
+        <None Include="7Zip\7za.dll">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <CopyToPublishDirectory>Always</CopyToPublishDirectory>
             <TargetPath>7za.dll</TargetPath>
         </None>
-        <None Include="Public\7z\7zxa.dll">
+        <None Include="7Zip\7zxa.dll">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <CopyToPublishDirectory>Always</CopyToPublishDirectory>
             <TargetPath>7zxa.dll</TargetPath>
         </None>
-        <None Include="Public\libs\**\*">
+        <None Include="Libs\**\*">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
             <CopyToPublishDirectory>Always</CopyToPublishDirectory>
-            <TargetPath>libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
+            <TargetPath>Libs\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
         </None>
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdatePaths.cs" Link="MediaUpdate\MediaUpdatePaths.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateSecurity.cs" Link="MediaUpdate\MediaUpdateSecurity.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateConstants.cs" Link="MediaUpdate\MediaUpdateConstants.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateArguments.cs" Link="MediaUpdate\MediaUpdateArguments.cs"/>
-        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateRunner.cs" Link="MediaUpdate\MediaUpdateRunner.cs"/>
+        <Compile Include="..\LazyBootstrap.MediaUpdater\MediaUpdateProtocol.cs" Link="MediaUpdate\MediaUpdateProtocol.cs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Compile Update="UI\MainWindow.*.cs">
+            <DependentUpon>MainWindow.axaml</DependentUpon>
+        </Compile>
     </ItemGroup>
 
 </Project>

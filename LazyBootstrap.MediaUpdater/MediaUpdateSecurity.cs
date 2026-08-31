@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 
 namespace LazyBootstrap.MediaUpdate
 {
-    public static class MediaUpdateSecurity
+    internal static class MediaUpdateSecurity
     {
         public const string BlockedNonGamePathMessage =
             "检测到对非游戏路径的改动，疑似恶意文件，请勿下载来源不明的更新包！";
@@ -59,7 +59,7 @@ namespace LazyBootstrap.MediaUpdate
 
             foreach (string file in EnumerateBatchFiles(stagingRoot))
             {
-                string text = ReadBatchText(file);
+                string text = File.ReadAllText(file, Encoding.UTF8);
                 if (ContainsForbiddenEnvToken(text))
                 {
                     error = BlockedNonGamePathMessage;
@@ -85,11 +85,6 @@ namespace LazyBootstrap.MediaUpdate
                     return string.Equals(e, ".bat", StringComparison.OrdinalIgnoreCase)
                            || string.Equals(e, ".cmd", StringComparison.OrdinalIgnoreCase);
                 });
-        }
-
-        private static string ReadBatchText(string path)
-        {
-            return File.ReadAllText(path, Encoding.UTF8);
         }
 
         private static bool ContainsForbiddenEnvToken(string text)

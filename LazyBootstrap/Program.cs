@@ -1,33 +1,33 @@
 using System;
 using Avalonia;
-using Microsoft.Extensions.DependencyInjection;
 using Serilog;
+using LazyBootstrap.Application;
+using LazyBootstrap.Platform;
+using LazyBootstrap.Serialization;
 
 namespace LazyBootstrap
 {
-    public class Program
+    internal static class Program
     {
         [STAThread]
         public static void Main(string[] args)
         {
+            ApplicationComposition composition = null;
+
             try
             {
                 AppServices.InitializeSerilog(args);
                 Log.Information("LazyBootstrap process started.");
-                MediaUpdaterPendingUpdateService.ApplyPendingUpdate(AppServices.RuntimeContext.ApplicationDirectoryPath);
+                MediaUpdaterPendingUpdateService.ApplyPendingUpdate(AppServices.Paths.ApplicationDirectoryPath);
 
-                // Build the DI container. Lazy singletons keep SukiUI managers uncreated until
-                // MainWindow is resolved (after SukiTheme loads); do NOT enable ValidateOnBuild.
-                var serviceProvider = new ServiceCollection()
-                    .AddLazyBootstrapServices(AppServices.RuntimeContext)
-                    .BuildServiceProvider();
-                App.Services = serviceProvider;
+                composition = new ApplicationComposition(AppServices.Paths);
+                App.Composition = composition;
 
-                // Configuration bootstrap/migration must run before the UI starts. ConfigHandler
-                // has no SukiUI dependency, so resolving it here is safe.
+                // Configuration bootstrap/migration must run before the UI starts. AppConfigStore
+                // has no SukiUI dependency, so using it here is safe.
                 AppConfigBootstrapper.InitializeAndMigrate(
-                    AppServices.RuntimeContext.ConfigFilePath,
-                    serviceProvider.GetRequiredService<ConfigHandler>());
+                    AppServices.Paths.ConfigFilePath,
+                    composition.AppConfig);
                 Log.Information("Configuration initialized.");
 
                 BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
@@ -40,7 +40,8 @@ namespace LazyBootstrap
             }
             finally
             {
-                (App.Services as IDisposable)?.Dispose();
+                App.Composition = null;
+                composition?.Dispose();
                 AppServices.Dispose();
             }
         }
