@@ -1,7 +1,7 @@
 # LazyBootstrap
 
 > [!CAUTION]
-> **DO NOT talk about this project or name publicly!**
+> **DO NOT talk about/mentioned this project or name outside this repo!**
 
 This is a lazy launcher for a “Woosh Woosh” game, need combined with Spice2x.
 
