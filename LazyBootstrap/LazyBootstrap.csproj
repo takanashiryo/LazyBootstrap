@@ -101,6 +101,7 @@
     <Compile Include="ConfigHandler.cs" />
     <Compile Include="EnvironmentScan.cs" />
     <Compile Include="FirewallHelper.cs" />
+    <Compile Include="GameSessionMonitor.cs" />
     <Compile Include="LogSystem.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

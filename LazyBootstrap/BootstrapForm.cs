@@ -16,6 +16,14 @@ namespace LazyBootstrap
     public partial class BootstrapForm : Form
     {
         private Process _gameProcess;
+        private GameSessionMonitor _gameSession;
+        private Timer _gameMonitorTimer;
+        private bool _isStarting;
+        private bool _isClosing;
+        private bool _sessionStartFailed;
+        private bool _sessionAsphyxiaStarted;
+        private bool _sessionRestoreRotation;
+        private string _sessionDisplayDevice;
         private readonly ConfigHandler _configFile;
         private readonly ConfigHandler _versionFile;
         private bool _usePreconfig = true; // 是否使用预配置文件
@@ -39,6 +47,7 @@ namespace LazyBootstrap
         public BootstrapForm()
         {
             InitializeComponent();
+            Disposed += (s, e) => StopGameSessionMonitoring();
 
             _baseDir = AppDomain.CurrentDomain.BaseDirectory;
             _contentsDir = Path.Combine(_baseDir, "contents");
@@ -538,6 +547,9 @@ namespace LazyBootstrap
         // Boot
         private async void btnStart_Click(object sender, EventArgs e)
         {
+            if (_isStarting || _gameSession != null || _isClosing) return;
+            _isStarting = true;
+            GameSessionMonitor session = null;
             // Lock Element
             SetControlsEnabled(false);
             if (statusLabel != null) statusLabel.Text = "正在启动...";
@@ -548,6 +560,22 @@ namespace LazyBootstrap
 
             try
             {
+                // Validate before changing the display or starting any companion process.
+                string spicePath = GetSpicePath();
+                string asphyxiaPath = GetAsphyxiaPath();
+                if (!File.Exists(spicePath))
+                    throw new FileNotFoundException($"未找到游戏主程序，路径: {spicePath}", spicePath);
+                if (!chkNoAsphyxia.Checked && !File.Exists(asphyxiaPath))
+                    throw new FileNotFoundException($"未找到 Asphyxia Core，路径: {asphyxiaPath}", asphyxiaPath);
+
+                session = new GameSessionMonitor(spicePath, (message, warning) =>
+                    LogSystem.Log(message, warning ? LogSystem.LogLevel.Warning : LogSystem.LogLevel.Info));
+                _gameSession = session;
+                _sessionStartFailed = false;
+                _sessionAsphyxiaStarted = false;
+                _sessionRestoreRotation = !chkNoRestoreRotation.Checked;
+                _sessionDisplayDevice = null;
+
                 // Screen Rotate
                 LogSystem.Log("正在旋转屏幕...");
                 if (!TryGetRotationAngle(out int rotationAngle)) rotationAngle = 0;
@@ -556,48 +584,42 @@ namespace LazyBootstrap
                 bool rotationSuccess = false;
                 if (!string.IsNullOrEmpty(deviceName))
                 {
+                    _sessionDisplayDevice = deviceName;
                     rotationSuccess = ScreenRotate.Rotate(deviceName, rotationAngle);
                 }
                 LogSystem.Log(rotationSuccess ? $"屏幕已旋转至 {rotationAngle} 度。" : "屏幕旋转失败或无需旋转。");
                 await Task.Delay(500); // 等待旋转生效
+                if (_isClosing || IsDisposed || !ReferenceEquals(session, _gameSession)) return;
 
                 // Launch Asphyxia
                 if (!chkNoAsphyxia.Checked)
                 {
                     LogSystem.Log("\n正在启动 Asphyxia Core...");
-                    string asphyxiaPath = GetAsphyxiaPath();
-                    if (File.Exists(asphyxiaPath))
+                    ProcessStartInfo asphyxiaStartInfo;
+                    if (_dbgAsphyxiaDebug)
                     {
-                        if (_dbgAsphyxiaDebug)
+                        asphyxiaStartInfo = new ProcessStartInfo
                         {
-                            var asphyxiaStartInfo = new ProcessStartInfo
-                            {
-                                FileName = "cmd.exe",
-                                Arguments = $"/k \"\"{asphyxiaPath}\" --dev\"",
-                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
-                            };
-                            Process.Start(asphyxiaStartInfo);
-                            LogSystem.Log("  - 使用调试模式启动（控制台窗口将保持打开）");
-                        }
-                        else
-                        {
-                            var asphyxiaStartInfo = new ProcessStartInfo
-                            {
-                                FileName = asphyxiaPath,
-                                WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
-                            };
-                            Process.Start(asphyxiaStartInfo);
-                        }
-
-                        LogSystem.Log("Asphyxia Core 已启动。");
+                            FileName = "cmd.exe",
+                            Arguments = $"/k \"\"{asphyxiaPath}\" --dev\"",
+                            WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                        };
+                        LogSystem.Log("  - 使用调试模式启动（控制台窗口将保持打开）");
                     }
                     else
                     {
-                        LogSystem.Log($"错误: 未找到 Asphyxia Core, 路径: {asphyxiaPath}", LogSystem.LogLevel.Error);
-                        SetControlsEnabled(true);
-                        if (statusLabel != null) statusLabel.Text = "启动失败";
-                        return;
+                        asphyxiaStartInfo = new ProcessStartInfo
+                        {
+                            FileName = asphyxiaPath,
+                            WorkingDirectory = Path.GetDirectoryName(asphyxiaPath)
+                        };
                     }
+                    using (var asphyxiaProcess = Process.Start(asphyxiaStartInfo))
+                    {
+                        if (asphyxiaProcess == null) throw new InvalidOperationException("未能启动 Asphyxia Core。");
+                        _sessionAsphyxiaStarted = true;
+                    }
+                    LogSystem.Log("Asphyxia Core 已启动。");
                 }
                 else
                 {
@@ -628,15 +650,6 @@ namespace LazyBootstrap
                 LogSystem.Log("\n正在启动游戏...");
                 LogSystem.Log($"  - 启动参数: {argsBuilder.ToString()}");
 
-                string spicePath = GetSpicePath();
-                if (!File.Exists(spicePath))
-                {
-                    LogSystem.Log($"\n错误: 未找到游戏主程序, 路径: {spicePath}", LogSystem.LogLevel.Error);
-                    SetControlsEnabled(true);
-                    if (statusLabel != null) statusLabel.Text = "启动失败";
-                    return;
-                }
-
                 var startInfo = new ProcessStartInfo
                 {
                     FileName = spicePath,
@@ -648,60 +661,109 @@ namespace LazyBootstrap
                 _gameProcess = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
                 _gameProcess.Exited += GameProcess_Exited;
 
-                _gameProcess.Start();
+                if (!_gameProcess.Start()) throw new InvalidOperationException("未能创建游戏进程。");
+                session.AttachInitialProcess(_gameProcess);
 
                 if (statusLabel != null) statusLabel.Text = "游戏已启动";
                 LogSystem.Log("\n游戏进程已启动。");
             }
             catch (Exception ex)
             {
+                if (_isClosing || IsDisposed) return;
                 LogSystem.Log($"\n启动过程中发生严重错误: {ex.Message}", LogSystem.LogLevel.Error);
-                SetControlsEnabled(true);
-                if (statusLabel != null) statusLabel.Text = "启动失败";
+                if (session != null && ReferenceEquals(session, _gameSession))
+                {
+                    _sessionStartFailed = true;
+                    if (statusLabel != null) statusLabel.Text = "启动失败，正在确认游戏进程状态...";
+                }
+                else
+                {
+                    SetControlsEnabled(true);
+                    if (statusLabel != null) statusLabel.Text = "启动失败";
+                }
+            }
+            finally
+            {
+                _isStarting = false;
+                if (!_isClosing && !IsDisposed && session != null && ReferenceEquals(session, _gameSession))
+                {
+                    _gameMonitorTimer = new Timer(components) { Interval = GameSessionMonitor.PollIntervalMilliseconds };
+                    _gameMonitorTimer.Tick += (s, args) => CheckGameSession(session);
+                    _gameMonitorTimer.Start();
+                    CheckGameSession(session);
+                }
             }
         }
 
         // Status
         private void GameProcess_Exited(object sender, EventArgs e)
         {
-            if (!this.IsDisposed && !this.Disposing)
+            // The initial Spice process may hand over to another process. Never restore here.
+            if (_isClosing || IsDisposed || Disposing || !IsHandleCreated) return;
+            try
             {
                 BeginInvoke((MethodInvoker)delegate
                 {
-                    LogSystem.Log("\n游戏进程已退出。");
-
-                    LogSystem.Log("正在关闭 Asphyxia Core...");
-                    try
-                    {
-                        KillProcessesByName("asphyxia-core-x64");
-                        LogSystem.Log("Asphyxia Core 已关闭");
-                    }
-                    catch (Exception ex)
-                    {
-                        LogSystem.Log($"未找到正在运行的 Asphyxia Core 进程。{ex.Message}", LogSystem.LogLevel.Warning);
-                    }
-
-                    if (!chkNoRestoreRotation.Checked)
-                    {
-                        LogSystem.Log("正在还原屏幕旋转...");
-                        string deviceName = null;
-                        try { deviceName = Screen.PrimaryScreen != null ? Screen.PrimaryScreen.DeviceName : null; } catch { deviceName = null; }
-                        bool restored = false;
-                        if (!string.IsNullOrEmpty(deviceName))
-                        {
-                            restored = ScreenRotate.Rotate(deviceName, 0);
-                        }
-                        LogSystem.Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
-                    }
-
-                    if (statusLabel != null) statusLabel.Text = "就绪";
-                    SetControlsEnabled(true);
-                    if (_gameProcess != null)
-                    {
-                        _gameProcess.Dispose();
-                        _gameProcess = null;
-                    }
+                    if (!_isStarting && ReferenceEquals(sender, _gameProcess))
+                        CheckGameSession(_gameSession);
                 });
+            }
+            catch (InvalidOperationException) { /* The window closed before dispatch. */ }
+        }
+
+        private void CheckGameSession(GameSessionMonitor session)
+        {
+            if (_isClosing || IsDisposed || Disposing || session == null || !ReferenceEquals(session, _gameSession)) return;
+            if (!session.CheckForExit()) return;
+
+            // Detach before cleanup so duplicate events and old timer callbacks cannot finish twice.
+            StopGameSessionMonitoring();
+            LogSystem.Log(_sessionStartFailed
+                ? "启动失败收尾：已连续 2 秒确认没有本次启动的游戏进程存活。"
+                : "游戏会话已结束：已连续 2 秒确认所有游戏进程退出。");
+            try
+            {
+                if (!_sessionStartFailed || _sessionAsphyxiaStarted)
+                {
+                    LogSystem.Log("正在关闭 Asphyxia Core...");
+                    KillProcessesByName("asphyxia-core-x64");
+                }
+            }
+            catch (Exception ex)
+            {
+                LogSystem.Log($"关闭 Asphyxia Core 时发生错误: {ex.Message}", LogSystem.LogLevel.Warning);
+            }
+            finally
+            {
+                if (_sessionRestoreRotation && !string.IsNullOrEmpty(_sessionDisplayDevice))
+                {
+                    LogSystem.Log("游戏进程退出已确认，正在还原屏幕旋转...");
+                    bool restored = ScreenRotate.Rotate(_sessionDisplayDevice, 0);
+                    LogSystem.Log(restored ? "屏幕旋转已还原为 0 度。" : "屏幕旋转还原失败。");
+                }
+                if (statusLabel != null) statusLabel.Text = _sessionStartFailed ? "启动失败" : "就绪";
+                SetControlsEnabled(true);
+            }
+        }
+
+        private void StopGameSessionMonitoring()
+        {
+            if (_gameMonitorTimer != null)
+            {
+                _gameMonitorTimer.Stop();
+                _gameMonitorTimer.Dispose();
+                _gameMonitorTimer = null;
+            }
+            if (_gameSession != null)
+            {
+                _gameSession.Dispose();
+                _gameSession = null;
+            }
+            if (_gameProcess != null)
+            {
+                _gameProcess.Exited -= GameProcess_Exited;
+                _gameProcess.Dispose();
+                _gameProcess = null;
             }
         }
 
@@ -1056,12 +1118,14 @@ namespace LazyBootstrap
         private void Bootstrap_FormClosing(object sender, FormClosingEventArgs e)
         {
             SaveSettings();
+            _isClosing = true;
             try
             {
                 if (_gameProcess != null && !_gameProcess.HasExited)
                     _gameProcess.Kill();
             }
             catch (Exception) { /* ignored */ }
+            finally { StopGameSessionMonitoring(); }
         }
 
         private void SetControlsEnabled(bool enabled)
